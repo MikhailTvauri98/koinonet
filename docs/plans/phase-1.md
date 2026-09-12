@@ -306,7 +306,7 @@ git add . && git commit -m "chore: monorepo skeleton, Laravel api, quality tooli
 **Интерфейсы:**
 - Отдаёт наружу: `make up` поднимает `postgres`, `redis`, `app`, `worker`, `web`; `make test` выполняет Pest внутри `app`; API на `http://localhost:8080/api/v1`.
 
-- [ ] **Шаг 1: Dockerfile для PHP**
+- [x] **Шаг 1: Dockerfile для PHP**
 
 `infra/php/Dockerfile`:
 
@@ -327,7 +327,7 @@ RUN printf 'upload_max_filesize = 100M\npost_max_size = 110M\nmemory_limit = 256
 WORKDIR /app
 ```
 
-- [ ] **Шаг 2: Конфиг nginx для разработки**
+- [x] **Шаг 2: Конфиг nginx для разработки**
 
 `infra/nginx/dev.conf`:
 
@@ -355,7 +355,7 @@ server {
 }
 ```
 
-- [ ] **Шаг 3: Compose**
+- [x] **Шаг 3: Compose**
 
 `infra/compose.yml`:
 
@@ -393,7 +393,7 @@ services:
 volumes: { pgdata: {}, redisdata: {}, media: {} }
 ```
 
-- [ ] **Шаг 4: `.env.example` и Makefile**
+- [x] **Шаг 4: `.env.example` и Makefile**
 
 Отличия `apps/api/.env.example` от стандартного:
 
@@ -414,7 +414,7 @@ SANCTUM_STATEFUL_DOMAINS=localhost:3000,localhost:8080
 
 `Makefile` с целями `up` (`docker compose -f infra/compose.yml up -d --build`), `down`, `test` (`docker compose -f infra/compose.yml exec app ./vendor/bin/pest`), `shell`.
 
-- [ ] **Шаг 5: Проверить**
+- [x] **Шаг 5: Проверить**
 
 Выполнить: `make up`, затем `curl -s localhost:8080/api/v1/health`
 Ожидается: `{"status":"ok","database":true,"redis":true}`.
@@ -422,7 +422,7 @@ SANCTUM_STATEFUL_DOMAINS=localhost:3000,localhost:8080
 Выполнить: `make test`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add infra Makefile apps/api/.env.example && git commit -m "chore: docker compose for development"
