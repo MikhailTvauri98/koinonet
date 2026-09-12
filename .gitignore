@@ -1,0 +1,10 @@
+/.idea/
+/.worktrees/
+/worktrees/
+
+/apps/api/.env
+/apps/api/vendor/
+/apps/api/node_modules/
+
+.DS_Store
+Thumbs.db
