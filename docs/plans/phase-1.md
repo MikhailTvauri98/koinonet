@@ -439,14 +439,14 @@ git add infra Makefile apps/api/.env.example && git commit -m "chore: docker com
 ### Задача 3: Настройки церкви
 
 **Файлы:**
-- Создать: `apps/api/app/Modules/Settings/Database/Migrations/2026_09_12_000100_create_settings_table.php`, `apps/api/app/Modules/Settings/Models/Setting.php`, `apps/api/app/Modules/Settings/ChurchSettings.php`
+- Создать: `apps/api/app/Modules/Settings/Database/Migrations/2026_09_12_000100_create_settings_table.php`, `apps/api/app/Modules/Settings/Models/Setting.php`, `apps/api/app/Modules/Settings/Actions/PutChurchSettings.php`, `apps/api/app/Modules/Settings/ChurchSettings.php`
 - Изменить: `apps/api/app/Providers/AppServiceProvider.php` (регистрация путей миграций модулей)
 - Тест: `apps/api/tests/Feature/Settings/ChurchSettingsTest.php`
 
 **Интерфейсы:**
 - Отдаёт наружу: `ChurchSettings::name(): string`, `timezone(): string`, `phoneRegion(): string`, `all(): array<string, mixed>`, `put(array<string, mixed> $values): void`. Значения по умолчанию: `church.name = 'Церковь'`, `church.timezone = 'UTC'`, `church.phone_region = 'RU'`, `calendar.horizon_weeks = 8`, `calendar.reminder_offsets = ['h24','h2']`. Кеш Redis под ключом `settings`, `put` сбрасывает его.
 
-- [ ] **Шаг 1: Написать падающий тест**
+- [x] **Шаг 1: Написать падающий тест**
 
 `apps/api/tests/Feature/Settings/ChurchSettingsTest.php`:
 
@@ -456,6 +456,10 @@ git add infra Makefile apps/api/.env.example && git commit -m "chore: docker com
 declare(strict_types=1);
 
 use App\Modules\Settings\ChurchSettings;
+use App\Modules\Settings\Models\Setting;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 it('falls back to defaults when nothing is stored', function () {
     expect(app(ChurchSettings::class)->timezone())->toBe('UTC')
@@ -474,14 +478,25 @@ it('rejects an unknown key', function () {
     expect(fn () => app(ChurchSettings::class)->put(['church.colour' => 'blue']))
         ->toThrow(InvalidArgumentException::class);
 });
+
+it('does not store known values when another key is unknown', function () {
+    $settings = app(ChurchSettings::class);
+
+    expect(fn () => $settings->put([
+        'church.name' => 'Дом хлеба',
+        'church.colour' => 'blue',
+    ]))->toThrow(InvalidArgumentException::class);
+
+    expect(Setting::query()->count())->toBe(0);
+});
 ```
 
-- [ ] **Шаг 2: Запустить тест, убедиться что падает**
+- [x] **Шаг 2: Запустить тест, убедиться что падает**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Settings`
 Ожидается: FAIL, класс `ChurchSettings` не найден.
 
-- [ ] **Шаг 3: Миграция и регистрация путей модулей**
+- [x] **Шаг 3: Миграция и регистрация путей модулей**
 
 Миграция:
 
@@ -499,7 +514,7 @@ Schema::create('settings', function (Blueprint $table) {
 $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
 ```
 
-- [ ] **Шаг 4: Реализовать `ChurchSettings`**
+- [x] **Шаг 4: Реализовать `ChurchSettings` и Action записи**
 
 ```php
 <?php
@@ -508,9 +523,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Settings;
 
+use App\Modules\Settings\Actions\PutChurchSettings;
 use App\Modules\Settings\Models\Setting;
 use Illuminate\Support\Facades\Cache;
-use InvalidArgumentException;
 
 final class ChurchSettings
 {
@@ -522,6 +537,8 @@ final class ChurchSettings
         'calendar.horizon_weeks' => 8,
         'calendar.reminder_offsets' => ['h24', 'h2'],
     ];
+
+    public function __construct(private readonly PutChurchSettings $putSettings) {}
 
     public function name(): string
     {
@@ -552,28 +569,19 @@ final class ChurchSettings
     /** @param array<string, mixed> $values */
     public function put(array $values): void
     {
-        foreach ($values as $key => $value) {
-            if (! array_key_exists($key, self::DEFAULTS)) {
-                throw new InvalidArgumentException("Неизвестная настройка: {$key}");
-            }
-
-            Setting::query()->updateOrCreate(
-                ['key' => $key],
-                ['value' => $value, 'updated_at' => now()]
-            );
-        }
-
-        Cache::forget('settings');
+        $this->putSettings->execute($values);
     }
 }
 ```
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+`PutChurchSettings` до записи проверяет все ключи по `ChurchSettings::DEFAULTS`, затем обновляет строки через `Setting::updateOrCreate` и сбрасывает кеш `settings`. Так неизвестный ключ не оставляет частично применённые настройки, а запись в таблицу остаётся внутри `Actions` модуля.
+
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Settings`
-Ожидается: PASS, 3 теста.
+Ожидается: PASS, 4 теста.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add apps/api && git commit -m "feat(settings): church settings table and typed accessor"
