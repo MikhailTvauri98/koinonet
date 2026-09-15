@@ -24,4 +24,4 @@ composer openapi
 
 Проверка состояния API доступна по адресу `GET /api/v1/health`.
 
-Архитектура описана в `docs/architecture.md`, словарь проекта — в `CONTEXT.md`, план первой фазы — в `docs/plans/phase-1.md`.
+Архитектура описана в `docs/architecture.md`, словарь проекта — в `CONTEXT.md`, планы фаз — в `docs/plans/phase-1.md` … `docs/plans/phase-4.md`.

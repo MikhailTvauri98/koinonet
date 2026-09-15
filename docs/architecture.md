@@ -62,7 +62,7 @@ flowchart LR
 | Очереди и расписание | Redis, Horizon, Laravel Scheduler |
 | БД | PostgreSQL 17+ |
 | Медиафайлы | локальный диск через Laravel Storage, отдача через nginx `X-Accel-Redirect` |
-| Пуши | Web Push с VAPID: `laravel-notification-channels/webpush` поверх `minishlink/web-push` |
+| Пуши | Web Push с VAPID: собственный канал уведомлений поверх `minishlink/web-push` (решение плана фазы 2: таблица и учёт ошибок пакета `laravel-notification-channels/webpush` не совпадают с разделом 5.7) |
 | Инфраструктура | Docker Compose, nginx, Let's Encrypt, GitHub Actions с деплоем по SSH |
 
 ## 3. Термины и идентификаторы в коде
@@ -216,7 +216,7 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 ### 5.3 Ministries
 
-`ministries`: `id`, `name` (уникально среди неархивных), `description`, `cover_media_id`, `default_role_id` (FK `roles`, заполняется в той же транзакции, что создаёт служение и его роли; в коде считается обязательным), `chat_id` (FK `chats`, создаётся вместе со служением), `archived_at`, `timestamps`.
+`ministries`: `id`, `name` (уникально среди неархивных), `description`, `cover_media_id`, `default_role_id` (FK `roles`, заполняется в той же транзакции, что создаёт служение и его роли; в коде считается обязательным), `archived_at`, `timestamps`. Колонки `chat_id` у служения нет: связь хранится на стороне Chat в `chats.ministry_id` (`UNIQUE`), потому что чат создаёт модуль Chat, а в `ministries` пишет только Ministries (решение плана фазы 4).
 
 `ministry_members`: `id`, `ministry_id`, `person_id`, `joined_at`, `added_by_user_id`. `UNIQUE (ministry_id, person_id)`, плюс `UNIQUE (id, ministry_id)` для составного ключа ниже.
 
@@ -241,16 +241,15 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 | status | enum `scheduled`, `cancelled` | |
 | cancelled_at | timestamptz, null | |
 | cancel_reason | varchar(500), null | |
-| chat_id | ulid, null | чат события, создаётся по кнопке |
-| created_by_user_id | ulid | |
+| created_by_user_id | ulid, null | `null` после стирания аккаунта |
 | archived_at | timestamptz, null | |
 | timestamps | | |
 
-Индексы: `(starts_at)`, `(ministry_id, starts_at)`, частичный `UNIQUE (template_id, occurrence_date) WHERE template_id IS NOT NULL`.
+Индексы: `(starts_at)`, `(ministry_id, starts_at)`, частичный `UNIQUE (template_id, occurrence_date) WHERE template_id IS NOT NULL`. Колонки `chat_id` у события нет: чат события создаётся по кнопке модулем Chat и хранит связь в `chats.event_id` (`UNIQUE`) (решение планов фаз 3 и 4).
 
 `event_slots`: `id`, `event_id`, `label varchar(100)` (для слота с ролью по умолчанию имя роли, можно переопределить), `resource_type` enum `person`, `role_id` (FK `roles` со `scope = ministry`, null для свободного слота), `required_count smallint > 0`, `sort_order`, `timestamps`. Check: `resource_type = 'person'` (расширяется миграцией при добавлении помещений).
 
-`event_assignments`: `id`, `slot_id`, `resource_type` enum `person`, `person_id` (FK `people`, null), `assigned_by_user_id`, `created_at`. Check: при `resource_type = 'person'` заполнен `person_id`. `UNIQUE (slot_id, person_id)`. Индекс `(person_id)` для поиска пересечений. Слот может быть заполнен сверх `required_count`, интерфейс показывает «3 из 2».
+`event_assignments`: `id`, `slot_id`, `resource_type` enum `person`, `person_id` (FK `people`, null), `assigned_by_user_id` (null после стирания аккаунта), `created_at`. Check: при `resource_type = 'person'` заполнен `person_id`. `UNIQUE (slot_id, person_id)`. Индекс `(person_id)` для поиска пересечений. Слот может быть заполнен сверх `required_count`, интерфейс показывает «3 из 2».
 
 `event_templates`
 
@@ -264,7 +263,7 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 | recurrence | jsonb, null | `null` для шаблона без повторения; иначе `{type, weekday, nth, anchor_date}` |
 | active | bool | неактивный шаблон не генерирует события |
 | generated_until | date, null | до какой даты события уже созданы |
-| created_by_user_id | ulid | |
+| created_by_user_id | ulid, null | `null` после стирания аккаунта |
 | archived_at | timestamptz, null | |
 | timestamps | | |
 
@@ -276,7 +275,7 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 ### 5.5 Announcements
 
-`announcements`: `id`, `scope` enum `church`, `ministry`, `ministry_id` (обязателен при `scope = ministry`), `author_user_id`, `title varchar(200)`, `body text` (подмножество Markdown: абзацы, жирный, курсив, ссылки, списки, заголовки), `pinned_at`, `hide_after date` (null означает «показывать всегда»), `notify_on_publish bool`, `published_at`, `archived_at`, `timestamps`.
+`announcements`: `id`, `scope` enum `church`, `ministry`, `ministry_id` (обязателен при `scope = ministry`), `author_user_id` (null после стирания автора), `title varchar(200)`, `body text` (подмножество Markdown: абзацы, жирный, курсив, ссылки, списки, заголовки), `pinned_at`, `hide_after date` (null означает «показывать всегда»), `notify_on_publish bool`, `published_at`, `archived_at`, `timestamps`.
 
 `announcement_views`: `announcement_id`, `user_id`, `viewed_at`. Первичный ключ по паре. Счётчик просмотров это `count(*)`.
 
@@ -300,9 +299,9 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 `chat_members`: `chat_id`, `user_id`, `is_owner bool` (создатель группы), `muted_until timestamptz null` (null: звук включён; дата в далёком будущем: навсегда), `last_read_message_id`, `joined_at`. Первичный ключ по паре. Выход из группы удаляет строку; из чата служения и события выход невозможен, состав ведёт синхронизация.
 
-`messages`: `id` (ULID, монотонен по времени с точностью до миллисекунды, курсор пагинации это пара `created_at, id`), `chat_id`, `sender_user_id`, `body text null` (до 4000 символов), `reply_to_id` (FK `messages`, null), `edited_at`, `deleted_at` (заглушка «Сообщение удалено», вложения отвязываются и удаляются), `created_at`. Индекс `(chat_id, created_at DESC, id DESC)`. Сообщение без текста обязано иметь вложение, проверяет Action.
+`messages`: `id` (ULID, монотонен по времени с точностью до миллисекунды, курсор пагинации это пара `created_at, id`), `chat_id`, `sender_user_id` (null после стирания отправителя, сообщение остаётся), `body text null` (до 4000 символов), `reply_to_id` (FK `messages`, null), `edited_at`, `deleted_at` (заглушка «Сообщение удалено», вложения отвязываются и удаляются), `created_at`. Индекс `(chat_id, created_at DESC, id DESC)`. Сообщение без текста обязано иметь вложение, проверяет Action.
 
-`chat_pinned_messages`: `chat_id`, `message_id` (`UNIQUE`), `pinned_by_user_id`, `pinned_at`.
+`chat_pinned_messages`: `chat_id`, `message_id` (`UNIQUE`), `pinned_by_user_id` (null после стирания аккаунта), `pinned_at`.
 
 Непрочитанное считается как число сообщений чата с парой `(created_at, id)` больше `last_read_message_id`, не удалённых и не своих. На проектном масштабе считается запросом, денормализация не нужна.
 
@@ -450,7 +449,7 @@ isMember(user, ministry):
 
 ### 7.3 Служение
 
-Создание (`ministries.create`) в одной транзакции: служение, роли «Лидер» (все права служения) и «Участник» (без прав), `default_role_id` на «Участника», чат типа `ministry`. Создатель не становится участником автоматически.
+Создание (`ministries.create`) в одной транзакции: служение, роли «Лидер» (все права служения) и «Участник» (без прав), `default_role_id` на «Участника». Чат типа `ministry` создаёт слушатель модуля Chat на событие `MinistryCreated` в очереди; служениям, созданным до появления модуля Chat, чаты досоздаёт команда `chat:backfill`. Создатель не становится участником автоматически.
 
 Добавление участника (`members.manage`): выбирается человек, выдаётся роль по умолчанию и, по желанию, другие роли. Публикуется `MemberAdded`, Chat добавляет аккаунт человека в чат служения, если аккаунт есть. Исключение публикует `MemberRemoved`, Chat удаляет из чата.
 
@@ -468,7 +467,7 @@ isMember(user, ministry):
 
 Генерация из шаблонов: команда `calendar:materialize` раз в сутки. Для каждого активного шаблона с правилом повторения вычисляются даты вхождений от `generated_until + 1` до `сегодня + horizon_weeks` в часовом поясе церкви, для каждой создаётся событие с копией слотов, `generated_until` сдвигается. Частичный уникальный индекс `(template_id, occurrence_date)` делает повторный запуск безопасным. Отменённые события остаются и не пересоздаются. Правки шаблона не затрагивают созданные события. Подробнее в [ADR-0005](./adr/0005-materialized-events-instead-of-recurrence.md).
 
-Напоминания: команда `calendar:send-reminders` каждые 5 минут. Для каждого вида (`h24`, `h2`) выбираются события со статусом `scheduled`, у которых `starts_at` попадает в окно `[now + offset, now + offset + 5 мин)` и нет записи в `event_reminders`. Назначенным с аккаунтом отправляется уведомление категории `reminders`, записывается `event_reminders`. Назначенный после прохождения окна напоминание этого вида не получает: это принято.
+Напоминания: команда `calendar:send-reminders` каждые 5 минут. Для каждого вида (`h24`, `h2`) выбираются события со статусом `scheduled`, у которых `starts_at` попадает в окно `[now + offset, now + offset + 5 мин)` и нет записи в `event_reminders`. Записывается `event_reminders` и публикуется доменное событие `EventReminderDue`; слушатель в Notifications отправляет назначенным с аккаунтом уведомление категории `reminders`. Назначенный после прохождения окна напоминание этого вида не получает: это принято.
 
 Лента iCal: `GET /api/v1/calendar/feed/{ical_token}.ics` без сессии, по токену аккаунта. Содержит события со статусом `scheduled`, куда назначен человек, в виде VEVENT с названием, местом, слотами человека в описании. Токен можно перевыпустить в настройках.
 
@@ -488,7 +487,7 @@ Markdown очищается на сервере при сохранении (б�
 
 Правка и удаление своих сообщений без ограничения по времени. Удаление ставит `deleted_at`, отвязывает и удаляет медиафайлы, рассылает `MessageDeleted`. Модератор удаляет чужие сообщения, действие попадает в журнал.
 
-Состав: чаты служений и событий синхронизируются слушателями (`MemberAdded`, `MemberRemoved`, `AssignmentCreated`, `AssignmentRemoved`, `UserCreated`). Группу создаёт носитель `chats.create_groups`, становится владельцем, управляет составом и названием, участники могут выйти. Личный чат создаётся лениво первым сообщением; `direct_key` не даёт завести второй чат для той же пары.
+Состав: чаты служений и событий синхронизируются слушателями (`MemberAdded`, `MemberRemoved`, `AssignmentCreated`, `AssignmentRemoved`, `UserCreated`). Группу создаёт носитель `chats.create_groups`, становится владельцем, управляет составом и названием, участники могут выйти; владелец выйти не может, он архивирует группу. Личный чат открывается идемпотентным `POST /chats` с `type = direct`: существующий возвращается, новый создаётся, а пока в нём нет сообщений, он не показывается в списке чатов. `direct_key` не даёт завести второй чат для той же пары.
 
 Новый участник видит всю историю чата. Автоудаления нет. Архивный чат открывается для чтения, писать нельзя.
 
@@ -530,7 +529,7 @@ nginx: `client_max_body_size 100m`. PHP: `upload_max_filesize = 100M`, `post_max
 
 ### 7.9 Стирание персональных данных
 
-Команда `php artisan people:erase {id}` для запроса «удалите меня»: ФИО заменяется на «Удалённый человек», контакты, дата рождения, заметка и фото стираются, аккаунт удаляется вместе с сессиями и подписками, человек архивируется. Участия, назначения и сообщения остаются, но ссылаются на обезличенную запись. Запись в журнал. Через интерфейс операция недоступна намеренно.
+Команда `php artisan people:erase {id}` для запроса «удалите меня»: ФИО заменяется на «Удалённый человек», контакты, дата рождения, заметка и фото стираются, аккаунт удаляется вместе с сессиями и подписками, человек архивируется. Перед удалением аккаунта команда вызывает реализации контракта `Directory\Contracts\AccountEraser`, зарегистрированные модулями тегом `directory.account_erasers`: Notifications удаляет подписки и настройки, Announcements, Calendar и Chat обнуляют авторство и снимают участие в чатах. Участия, назначения и сообщения остаются, но ссылаются на обезличенную запись. Запись в журнал. Через интерфейс операция недоступна намеренно.
 
 ## 8. API
 
@@ -552,9 +551,9 @@ nginx: `client_max_body_size 100m`. PHP: `upload_max_filesize = 100M`, `post_max
 | People | `GET /people` (поиск, фильтры по служению, статусу, архиву, «без ролей»), `POST /people`, `GET /people/{id}`, `PATCH /people/{id}`, `POST /people/{id}/archive`, `POST /people/{id}/restore`, `PUT /people/{id}/roles` (глобальные), `POST /people/{id}/invite`, `POST /people/{id}/password-reset-link`, `POST /people/{id}/disable`, `POST /people/{id}/enable`, `PATCH /me/profile`, `PUT /me/photo`, `PATCH /me/login`, `PATCH /me/password` |
 | Roles | `GET /permissions`, `GET /roles?scope=global`, `POST /roles`, `PATCH /roles/{id}`, `DELETE /roles/{id}`, `GET /roles/{id}/usage` (носители, слоты, шаблоны), `GET /ministries/{id}/roles`, `POST /ministries/{id}/roles` |
 | Ministries | `GET /ministries`, `POST /ministries`, `GET /ministries/{id}`, `PATCH /ministries/{id}` (включая `default_role_id`), `POST /ministries/{id}/archive`, `GET /ministries/{id}/members`, `POST /ministries/{id}/members`, `PUT /ministries/{id}/members/{memberId}/roles`, `DELETE /ministries/{id}/members/{memberId}` |
-| Calendar | `GET /events?from&to&scope=church|ministry:{id}|mine`, `POST /events`, `GET /events/{id}`, `PATCH /events/{id}`, `POST /events/{id}/cancel`, `POST /events/{id}/chat`, `POST /events/{id}/slots`, `PATCH /slots/{id}`, `DELETE /slots/{id}`, `GET /slots/{id}/candidates`, `POST /slots/{id}/assignments`, `DELETE /assignments/{id}`, `GET /templates`, `POST /templates`, `GET /templates/{id}`, `PATCH /templates/{id}`, `POST /templates/{id}/archive`, `POST /templates/{id}/create-event`, `GET /calendar/feed/{token}.ics` (публичный по токену), `POST /me/ical-token/rotate` |
+| Calendar | `GET /events?from&to&scope=church|ministry:{id}|mine`, `POST /events`, `GET /events/{id}`, `PATCH /events/{id}`, `POST /events/{id}/cancel`, `POST /events/{id}/slots`, `PATCH /slots/{id}`, `DELETE /slots/{id}`, `GET /slots/{id}/candidates`, `POST /slots/{id}/assignments`, `DELETE /assignments/{id}`, `GET /templates`, `POST /templates`, `GET /templates/{id}`, `PATCH /templates/{id}`, `POST /templates/{id}/archive`, `POST /templates/{id}/create-event`, `GET /calendar/feed/{token}.ics` (публичный по токену), `POST /me/ical-token/rotate` |
 | Announcements | `GET /announcements?scope&ministry`, `POST /announcements`, `GET /announcements/{id}` (фиксирует просмотр), `PATCH /announcements/{id}`, `POST /announcements/{id}/pin`, `POST /announcements/{id}/unpin`, `POST /announcements/{id}/archive` |
-| Chat | `GET /chats` (с непрочитанным и последним сообщением), `POST /chats` (группа или личный), `GET /chats/{id}`, `PATCH /chats/{id}`, `POST /chats/{id}/members`, `DELETE /chats/{id}/members/{userId}`, `POST /chats/{id}/leave`, `POST /chats/{id}/mute`, `DELETE /chats/{id}/mute`, `POST /chats/{id}/archive`, `GET /chats/{id}/messages?before&limit`, `POST /chats/{id}/messages`, `PATCH /messages/{id}`, `DELETE /messages/{id}`, `POST /chats/{id}/read`, `POST /messages/{id}/pin`, `DELETE /messages/{id}/pin` |
+| Chat | `GET /chats` (с непрочитанным и последним сообщением), `POST /chats` (группа или личный), `POST /events/{id}/chat` (чат события, маршрут модуля Chat), `GET /chats/{id}`, `PATCH /chats/{id}`, `POST /chats/{id}/members`, `DELETE /chats/{id}/members/{userId}`, `POST /chats/{id}/leave`, `POST /chats/{id}/mute`, `DELETE /chats/{id}/mute`, `POST /chats/{id}/archive`, `GET /chats/{id}/messages?before&limit`, `POST /chats/{id}/messages`, `PATCH /messages/{id}`, `DELETE /messages/{id}`, `POST /chats/{id}/read`, `POST /messages/{id}/pin`, `DELETE /messages/{id}/pin` |
 | Notifications | `GET /notifications?cursor`, `POST /notifications/read`, `GET /notification-settings`, `PUT /notification-settings`, `POST /push-subscriptions`, `DELETE /push-subscriptions` |
 | Media | `POST /media`, `GET /media/{id}` (подписанный), `DELETE /media/{id}` (своё непривязанное) |
 | Settings, Audit | `GET /settings` (публичная часть: название, часовой пояс), `PUT /settings`, `GET /audit?cursor&actor&action&subject` |
