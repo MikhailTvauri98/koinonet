@@ -13,6 +13,13 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property string $id
+ * @property string $person_id
+ * @property string|null $phone
+ * @property string|null $email
+ * @property-read Person $person
+ */
 final class User extends Authenticatable
 {
     use HasApiTokens;

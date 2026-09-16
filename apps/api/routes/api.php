@@ -29,3 +29,7 @@ Route::prefix('v1')->group(function (): void {
         ], $ok ? 200 : 503);
     });
 });
+
+foreach (glob(app_path('Modules/*/routes.php')) ?: [] as $file) {
+    Route::prefix('v1')->group($file);
+}

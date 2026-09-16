@@ -13,6 +13,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property string $id
+ * @property string $last_name
+ * @property string $first_name
+ * @property string|null $patronymic
+ * @property PersonStatus $status
+ */
 final class Person extends Model
 {
     /** @use HasFactory<PersonFactory> */

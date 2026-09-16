@@ -939,7 +939,7 @@ git add apps/api && git commit -m "feat(access): core tables for people, users, 
 - Отдаёт наружу: тест-хелпер `actingAsUser(?Person $person = null, array $attributes = []): User` в `tests/Pest.php` — используется всеми последующими задачами.
 - `GET /auth/me` отдаёт `{ user: {id, phone, email}, person: {id, last_name, first_name, patronymic, status}, permissions: {administrator, global: [], ministries: {}} }`. Поле `permissions` в этой задаче — заглушка с пустыми списками, наполняет его задача 6.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Directory/LoginTest.php`:
 
@@ -1021,12 +1021,12 @@ it('logs out', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/LoginTest.php`
 Ожидается: FAIL, маршруты не определены.
 
-- [ ] **Шаг 3: Реализовать вход**
+- [x] **Шаг 3: Реализовать вход**
 
 Хелпер в `tests/Pest.php`:
 
@@ -1091,12 +1091,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
 `SESSION_DRIVER=database`, `SESSION_LIFETIME=525600` (365 дней) уже в `.env.example`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/LoginTest.php`
 Ожидается: PASS, 8 тестов.
 
-- [ ] **Шаг 5: Обновить схему и закоммитить**
+- [x] **Шаг 5: Обновить схему и закоммитить**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(directory): cookie session login, logout, current account"
