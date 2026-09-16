@@ -614,7 +614,7 @@ git add apps/api && git commit -m "feat(settings): church settings table and typ
 - Отдаёт наружу: фабрики `Person::factory()` (состояние `archived()`), `User::factory()->for($person)`, `Role::factory()->global()`, `Role::factory()->system()`, `Role::factory()->ministry(string $ministryId)`, `Role::factory()->withPermissions(list<Permission> $permissions)` — последнее состояние создаёт строки `role_permissions` вместе с ролью и используется во всех тестах прав.
 - Потребляет: `ChurchSettings::phoneRegion()` из задачи 3.
 
-- [ ] **Шаг 1: Написать падающие тесты схемы**
+- [x] **Шаг 1: Написать падающие тесты схемы**
 
 `tests/Feature/Access/CoreSchemaTest.php`:
 
@@ -695,12 +695,12 @@ it('rejects gibberish', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/CoreSchemaTest.php tests/Unit/PhoneTest.php`
 Ожидается: FAIL, таблиц и классов нет.
 
-- [ ] **Шаг 3: Миграции**
+- [x] **Шаг 3: Миграции**
 
 `people`:
 
@@ -810,7 +810,7 @@ Schema::create('audit_entries', function (Blueprint $table) {
 });
 ```
 
-- [ ] **Шаг 4: Модели, перечисления, фабрики**
+- [x] **Шаг 4: Модели, перечисления, фабрики**
 
 `Person`:
 
@@ -906,12 +906,12 @@ final class Phone
 
 Установить зависимость: `composer require giggsey/libphonenumber-for-php`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/CoreSchemaTest.php tests/Unit/PhoneTest.php`
 Ожидается: PASS, 9 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add apps/api && git commit -m "feat(access): core tables for people, users, roles, audit"
