@@ -54,7 +54,9 @@ final class Person extends Model
     /** @return BelongsToMany<Role, $this> */
     public function globalRoles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'person_roles');
+        return $this->belongsToMany(Role::class, 'person_roles')
+            ->withPivot('assigned_by_user_id')
+            ->withTimestamps(null, false);
     }
 
     public function fullName(): string

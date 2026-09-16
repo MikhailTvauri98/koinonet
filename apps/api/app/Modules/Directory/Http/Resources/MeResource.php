@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Directory\Http\Resources;
 
+use App\Modules\Access\Http\Resources\UserPermissionsResource;
+use App\Modules\Access\PermissionResolver;
 use App\Modules\Directory\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use stdClass;
 
 /** @mixin User */
 final class MeResource extends JsonResource
@@ -18,7 +19,7 @@ final class MeResource extends JsonResource
      * @return array{
      *     user: array{id: string, phone: string|null, email: string|null},
      *     person: array{id: string, last_name: string, first_name: string, patronymic: string|null, status: string},
-     *     permissions: array{administrator: bool, global: list<string>, ministries: stdClass}
+     *     permissions: UserPermissionsResource
      * }
      */
     public function toArray(Request $request): array
@@ -27,6 +28,7 @@ final class MeResource extends JsonResource
         assert($user instanceof User);
 
         $person = $user->person;
+        $permissions = app(PermissionResolver::class)->for($user);
 
         return [
             'user' => [
@@ -41,11 +43,7 @@ final class MeResource extends JsonResource
                 'patronymic' => $person->patronymic,
                 'status' => $person->status->value,
             ],
-            'permissions' => [
-                'administrator' => false,
-                'global' => [],
-                'ministries' => new stdClass,
-            ],
+            'permissions' => new UserPermissionsResource($permissions),
         ];
     }
 }

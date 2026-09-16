@@ -1126,7 +1126,7 @@ composer openapi && git add . && git commit -m "feat(directory): cookie session 
 - Отдаёт наружу: `interface MinistryPermissionSource { /** @return array<string, list<string>> */ public function forPerson(string $personId): array; }`. В этой задаче связан с `EmptyMinistryPermissionSource`; задача 19 подменяет реализацию.
 - Отдаёт наружу: `GET /api/v1/permissions`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Unit/Access/PermissionCatalogTest.php`:
 
@@ -1251,12 +1251,12 @@ it('returns the catalogue grouped by scope', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Access tests/Feature/Access`
 Ожидается: FAIL, классов нет.
 
-- [ ] **Шаг 3: Каталог прав**
+- [x] **Шаг 3: Каталог прав**
 
 Объявляются только ключи, проверяемые в фазе 1 (решение планирования 5).
 
@@ -1351,7 +1351,7 @@ enum Permission: string
 }
 ```
 
-- [ ] **Шаг 4: Резолвер и кеш**
+- [x] **Шаг 4: Резолвер и кеш**
 
 ```php
 <?php
@@ -1446,16 +1446,16 @@ final class PermissionResolver
 
 `EmptyMinistryPermissionSource::forPerson()` возвращает `[]`. Привязка в `AppServiceProvider`.
 
-- [ ] **Шаг 5: Эндпоинт каталога и права в `/auth/me`**
+- [x] **Шаг 5: Эндпоинт каталога и права в `/auth/me`**
 
 `GET /permissions` отдаёт `data: [{key, scope, label, description}]`. `MeResource` подставляет `PermissionResolver::for($user)`.
 
-- [ ] **Шаг 6: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 6: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Access tests/Feature/Access`
 Ожидается: PASS.
 
-- [ ] **Шаг 7: Коммит**
+- [x] **Шаг 7: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(access): permission catalogue, resolver and cache"

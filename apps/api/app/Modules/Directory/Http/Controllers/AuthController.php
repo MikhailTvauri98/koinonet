@@ -9,6 +9,8 @@ use App\Modules\Directory\Http\Resources\MeResource;
 use App\Modules\Directory\Models\User;
 use App\Support\DomainRuleException;
 use App\Support\Phone;
+use Dedoc\Scramble\Attributes\Response as OpenApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +19,10 @@ use Illuminate\Validation\ValidationException;
 
 final class AuthController
 {
-    public function login(LoginRequest $request): MeResource
+    private const string ME_RESPONSE = 'array{user: array{id: string, phone: string|null, email: string|null}, person: array{id: string, last_name: string, first_name: string, patronymic: string|null, status: string}, permissions: array{administrator: bool, global: list<string>, ministries: array<string, list<string>>}}';
+
+    #[OpenApiResponse(type: self::ME_RESPONSE)]
+    public function login(LoginRequest $request): JsonResponse
     {
         $login = trim($request->string('login')->toString());
         $candidate = filter_var($login, FILTER_VALIDATE_EMAIL)
@@ -40,7 +45,7 @@ final class AuthController
         $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->save();
 
-        return new MeResource($user->load('person'));
+        return (new MeResource($user->load('person')))->response();
     }
 
     public function logout(Request $request): Response
@@ -52,11 +57,12 @@ final class AuthController
         return response()->noContent();
     }
 
-    public function me(Request $request): MeResource
+    #[OpenApiResponse(type: self::ME_RESPONSE)]
+    public function me(Request $request): JsonResponse
     {
         $user = $request->user();
         assert($user instanceof User);
 
-        return new MeResource($user->load('person'));
+        return (new MeResource($user->load('person')))->response();
     }
 }
