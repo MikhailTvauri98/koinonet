@@ -877,6 +877,81 @@
                     }
                 }
             }
+        },
+        "/settings": {
+            "get": {
+                "operationId": "settings.index",
+                "tags": [
+                    "Settings"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`SettingsResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SettingsResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "settings.update",
+                "tags": [
+                    "Settings"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSettingsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`SettingsResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SettingsResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1127,6 +1202,40 @@
                     "permissions"
                 ],
                 "title": "RoleResource"
+            },
+            "SettingsResource": {
+                "type": "object",
+                "properties": {
+                    "church_name": {
+                        "type": "string"
+                    },
+                    "timezone": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "church_name",
+                    "timezone"
+                ],
+                "title": "SettingsResource"
+            },
+            "UpdateSettingsRequest": {
+                "type": "object",
+                "properties": {
+                    "church_name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "timezone": {
+                        "type": "string"
+                    },
+                    "phone_region": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 2
+                    }
+                },
+                "title": "UpdateSettingsRequest"
             },
             "UserPermissionsResource": {
                 "type": "object",

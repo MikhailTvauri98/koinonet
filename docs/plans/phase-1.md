@@ -1995,7 +1995,7 @@ composer openapi && git add . && git commit -m "feat(access): global role assign
 **Интерфейсы:**
 - Отдаёт наружу: `GET /api/v1/settings` — публичная часть (`church.name`, `church.timezone`), доступна любому активному аккаунту; `PUT /api/v1/settings` — право `settings.manage`, пишет журнал.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2045,21 +2045,21 @@ it('records the change in the journal', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Settings/SettingsEndpointTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `UpdateSettingsRequest`: `timezone` — `timezone:all`, `phone_region` — `size:2|alpha`, `church_name` — `string|max:100`. Контроллер складывает поля в ключи `church.*` и вызывает `ChurchSettings::put`, затем `AuditLogger::record('settings.changed', null, ['before' => ..., 'after' => ...])`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Settings`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(settings): settings endpoints with audit"

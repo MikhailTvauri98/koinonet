@@ -13,6 +13,8 @@ use App\Modules\Access\Models\AuditEntry;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Policies\AuditPolicy;
 use App\Modules\Access\Policies\RolePolicy;
+use App\Modules\Settings\Models\Setting;
+use App\Modules\Settings\Policies\SettingsPolicy;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -35,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
+        Gate::policy(Setting::class, SettingsPolicy::class);
         Event::listen(PersonRolesChanged::class, BumpPermissionCache::class);
         Event::listen(RoleDeleted::class, BumpPermissionCache::class);
     }

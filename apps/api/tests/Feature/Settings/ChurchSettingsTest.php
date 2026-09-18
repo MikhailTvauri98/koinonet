@@ -5,8 +5,13 @@ declare(strict_types=1);
 use App\Modules\Settings\ChurchSettings;
 use App\Modules\Settings\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function (): void {
+    Cache::forget('settings');
+});
 
 it('falls back to defaults when nothing is stored', function () {
     expect(app(ChurchSettings::class)->timezone())->toBe('UTC')
