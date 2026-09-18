@@ -2480,10 +2480,10 @@ composer openapi && git add . && git commit -m "feat(directory): people index wi
 - Отдаёт наружу: `POST /people/{id}/password-reset-link` → тот же формат, срок 24 часа.
 - Отдаёт наружу: публичные `GET /access-links/{token}` → `{kind, person: {first_name, last_name}, login_hint: {phone, email}}` и `POST /access-links/{token}/accept` с телом `{login, password, password_confirmation}`; для `kind = password_reset` поле `login` не принимается — логин у аккаунта уже есть.
 - Отдаёт наружу: `UserCreated(string $userId, string $personId)`.
-- Коды ошибок: `invite.person_has_no_global_role`, `invite.person_has_account`, `invite.person_archived`, `access_link.invalid`, `access_link.expired`, `access_link.used`, `login.taken`.
+- Коды ошибок: `invite.person_has_no_global_role`, `invite.person_has_account`, `invite.person_archived`, `password_reset.person_has_no_account`, `access_link.invalid`, `access_link.expired`, `access_link.used`, `access_link.revoked`, `login.taken`.
 - Решение внутри задачи: создание новой ссылки того же вида помечает прежние неиспользованные ссылки этого человека как отозванные (`revoked_at`). Иначе старая ссылка, разосланная по ошибке, остаётся рабочей.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2633,12 +2633,12 @@ it('resets a password through a reset link', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/InvitationTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Миграция**
+- [x] **Шаг 3: Миграция**
 
 ```php
 Schema::create('access_links', function (Blueprint $table) {
@@ -2659,7 +2659,7 @@ DB::statement("ALTER TABLE access_links ADD CONSTRAINT access_links_kind_check
     CHECK (kind IN ('invite', 'password_reset'))");
 ```
 
-- [ ] **Шаг 4: Реализовать создание ссылки**
+- [x] **Шаг 4: Реализовать создание ссылки**
 
 ```php
 final class CreateInvitation
@@ -2708,12 +2708,12 @@ final class CreateInvitation
 
 `AcceptAccessLink` в одной транзакции: находит ссылку по `hash('sha256', $token)`, проверяет `revoked_at`, `used_at`, `expires_at`; для `invite` — нормализует логин, проверяет занятость (`login.taken`), создаёт `User`, помечает ссылку использованной, публикует `UserCreated`, логинит; для `password_reset` — меняет пароль, помечает ссылку, завершает прочие сессии аккаунта.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/InvitationTest.php`
-Ожидается: PASS, 12 тестов.
+Ожидается: PASS, 20 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(directory): invitations and password reset links"

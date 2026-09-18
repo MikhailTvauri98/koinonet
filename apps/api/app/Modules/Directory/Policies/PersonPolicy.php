@@ -43,4 +43,14 @@ final readonly class PersonPolicy
     {
         return $this->permissions->can($user, Permission::PeopleManage);
     }
+
+    public function invite(User $user, Person $person): bool
+    {
+        return $this->permissions->can($user, Permission::PeopleInvite);
+    }
+
+    public function createPasswordResetLink(User $user, Person $person): bool
+    {
+        return $this->permissions->can($user, Permission::PeopleInvite);
+    }
 }
