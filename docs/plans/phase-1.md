@@ -1840,7 +1840,7 @@ composer openapi && git add . && git commit -m "feat(access): global role editor
 - Отдаёт наружу: `PUT /api/v1/people/{id}/roles` с телом `{ "role_ids": ["..."] }`.
 - Коды ошибок: `role.scope_not_global`, `role.last_administrator`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1911,12 +1911,12 @@ it('invalidates the permission cache of the affected account', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/PersonRolesTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать `SetPersonRoles`**
+- [x] **Шаг 3: Реализовать `SetPersonRoles`**
 
 ```php
 final class SetPersonRoles
@@ -1967,12 +1967,12 @@ final class SetPersonRoles
 
 `BumpPermissionCache` слушает `PersonRolesChanged` и `RoleDeleted`, вызывает `PermissionCache::bump`. Слушатель ставится в очередь (`ShouldQueue`), в тестах очередь синхронная.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/PersonRolesTest.php`
 Ожидается: PASS, 6 тестов.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(access): global role assignment with last-administrator guard"

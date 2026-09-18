@@ -6,10 +6,14 @@ namespace App\Providers;
 
 use App\Modules\Access\Contracts\MinistryPermissionSource;
 use App\Modules\Access\EmptyMinistryPermissionSource;
+use App\Modules\Access\Events\PersonRolesChanged;
+use App\Modules\Access\Events\RoleDeleted;
+use App\Modules\Access\Listeners\BumpPermissionCache;
 use App\Modules\Access\Models\AuditEntry;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Policies\AuditPolicy;
 use App\Modules\Access\Policies\RolePolicy;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,5 +35,7 @@ class AppServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
+        Event::listen(PersonRolesChanged::class, BumpPermissionCache::class);
+        Event::listen(RoleDeleted::class, BumpPermissionCache::class);
     }
 }

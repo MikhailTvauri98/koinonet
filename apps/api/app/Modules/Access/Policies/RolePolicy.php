@@ -39,6 +39,11 @@ final readonly class RolePolicy
         return $this->canManage($user, $role->scope, $role->ministry_id);
     }
 
+    public function assignGlobalRoles(User $user): bool
+    {
+        return $this->permissions->can($user, Permission::RolesManageGlobal);
+    }
+
     private function canManage(User $user, RoleScope $scope, ?string $ministryId): bool
     {
         if ($scope === RoleScope::Global) {
