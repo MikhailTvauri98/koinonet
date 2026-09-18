@@ -2087,7 +2087,7 @@ composer openapi && git add . && git commit -m "feat(settings): settings endpoin
 - Отдаёт наружу: `PersonCreated(string $personId)`, `PersonArchived(string $personId)`.
 - Коды ошибок: `person.archived` (правка архивного человека).
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2175,12 +2175,12 @@ it('writes archiving to the journal', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/PersonCrudTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать Actions и предупреждения о дубликатах**
+- [x] **Шаг 3: Реализовать Actions и предупреждения о дубликатах**
 
 ```php
 final class CreatePerson
@@ -2219,12 +2219,12 @@ final class CreatePerson
 
 `ArchivePerson` ставит `archived_at`, пишет журнал, публикует `PersonArchived`. `UpdatePerson` бросает `person.archived`, если `archived_at` задан.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/PersonCrudTest.php`
 Ожидается: PASS, 8 тестов.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(directory): person card create, update, archive, restore"

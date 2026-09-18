@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $first_name
  * @property string|null $patronymic
  * @property PersonStatus $status
+ * @property Carbon|null $archived_at
  */
 final class Person extends Model
 {

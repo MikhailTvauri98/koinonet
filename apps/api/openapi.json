@@ -531,6 +531,297 @@
                 }
             }
         },
+        "/people": {
+            "post": {
+                "operationId": "person.store",
+                "tags": [
+                    "Person"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StorePersonRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`PersonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PersonResource"
+                                        },
+                                        "warnings": {
+                                            "type": "array",
+                                            "items": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "code": {
+                                                                "type": "string",
+                                                                "const": "person.duplicate_phone"
+                                                            },
+                                                            "message": {
+                                                                "type": "string",
+                                                                "const": "\u0427\u0435\u043b\u043e\u0432\u0435\u043a \u0441 \u0442\u0430\u043a\u0438\u043c \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u043e\u043c \u0443\u0436\u0435 \u0435\u0441\u0442\u044c."
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "code",
+                                                            "message"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "code": {
+                                                                "type": "string",
+                                                                "const": "person.duplicate_email"
+                                                            },
+                                                            "message": {
+                                                                "type": "string",
+                                                                "const": "\u0427\u0435\u043b\u043e\u0432\u0435\u043a \u0441 \u0442\u0430\u043a\u043e\u0439 \u043f\u043e\u0447\u0442\u043e\u0439 \u0443\u0436\u0435 \u0435\u0441\u0442\u044c."
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "code",
+                                                            "message"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "warnings"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/people/{person}": {
+            "get": {
+                "operationId": "person.show",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "The person ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PersonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PersonResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "person.update",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "The person ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePersonRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`PersonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PersonResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/people/{person}/archive": {
+            "post": {
+                "operationId": "person.archive",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "The person ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PersonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PersonResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/people/{person}/restore": {
+            "post": {
+                "operationId": "person.restore",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "The person ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PersonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PersonResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/people/{person}/roles": {
             "put": {
                 "operationId": "access.personRole",
@@ -1123,6 +1414,62 @@
                 ],
                 "title": "PermissionResource"
             },
+            "PersonResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    },
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "patronymic": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "has_account": {
+                        "type": "boolean"
+                    },
+                    "has_global_roles": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "last_name",
+                    "first_name",
+                    "patronymic",
+                    "full_name",
+                    "status",
+                    "archived",
+                    "has_account",
+                    "has_global_roles"
+                ],
+                "title": "PersonResource"
+            },
+            "PersonStatus": {
+                "type": "string",
+                "enum": [
+                    "member",
+                    "attendee",
+                    "guest"
+                ],
+                "title": "PersonStatus"
+            },
             "RoleRequest": {
                 "type": "object",
                 "properties": {
@@ -1218,6 +1565,115 @@
                     "timezone"
                 ],
                 "title": "SettingsResource"
+            },
+            "StorePersonRequest": {
+                "type": "object",
+                "properties": {
+                    "last_name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "patronymic": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 100
+                    },
+                    "phone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 100
+                    },
+                    "email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "email",
+                        "maxLength": 254
+                    },
+                    "birth_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PersonStatus"
+                    },
+                    "note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "last_name",
+                    "first_name",
+                    "status"
+                ],
+                "title": "StorePersonRequest"
+            },
+            "UpdatePersonRequest": {
+                "type": "object",
+                "properties": {
+                    "last_name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "patronymic": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 100
+                    },
+                    "phone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 100
+                    },
+                    "email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "email",
+                        "maxLength": 254
+                    },
+                    "birth_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PersonStatus"
+                    },
+                    "note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "title": "UpdatePersonRequest"
             },
             "UpdateSettingsRequest": {
                 "type": "object",
