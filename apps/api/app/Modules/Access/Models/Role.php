@@ -6,6 +6,7 @@ namespace App\Modules\Access\Models;
 
 use App\Modules\Access\RoleScope;
 use App\Modules\Directory\Models\Person;
+use App\Modules\Directory\Models\User;
 use Database\Factories\RoleFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id
+ * @property RoleScope $scope
+ * @property string|null $ministry_id
+ * @property string $name
+ * @property string|null $description
+ * @property bool $is_system
+ */
 final class Role extends Model
 {
     /** @use HasFactory<RoleFactory> */
@@ -48,5 +57,17 @@ final class Role extends Model
     public function permissions(): HasMany
     {
         return $this->hasMany(RolePermission::class);
+    }
+
+    /** @return list<string> */
+    public function carrierUserIds(): array
+    {
+        return User::query()
+            ->whereIn(
+                'person_id',
+                PersonRole::query()->where('role_id', $this->id)->select('person_id'),
+            )
+            ->pluck('id')
+            ->all();
     }
 }

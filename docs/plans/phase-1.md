@@ -1630,7 +1630,7 @@ composer openapi && git add . && git commit -m "feat(access): audit log writer a
 - Отдаёт наружу: `GET /roles?scope=global`, `POST /roles`, `PATCH /roles/{id}`, `DELETE /roles/{id}`, `GET /roles/{id}/usage`.
 - Коды доменных ошибок: `role.system_immutable`, `role.permission_scope_mismatch`, `role.name_taken`, `role.in_use`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1733,12 +1733,12 @@ it('writes role changes to the journal', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/GlobalRoleTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать Actions**
+- [x] **Шаг 3: Реализовать Actions**
 
 `SetRolePermissions` — единственное место, где проверяется совпадение областей:
 
@@ -1803,16 +1803,16 @@ final class DeleteRole
 
 `Role::carrierUserIds(): list<string>` — идентификаторы аккаунтов людей-носителей роли (для глобальной роли через `person_roles`, для роли служения — через `ministry_member_roles`, задача 17 дополнит метод).
 
-- [ ] **Шаг 4: Контроллер, запросы, политика, маршруты**
+- [x] **Шаг 4: Контроллер, запросы, политика, маршруты**
 
 `RolePolicy` для глобальных ролей опирается на `Permission::RolesManageGlobal`, для ролей служения — на `Permission::RolesManage` в области роли (задача 18 подключит эту ветку). `RoleRequest` проверяет, что каждое значение `permissions` есть в `Permission::cases()`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/GlobalRoleTest.php`
 Ожидается: PASS, 10 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(access): global role editor with invariants"
