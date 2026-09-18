@@ -1482,7 +1482,7 @@ composer openapi && git add . && git commit -m "feat(access): permission catalog
 - Отдаёт наружу: `AuditLogger::record(string $action, ?Model $subject = null, array $payload = []): void` — берёт актора из `auth()->user()` (null для консоли) и IP из запроса. Все последующие задачи пишут журнал только через него.
 - Отдаёт наружу: `GET /api/v1/audit?cursor&actor&action&subject_type&subject_id&from&to` — курсорная пагинация, право `audit.view`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1540,7 +1540,7 @@ it('filters by action', function () {
 });
 ```
 
-- [ ] **Шаг 2: Добавить хелпер `actingAsUserWith`**
+- [x] **Шаг 2: Добавить хелпер `actingAsUserWith`**
 
 В `tests/Pest.php` — используется дальше во всех задачах:
 
@@ -1568,12 +1568,12 @@ function actingAsAdministrator(): User
 }
 ```
 
-- [ ] **Шаг 3: Запустить тесты, убедиться что падают**
+- [x] **Шаг 3: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/AuditTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 4: Реализовать**
+- [x] **Шаг 4: Реализовать**
 
 ```php
 final class AuditLogger
@@ -1596,12 +1596,12 @@ final class AuditLogger
 
 Контроллер: `AuditEntry::query()->latest('created_at')->latest('id')` с фильтрами и `cursorPaginate(50)`. Политика: `Gate::allows` через `PermissionResolver::can($user, Permission::AuditView)`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Access/AuditTest.php`
 Ожидается: PASS, 5 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(access): audit log writer and journal endpoint"
