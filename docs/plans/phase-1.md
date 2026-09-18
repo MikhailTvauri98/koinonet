@@ -2250,7 +2250,7 @@ composer openapi && git add . && git commit -m "feat(directory): person card cre
 - Отдаёт наружу: `PersonVisibility::canSeeContacts(User $viewer, Person $person): bool`, `canSeeNotes(User $viewer, Person $person): bool`. Заметку видит носитель `people.view_notes`, но не о самом себе: «сам человек свою заметку не видит» (CONTEXT.md, «Заметка»).
 - Отдаёт наружу: `interface SharedMinistryFinder { /** @return list<string> */ public function sharedMinistryIds(string $viewerPersonId, string $subjectPersonId): array; }`. Здесь связан с `NoSharedMinistryFinder` (пустой список); задача 19 подменяет реализацию, фильтр `?ministry=` добавляет задача 17.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Directory/PersonIndexTest.php`:
 
@@ -2388,12 +2388,12 @@ it('shows notes about other people with people.view_notes', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать видимость**
+- [x] **Шаг 3: Реализовать видимость**
 
 ```php
 final class PersonVisibility
@@ -2437,7 +2437,7 @@ final class PersonVisibility
 }
 ```
 
-- [ ] **Шаг 4: Реализовать список**
+- [x] **Шаг 4: Реализовать список**
 
 Поиск через уже созданный GIN-индекс:
 
@@ -2449,12 +2449,12 @@ $query->when($search !== null, fn ($q) => $q->whereRaw(
 
 `without_roles`: `whereNotExists` по `person_roles`. По умолчанию `whereNull('archived_at')`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory`
 Ожидается: PASS, 13 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(directory): people index with trigram search and contact visibility"

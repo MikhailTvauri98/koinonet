@@ -13,9 +13,15 @@ final readonly class PersonPolicy
 {
     public function __construct(private PermissionResolver $permissions) {}
 
-    public function view(User $user, Person $person): bool
+    public function viewAny(User $user): bool
     {
         return $this->permissions->can($user, Permission::PeopleView);
+    }
+
+    public function view(User $user, Person $person): bool
+    {
+        return (! $user->isDisabled() && $user->person_id === $person->id)
+            || $this->permissions->can($user, Permission::PeopleView);
     }
 
     public function create(User $user): bool

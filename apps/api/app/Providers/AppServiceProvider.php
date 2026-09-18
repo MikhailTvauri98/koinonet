@@ -13,7 +13,9 @@ use App\Modules\Access\Models\AuditEntry;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Policies\AuditPolicy;
 use App\Modules\Access\Policies\RolePolicy;
+use App\Modules\Directory\Contracts\SharedMinistryFinder;
 use App\Modules\Directory\Models\Person;
+use App\Modules\Directory\NoSharedMinistryFinder;
 use App\Modules\Directory\Policies\PersonPolicy;
 use App\Modules\Settings\Models\Setting;
 use App\Modules\Settings\Policies\SettingsPolicy;
@@ -29,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(MinistryPermissionSource::class, EmptyMinistryPermissionSource::class);
+        $this->app->bind(SharedMinistryFinder::class, NoSharedMinistryFinder::class);
     }
 
     /**

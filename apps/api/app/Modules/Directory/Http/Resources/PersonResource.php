@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Directory\Http\Resources;
 
 use App\Modules\Directory\Models\Person;
+use App\Modules\Directory\Models\User;
+use App\Modules\Directory\PersonVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,13 +23,18 @@ final class PersonResource extends JsonResource
      *     status: string,
      *     archived: bool,
      *     has_account: bool,
-     *     has_global_roles: bool
+     *     has_global_roles: bool,
+     *     contacts?: array{phone: string|null, email: string|null, birth_date: string|null},
+     *     note?: string|null
      * }
      */
     public function toArray(Request $request): array
     {
         $person = $this->resource;
         assert($person instanceof Person);
+        $viewer = $request->user();
+        assert($viewer instanceof User);
+        $visibility = app(PersonVisibility::class);
 
         return [
             'id' => $person->id,
@@ -39,6 +46,18 @@ final class PersonResource extends JsonResource
             'archived' => $person->archived_at !== null,
             'has_account' => (bool) $person->getAttribute('user_exists'),
             'has_global_roles' => (bool) $person->getAttribute('global_roles_exists'),
+            'contacts' => $this->when(
+                $visibility->canSeeContacts($viewer, $person),
+                [
+                    'phone' => $person->phone,
+                    'email' => $person->email,
+                    'birth_date' => $person->birth_date?->format('Y-m-d'),
+                ],
+            ),
+            'note' => $this->when(
+                $visibility->canSeeNotes($viewer, $person),
+                $person->note,
+            ),
         ];
     }
 }

@@ -19,7 +19,12 @@ use Illuminate\Support\Carbon;
  * @property string $last_name
  * @property string $first_name
  * @property string|null $patronymic
+ * @property string|null $phone
+ * @property string|null $email
+ * @property Carbon|null $birth_date
  * @property PersonStatus $status
+ * @property string|null $note
+ * @property bool $contacts_public
  * @property Carbon|null $archived_at
  */
 final class Person extends Model
