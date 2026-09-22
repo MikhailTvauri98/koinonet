@@ -42,5 +42,21 @@ jobs:
       - run: composer lint
       - run: composer types
       - run: composer test
+        env:
+          # The job runs on the runner itself, not inside a container on the
+          # compose network, so these services are reachable at localhost
+          # (ports mapped above), not by service name. phpunit.xml's DB_*
+          # env vars have no force="true", so a real env var here beats its
+          # sqlite default, same as infra/compose.yml's container env
+          # already does for `docker compose exec app`.
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: church_test
+          DB_USERNAME: church
+          DB_PASSWORD: secret
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+          CACHE_STORE: redis
       - name: OpenAPI schema is up to date
         run: composer openapi && git diff --exit-code openapi.json
