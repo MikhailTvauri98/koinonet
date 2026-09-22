@@ -24,6 +24,7 @@ final class PersonResource extends JsonResource
      *     archived: bool,
      *     has_account: bool,
      *     has_global_roles: bool,
+     *     account_disabled: bool,
      *     contacts?: array{phone: string|null, email: string|null, birth_date: string|null},
      *     note?: string|null
      * }
@@ -46,6 +47,7 @@ final class PersonResource extends JsonResource
             'archived' => $person->archived_at !== null,
             'has_account' => (bool) $person->getAttribute('user_exists'),
             'has_global_roles' => (bool) $person->getAttribute('global_roles_exists'),
+            'account_disabled' => (bool) $person->getAttribute('account_disabled'),
             'contacts' => $this->when(
                 $visibility->canSeeContacts($viewer, $person),
                 [

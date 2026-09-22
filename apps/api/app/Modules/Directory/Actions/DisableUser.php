@@ -10,6 +10,7 @@ use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Support\DomainRuleException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final readonly class DisableUser
 {
@@ -24,9 +25,10 @@ final readonly class DisableUser
                 throw DomainRuleException::because('user.no_account', 'У человека нет аккаунта.');
             }
 
-            if (! $user->isDisabled()) {
-                $user->forceFill(['disabled_at' => now()])->save();
-            }
+            $user->forceFill([
+                'disabled_at' => $user->isDisabled() ? $user->disabled_at : now(),
+                'remember_token' => Str::random(60),
+            ])->save();
 
             DB::table('sessions')->where('user_id', $user->id)->delete();
             $this->audit->record('user.disabled', $user, ['person_id' => $person->id]);

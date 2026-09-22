@@ -19,7 +19,7 @@ final class PersonIndexQuery
         $search = $filters['search'] ?? null;
 
         return Person::query()
-            ->withExists(['user', 'globalRoles'])
+            ->withCardFlags()
             ->when(
                 $search !== null,
                 fn (Builder $query): Builder => $query

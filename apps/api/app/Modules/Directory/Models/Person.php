@@ -7,6 +7,7 @@ namespace App\Modules\Directory\Models;
 use App\Modules\Access\Models\Role;
 use App\Modules\Directory\PersonStatus;
 use Database\Factories\PersonFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -50,6 +51,31 @@ final class Person extends Model
             'contacts_public' => 'boolean',
             'archived_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Existence flags every person card shows: account, global roles, disabled account.
+     *
+     * @return array<int|string, string|callable>
+     */
+    private static function cardFlags(): array
+    {
+        return [
+            'user',
+            'globalRoles',
+            'user as account_disabled' => fn (Builder $query) => $query->whereNotNull('disabled_at'),
+        ];
+    }
+
+    public function loadCardFlags(): self
+    {
+        return $this->loadExists(self::cardFlags());
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeWithCardFlags(Builder $query): void
+    {
+        $query->withExists(self::cardFlags());
     }
 
     /** @return HasOne<User, $this> */

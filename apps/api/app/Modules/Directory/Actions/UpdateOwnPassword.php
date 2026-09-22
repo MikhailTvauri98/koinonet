@@ -8,6 +8,7 @@ use App\Modules\Directory\Models\User;
 use App\Support\DomainRuleException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 final readonly class UpdateOwnPassword
 {
@@ -17,7 +18,10 @@ final readonly class UpdateOwnPassword
             throw DomainRuleException::because('auth.invalid_password', 'Неверный текущий пароль.');
         }
 
-        $user->forceFill(['password' => Hash::make($password)])->save();
+        $user->forceFill([
+            'password' => Hash::make($password),
+            'remember_token' => Str::random(60),
+        ])->save();
 
         DB::table('sessions')
             ->where('user_id', $user->id)

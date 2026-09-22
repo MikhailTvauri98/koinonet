@@ -96,6 +96,6 @@ final class PersonController
 
     private function withFlags(Person $person): Person
     {
-        return $person->loadExists(['user', 'globalRoles']);
+        return $person->loadCardFlags();
     }
 }

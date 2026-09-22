@@ -2237,6 +2237,9 @@
                     "has_global_roles": {
                         "type": "boolean"
                     },
+                    "account_disabled": {
+                        "type": "boolean"
+                    },
                     "contacts": {
                         "type": "object",
                         "properties": {
@@ -2281,7 +2284,8 @@
                     "status",
                     "archived",
                     "has_account",
-                    "has_global_roles"
+                    "has_global_roles",
+                    "account_disabled"
                 ],
                 "title": "PersonResource"
             },

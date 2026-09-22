@@ -161,3 +161,29 @@ it('records disabling and enabling in the journal', function () {
         ->and($entries->pluck('actor_user_id')->unique()->all())->toBe([$actor->id])
         ->and($entries->pluck('subject_id')->unique()->all())->toBe([$victim->id]);
 });
+
+it('cuts the remember-me token of a disabled account', function () {
+    actingAsUserWith([Permission::PeopleInvite]);
+    $person = Person::factory()->create();
+    $victim = User::factory()->for($person)->create(['remember_token' => 'old-token']);
+
+    $this->postJson("/api/v1/people/{$person->id}/disable")->assertOk();
+
+    expect($victim->fresh()->remember_token)->not->toBe('old-token');
+});
+
+it('marks the disabled account on the person card and in the list', function () {
+    actingAsUserWith([Permission::PeopleInvite, Permission::PeopleView]);
+    $person = Person::factory()->create();
+    User::factory()->for($person)->create();
+
+    $this->postJson("/api/v1/people/{$person->id}/disable")
+        ->assertOk()->assertJsonPath('data.account_disabled', true);
+    $this->getJson("/api/v1/people/{$person->id}")
+        ->assertOk()->assertJsonPath('data.account_disabled', true);
+    $this->getJson('/api/v1/people?search='.$person->last_name)
+        ->assertOk()->assertJsonPath('data.0.account_disabled', true);
+
+    $this->postJson("/api/v1/people/{$person->id}/enable")
+        ->assertOk()->assertJsonPath('data.account_disabled', false);
+});

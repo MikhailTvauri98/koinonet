@@ -126,3 +126,17 @@ it('refuses a password change with a wrong current password', function () {
 
     expect(Hash::check('password', $user->fresh()->password))->toBeTrue();
 });
+
+it('cuts the remember-me tokens when the password changes', function () {
+    $user = actingAsUser(attributes: ['remember_token' => 'old-token']);
+    keepSessionCookie();
+    $this->getJson('/api/v1/auth/me');
+
+    $this->patchJson('/api/v1/me/password', [
+        'current_password' => 'password',
+        'password' => 'new-secret-123',
+        'password_confirmation' => 'new-secret-123',
+    ])->assertOk();
+
+    expect($user->fresh()->remember_token)->not->toBe('old-token');
+});

@@ -43,7 +43,7 @@ final class InvitationController
         Gate::authorize('disable', $person);
         $disableUser->handle($person);
 
-        return new PersonResource($person->loadExists(['user', 'globalRoles']));
+        return new PersonResource($person->loadCardFlags());
     }
 
     public function enable(Person $person, EnableUser $enableUser): PersonResource
@@ -51,6 +51,6 @@ final class InvitationController
         Gate::authorize('enable', $person);
         $enableUser->handle($person);
 
-        return new PersonResource($person->loadExists(['user', 'globalRoles']));
+        return new PersonResource($person->loadCardFlags());
     }
 }

@@ -26,7 +26,7 @@ final class ProfileController
         $attributes = $request->validated();
         $person = $updateOwnProfile->handle($user->person, $attributes);
 
-        return new PersonResource($person->loadExists(['user', 'globalRoles']));
+        return new PersonResource($person->loadCardFlags());
     }
 
     public function updateLogin(UpdateLoginRequest $request, UpdateOwnLogin $updateOwnLogin): JsonResponse

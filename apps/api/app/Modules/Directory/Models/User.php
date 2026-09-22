@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -18,6 +19,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $person_id
  * @property string|null $phone
  * @property string|null $email
+ * @property Carbon|null $disabled_at
  * @property-read Person $person
  */
 final class User extends Authenticatable
