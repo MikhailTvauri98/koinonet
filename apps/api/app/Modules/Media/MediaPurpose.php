@@ -7,8 +7,8 @@ namespace App\Modules\Media;
 /**
  * What the caller intends to do with an uploaded file. Required by `POST /media`
  * (architecture 7.8) but not persisted on `media` (architecture 5.8 lists its full
- * composition) - task 23's binding endpoints are what check a file's kind actually
- * fits its purpose (e.g. an image for `person_photo`).
+ * composition) - whether a file's kind actually fits its purpose is checked when
+ * it is bound to its entity: a person's photo, a ministry's cover, and so on.
  */
 enum MediaPurpose: string
 {
