@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Modules\Access\Contracts\MinistryPermissionSource;
+use App\Modules\Access\Contracts\RoleCarrierDetacher;
 use App\Modules\Access\EmptyMinistryPermissionSource;
 use App\Modules\Access\Events\PersonRolesChanged;
 use App\Modules\Access\Events\RoleDeleted;
@@ -21,6 +22,7 @@ use App\Modules\Directory\Events\UserEnabled;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\NoSharedMinistryFinder;
 use App\Modules\Directory\Policies\PersonPolicy;
+use App\Modules\Ministries\Actions\DetachRoleFromMembers;
 use App\Modules\Ministries\Models\Ministry;
 use App\Modules\Ministries\Policies\MinistryPolicy;
 use App\Modules\Settings\Models\Setting;
@@ -38,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(MinistryPermissionSource::class, EmptyMinistryPermissionSource::class);
         $this->app->bind(SharedMinistryFinder::class, NoSharedMinistryFinder::class);
+        $this->app->bind(RoleCarrierDetacher::class, DetachRoleFromMembers::class);
     }
 
     /**

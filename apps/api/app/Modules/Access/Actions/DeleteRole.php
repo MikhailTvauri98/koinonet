@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Access\Actions;
 
 use App\Modules\Access\AuditLogger;
+use App\Modules\Access\Contracts\RoleCarrierDetacher;
 use App\Modules\Access\Events\RoleDeleted;
 use App\Modules\Access\Models\PersonRole;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\PermissionCache;
 use App\Modules\Access\RoleUsageCollector;
-use App\Modules\Ministries\Actions\DetachRoleFromMembers;
 use App\Support\DomainRuleException;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +20,7 @@ final readonly class DeleteRole
         private RoleUsageCollector $usage,
         private PermissionCache $cache,
         private AuditLogger $audit,
-        private DetachRoleFromMembers $detachRoleFromMembers,
+        private RoleCarrierDetacher $detachRoleFromMembers,
     ) {}
 
     public function handle(Role $role): void
@@ -54,10 +54,10 @@ final readonly class DeleteRole
 
         DB::transaction(function () use ($role): void {
             PersonRole::query()->where('role_id', $role->id)->delete();
-            // roles(id, ministry_id) is referenced by ministry_member_roles with ON DELETE RESTRICT
-            // (section 5): the carrier link must be gone before $role->delete() below, in the same
-            // transaction, so this calls the Ministries Action directly rather than through a queued
-            // cross-module listener, which would run too late to satisfy the constraint.
+            // Other carrier tables (e.g. ministry_member_roles) reference roles with composite
+            // foreign keys under ON DELETE RESTRICT (section 5): those links must be gone before
+            // $role->delete() below, in the same transaction — see RoleCarrierDetacher for why
+            // this is a synchronous contract call rather than a queued cross-module listener.
             $this->detachRoleFromMembers->handle($role->id);
             $role->permissions()->delete();
             $role->delete();
