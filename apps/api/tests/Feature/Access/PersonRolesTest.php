@@ -8,6 +8,7 @@ use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionResolver;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
+use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
@@ -35,7 +36,7 @@ it('replaces the whole set of global roles', function () {
 it('refuses a ministry role as a global one', function () {
     actingAsUserWith([Permission::RolesManageGlobal]);
     $person = Person::factory()->create();
-    $ministryRole = Role::factory()->ministry((string) Str::ulid())->create();
+    $ministryRole = Role::factory()->ministry(Ministry::factory()->create()->id)->create();
 
     $this->putJson("/api/v1/people/{$person->id}/roles", ['role_ids' => [$ministryRole->id]])
         ->assertStatus(422)

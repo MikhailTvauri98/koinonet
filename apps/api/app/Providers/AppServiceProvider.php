@@ -21,6 +21,8 @@ use App\Modules\Directory\Events\UserEnabled;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\NoSharedMinistryFinder;
 use App\Modules\Directory\Policies\PersonPolicy;
+use App\Modules\Ministries\Models\Ministry;
+use App\Modules\Ministries\Policies\MinistryPolicy;
 use App\Modules\Settings\Models\Setting;
 use App\Modules\Settings\Policies\SettingsPolicy;
 use Illuminate\Support\Facades\Event;
@@ -46,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
         $this->commands([InstallCommand::class, ErasePersonCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
+        Gate::policy(Ministry::class, MinistryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Setting::class, SettingsPolicy::class);

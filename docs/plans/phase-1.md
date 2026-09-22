@@ -3059,7 +3059,7 @@ git add . && git commit -m "feat(directory): install and erase commands"
 - Отдаёт наружу: `Ministry::defaultRole(): BelongsTo`, `Ministry::roles(): HasMany`, `Ministry::members(): HasMany`.
 - Напоминание: колонка `chat_id` в фазе 1 не создаётся, чат появляется в фазе 4 (решение планирования 1).
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -3173,12 +3173,12 @@ it('shows every ministry to ministries.view_all', function () {
 
 Хелпер `memberOf(Ministry $ministry, Person $person, array $roleIds = []): MinistryMember` добавляется в `tests/Pest.php` в задаче 17; в этой задаче он объявляется минимально — создаёт `ministry_members` и выдаёт роль по умолчанию.
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Ministries/MinistryCrudTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Миграции**
+- [x] **Шаг 3: Миграции**
 
 ```php
 Schema::create('ministries', function (Blueprint $table) {
@@ -3229,7 +3229,7 @@ DB::statement('ALTER TABLE roles ADD CONSTRAINT roles_ministry_fk
     FOREIGN KEY (ministry_id) REFERENCES ministries (id) ON DELETE RESTRICT');
 ```
 
-- [ ] **Шаг 4: Реализовать `CreateMinistry`**
+- [x] **Шаг 4: Реализовать `CreateMinistry`**
 
 ```php
 final class CreateMinistry
@@ -3267,12 +3267,12 @@ final class CreateMinistry
 
 Список служений: участникам — свои, носителям `ministries.view_all` и администратору — все. `MinistryPolicy::update` опирается на `canInMinistry($user, Permission::MinistryEdit, $ministry->id)`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Ministries/MinistryCrudTest.php`
 Ожидается: PASS, 11 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(ministries): ministry creation with leader and member roles"
