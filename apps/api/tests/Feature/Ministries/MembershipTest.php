@@ -108,8 +108,16 @@ it('filters the directory by ministry', function () {
 it('writes membership changes to the journal', function () {
     $ministry = ministryWithRoles();
     actingAsUserWith([Permission::MinistriesManageAll]);
+    $leader = $ministry->roles()->where('name', 'Лидер')->sole();
+    $person = Person::factory()->create();
 
-    $this->postJson("/api/v1/ministries/{$ministry->id}/members", ['person_id' => Person::factory()->create()->id]);
+    $memberId = $this->postJson("/api/v1/ministries/{$ministry->id}/members", ['person_id' => $person->id])
+        ->json('data.id');
 
-    expect(AuditEntry::query()->where('action', 'member.added')->exists())->toBeTrue();
+    $this->putJson("/api/v1/ministries/{$ministry->id}/members/{$memberId}/roles", ['role_ids' => [$leader->id]]);
+    $this->deleteJson("/api/v1/ministries/{$ministry->id}/members/{$memberId}");
+
+    expect(AuditEntry::query()->where('action', 'member.added')->exists())->toBeTrue()
+        ->and(AuditEntry::query()->where('action', 'member.roles_changed')->exists())->toBeTrue()
+        ->and(AuditEntry::query()->where('action', 'member.removed')->exists())->toBeTrue();
 });
