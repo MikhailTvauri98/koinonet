@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property string $id
@@ -59,13 +60,25 @@ final class Role extends Model
         return $this->hasMany(RolePermission::class);
     }
 
-    /** @return list<string> */
+    /**
+     * Carriers of a global role hold it directly; carriers of a ministry role hold it through
+     * membership, so both `person_roles` and `ministry_member_roles` are checked.
+     *
+     * @return list<string>
+     */
     public function carrierUserIds(): array
     {
         return User::query()
             ->whereIn(
                 'person_id',
                 PersonRole::query()->where('role_id', $this->id)->select('person_id'),
+            )
+            ->orWhereIn(
+                'person_id',
+                DB::table('ministry_member_roles')
+                    ->join('ministry_members', 'ministry_members.id', '=', 'ministry_member_roles.member_id')
+                    ->where('ministry_member_roles.role_id', $this->id)
+                    ->select('ministry_members.person_id'),
             )
             ->pluck('id')
             ->all();

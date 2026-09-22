@@ -6,7 +6,6 @@ namespace App\Providers;
 
 use App\Modules\Access\Contracts\MinistryPermissionSource;
 use App\Modules\Access\Contracts\RoleCarrierDetacher;
-use App\Modules\Access\EmptyMinistryPermissionSource;
 use App\Modules\Access\Events\PersonRolesChanged;
 use App\Modules\Access\Events\RoleDeleted;
 use App\Modules\Access\Listeners\BumpPermissionCache;
@@ -20,9 +19,15 @@ use App\Modules\Directory\Contracts\SharedMinistryFinder;
 use App\Modules\Directory\Events\UserDisabled;
 use App\Modules\Directory\Events\UserEnabled;
 use App\Modules\Directory\Models\Person;
-use App\Modules\Directory\NoSharedMinistryFinder;
 use App\Modules\Directory\Policies\PersonPolicy;
+use App\Modules\Ministries\Access\DatabaseMinistryPermissionSource;
+use App\Modules\Ministries\Access\DatabaseSharedMinistryFinder;
 use App\Modules\Ministries\Actions\DetachRoleFromMembers;
+use App\Modules\Ministries\Events\MemberAdded;
+use App\Modules\Ministries\Events\MemberRemoved;
+use App\Modules\Ministries\Events\MemberRolesChanged;
+use App\Modules\Ministries\Events\MinistryArchived;
+use App\Modules\Ministries\Listeners\BumpMembershipPermissionCache;
 use App\Modules\Ministries\Models\Ministry;
 use App\Modules\Ministries\Policies\MinistryPolicy;
 use App\Modules\Settings\Models\Setting;
@@ -38,8 +43,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(MinistryPermissionSource::class, EmptyMinistryPermissionSource::class);
-        $this->app->bind(SharedMinistryFinder::class, NoSharedMinistryFinder::class);
+        $this->app->bind(MinistryPermissionSource::class, DatabaseMinistryPermissionSource::class);
+        $this->app->bind(SharedMinistryFinder::class, DatabaseSharedMinistryFinder::class);
         $this->app->bind(RoleCarrierDetacher::class, DetachRoleFromMembers::class);
     }
 
@@ -59,5 +64,9 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(RoleDeleted::class, BumpPermissionCache::class);
         Event::listen(UserDisabled::class, BumpPermissionCache::class);
         Event::listen(UserEnabled::class, BumpPermissionCache::class);
+        Event::listen(MemberAdded::class, BumpMembershipPermissionCache::class);
+        Event::listen(MemberRemoved::class, BumpMembershipPermissionCache::class);
+        Event::listen(MemberRolesChanged::class, BumpMembershipPermissionCache::class);
+        Event::listen(MinistryArchived::class, BumpMembershipPermissionCache::class);
     }
 }

@@ -3697,7 +3697,7 @@ composer openapi && git add . && git commit -m "feat(ministries): ministry role 
 - Потребляет: `MinistryPermissionSource` и `SharedMinistryFinder` из задач 6 и 12 — здесь они получают рабочие реализации, сигнатуры не меняются.
 - Отдаёт наружу: покрытие тестами каждого ключа каталога — с этой задачи каталог нельзя расширить, не написав тест.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -3855,12 +3855,12 @@ it('has an authorization test mentioning every permission key', function (Permis
 })->with(Permission::cases());
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Ministries/MinistryPermissionsTest.php tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать источник прав служений**
+- [x] **Шаг 3: Реализовать источник прав служений**
 
 ```php
 final class DatabaseMinistryPermissionSource implements MinistryPermissionSource
@@ -3896,12 +3896,12 @@ final class DatabaseMinistryPermissionSource implements MinistryPermissionSource
 
 `BumpMembershipPermissionCache` слушает `MemberAdded`, `MemberRemoved`, `MemberRolesChanged`, `MinistryArchived` и вызывает `PermissionCache::bump` для затронутых аккаунтов. `SetRolePermissions` уже сбрасывает кеш носителей (задача 8), теперь `Role::carrierUserIds()` для роли служения считает и участников.
 
-- [ ] **Шаг 4: Запустить весь набор тестов**
+- [x] **Шаг 4: Запустить весь набор тестов**
 
 Выполнить: `./vendor/bin/pest`
 Ожидается: PASS целиком, включая `PermissionCoverageTest`.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add . && git commit -m "feat(ministries): ministry-scoped permissions, cache invalidation, permission coverage test"
