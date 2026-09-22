@@ -8,6 +8,7 @@ use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionResolver;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
+use App\Modules\Ministries\Actions\ArchiveMinistry;
 use App\Modules\Ministries\Actions\RemoveMember;
 use App\Modules\Ministries\Actions\SetMemberRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,6 +115,20 @@ it('refreshes permissions when a role loses a permission', function () {
         ->toBeFalse();
 });
 
+it('refreshes permissions when a ministry is archived', function () {
+    $ministry = ministryWithRoles();
+    $person = Person::factory()->create();
+    $user = User::factory()->for($person)->create();
+    memberOf($ministry, $person, [$ministry->roles()->where('name', 'Лидер')->sole()->id]);
+
+    expect(app(PermissionResolver::class)->canInMinistry($user, Permission::MembersManage, $ministry->id))->toBeTrue();
+
+    app(ArchiveMinistry::class)->handle($ministry);
+
+    expect(app(PermissionResolver::class)->canInMinistry($user->fresh(), Permission::MembersManage, $ministry->id))
+        ->toBeFalse();
+});
+
 it('shows contacts to a fellow member with members.view_contacts', function () {
     $ministry = ministryWithRoles();
     $viewerPerson = Person::factory()->create();
@@ -145,6 +160,27 @@ it('hides contacts of a person from another ministry', function () {
     memberOf($other, $subject);
 
     actingAsUserWith([Permission::PeopleView], $viewerPerson);
+
+    $this->getJson("/api/v1/people/{$subject->id}")->assertJsonMissingPath('data.contacts');
+});
+
+it('hides contacts after the shared ministry is archived', function () {
+    $ministry = ministryWithRoles();
+    $viewerPerson = Person::factory()->create();
+    $subject = Person::factory()->create(['phone' => '+79123456789', 'contacts_public' => false]);
+    $role = Role::query()->create([
+        'scope' => 'ministry', 'ministry_id' => $ministry->id, 'name' => 'Куратор',
+    ]);
+    $role->permissions()->create(['permission' => Permission::MembersViewContacts->value]);
+
+    memberOf($ministry, $viewerPerson, [$role->id]);
+    memberOf($ministry, $subject);
+
+    actingAsUserWith([Permission::PeopleView], $viewerPerson);
+
+    $this->getJson("/api/v1/people/{$subject->id}")->assertJsonPath('data.contacts.phone', '+79123456789');
+
+    app(ArchiveMinistry::class)->handle($ministry);
 
     $this->getJson("/api/v1/people/{$subject->id}")->assertJsonMissingPath('data.contacts');
 });
