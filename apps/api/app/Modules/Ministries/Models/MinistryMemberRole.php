@@ -13,11 +13,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  */
 final class MinistryMemberRole extends Pivot
 {
-    public $incrementing = false;
-
     public $timestamps = false;
 
     protected $table = 'ministry_member_roles';
-
-    protected $guarded = [];
 }

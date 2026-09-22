@@ -14,6 +14,10 @@ final readonly class ArchiveMinistry
 
     public function handle(Ministry $ministry): Ministry
     {
+        if ($ministry->archived_at !== null) {
+            return $ministry;
+        }
+
         $ministry->forceFill(['archived_at' => now()])->save();
         $this->audit->record('ministry.archived', $ministry, ['name' => $ministry->name]);
         MinistryArchived::dispatch($ministry->id);

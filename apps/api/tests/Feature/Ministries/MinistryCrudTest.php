@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Access\Models\AuditEntry;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionScope;
@@ -107,4 +108,60 @@ it('shows every ministry to ministries.view_all', function () {
     Ministry::factory()->count(2)->create();
 
     expect($this->getJson('/api/v1/ministries')->json('data'))->toHaveCount(2);
+});
+
+it('refuses to edit an archived ministry', function () {
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    $ministry = Ministry::factory()->archived()->create();
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['name' => 'Другое'])
+        ->assertStatus(422)
+        ->assertJsonPath('code', 'ministry.archived');
+});
+
+it('refuses a rename onto the name of another active ministry', function () {
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    Ministry::factory()->create(['name' => 'Прославление']);
+    $ministry = Ministry::factory()->create(['name' => 'Дети']);
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['name' => 'Прославление'])
+        ->assertStatus(422)
+        ->assertJsonPath('code', 'ministry.name_taken');
+});
+
+it('keeps the first archival time when archived twice', function () {
+    actingAsUserWith([Permission::MinistriesCreate]);
+    $ministry = Ministry::factory()->create();
+
+    $this->postJson("/api/v1/ministries/{$ministry->id}/archive")->assertOk();
+    $archivedAt = $ministry->fresh()->archived_at;
+
+    $this->postJson("/api/v1/ministries/{$ministry->id}/archive")->assertOk();
+
+    expect($ministry->fresh()->archived_at->equalTo($archivedAt))->toBeTrue()
+        ->and(AuditEntry::query()->where('action', 'ministry.archived')->count())->toBe(1);
+});
+
+it('hides the ministry card from a stranger', function () {
+    actingAsUser();
+    $ministry = Ministry::factory()->create();
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}")->assertForbidden();
+});
+
+it('shows the ministry card to its member', function () {
+    $ministry = Ministry::factory()->create();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}")
+        ->assertOk()
+        ->assertJsonPath('data.id', $ministry->id);
+});
+
+it('shows any ministry card to ministries.view_all', function () {
+    actingAsUserWith([Permission::MinistriesViewAll]);
+    $ministry = Ministry::factory()->create();
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}")->assertOk();
 });

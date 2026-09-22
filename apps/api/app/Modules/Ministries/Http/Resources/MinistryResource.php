@@ -22,7 +22,7 @@ final class MinistryResource extends JsonResource
             'name' => $ministry->name,
             'description' => $ministry->description,
             'default_role_id' => $ministry->default_role_id,
-            'archived_at' => $ministry->archived_at?->toIso8601String(),
+            'archived_at' => $ministry->archived_at?->toISOString(),
         ];
     }
 }
