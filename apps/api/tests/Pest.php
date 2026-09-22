@@ -6,6 +6,8 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
+use App\Modules\Ministries\Actions\AddMember;
+use App\Modules\Ministries\Actions\CreateMinistry;
 use App\Modules\Ministries\Models\Ministry;
 use App\Modules\Ministries\Models\MinistryMember;
 use Tests\TestCase;
@@ -43,6 +45,11 @@ function actingAsAdministrator(): User
     return actingAsUser($person);
 }
 
+function ministryWithRoles(string $name = 'Прославление'): Ministry
+{
+    return app(CreateMinistry::class)->handle($name, null);
+}
+
 /**
  * Membership with the roles a member should have; without roles the ministry default is given.
  *
@@ -50,18 +57,7 @@ function actingAsAdministrator(): User
  */
 function memberOf(Ministry $ministry, Person $person, array $roleIds = []): MinistryMember
 {
-    $member = MinistryMember::query()->create([
-        'ministry_id' => $ministry->id,
-        'person_id' => $person->id,
-        'joined_at' => now(),
-    ]);
-
-    $member->roles()->attach(
-        $roleIds === [] ? [$ministry->default_role_id] : $roleIds,
-        ['ministry_id' => $ministry->id],
-    );
-
-    return $member;
+    return app(AddMember::class)->handle($ministry, $person, $roleIds);
 }
 
 /** Keeps one session id across every request of a test, the way a browser cookie does. */

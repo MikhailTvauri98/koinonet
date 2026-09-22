@@ -11,12 +11,13 @@ use Illuminate\Database\Eloquent\Builder;
 final class PersonIndexQuery
 {
     /**
-     * @param  array{search?: string, status?: string, archived: bool, without_roles: bool, per_page: int}  $filters
+     * @param  array{search?: string, status?: string, ministry?: string, archived: bool, without_roles: bool, per_page: int}  $filters
      * @return LengthAwarePaginator<int, Person>
      */
     public function paginate(array $filters): LengthAwarePaginator
     {
         $search = $filters['search'] ?? null;
+        $ministryId = $filters['ministry'] ?? null;
 
         return Person::query()
             ->withCardFlags()
@@ -35,6 +36,13 @@ final class PersonIndexQuery
             ->when(
                 isset($filters['status']),
                 fn (Builder $query): Builder => $query->where('status', $filters['status']),
+            )
+            ->when(
+                $ministryId !== null,
+                fn (Builder $query): Builder => $query->whereHas(
+                    'ministryMemberships',
+                    fn (Builder $memberships): Builder => $memberships->where('ministry_id', $ministryId),
+                ),
             )
             ->when(
                 $filters['archived'],

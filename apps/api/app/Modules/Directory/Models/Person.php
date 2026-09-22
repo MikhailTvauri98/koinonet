@@ -6,12 +6,14 @@ namespace App\Modules\Directory\Models;
 
 use App\Modules\Access\Models\Role;
 use App\Modules\Directory\PersonStatus;
+use App\Modules\Ministries\Models\MinistryMember;
 use Database\Factories\PersonFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
@@ -90,6 +92,12 @@ final class Person extends Model
         return $this->belongsToMany(Role::class, 'person_roles')
             ->withPivot('assigned_by_user_id')
             ->withTimestamps(null, false);
+    }
+
+    /** @return HasMany<MinistryMember, $this> */
+    public function ministryMemberships(): HasMany
+    {
+        return $this->hasMany(MinistryMember::class);
     }
 
     public function fullName(): string

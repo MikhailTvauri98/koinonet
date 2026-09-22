@@ -45,6 +45,11 @@ final readonly class MinistryPolicy
         return $this->permissions->can($user, Permission::MinistriesCreate);
     }
 
+    public function manageMembers(User $user, Ministry $ministry): bool
+    {
+        return $this->permissions->canInMinistry($user, Permission::MembersManage, $ministry->id);
+    }
+
     private function isMember(User $user, Ministry $ministry): bool
     {
         return ! $user->isDisabled()

@@ -26,10 +26,11 @@ final class PersonController
     {
         Gate::authorize('viewAny', Person::class);
 
-        /** @var array{search?: string, status?: string, archived?: bool|string|int, without_roles?: bool|string|int, per_page?: int} $validated */
+        /** @var array{search?: string, status?: string, ministry?: string, archived?: bool|string|int, without_roles?: bool|string|int, per_page?: int} $validated */
         $validated = $request->validate([
             'search' => ['sometimes', 'string', 'max:200'],
             'status' => ['sometimes', Rule::enum(PersonStatus::class)],
+            'ministry' => ['sometimes', 'string', 'ulid'],
             'archived' => ['sometimes', 'boolean'],
             'without_roles' => ['sometimes', 'boolean'],
             'page' => ['sometimes', 'integer', 'min:1'],

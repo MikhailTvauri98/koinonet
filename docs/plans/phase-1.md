@@ -3300,7 +3300,7 @@ composer openapi && git add . && git commit -m "feat(ministries): ministry creat
 - Отдаёт наружу: `MemberAdded(string $ministryId, string $personId, ?string $userId)`, `MemberRemoved(...)`, `MemberRolesChanged(...)` — в фазе 4 их слушает Chat.
 - Коды ошибок: `member.already_in_ministry`, `member.last_role_cannot_be_removed`, `member.role_from_other_ministry`, `member.person_archived`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -3418,7 +3418,7 @@ it('writes membership changes to the journal', function () {
 });
 ```
 
-- [ ] **Шаг 2: Дописать хелперы в `tests/Pest.php`**
+- [x] **Шаг 2: Дописать хелперы в `tests/Pest.php`**
 
 ```php
 function ministryWithRoles(string $name = 'Прославление'): Ministry
@@ -3433,12 +3433,12 @@ function memberOf(Ministry $ministry, Person $person, array $roleIds = []): Mini
 }
 ```
 
-- [ ] **Шаг 3: Запустить тесты, убедиться что падают**
+- [x] **Шаг 3: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Ministries/MembershipTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 4: Реализовать Actions**
+- [x] **Шаг 4: Реализовать Actions**
 
 ```php
 final class AddMember
@@ -3478,12 +3478,12 @@ final class AddMember
 
 Политика: `canInMinistry($user, Permission::MembersManage, $ministry->id)`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Ministries/MembershipTest.php`
 Ожидается: PASS, 10 тестов. Все проверки прав здесь идут от `ministries.manage_all`: право через участие в служении включает задача 19, туда же вынесены его тесты.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(ministries): membership with default role and role invariants"
