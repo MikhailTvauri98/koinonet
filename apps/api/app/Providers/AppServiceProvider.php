@@ -13,6 +13,8 @@ use App\Modules\Access\Models\AuditEntry;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Policies\AuditPolicy;
 use App\Modules\Access\Policies\RolePolicy;
+use App\Modules\Directory\Console\ErasePersonCommand;
+use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
 use App\Modules\Directory\Events\UserDisabled;
 use App\Modules\Directory\Events\UserEnabled;
@@ -42,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
+        $this->commands([InstallCommand::class, ErasePersonCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);

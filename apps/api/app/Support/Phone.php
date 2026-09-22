@@ -11,14 +11,15 @@ use libphonenumber\PhoneNumberUtil;
 
 final class Phone
 {
-    public static function normalize(?string $raw): ?string
+    /** @param string|null $region defaults to the church phone region from settings */
+    public static function normalize(?string $raw, ?string $region = null): ?string
     {
         if ($raw === null || trim($raw) === '') {
             return null;
         }
 
         $util = PhoneNumberUtil::getInstance();
-        $region = app(ChurchSettings::class)->phoneRegion();
+        $region ??= app(ChurchSettings::class)->phoneRegion();
 
         try {
             $parsed = $util->parse($raw, $region);

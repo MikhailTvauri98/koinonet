@@ -2942,7 +2942,7 @@ composer openapi && git add . && git commit -m "feat(directory): own profile, lo
 - Отдаёт наружу: `php artisan app:install` — интерактивно спрашивает название церкви, часовой пояс, регион телефонов, ФИО, телефон или почту первого администратора и пароль. Поддерживает неинтерактивный режим опциями `--church-name`, `--timezone`, `--phone-region`, `--last-name`, `--first-name`, `--login`, `--password` (нужен тестам и деплою).
 - Отдаёт наружу: `php artisan people:erase {id}`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -3014,23 +3014,23 @@ it('writes erasure to the journal without an actor', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/InstallCommandTest.php tests/Feature/Directory/ErasePersonTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `InstallCommand` в одной транзакции: `ChurchSettings::put`, `EnsureAdministratorRole` (создаёт роль «Администратор», `is_system = true`), `CreatePerson`, `SetPersonRoles`, создание `User` с хешем пароля. Отказ, если системная роль уже существует. Никаких других ролей, людей и настроек не создаётся (ADR-0003).
 
 `ErasePersonCommand` без `--force` запрашивает подтверждение; в интерфейсе операции нет намеренно (раздел 7.9).
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add . && git commit -m "feat(directory): install and erase commands"
