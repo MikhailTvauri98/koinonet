@@ -1,0 +1,138 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Modules\Access\Models\Role;
+use App\Modules\Access\Permission;
+use App\Modules\Directory\Models\Person;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
+it('denies the ministry role editor without roles.manage in that ministry', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+
+    $this->postJson("/api/v1/ministries/{$ministry->id}/roles", ['name' => 'Вокалист', 'permissions' => []])
+        ->assertForbidden();
+});
+
+it('creates a ministry role without permissions', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+
+    $this->postJson("/api/v1/ministries/{$ministry->id}/roles", ['name' => 'Вокалист', 'permissions' => []])
+        ->assertCreated()->assertJsonPath('data.name', 'Вокалист');
+});
+
+it('refuses a global permission on a ministry role', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+
+    $this->postJson("/api/v1/ministries/{$ministry->id}/roles", [
+        'name' => 'Вокалист', 'permissions' => ['people.manage'],
+    ])->assertStatus(422)->assertJsonPath('code', 'role.permission_scope_mismatch');
+});
+
+it('allows renaming and re-permissioning the leader role', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    $leader = $ministry->roles()->where('name', 'Лидер')->sole();
+
+    $this->patchJson("/api/v1/roles/{$leader->id}", ['name' => 'Ответственный', 'permissions' => ['members.manage']])
+        ->assertOk();
+
+    expect($leader->fresh()->name)->toBe('Ответственный')
+        ->and($leader->fresh()->permissions)->toHaveCount(1);
+});
+
+it('refuses to delete the default role', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+
+    $this->deleteJson("/api/v1/roles/{$ministry->default_role_id}")
+        ->assertStatus(422)->assertJsonPath('code', 'role.is_default');
+});
+
+it('allows deleting the former default role after another is chosen', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    $old = $ministry->default_role_id;
+    $new = $this->postJson("/api/v1/ministries/{$ministry->id}/roles", ['name' => 'Новичок', 'permissions' => []])
+        ->json('data.id');
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['default_role_id' => $new])->assertOk();
+    $this->deleteJson("/api/v1/roles/{$old}")->assertNoContent();
+});
+
+it('refuses a default role from another ministry', function () {
+    $ministry = ministryWithRoles();
+    $other = ministryWithRoles('Молодёжное');
+    actingAsUserWith([Permission::MinistriesManageAll]);
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['default_role_id' => $other->default_role_id])
+        ->assertStatus(422)->assertJsonPath('code', 'role.default_from_other_ministry');
+});
+
+it('refuses to delete a role that is someones only role', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    $solo = Role::query()->create([
+        'scope' => 'ministry', 'ministry_id' => $ministry->id, 'name' => 'Звукорежиссёр',
+    ]);
+    $member = memberOf($ministry, Person::factory()->create(), [$solo->id]);
+    $member->roles()->detach($ministry->default_role_id);
+
+    $this->deleteJson("/api/v1/roles/{$solo->id}")
+        ->assertStatus(422)->assertJsonPath('code', 'role.last_role_of_member');
+});
+
+it('reports carriers of a ministry role in usage', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    memberOf($ministry, Person::factory()->create());
+
+    $this->getJson("/api/v1/roles/{$ministry->default_role_id}/usage")
+        ->assertOk()->assertJsonPath('data.carriers', 1);
+});
+
+it('keeps ministry role names unique inside the ministry only', function () {
+    $ministry = ministryWithRoles();
+    $other = ministryWithRoles('Молодёжное');
+    actingAsUserWith([Permission::MinistriesManageAll]);
+
+    $this->postJson("/api/v1/ministries/{$other->id}/roles", ['name' => 'Лидер', 'permissions' => []])
+        ->assertStatus(422)->assertJsonPath('code', 'role.name_taken');
+
+    $this->postJson("/api/v1/ministries/{$ministry->id}/roles", ['name' => 'Вокалист', 'permissions' => []])
+        ->assertCreated();
+});
+
+it('lists the roles of a ministry for someone who can manage them', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}/roles")
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+});
+
+it('denies listing ministry roles without roles.manage in that ministry', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}/roles")->assertForbidden();
+});
+
+it('deletes a role that a member still holds alongside another role', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    $leader = $ministry->roles()->where('name', 'Лидер')->sole();
+    memberOf($ministry, Person::factory()->create(), [$leader->id]);
+
+    $this->deleteJson("/api/v1/roles/{$leader->id}")->assertNoContent();
+
+    expect($ministry->fresh()->roles()->where('name', 'Лидер')->exists())->toBeFalse();
+});

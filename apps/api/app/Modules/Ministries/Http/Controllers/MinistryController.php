@@ -65,7 +65,7 @@ final class MinistryController
     ): MinistryResource {
         Gate::authorize('update', $ministry);
 
-        /** @var array{name?: string, description?: string|null} $validated */
+        /** @var array{name?: string, description?: string|null, default_role_id?: string} $validated */
         $validated = $request->validated();
 
         return new MinistryResource($updateMinistry->handle($ministry, $validated));

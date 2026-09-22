@@ -3510,7 +3510,7 @@ composer openapi && git add . && git commit -m "feat(ministries): membership wit
 - Отдаёт наружу: смена роли по умолчанию — `PATCH /ministries/{id}` с полем `default_role_id`.
 - Коды ошибок: `role.is_default` (удаление роли по умолчанию), `role.last_role_of_member` (удаление роли, которая у кого-то единственная), `role.default_from_other_ministry`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -3622,12 +3622,12 @@ it('keeps ministry role names unique inside the ministry only', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Ministries/MinistryRoleTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Расширить `RoleUsageCollector` и `DeleteRole`**
+- [x] **Шаг 3: Расширить `RoleUsageCollector` и `DeleteRole`**
 
 ```php
 final class RoleUsageCollector
@@ -3666,12 +3666,12 @@ final class RoleUsageCollector
 
 `DeleteRole` выбирает код ошибки по типу первой блокировки: `default_role` → `role.is_default`, `last_role_of_member` → `role.last_role_of_member`, всё прочее (появится в фазе 3) → `role.in_use`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Ministries`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(ministries): ministry role editor and default role"
