@@ -40,3 +40,12 @@ function actingAsAdministrator(): User
 
     return actingAsUser($person);
 }
+
+/** Keeps one session id across every request of a test, the way a browser cookie does. */
+function keepSessionCookie(): string
+{
+    $id = session()->getId();
+    test()->withCredentials()->withCookie((string) config('session.cookie'), $id);
+
+    return $id;
+}

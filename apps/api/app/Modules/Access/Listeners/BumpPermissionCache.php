@@ -7,13 +7,15 @@ namespace App\Modules\Access\Listeners;
 use App\Modules\Access\Events\PersonRolesChanged;
 use App\Modules\Access\Events\RoleDeleted;
 use App\Modules\Access\PermissionCache;
+use App\Modules\Directory\Events\UserDisabled;
+use App\Modules\Directory\Events\UserEnabled;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 final readonly class BumpPermissionCache implements ShouldQueue
 {
     public function __construct(private PermissionCache $cache) {}
 
-    public function handle(PersonRolesChanged|RoleDeleted $event): void
+    public function handle(PersonRolesChanged|RoleDeleted|UserDisabled|UserEnabled $event): void
     {
         if ($event instanceof PersonRolesChanged) {
             if ($event->userId !== null) {
@@ -23,6 +25,12 @@ final readonly class BumpPermissionCache implements ShouldQueue
             return;
         }
 
-        $this->cache->bump(...$event->carrierUserIds);
+        if ($event instanceof RoleDeleted) {
+            $this->cache->bump(...$event->carrierUserIds);
+
+            return;
+        }
+
+        $this->cache->bump($event->userId);
     }
 }

@@ -14,6 +14,8 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Access\Policies\AuditPolicy;
 use App\Modules\Access\Policies\RolePolicy;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
+use App\Modules\Directory\Events\UserDisabled;
+use App\Modules\Directory\Events\UserEnabled;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\NoSharedMinistryFinder;
 use App\Modules\Directory\Policies\PersonPolicy;
@@ -46,5 +48,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Setting::class, SettingsPolicy::class);
         Event::listen(PersonRolesChanged::class, BumpPermissionCache::class);
         Event::listen(RoleDeleted::class, BumpPermissionCache::class);
+        Event::listen(UserDisabled::class, BumpPermissionCache::class);
+        Event::listen(UserEnabled::class, BumpPermissionCache::class);
     }
 }

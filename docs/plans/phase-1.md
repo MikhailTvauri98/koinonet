@@ -2740,7 +2740,7 @@ composer openapi && git add . && git commit -m "feat(directory): invitations and
 - Решение заказчика (2026-09-12): контакты человека и логины аккаунта — отдельные поля. `PATCH /me/profile` меняет только `people`; логин меняется только через `PATCH /me/login` с текущим паролем. Тип логина определяется по значению: телефон нормализуется в E.164 и пишется в `users.phone`, почта приводится к нижнему регистру и пишется в `users.email`.
 - Коды ошибок: `login.taken`, `auth.invalid_password`, `session.current_cannot_be_revoked`, `user.no_account`, `user.not_disabled`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2898,12 +2898,12 @@ it('refuses to enable an account that is not disabled', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory/ProfileTest.php tests/Feature/Directory/SessionTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `UpdateProfileRequest` принимает только `phone`, `email`, `birth_date`, `contacts_public`; любое другое поле — ошибка валидации (`prohibited`). `UpdateOwnProfile` меняет только `people`: логины аккаунта не трогает.
 
@@ -2911,12 +2911,12 @@ it('refuses to enable an account that is not disabled', function () {
 
 `DisableUser`: ставит `disabled_at`, удаляет строки `sessions` аккаунта, пишет журнал, публикует `UserDisabled`. Слушатель сбрасывает кеш прав. (Push-подписки удаляются здесь же начиная с фазы 2.) `EnableUser`: для отключённого аккаунта снимает `disabled_at`, пишет журнал, публикует `UserEnabled`; для неотключённого — `422` с `user.not_disabled`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Directory`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(directory): own profile, login and password change, device list, account disabling and enabling"

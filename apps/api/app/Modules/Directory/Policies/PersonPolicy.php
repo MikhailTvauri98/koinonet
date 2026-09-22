@@ -53,4 +53,14 @@ final readonly class PersonPolicy
     {
         return $this->permissions->can($user, Permission::PeopleInvite);
     }
+
+    public function disable(User $user, Person $person): bool
+    {
+        return $this->permissions->can($user, Permission::PeopleInvite);
+    }
+
+    public function enable(User $user, Person $person): bool
+    {
+        return $this->permissions->can($user, Permission::PeopleInvite);
+    }
 }
