@@ -36,7 +36,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_pgsql, redis, intl, imagick, bcmath, zip, exif
+          extensions: pdo_pgsql, redis, intl, imagick, bcmath, zip, exif, gd
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env && php artisan key:generate
       - run: composer lint
