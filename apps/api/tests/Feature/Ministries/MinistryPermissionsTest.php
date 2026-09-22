@@ -6,6 +6,7 @@ use App\Modules\Access\Actions\SetRolePermissions;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionResolver;
+use App\Modules\Directory\Contracts\SharedMinistryFinder;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Modules\Ministries\Actions\ArchiveMinistry;
@@ -183,4 +184,19 @@ it('hides contacts after the shared ministry is archived', function () {
     app(ArchiveMinistry::class)->handle($ministry);
 
     $this->getJson("/api/v1/people/{$subject->id}")->assertJsonMissingPath('data.contacts');
+});
+
+it('excludes an archived ministry from the shared-ministry finder', function () {
+    $ministry = ministryWithRoles();
+    $viewerPerson = Person::factory()->create();
+    $subjectPerson = Person::factory()->create();
+    memberOf($ministry, $viewerPerson);
+    memberOf($ministry, $subjectPerson);
+    $finder = app(SharedMinistryFinder::class);
+
+    expect($finder->sharedMinistryIds($viewerPerson->id, $subjectPerson->id))->toBe([$ministry->id]);
+
+    app(ArchiveMinistry::class)->handle($ministry);
+
+    expect($finder->sharedMinistryIds($viewerPerson->id, $subjectPerson->id))->toBe([]);
 });
