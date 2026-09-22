@@ -2865,6 +2865,7 @@
             },
             "MediaPurpose": {
                 "type": "string",
+                "description": "What the caller intends to do with an uploaded file. Required by `POST /media` (architecture 7.8) but not persisted on `media` (architecture 5.8 lists its full composition) - whether a file's kind actually fits its purpose is checked when it is bound to its entity: a person's photo, a ministry's cover, and so on.\n",
                 "enum": [
                     "message",
                     "announcement",
@@ -3319,6 +3320,7 @@
                         "contentMediaType": "application/octet-stream"
                     },
                     "purpose": {
+                        "description": "Required by the upload contract (architecture 7.8) but not a column on\n`media` (architecture 5.8 lists its full composition) - it only states\nwhat the caller intends to do with the file. Whether the file actually\nfits that intent (e.g. an image for `person_photo`) is checked when it\nis bound to its entity - a person's photo, a ministry's cover, and so on.",
                         "$ref": "#/components/schemas/MediaPurpose"
                     }
                 },
