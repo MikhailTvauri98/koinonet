@@ -796,6 +796,50 @@
                 }
             }
         },
+        "/media": {
+            "post": {
+                "operationId": "mediaUpload.store",
+                "tags": [
+                    "MediaUpload"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreMediaRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`MediaResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MediaResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/ministries": {
             "get": {
                 "operationId": "ministry.index",
@@ -2819,6 +2863,42 @@
                 ],
                 "title": "MeResource"
             },
+            "MediaPurpose": {
+                "type": "string",
+                "enum": [
+                    "message",
+                    "announcement",
+                    "event",
+                    "person_photo",
+                    "ministry_cover",
+                    "chat_avatar"
+                ],
+                "title": "MediaPurpose"
+            },
+            "MediaResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "null"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "status",
+                    "url"
+                ],
+                "title": "MediaResource"
+            },
             "MemberResource": {
                 "type": "object",
                 "properties": {
@@ -3229,6 +3309,24 @@
                     "timezone"
                 ],
                 "title": "SettingsResource"
+            },
+            "StoreMediaRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream"
+                    },
+                    "purpose": {
+                        "$ref": "#/components/schemas/MediaPurpose"
+                    }
+                },
+                "required": [
+                    "file",
+                    "purpose"
+                ],
+                "title": "StoreMediaRequest"
             },
             "StorePersonRequest": {
                 "type": "object",

@@ -62,6 +62,16 @@ return [
             'report' => false,
         ],
 
+        // Uploaded media (section 7.8). Backed by the `media` Docker volume,
+        // mounted at /media in the app and web containers; nginx serves it
+        // through an internal location, PHP never streams the bytes itself.
+        'media' => [
+            'driver' => 'local',
+            'root' => '/media',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

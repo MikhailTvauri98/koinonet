@@ -3930,7 +3930,7 @@ git add . && git commit -m "feat(ministries): ministry-scoped permissions, cache
 - Отдаёт наружу: `Media::factory()` — по умолчанию готовое изображение (`kind = image`, `status = ready`, `disk = media`, путь вида `2026/09/{ulid}.jpg`); используется задачами 21–23.
 - Коды ошибок: `media.type_not_allowed`, `media.too_large`, `media.heic_unsupported`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -4037,12 +4037,12 @@ it('remembers who uploaded the file', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media/UploadTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Миграция и конфиг**
+- [x] **Шаг 3: Миграция и конфиг**
 
 ```php
 Schema::create('media', function (Blueprint $table) {
@@ -4094,16 +4094,16 @@ Schema::table('ministries', function (Blueprint $table) {
 
 `config/media.php` задаёт по видам максимальный размер и белый список расширений и MIME из таблицы раздела 7.8, а также `heic_supported` — вычисляется один раз через `extension_loaded('imagick') && in_array('HEIC', \Imagick::queryFormats())`.
 
-- [ ] **Шаг 4: Реализовать `StoreMedia`**
+- [x] **Шаг 4: Реализовать `StoreMedia`**
 
 Порядок проверок: MIME по содержимому через `finfo` (не по заголовку запроса) → вид файла по MIME → расширение из белого списка вида → размер по лимиту вида → HEIC отдельной веткой. Затем `Str::ulid()`, путь `Y/m/{ulid}.{ext}`, `Storage::disk('media')->putFileAs(...)`, запись со статусом `processing` для изображений и `ready` для остальных.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media/UploadTest.php`
 Ожидается: PASS, 9 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(media): upload with content-based type and size validation"

@@ -3,8 +3,10 @@ FROM php:8.4-fpm-alpine
 ARG PHPREDIS_VERSION=6.3.0
 ARG IMAGICK_VERSION=3.8.1
 
-RUN apk add --no-cache postgresql-dev icu-dev libzip-dev imagemagick imagemagick-dev libheif-dev $PHPIZE_DEPS \
-    && docker-php-ext-install -j"$(nproc)" pdo_pgsql pcntl intl bcmath zip exif opcache \
+RUN apk add --no-cache postgresql-dev icu-dev libzip-dev imagemagick imagemagick-dev libheif-dev \
+        libpng-dev libjpeg-turbo-dev freetype-dev $PHPIZE_DEPS \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" pdo_pgsql pcntl intl bcmath zip exif opcache gd \
     && mkdir -p /usr/src/php/ext/redis /usr/src/php/ext/imagick \
     && wget -q -O - "https://github.com/phpredis/phpredis/archive/refs/tags/${PHPREDIS_VERSION}.tar.gz" \
         | tar -xz --strip-components=1 -C /usr/src/php/ext/redis \
