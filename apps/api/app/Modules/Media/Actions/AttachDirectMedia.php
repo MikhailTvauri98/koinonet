@@ -18,6 +18,15 @@ use App\Support\DomainRuleException;
  * write to their own tables afterwards (boundary rule 1): this class never
  * touches `people` or `ministries` itself, only reads them through
  * {@see MediaUsage} to decide whether the file is free to use.
+ *
+ * Re-reads `$media` row-locked ({@see Media::lockedFind()}) before checking
+ * it, so two concurrent attach attempts for the same file serialize instead
+ * of both seeing "free". That protection only holds for as long as a
+ * transaction stays open around the check-then-write sequence, so this must
+ * always run inside one already started by the caller - `SetPersonPhoto`
+ * and `SetMinistryCover` wrap their whole "validate, then set the column"
+ * in `DB::transaction()`; this method never opens one itself, because
+ * committing here would release the lock before the caller's write runs.
  */
 final readonly class AttachDirectMedia
 {
@@ -25,6 +34,8 @@ final readonly class AttachDirectMedia
 
     public function handle(Media $media, MediaKind $expected): void
     {
+        $media = Media::lockedFind($media->id);
+
         if ($media->uploader_user_id !== auth()->id()) {
             throw DomainRuleException::because('media.not_owned', 'Файл загрузил другой аккаунт.');
         }

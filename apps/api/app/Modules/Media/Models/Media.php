@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Media\Models;
 
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Actions\AttachDirectMedia;
+use App\Modules\Media\Actions\DeleteOwnMedia;
+use App\Modules\Media\Console\PruneOrphanMediaCommand;
 use App\Modules\Media\Jobs\ImageProcessor;
 use App\Modules\Media\MediaKind;
 use App\Modules\Media\MediaStatus;
@@ -90,5 +93,24 @@ final class Media extends Model
     public function storedPaths(): array
     {
         return [$this->path, ...array_values($this->variants ?? [])];
+    }
+
+    /**
+     * A row-locked re-read of one media by id: the single place every
+     * "check whether it's free, then attach or delete" sequence gets its
+     * copy of the row from, so two concurrent requests for the same file
+     * serialize on Postgres's row lock instead of both reading "free" and
+     * both writing - the race that would silently break "a media file
+     * belongs to exactly one object" (CONTEXT.md, "Медиафайл").
+     *
+     * Only holds anything while a transaction is open: `lockForUpdate()`
+     * with no surrounding `DB::transaction()` releases the lock the moment
+     * this call returns, which would defeat the whole point. Every caller -
+     * {@see AttachDirectMedia}, {@see DeleteOwnMedia},
+     * {@see PruneOrphanMediaCommand} - runs this inside one.
+     */
+    public static function lockedFind(string $id): self
+    {
+        return self::query()->whereKey($id)->lockForUpdate()->firstOrFail();
     }
 }

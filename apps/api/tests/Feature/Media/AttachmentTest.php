@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Access\Permission;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Media\Models\Media;
+use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 
@@ -62,6 +63,24 @@ it('sets a ministry cover with ministry.edit', function () {
     $this->putJson("/api/v1/ministries/{$ministry->id}/cover", ['media_id' => $media->id])->assertOk();
 
     expect($ministry->fresh()->cover_media_id)->toBe($media->id);
+});
+
+it('refuses to set a photo on an archived person', function () {
+    $user = actingAsUserWith([Permission::PeopleManage]);
+    $person = Person::factory()->archived()->create();
+    $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image']);
+
+    $this->putJson("/api/v1/people/{$person->id}/photo", ['media_id' => $media->id])
+        ->assertStatus(422)->assertJsonPath('code', 'person.archived');
+});
+
+it('refuses to set a cover on an archived ministry', function () {
+    $user = actingAsUserWith([Permission::MinistriesManageAll]);
+    $ministry = Ministry::factory()->archived()->create();
+    $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image']);
+
+    $this->putJson("/api/v1/ministries/{$ministry->id}/cover", ['media_id' => $media->id])
+        ->assertStatus(422)->assertJsonPath('code', 'ministry.archived');
 });
 
 it('lets an account delete its own unattached file', function () {
