@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Modules\Directory\Models;
 
 use App\Modules\Access\Models\Role;
+use App\Modules\Directory\Actions\SetPersonPhoto;
 use App\Modules\Directory\PersonStatus;
+use App\Modules\Media\MediaAccess;
+use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Models\MinistryMember;
 use Database\Factories\PersonFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -28,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property PersonStatus $status
  * @property string|null $note
  * @property bool $contacts_public
+ * @property string|null $photo_media_id
  * @property Carbon|null $archived_at
  */
 final class Person extends Model
@@ -98,6 +103,20 @@ final class Person extends Model
     public function ministryMemberships(): HasMany
     {
         return $this->hasMany(MinistryMember::class);
+    }
+
+    /**
+     * `photo_media_id` (architecture 5.8/5.2) - Directory's own column,
+     * written only by {@see SetPersonPhoto}.
+     * Reading Media's model here is the same permitted cross-module read
+     * {@see MediaAccess} already does in the other
+     * direction.
+     *
+     * @return BelongsTo<Media, $this>
+     */
+    public function photo(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'photo_media_id');
     }
 
     public function fullName(): string

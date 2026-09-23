@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Access\Models\AuditEntry;
 use App\Modules\Access\Permission;
 use App\Modules\Directory\Models\Person;
+use App\Modules\Media\Models\Media;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -103,6 +104,60 @@ it('filters the directory by ministry', function () {
     $ids = collect($this->getJson("/api/v1/people?ministry={$ministry->id}")->json('data'))->pluck('id');
 
     expect($ids)->toContain($inside->id)->not->toContain($outside->id);
+});
+
+it('shows a members photo url to a viewer who can see that person', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesViewAll, Permission::PeopleView]);
+    $person = Person::factory()->create();
+    memberOf($ministry, $person);
+    $media = Media::factory()->create(['variants' => ['thumb' => '2026/09/m_thumb.webp']]);
+    $person->forceFill(['photo_media_id' => $media->id])->save();
+
+    $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
+        ->firstWhere('person_id', $person->id);
+
+    expect($row['photo_url'])->not->toBeNull();
+});
+
+it('hides a members photo url from a fellow member without people.view', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+    $person = Person::factory()->create();
+    memberOf($ministry, $person);
+    $media = Media::factory()->create(['variants' => ['thumb' => '2026/09/m_thumb.webp']]);
+    $person->forceFill(['photo_media_id' => $media->id])->save();
+
+    $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
+        ->firstWhere('person_id', $person->id);
+
+    expect($row['photo_url'])->toBeNull();
+});
+
+it('shows a member their own photo url without people.view', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $member = memberOf($ministry, $user->person);
+    $media = Media::factory()->create(['variants' => ['thumb' => '2026/09/m_thumb.webp']]);
+    $user->person->forceFill(['photo_media_id' => $media->id])->save();
+
+    $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
+        ->firstWhere('id', $member->id);
+
+    expect($row['photo_url'])->not->toBeNull();
+});
+
+it('omits the photo url when a member has no photo', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesViewAll, Permission::PeopleView]);
+    $person = Person::factory()->create();
+    memberOf($ministry, $person);
+
+    $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
+        ->firstWhere('person_id', $person->id);
+
+    expect($row['photo_url'])->toBeNull();
 });
 
 it('writes membership changes to the journal', function () {

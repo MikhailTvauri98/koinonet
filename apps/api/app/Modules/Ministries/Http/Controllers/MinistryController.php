@@ -29,6 +29,7 @@ final class MinistryController
 
         $ministries = Ministry::query()
             ->whereNull('archived_at')
+            ->with('cover')
             ->unless(
                 Gate::allows('viewAll', Ministry::class),
                 fn (Builder $query): Builder => $query->whereHas(

@@ -21,6 +21,7 @@ final class PersonIndexQuery
 
         return Person::query()
             ->withCardFlags()
+            ->with('photo')
             ->when(
                 $search !== null,
                 fn (Builder $query): Builder => $query

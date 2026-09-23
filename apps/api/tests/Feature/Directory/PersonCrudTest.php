@@ -9,6 +9,7 @@ use App\Modules\Directory\Events\PersonArchived;
 use App\Modules\Directory\Events\PersonCreated;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Models\Media;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 
@@ -120,6 +121,25 @@ it('shows the basic person card with account and role flags', function () {
         ->assertJsonPath('data.has_global_roles', true)
         ->assertJsonMissingPath('data.contacts')
         ->assertJsonMissingPath('data.note');
+});
+
+it('includes a signed photo url when a photo is attached', function () {
+    actingAsUserWith([Permission::PeopleView]);
+    $person = Person::factory()->create();
+    $media = Media::factory()->create(['variants' => ['thumb' => '2026/09/p_thumb.webp']]);
+    $person->forceFill(['photo_media_id' => $media->id])->save();
+
+    $url = $this->getJson("/api/v1/people/{$person->id}")->assertOk()->json('data.photo_url');
+
+    expect($url)->not->toBeNull();
+    $this->get($url)->assertOk()->assertHeader('X-Accel-Redirect', '/_protected/2026/09/p_thumb.webp');
+});
+
+it('omits the photo url when the person has no photo', function () {
+    actingAsUserWith([Permission::PeopleView]);
+    $person = Person::factory()->create();
+
+    $this->getJson("/api/v1/people/{$person->id}")->assertOk()->assertJsonPath('data.photo_url', null);
 });
 
 it('updates only the submitted person fields', function () {

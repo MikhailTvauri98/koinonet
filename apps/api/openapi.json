@@ -3202,6 +3202,13 @@
                             "null"
                         ]
                     },
+                    "photo_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Seeing this roster row (`members.manage`/`view_all` or plain\nmembership) is a weaker gate than seeing a photo (architecture\n6.4: \"\u0444\u043e\u0442\u043e \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0430 \u0442\u0435\u043c, \u0443 \u043a\u043e\u0433\u043e people.view\", own exempted).\nA fellow member without `people.view` sees the row but not\nthe photo - the same `PersonPolicy::view` `MediaAccess`\nalready uses for the person's own card and photo elsewhere."
+                    },
                     "roles": {
                         "type": "array",
                         "items": {
@@ -3226,6 +3233,7 @@
                     "ministry_id",
                     "person_id",
                     "joined_at",
+                    "photo_url",
                     "roles"
                 ],
                 "title": "MemberResource"
@@ -3267,6 +3275,13 @@
                             "null"
                         ]
                     },
+                    "cover_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "`large` (1080px), not `thumb` (320px, architecture 7.8 defines\nboth sizes but not which screen uses which): unlike a\nperson's photo or a member row's avatar, a ministry cover is\nshown banner-style at close to full card width (task 28), and\na 320px source would visibly blur stretched that wide."
+                    },
                     "default_role_id": {
                         "type": [
                             "string",
@@ -3284,6 +3299,7 @@
                     "id",
                     "name",
                     "description",
+                    "cover_url",
                     "default_role_id",
                     "archived_at"
                 ],
@@ -3395,6 +3411,13 @@
                     "archived": {
                         "type": "boolean"
                     },
+                    "photo_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Same rule as the card itself (architecture 6.4: \"\u0444\u043e\u0442\u043e \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0430\n \u0442\u0435\u043c, \u0443 \u043a\u043e\u0433\u043e people.view\" - see the class this resource is\nnever returned without passing): whoever the controller\nalready let see this person's card sees their photo too, so\nno extra check is needed here."
+                    },
                     "has_account": {
                         "type": "boolean"
                     },
@@ -3447,6 +3470,7 @@
                     "full_name",
                     "status",
                     "archived",
+                    "photo_url",
                     "has_account",
                     "has_global_roles",
                     "account_disabled"

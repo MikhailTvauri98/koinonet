@@ -25,7 +25,7 @@ final class MinistryMemberController
         Gate::authorize('view', $ministry);
 
         return MemberResource::collection(
-            $ministry->members()->with('roles')->orderBy('joined_at')->get(),
+            $ministry->members()->with(['roles', 'person.photo'])->orderBy('joined_at')->get(),
         );
     }
 

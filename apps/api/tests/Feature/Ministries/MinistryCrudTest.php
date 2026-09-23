@@ -7,6 +7,7 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionScope;
 use App\Modules\Access\RoleScope;
+use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -164,4 +165,23 @@ it('shows any ministry card to ministries.view_all', function () {
     $ministry = Ministry::factory()->create();
 
     $this->getJson("/api/v1/ministries/{$ministry->id}")->assertOk();
+});
+
+it('includes a signed cover url when a cover is attached', function () {
+    actingAsUserWith([Permission::MinistriesViewAll]);
+    $ministry = Ministry::factory()->create();
+    $media = Media::factory()->create(['variants' => ['thumb' => '2026/09/c_thumb.webp', 'large' => '2026/09/c_large.webp']]);
+    $ministry->forceFill(['cover_media_id' => $media->id])->save();
+
+    $url = $this->getJson("/api/v1/ministries/{$ministry->id}")->assertOk()->json('data.cover_url');
+
+    expect($url)->not->toBeNull();
+    $this->get($url)->assertOk()->assertHeader('X-Accel-Redirect', '/_protected/2026/09/c_large.webp');
+});
+
+it('omits the cover url when the ministry has no cover', function () {
+    actingAsUserWith([Permission::MinistriesViewAll]);
+    $ministry = Ministry::factory()->create();
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}")->assertOk()->assertJsonPath('data.cover_url', null);
 });

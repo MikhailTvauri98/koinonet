@@ -7,6 +7,7 @@ namespace App\Modules\Directory\Http\Resources;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Modules\Directory\PersonVisibility;
+use App\Modules\Media\SignedMediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,6 +26,7 @@ final class PersonResource extends JsonResource
      *     has_account: bool,
      *     has_global_roles: bool,
      *     account_disabled: bool,
+     *     photo_url: string|null,
      *     contacts?: array{phone: string|null, email: string|null, birth_date: string|null},
      *     note?: string|null
      * }
@@ -45,6 +47,12 @@ final class PersonResource extends JsonResource
             'full_name' => $person->fullName(),
             'status' => $person->status->value,
             'archived' => $person->archived_at !== null,
+            // Same rule as the card itself (architecture 6.4: "фото человека
+            // тем, у кого people.view" - see the class this resource is
+            // never returned without passing): whoever the controller
+            // already let see this person's card sees their photo too, so
+            // no extra check is needed here.
+            'photo_url' => SignedMediaUrl::variant($person->photo, 'thumb'),
             'has_account' => (bool) $person->getAttribute('user_exists'),
             'has_global_roles' => (bool) $person->getAttribute('global_roles_exists'),
             'account_disabled' => (bool) $person->getAttribute('account_disabled'),
