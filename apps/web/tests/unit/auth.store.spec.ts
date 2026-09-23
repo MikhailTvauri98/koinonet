@@ -56,4 +56,50 @@ describe('auth store', () => {
     expect(auth.user).toBeNull()
     expect(auth.permissions.administrator).toBe(false)
   })
+
+  describe('forgetSession', () => {
+    // pages/password-reset/[token].vue зовёт forgetSession() перед переходом
+    // на /login, не зная, чья сессия была в этой вкладке — своя (сервер её
+    // только что убил) или чужая (сервер её не трогал). Оба случая должны
+    // разрешиться правильно на ближайшем fetchMe(), которым middleware
+    // перепроверяет, кто вошёл, — а не тем, что было в сторе до сброса.
+
+    it('drops the local account immediately and lets the next fetchMe confirm the server logged it out', async () => {
+      const auth = useAuthStore()
+      auth.user = { id: 'u1', phone: null, email: 'maria@example.com' }
+      auth.initialized = true
+
+      auth.forgetSession()
+
+      // Сразу после forgetSession(), ещё до любого запроса к серверу: сторая
+      // не должен продолжать выглядеть вошедшим, и middleware обязан
+      // перепроверить (initialized сброшен).
+      expect(auth.user).toBeNull()
+      expect(auth.initialized).toBe(false)
+
+      get.mockRejectedValue(Object.assign(new Error('unauthenticated'), { statusCode: 401 }))
+      await auth.fetchMe()
+
+      expect(auth.user).toBeNull()
+      expect(auth.initialized).toBe(true)
+    })
+
+    it('restores a different account whose own session the server did not touch', async () => {
+      const auth = useAuthStore()
+      // Другой аккаунт был вошедшим в этой же вкладке (например
+      // администратор открыл чужую ссылку сброса, чтобы её проверить) —
+      // его сессию AcceptAccessLink.php не трогает вовсе.
+      auth.user = { id: 'admin1', phone: null, email: 'admin@example.com' }
+      auth.initialized = true
+
+      auth.forgetSession()
+      get.mockResolvedValue(me)
+      await auth.fetchMe()
+
+      // Сервер подтвердил: сессия жива, это тот же (другой) аккаунт — а не
+      // гость и не тот, кого сбросили.
+      expect(auth.user?.id).toBe(me.user.id)
+      expect(auth.initialized).toBe(true)
+    })
+  })
 })

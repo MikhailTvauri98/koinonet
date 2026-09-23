@@ -48,6 +48,23 @@ export const useAuthStore = defineStore('auth', () => {
     permissions.value = { ...emptyPermissions }
   }
 
+  // Публично: экран сброса пароля (`pages/password-reset/[token].vue`) зовёт
+  // это перед переходом на /login после успешного приёма ссылки. Сервер там
+  // меняет состояние сессий по своим правилам, не по cookie этой вкладки
+  // (AcceptAccessLink.php завершает все сессии аккаунта, чей пароль
+  // сбросили, — а если ссылку сбросил кто-то ДРУГОЙ, уже вошедший в этой же
+  // вкладке своим аккаунтом, тот чужой сессии вообще не касается). В обоих
+  // случаях локальный `user` мог устареть, а простой reset() ещё и соврал
+  // бы: он безусловно разлогинил бы вкладку, даже когда сервер её сессию не
+  // трогал. Вместо угадывания — reset() плюс `initialized = false`, чтобы
+  // ближайший прогон middleware (auth.global.ts) заново спросил сервер через
+  // fetchMe() и восстановил ровно то, что там на самом деле: гостя для
+  // сброшенного аккаунта или прежнего пользователя для стороннего.
+  function forgetSession() {
+    reset()
+    initialized.value = false
+  }
+
   async function login(loginValue: string, password: string, remember: boolean) {
     const api = useApi()
     const me = await api.post<MeResponse>('/auth/login', { login: loginValue, password, remember })
@@ -78,5 +95,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, person, permissions, initialized, login, logout, fetchMe, reset, setMe }
+  return { user, person, permissions, initialized, login, logout, fetchMe, reset, setMe, forgetSession }
 })

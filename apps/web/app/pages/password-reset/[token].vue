@@ -14,6 +14,7 @@ definePageMeta({ layout: false, auth: false })
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
+const authStore = useAuthStore()
 
 const token = route.params.token as string
 
@@ -59,6 +60,13 @@ async function onSubmit() {
     // password_reset и завершает все сессии аккаунта. Человек идёт на
     // «Вход» с новым паролем, а не в приложение — в отличие от приглашения.
     await api.post(`/access-links/${token}/accept`, payload)
+    // Вкладка могла быть вошедшей ДО отправки — своим же аккаунтом (его
+    // сессию сервер только что убил) или чужим (например администратор
+    // проверял ссылку — его сессия жива и не при чём). Локальный `user` в
+    // обоих случаях не заслуживает доверия: forgetSession() заставляет
+    // ближайший прогон middleware спросить сервер заново, а не полагаться на
+    // то, что было в сторе до этого запроса.
+    authStore.forgetSession()
     router.push('/login?passwordChanged=1')
   } catch (error) {
     formError.value = describeSubmitError(error)

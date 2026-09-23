@@ -1,7 +1,9 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import PasswordResetPage from '~/pages/password-reset/[token].vue'
+import { useAuthStore } from '~/stores/auth'
 
 const get = vi.fn()
 const post = vi.fn()
@@ -21,6 +23,9 @@ mockNuxtImport('useRouter', () => () => ({
 }))
 
 beforeEach(() => {
+  // Страница обращается к настоящему authStore (forgetSession() перед
+  // переходом на /login) — тот же приём, что в invite.spec.ts.
+  setActivePinia(createPinia())
   get.mockReset()
   post.mockReset()
   push.mockReset()
@@ -81,5 +86,28 @@ describe('password reset page', () => {
       password_confirmation: 'secret123',
     })
     expect(push).toHaveBeenCalledWith('/login?passwordChanged=1')
+  })
+
+  it('invalidates a stale signed-in session before leaving for the login screen', async () => {
+    // Вкладка была вошедшей КАКИМ-ТО аккаунтом до отправки — экран не
+    // пытается угадать, свой это аккаунт или чужой (сервер решит по
+    // fetchMe() на /login, apps/web/tests/unit/auth.store.spec.ts проверяет
+    // оба исхода); он обязан сбросить локальное состояние безусловно, а не
+    // тащить его дальше как есть.
+    const auth = useAuthStore()
+    auth.user = { id: 'admin1', phone: null, email: 'admin@example.com' }
+    auth.initialized = true
+
+    get.mockResolvedValue({ data: { kind: 'password_reset', person: { first_name: 'Мария' }, login_hint: {} } })
+    post.mockResolvedValue({ data: { kind: 'password_reset' } })
+
+    const page = await mountSuspended(PasswordResetPage)
+    await page.find('[data-test="password"]').setValue('secret123')
+    await page.find('[data-test="password-confirmation"]').setValue('secret123')
+    await page.find('form').trigger('submit')
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(auth.user).toBeNull()
+    expect(auth.initialized).toBe(false)
   })
 })
