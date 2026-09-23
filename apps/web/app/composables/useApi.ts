@@ -46,9 +46,18 @@ export function useApi() {
       headers,
       body,
       async onResponseError({ response }) {
-        if (response.status === 401) {
+        if (response.status === 401 && path !== '/auth/me') {
           // Сессия истекла или её не было: чистим состояние и ведём на вход,
-          // а не оставляем пустой экран.
+          // а не оставляем пустой экран. /auth/me исключён тем же приёмом,
+          // что и ниже у 403: 401 оттуда — не сбой посреди работы, а обычный
+          // ответ на вопрос "кто вошёл", который сам обрабатывает fetchMe()
+          // (apps/web/app/stores/auth.ts) через reset() в своём catch, а
+          // решение, куда вести дальше, принимает middleware
+          // (auth.global.ts). Без исключения этот push('/login') конкурировал
+          // бы с уже идущей навигацией — например на
+          // /login?passwordChanged=1 после сброса пароля
+          // (pages/password-reset/[token].vue) — и отменял бы её вместе с
+          // query.
           auth.reset()
           router.push('/login')
           return
