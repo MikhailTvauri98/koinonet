@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Media\Actions;
 
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Jobs\ProcessUploadedImage;
 use App\Modules\Media\MediaKind;
 use App\Modules\Media\MediaStatus;
 use App\Modules\Media\Models\Media;
@@ -57,7 +58,7 @@ final readonly class StoreMedia
             throw new RuntimeException('Could not write the uploaded file to the media disk.');
         }
 
-        return Media::query()->create([
+        $media = Media::query()->create([
             'uploader_user_id' => $uploader->id,
             'disk' => self::DISK,
             'path' => $path,
@@ -68,5 +69,11 @@ final readonly class StoreMedia
             'status' => $kind === MediaKind::Image ? MediaStatus::Processing : MediaStatus::Ready,
             'created_at' => now(),
         ]);
+
+        if ($kind === MediaKind::Image) {
+            ProcessUploadedImage::dispatch($media->id);
+        }
+
+        return $media;
     }
 }

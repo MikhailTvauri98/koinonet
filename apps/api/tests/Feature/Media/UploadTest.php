@@ -5,11 +5,19 @@ declare(strict_types=1);
 use App\Modules\Media\Models\Media;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
-beforeEach(fn () => Storage::fake('media'));
+beforeEach(function () {
+    Storage::fake('media');
+    // An image upload queues ProcessUploadedImage (task 21). Faked here so
+    // these tests observe the upload's own immediate result - `processing`,
+    // not whatever the sync test queue turns it into a moment later. The
+    // job itself is exercised in ImageProcessingTest.php.
+    Bus::fake();
+});
 
 it('requires a session to upload', function () {
     $this->postJson('/api/v1/media', ['file' => UploadedFile::fake()->image('photo.jpg')])

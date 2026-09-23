@@ -9,6 +9,7 @@
         "php": "^8.4",
         "dedoc/scramble": "^0.13.43",
         "giggsey/libphonenumber-for-php": "^9.0",
+        "intervention/image": "^4.3",
         "laravel/framework": "^13.17",
         "laravel/horizon": "^5.49",
         "laravel/sanctum": "^4.3",

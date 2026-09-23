@@ -4128,7 +4128,7 @@ composer openapi && git add . && git commit -m "feat(media): upload with content
 **Интерфейсы:**
 - Отдаёт наружу: `ProcessUploadedImage::dispatch(string $mediaId)` — удаляет EXIF, поворачивает по ориентации, ужимает оригинал до 2000 px по большей стороне, создаёт варианты `thumb` (320 px) и `large` (1080 px) в WebP, заполняет `width`, `height`, `variants`, ставит `status = ready`; при ошибке — `failed`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -4211,23 +4211,23 @@ it('marks the media failed when the file is not a readable image', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media/ImageProcessingTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Установить `composer require intervention/image`. `ImageProcessor` работает с драйвером Imagick: читает файл, применяет `orient()`, убирает профили и EXIF, при большей стороне свыше 2000 px делает `scaleDown(2000)`, пишет оригинал обратно; затем `scaleDown(320)` и `scaleDown(1080)` в WebP качества 80 по путям `{dir}/{ulid}_thumb.webp` и `_large.webp`.
 
 `ProcessUploadedImage` — `ShouldQueue` с `tries = 3`, в `failed()` ставит `status = failed`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media/ImageProcessingTest.php`
 Ожидается: PASS, 5 тестов.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add . && git commit -m "feat(media): image processing job with exif strip and webp variants"
