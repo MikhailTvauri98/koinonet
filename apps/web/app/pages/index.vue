@@ -1,12 +1,8 @@
 <script setup lang="ts">
 const auth = useAuthStore()
 const { can } = useCan()
-
-// Та же логика видимости, что в AppNav.vue: см. комментарий там про
-// отсутствие отдельного права на список служений в каталоге.
-const hasMinistries = computed(() =>
-  can('ministries.view_all') || can('ministries.manage_all') || Object.keys(auth.permissions.ministries).length > 0,
-)
+// Правило и обоснование — в useCan.ts (hasVisibleMinistries), общее с AppNav.vue.
+const hasMinistries = useHasVisibleMinistries()
 </script>
 
 <template>

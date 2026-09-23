@@ -1,21 +1,12 @@
 <script setup lang="ts">
-const auth = useAuthStore()
 const { can } = useCan()
+// Правило и обоснование — в useCan.ts (hasVisibleMinistries), общее с index.vue.
+const hasMinistries = useHasVisibleMinistries()
 
 interface NavItem {
   to: string
   label: string
 }
-
-// "Служения" показываем тому, кому есть что там смотреть: состоит хотя бы в
-// одном служении, либо видит/администрирует все служения без участия в них.
-// Каталог прав (docs/architecture.md, раздел 6.1) не заводит отдельного
-// "ministries.view" — список служений сам по себе не за правом, а решение
-// показывать пункт меню — это решение только клиента, сервер как обычно
-// остаётся единственным источником правды по каждому конкретному служению.
-const hasMinistries = computed(() =>
-  can('ministries.view_all') || can('ministries.manage_all') || Object.keys(auth.permissions.ministries).length > 0,
-)
 
 const items = computed<NavItem[]>(() => {
   const list: NavItem[] = [{ to: '/', label: 'Главная' }]
