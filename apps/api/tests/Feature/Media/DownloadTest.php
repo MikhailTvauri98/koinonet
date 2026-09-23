@@ -82,6 +82,17 @@ it('shows a person photo to anyone with people.view', function () {
         ->assertOk();
 });
 
+it('shows a person their own photo without people.view', function () {
+    $person = Person::factory()->create();
+    $media = Media::factory()->create();
+    $person->forceFill(['photo_media_id' => $media->id])->save();
+
+    actingAsUser($person);
+
+    $this->get(URL::temporarySignedRoute('media.show', now()->addHour(), ['media' => $media->id]))
+        ->assertOk();
+});
+
 it('hides a person photo from an account without people.view', function () {
     $person = Person::factory()->create();
     $media = Media::factory()->create();

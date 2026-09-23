@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Media;
 
-use App\Modules\Access\Permission;
-use App\Modules\Access\PermissionResolver;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Modules\Media\Contracts\MediaOwnerResolver;
@@ -17,7 +15,9 @@ use Illuminate\Support\Facades\Gate;
  * Visibility rule for one media file: decided by whichever object owns it
  * (architecture 6.4), never by who merely uploaded it. Phase 1 has two
  * direct owners - a person's photo and a ministry's cover - checked here
- * against the permission or policy that already governs seeing that owner.
+ * by asking the Policy that already governs seeing that owner (through
+ * `Gate`, so both branches pick up its full rule, including "own" - a
+ * person sees their own photo without `people.view`, architecture 6.4).
  * A file matching neither is unattached and visible only to its uploader.
  *
  * Later phases add owners (chat avatar, message/announcement/event
@@ -29,7 +29,6 @@ final readonly class MediaAccess
 {
     /** @param iterable<MediaOwnerResolver> $resolvers */
     public function __construct(
-        private PermissionResolver $permissions,
         private iterable $resolvers = [],
     ) {}
 
@@ -37,7 +36,7 @@ final readonly class MediaAccess
     {
         $person = Person::query()->where('photo_media_id', $media->id)->first();
         if ($person !== null) {
-            return $this->permissions->can($user, Permission::PeopleView);
+            return Gate::forUser($user)->allows('view', $person);
         }
 
         $ministry = Ministry::query()->where('cover_media_id', $media->id)->first();
