@@ -5,8 +5,13 @@ import LoginPage from '~/pages/login.vue'
 
 const login = vi.fn()
 const push = vi.fn()
+let routeQuery: Record<string, string> = {}
 
 mockNuxtImport('useAuthStore', () => () => ({ login }))
+// Страница сброса пароля (pages/password-reset/[token].vue) ведёт сюда с
+// ?passwordChanged=1 — заглушка достаточно настоящая, чтобы это проверить,
+// но не завязана на реальный vue-router (routeQuery меняется по тесту).
+mockNuxtImport('useRoute', () => () => ({ query: routeQuery }))
 // mockNuxtImport заменяет useRouter везде в модульном графе файла, включая
 // служебный код @nuxt/test-utils (setupNuxt зовёт useRouter().afterEach,
 // mountSuspended — useRouter().replace) и плагин Nuxt navigation-repaint
@@ -23,6 +28,7 @@ mockNuxtImport('useRouter', () => () => ({
 beforeEach(() => {
   login.mockReset()
   push.mockReset()
+  routeQuery = {}
 })
 
 describe('login page', () => {
@@ -76,5 +82,13 @@ describe('login page', () => {
     await new Promise(resolve => setTimeout(resolve))
 
     expect(push).toHaveBeenCalledWith('/')
+  })
+
+  it('explains why the person landed here after a password reset', async () => {
+    routeQuery = { passwordChanged: '1' }
+
+    const page = await mountSuspended(LoginPage)
+
+    expect(page.text()).toContain('Пароль изменён')
   })
 })

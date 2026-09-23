@@ -1,5 +1,8 @@
-function isPublicPath(path: string): boolean {
-  return path === '/login' || path.startsWith('/invite/')
+// Экспортируется для прямого юнит-теста (tests/unit/auth.middleware.spec.ts):
+// публичность маршрута — это ровно то, что проверяет эта функция, а не
+// побочный эффект прогона всего middleware.
+export function isPublicPath(path: string): boolean {
+  return path === '/login' || path.startsWith('/invite/') || path.startsWith('/password-reset/')
 }
 
 export default defineNuxtRouteMiddleware(async (to) => {

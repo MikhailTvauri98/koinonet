@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import type { components } from '~~/types/api'
 import type { MeResponse } from '~/stores/auth'
 
-type AccessLinkInfo = components['schemas']['AccessLinkResource']
-
 interface ApiErrorData {
-  code?: string
   message?: string
 }
 
@@ -16,18 +12,6 @@ interface ApiErrorData {
 // читать page meta вместо префикса.
 definePageMeta({ layout: false, auth: false })
 
-// Тексты по кодам ссылки — дословно из ensureUsable()/AccessLinkController
-// (apps/api/app/Modules/Directory/{Models/AccessLink.php,Http/Controllers/AccessLinkController.php}),
-// а не `error.data.message`: сообщение в теле ошибки существует, но экран
-// обязан показывать понятный текст даже если оно когда-нибудь изменится или
-// придёт пустым.
-const LINK_ERROR_MESSAGES: Record<string, string> = {
-  'access_link.expired': 'Срок действия ссылки истёк.',
-  'access_link.used': 'Ссылка уже использована.',
-  'access_link.revoked': 'Ссылка отозвана.',
-  'access_link.invalid': 'Ссылка недействительна.',
-}
-
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
@@ -35,48 +19,24 @@ const authStore = useAuthStore()
 
 const token = route.params.token as string
 
-function apiErrorData(error: unknown): ApiErrorData | undefined {
-  return (error as { data?: ApiErrorData } | undefined)?.data
-}
+// Загрузка ссылки, отказы по коду и по несовпадающему виду — общие с
+// экраном сброса пароля, вынесены в useAccessLinkInfo.ts.
+const { loading, linkError, info, load } = useAccessLinkInfo(token, 'invite')
+await load()
 
-function describeLinkError(error: unknown): string {
-  const data = apiErrorData(error)
-  if (data?.code && data.code in LINK_ERROR_MESSAGES) {
-    return LINK_ERROR_MESSAGES[data.code]!
-  }
-  return data?.message ?? 'Не удалось открыть ссылку.'
-}
-
-function describeSubmitError(error: unknown): string {
-  return apiErrorData(error)?.message ?? 'Не удалось создать аккаунт. Попробуйте ещё раз.'
-}
-
-const loading = ref(true)
-const linkError = ref<string | null>(null)
-const invite = ref<AccessLinkInfo | null>(null)
-
-const login = ref('')
+// Верхнеуровневый await выше — сознательно: mountSuspended (и настоящий
+// Suspense в приложении) ждёт разрешения setup до первого рендера, так что
+// человек не видит пустую форму на мгновение раньше проверки ссылки.
+const login = ref(info.value?.login_hint.phone ?? info.value?.login_hint.email ?? '')
 const password = ref('')
 const passwordConfirmation = ref('')
 const submitting = ref(false)
 const formError = ref<string | null>(null)
 
-async function loadInvite() {
-  try {
-    const response = await api.get<{ data: AccessLinkInfo }>(`/access-links/${token}`)
-    invite.value = response.data
-    login.value = response.data.login_hint.phone ?? response.data.login_hint.email ?? ''
-  } catch (error) {
-    linkError.value = describeLinkError(error)
-  } finally {
-    loading.value = false
-  }
+function describeSubmitError(error: unknown): string {
+  const data = (error as { data?: ApiErrorData } | undefined)?.data
+  return data?.message ?? 'Не удалось создать аккаунт. Попробуйте ещё раз.'
 }
-
-// Верхнеуровневый await здесь — сознательно: mountSuspended (и настоящий
-// Suspense в приложении) ждёт разрешения setup до первого рендера, так что
-// человек не видит пустую форму на мгновение раньше проверки ссылки.
-await loadInvite()
 
 async function onSubmit() {
   formError.value = null
@@ -126,9 +86,9 @@ async function onSubmit() {
       {{ linkError }}
     </p>
 
-    <template v-else-if="invite">
+    <template v-else-if="info">
       <h1>Приглашение</h1>
-      <p>Здравствуйте, {{ invite.person.first_name }} {{ invite.person.last_name }}!</p>
+      <p>Здравствуйте, {{ info.person.first_name }} {{ info.person.last_name }}!</p>
 
       <form @submit.prevent="onSubmit">
         <label>

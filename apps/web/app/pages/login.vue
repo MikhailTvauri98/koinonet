@@ -9,6 +9,14 @@ definePageMeta({ layout: false })
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+
+// Экран сброса пароля (pages/password-reset/[token].vue) ведёт сюда с этим
+// флагом в query после смены пароля: сервер на приёме ссылки сброса не
+// логинит и завершает все сессии аккаунта (AcceptAccessLink.php), так что
+// человек попадает именно на «Вход», а не в приложение — и должен понимать
+// почему, а не просто увидеть пустую форму входа.
+const passwordChanged = computed(() => route.query.passwordChanged === '1')
 
 const loginValue = ref('')
 const password = ref('')
@@ -48,6 +56,9 @@ async function onSubmit() {
 <template>
   <main class="login-page">
     <h1>Вход</h1>
+    <p v-if="passwordChanged" class="login-page__notice" role="status">
+      Пароль изменён. Войдите с новым паролем.
+    </p>
     <form @submit.prevent="onSubmit">
       <label>
         Телефон или email

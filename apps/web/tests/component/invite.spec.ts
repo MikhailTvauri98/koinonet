@@ -77,6 +77,17 @@ describe('invite page', () => {
     expect(page.text()).toContain('Ссылка уже использована')
   })
 
+  it('rejects a password-reset link opened as an invitation', async () => {
+    // GET сам по себе не падает — ссылка существует и годна, просто не того
+    // вида. Экран приглашения не должен показать форму сброса пароля.
+    get.mockResolvedValue({ data: { kind: 'password_reset', person: { first_name: 'Мария' }, login_hint: {} } })
+
+    const page = await mountSuspended(InvitePage)
+
+    expect(page.text()).toContain('Ссылка недействительна')
+    expect(page.find('form').exists()).toBe(false)
+  })
+
   it('requires the password twice before sending anything', async () => {
     get.mockResolvedValue({ data: { kind: 'invite', person: { first_name: 'Мария' }, login_hint: {} } })
 
