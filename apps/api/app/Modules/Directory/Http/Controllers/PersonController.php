@@ -7,13 +7,16 @@ namespace App\Modules\Directory\Http\Controllers;
 use App\Modules\Directory\Actions\ArchivePerson;
 use App\Modules\Directory\Actions\CreatePerson;
 use App\Modules\Directory\Actions\RestorePerson;
+use App\Modules\Directory\Actions\SetPersonPhoto;
 use App\Modules\Directory\Actions\UpdatePerson;
 use App\Modules\Directory\Http\Queries\PersonIndexQuery;
+use App\Modules\Directory\Http\Requests\SetPhotoRequest;
 use App\Modules\Directory\Http\Requests\StorePersonRequest;
 use App\Modules\Directory\Http\Requests\UpdatePersonRequest;
 use App\Modules\Directory\Http\Resources\PersonResource;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\PersonStatus;
+use App\Modules\Media\Models\Media;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -93,6 +96,18 @@ final class PersonController
         Gate::authorize('restore', $person);
 
         return new PersonResource($this->withFlags($restorePerson->handle($person)));
+    }
+
+    public function updatePhoto(
+        SetPhotoRequest $request,
+        Person $person,
+        SetPersonPhoto $setPersonPhoto,
+    ): PersonResource {
+        Gate::authorize('update', $person);
+
+        $media = Media::query()->findOrFail($request->string('media_id')->toString());
+
+        return new PersonResource($this->withFlags($setPersonPhoto->handle($person, $media)));
     }
 
     private function withFlags(Person $person): Person

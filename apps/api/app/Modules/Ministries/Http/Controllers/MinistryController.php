@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Ministries\Http\Controllers;
 
+use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Actions\ArchiveMinistry;
 use App\Modules\Ministries\Actions\CreateMinistry;
+use App\Modules\Ministries\Actions\SetMinistryCover;
 use App\Modules\Ministries\Actions\UpdateMinistry;
 use App\Modules\Ministries\Http\Requests\MinistryRequest;
+use App\Modules\Ministries\Http\Requests\SetCoverRequest;
 use App\Modules\Ministries\Http\Resources\MinistryResource;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Database\Eloquent\Builder;
@@ -76,5 +79,17 @@ final class MinistryController
         Gate::authorize('archive', $ministry);
 
         return new MinistryResource($archiveMinistry->handle($ministry));
+    }
+
+    public function updateCover(
+        SetCoverRequest $request,
+        Ministry $ministry,
+        SetMinistryCover $setMinistryCover,
+    ): MinistryResource {
+        Gate::authorize('update', $ministry);
+
+        $media = Media::query()->findOrFail($request->string('media_id')->toString());
+
+        return new MinistryResource($setMinistryCover->handle($ministry, $media));
     }
 }

@@ -20,6 +20,7 @@ use App\Modules\Directory\Events\UserDisabled;
 use App\Modules\Directory\Events\UserEnabled;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Policies\PersonPolicy;
+use App\Modules\Media\Console\PruneOrphanMediaCommand;
 use App\Modules\Ministries\Access\DatabaseMinistryPermissionSource;
 use App\Modules\Ministries\Access\DatabaseSharedMinistryFinder;
 use App\Modules\Ministries\Actions\DetachRoleFromMembers;
@@ -54,7 +55,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
-        $this->commands([InstallCommand::class, ErasePersonCommand::class]);
+        $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Ministry::class, MinistryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);

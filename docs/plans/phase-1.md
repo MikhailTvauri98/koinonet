@@ -4406,7 +4406,7 @@ composer openapi && git add . && git commit -m "feat(media): signed delivery thr
 - Отдаёт наружу: `php artisan media:prune` — удаляет непривязанные файлы старше 24 часов вместе с вариантами; ставится в расписание ежедневно.
 - Коды ошибок: `media.not_owned`, `media.already_attached`, `media.wrong_kind`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -4529,23 +4529,23 @@ it('keeps a directly referenced photo even when unattached', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `AttachDirectMedia::handle(Media $media, MediaKind $expected): void` проверяет: загрузивший — текущий аккаунт (`media.not_owned`), вид совпадает (`media.wrong_kind`), файл ещё нигде не используется — ни в `media_attachments`, ни прямой ссылкой (`media.already_attached`).
 
 `PruneOrphanMediaCommand` выбирает `media` старше 24 часов, у которых нет строки в `media_attachments` и нет прямых ссылок из `people.photo_media_id` и `ministries.cover_media_id`, удаляет файл, варианты и запись. Расписание: `Schedule::command('media:prune')->daily();`
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(media): direct attachments for photos and covers, orphan pruning"

@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('auth/sessions/logout-others', [SessionController::class, 'logoutOthers']);
 
     Route::patch('me/profile', [ProfileController::class, 'update']);
+    Route::put('me/photo', [ProfileController::class, 'updatePhoto']);
     Route::patch('me/login', [ProfileController::class, 'updateLogin']);
     Route::patch('me/password', [ProfileController::class, 'updatePassword']);
 
@@ -29,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('people', [PersonController::class, 'store']);
     Route::get('people/{person}', [PersonController::class, 'show']);
     Route::patch('people/{person}', [PersonController::class, 'update']);
+    Route::put('people/{person}/photo', [PersonController::class, 'updatePhoto']);
     Route::post('people/{person}/archive', [PersonController::class, 'archive']);
     Route::post('people/{person}/restore', [PersonController::class, 'restore']);
     Route::post('people/{person}/invite', [InvitationController::class, 'invite']);

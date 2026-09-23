@@ -12,6 +12,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('ministries', [MinistryController::class, 'store']);
     Route::get('ministries/{ministry}', [MinistryController::class, 'show']);
     Route::patch('ministries/{ministry}', [MinistryController::class, 'update']);
+    Route::put('ministries/{ministry}/cover', [MinistryController::class, 'updateCover']);
     Route::post('ministries/{ministry}/archive', [MinistryController::class, 'archive']);
 
     Route::get('ministries/{ministry}/members', [MinistryMemberController::class, 'index']);

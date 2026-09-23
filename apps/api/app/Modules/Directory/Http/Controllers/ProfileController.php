@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Directory\Http\Controllers;
 
+use App\Modules\Directory\Actions\SetPersonPhoto;
 use App\Modules\Directory\Actions\UpdateOwnLogin;
 use App\Modules\Directory\Actions\UpdateOwnPassword;
 use App\Modules\Directory\Actions\UpdateOwnProfile;
+use App\Modules\Directory\Http\Requests\SetPhotoRequest;
 use App\Modules\Directory\Http\Requests\UpdateLoginRequest;
 use App\Modules\Directory\Http\Requests\UpdatePasswordRequest;
 use App\Modules\Directory\Http\Requests\UpdateProfileRequest;
 use App\Modules\Directory\Http\Resources\MeResource;
 use App\Modules\Directory\Http\Resources\PersonResource;
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Models\Media;
 use Illuminate\Http\JsonResponse;
 
 final class ProfileController
@@ -25,6 +28,17 @@ final class ProfileController
         /** @var array<string, mixed> $attributes */
         $attributes = $request->validated();
         $person = $updateOwnProfile->handle($user->person, $attributes);
+
+        return new PersonResource($person->loadCardFlags());
+    }
+
+    public function updatePhoto(SetPhotoRequest $request, SetPersonPhoto $setPersonPhoto): PersonResource
+    {
+        $user = $request->user();
+        assert($user instanceof User);
+
+        $media = Media::query()->findOrFail($request->string('media_id')->toString());
+        $person = $setPersonPhoto->handle($user->person, $media);
 
         return new PersonResource($person->loadCardFlags());
     }

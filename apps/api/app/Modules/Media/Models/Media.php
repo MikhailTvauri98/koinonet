@@ -78,4 +78,17 @@ final class Media extends Model
             default => $this->mime,
         };
     }
+
+    /**
+     * Every path on `$disk` this media occupies: the original file plus
+     * every processed variant (architecture 7.8). Used to remove a file
+     * completely - own deletion and orphan pruning alike - without either
+     * leaving a variant behind on disk or forgetting one still referenced.
+     *
+     * @return list<string>
+     */
+    public function storedPaths(): array
+    {
+        return [$this->path, ...array_values($this->variants ?? [])];
+    }
 }
