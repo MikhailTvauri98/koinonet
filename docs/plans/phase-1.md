@@ -4575,7 +4575,7 @@ composer openapi && git add . && git commit -m "feat(media): direct attachments 
 - Отдаёт наружу: `npm run gen:api` — генерирует `types/api.d.ts` из `apps/api/openapi.json`; `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
 - Отдаёт наружу: тип `paths` из `types/api.d.ts` — им типизируются все запросы.
 
-- [ ] **Шаг 1: Создать скелет**
+- [x] **Шаг 1: Создать скелет**
 
 ```bash
 npx nuxi@latest init apps/web --packageManager npm --no-install --gitInit false
@@ -4609,7 +4609,7 @@ export default defineNuxtConfig({
 }
 ```
 
-- [ ] **Шаг 2: Написать падающий тест**
+- [x] **Шаг 2: Написать падающий тест**
 
 `apps/web/tests/unit/smoke.spec.ts`:
 
@@ -4625,17 +4625,17 @@ describe('generated api types', () => {
 })
 ```
 
-- [ ] **Шаг 3: Запустить тест, убедиться что падает**
+- [x] **Шаг 3: Запустить тест, убедиться что падает**
 
 Выполнить: `npm run test`
 Ожидается: FAIL, `types/api` не найден.
 
-- [ ] **Шаг 4: Сгенерировать типы и прогнать проверки**
+- [x] **Шаг 4: Сгенерировать типы и прогнать проверки**
 
 Выполнить: `npm run gen:api && npm run test && npm run lint && npm run typecheck && npm run build`
 Ожидается: всё зелёное.
 
-- [ ] **Шаг 5: Задание `web` в CI**
+- [x] **Шаг 5: Задание `web` в CI**
 
 ```yaml
   web:
@@ -4660,7 +4660,7 @@ describe('generated api types', () => {
       - run: npm run build
 ```
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add apps/web .github && git commit -m "chore(web): nuxt skeleton, generated api types, CI"
