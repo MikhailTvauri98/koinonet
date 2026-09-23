@@ -31,6 +31,11 @@ export const useAuthStore = defineStore('auth', () => {
   // страницы, а не перед каждым переходом.
   const initialized = ref(false)
 
+  // Публично: экран приглашения (`pages/invite/[token].vue`) принимает
+  // `POST /access-links/{token}/accept`, который для kind=invite логинит
+  // аккаунт на сервере и отдаёт тот же `MeResource`, что и `/auth/login`
+  // (docs/architecture.md:444, apps/api/.../MeResource.php `$wrap = null`).
+  // Экран переиспользует эту функцию вместо второго похода за `/auth/me`.
   function setMe(me: MeResponse) {
     user.value = me.user
     person.value = me.person
@@ -73,5 +78,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, person, permissions, initialized, login, logout, fetchMe, reset }
+  return { user, person, permissions, initialized, login, logout, fetchMe, reset, setMe }
 })

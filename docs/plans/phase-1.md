@@ -4929,7 +4929,7 @@ git add apps/web && git commit -m "feat(web): api layer, auth store, permission 
 - Потребляет: `GET /access-links/{token}`, `POST /access-links/{token}/accept`.
 - Отдаёт наружу: маршрут `/invite/{token}` — публичный, без сессии.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `apps/web/tests/component/invite.spec.ts`:
 
@@ -5024,21 +5024,21 @@ describe('invite page', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/invite.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать страницу**
+- [x] **Шаг 3: Реализовать страницу**
 
 Страница помечена `definePageMeta({ layout: false, auth: false })`. Состояния: загрузка, приветствие с формой, ошибка ссылки (просрочена, использована, отозвана — разные тексты по `code`), успех. Поле логина предзаполняется из `login_hint`, пароль вводится дважды.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test tests/component/invite.spec.ts`
 Ожидается: PASS, 6 тестов.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): invitation acceptance screen"
