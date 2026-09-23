@@ -796,6 +796,86 @@
                 }
             }
         },
+        "/media/{media}": {
+            "get": {
+                "operationId": "media.show",
+                "tags": [
+                    "MediaDownload"
+                ],
+                "parameters": [
+                    {
+                        "name": "media",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "variant",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "headers": {
+                            "Content-Disposition": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "string",
+                                            "enum": [
+                                                "inline"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            },
+                            "X-Accel-Redirect": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/media": {
             "post": {
                 "operationId": "mediaUpload.store",
@@ -2889,14 +2969,21 @@
                         "type": "string"
                     },
                     "url": {
-                        "type": "null"
+                        "type": "string"
+                    },
+                    "thumb_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
                     "id",
                     "kind",
                     "status",
-                    "url"
+                    "url",
+                    "thumb_url"
                 ],
                 "title": "MediaResource"
             },

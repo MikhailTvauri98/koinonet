@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Media\Models;
 
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Jobs\ImageProcessor;
 use App\Modules\Media\MediaKind;
 use App\Modules\Media\MediaStatus;
 use Database\Factories\MediaFactory;
@@ -63,5 +64,18 @@ final class Media extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploader_user_id');
+    }
+
+    /**
+     * The MIME type to serve for one stored path of this media: `$mime` for
+     * the original, or `image/webp` for a `thumb`/`large` variant - the only
+     * format {@see ImageProcessor} writes variants in.
+     */
+    public function mimeFor(string $path): string
+    {
+        return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'webp' => 'image/webp',
+            default => $this->mime,
+        };
     }
 }

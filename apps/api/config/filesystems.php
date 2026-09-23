@@ -65,9 +65,15 @@ return [
         // Uploaded media (section 7.8). Backed by the `media` Docker volume,
         // mounted at /media in the app and web containers; nginx serves it
         // through an internal location, PHP never streams the bytes itself.
+        // `visibility` only sets the on-disk permission bits (0755/0644):
+        // without it Flysystem creates directories `0700`, which the app
+        // and web containers - different Unix users on a shared volume -
+        // cannot read across. Actual access control is the signed route and
+        // the owner check in MediaAccess, not these bits.
         'media' => [
             'driver' => 'local',
             'root' => '/media',
+            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],

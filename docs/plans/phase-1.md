@@ -4253,7 +4253,7 @@ git add . && git commit -m "feat(media): image processing job with exif strip an
 - Отдаёт наружу: `MediaAccess::canView(User $user, Media $media): bool` — правило владельца по разделу 6.4. В фазе 1 владельцами бывают фото человека, обложка служения и непривязанный файл самого загрузившего; фазы 2–4 регистрируют своих владельцев через `MediaOwnerResolver`.
 - Отдаёт наружу: `MediaResource` подставляет готовый подписанный `url` и `thumb_url` — клиент подписи не строит.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -4337,12 +4337,12 @@ it('hides a person photo from an account without people.view', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media/DownloadTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class MediaDownloadController
@@ -4369,17 +4369,17 @@ final class MediaDownloadController
 
 Маршрут: `Route::get('media/{media}', MediaDownloadController::class)->name('media.show')->middleware(['auth:sanctum', 'signed']);`
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Media/DownloadTest.php`
 Ожидается: PASS, 7 тестов.
 
-- [ ] **Шаг 5: Проверить отдачу через nginx вручную**
+- [x] **Шаг 5: Проверить отдачу через nginx вручную**
 
 Выполнить: `make up`, загрузить фото через API, открыть подписанную ссылку в браузере.
 Ожидается: файл отдан, в `docker compose logs app` нет строки о чтении файла PHP — байты гонит nginx.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(media): signed delivery through x-accel-redirect"
