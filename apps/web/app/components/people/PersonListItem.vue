@@ -9,7 +9,7 @@ defineProps<{ person: Person }>()
     <img v-if="person.photo_url" :src="person.photo_url" :alt="`Фото: ${person.full_name}`" width="48" height="48" loading="lazy">
     <span v-else class="person-item__placeholder" aria-hidden="true">{{ person.first_name.slice(0, 1) }}</span>
     <div>
-      <strong>{{ person.full_name }}</strong>
+      <NuxtLink :to="`/people/${person.id}`"><strong>{{ person.full_name }}</strong></NuxtLink>
       <div class="person-item__details">
         <span>{{ personStatuses[person.status as PersonStatus] ?? person.status }}</span>
         <span v-if="!person.has_global_roles" class="person-item__badge">без ролей</span>

@@ -805,6 +805,14 @@ export interface components {
             has_account: boolean;
             has_global_roles: boolean;
             account_disabled: boolean;
+            global_roles?: {
+                id: string;
+                name: string;
+            }[];
+            ministries?: {
+                id: string;
+                name: string;
+            }[];
             contacts?: {
                 phone: string | null;
                 email: string | null;
@@ -1921,7 +1929,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["PersonResource"];
+                        data: components["schemas"]["PersonResource"] & Record<string, never>;
                     };
                 };
             };

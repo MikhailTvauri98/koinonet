@@ -69,6 +69,7 @@ describe('people list', () => {
     ])))
     const page = await mountPage()
     expect(page.text()).toContain('Прокопенко Мария')
+    expect(page.get('a[href="/people/01J00000000000000000000002"]').text()).toContain('Прокопенко Мария')
     expect(page.text()).toContain('Член церкви')
     expect(page.text()).toContain('без ролей')
     expect(page.text()).toContain('В архиве')

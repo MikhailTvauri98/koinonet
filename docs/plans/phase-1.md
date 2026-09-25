@@ -5075,171 +5075,49 @@ git add apps/web && git commit -m "feat(web): invitation acceptance screen"
 
 ### Задача 27б: Карточка человека и управление доступом (1–3 часа)
 
-**Зависимости:** задача 27а. Список и создание из исходного брифа ниже выполняются в 27а; здесь остаются карточка, редактирование, роли, служения и действия с аккаунтом. Дополнить `PersonResource` и его загрузку ролями/служениями с соблюдением видимости; обновить OpenAPI и клиентские типы, покрыть контракт тестами API. Добавить переход из строки списка на карточку. Исходные тесты списка ниже служат регрессионными критериями 27а.
+**Цель:** открыть человека из списка, просмотреть доступные сведения, изменить карточку и глобальные роли, пригласить человека и управлять состоянием его аккаунта.
 
-**Уточнение исполнения:** существующие компоненты и тесты 27а расширить, не перезаписывать примерами ниже. В Nuxt 4 импорт страницы идёт через `~/pages/...`; `useApi.get` принимает URL с query; для настоящего `useCan` тест передаёт подготовленную Pinia через `global.plugins` в `mountSuspended`. Проверять фактический полный набор тестов, а не указанное в исходном примере число 8.
+**Зависимости:** задача 27а; серверные задачи 9, 11–14, 16–19, 23. Используются действующие политики Directory, Access и Ministries. Новых прав и таблиц нет.
 
 **Файлы:**
-- Создать: `apps/web/app/pages/people/index.vue`, `people/[id].vue`; `app/components/people/PersonListItem.vue`, `PersonForm.vue`, `PersonContacts.vue`
-- Тест: `apps/web/tests/component/people.spec.ts`
+- API: `PersonController.php`, `PersonResource.php` модуля Directory; `tests/Feature/Directory/PersonCardTest.php`; `openapi.json`.
+- Клиент: `app/pages/people/[id].vue`, `app/components/people/{PersonListItem,PersonForm,PersonContacts,PersonRoles,PersonAccountActions,AccessLinkDialog}.vue`, `tests/component/{people,person-card}.spec.ts`, `types/api.d.ts`, `package.json`, `package-lock.json`.
+- Документы: `docs/architecture.md` (разделы 6.4 и 10), этот план. Термины уже есть в `CONTEXT.md`.
 
 **Интерфейсы:**
-- Потребляет: `GET /people`, `GET /people/{id}`, `POST /people`, `PATCH /people/{id}`, `POST /people/{id}/archive`, `POST /people/{id}/restore`, `PUT /people/{id}/roles`, `POST /people/{id}/invite`.
+- `GET /people/{id}` дополняется массивами `global_roles` и `ministries` из `{id, name}`. Роли без списка прав; служения только активные и разрешённые `MinistryPolicy::view`. Список людей и ответы изменений не расширяются.
+- Используются `PATCH /people/{id}`, `POST /people/{id}/archive`, `POST /people/{id}/restore`, `GET /roles?scope=global`, `PUT /people/{id}/roles`, `POST /people/{id}/invite`, `POST /people/{id}/password-reset-link`, `POST /people/{id}/disable`, `POST /people/{id}/enable`.
+- После изменений карточка запрашивается заново; изменение собственных данных обновляет `/auth/me`. Ссылка существует только в памяти открытого окна; QR строится локально через `qrcode`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
-
-`apps/web/tests/component/people.spec.ts`:
-
-```ts
-import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import PeopleIndex from '~/app/pages/people/index.vue'
-import PersonCard from '~/app/pages/people/[id].vue'
-
-const get = vi.fn()
-const post = vi.fn()
-const permissions = { administrator: false, global: ['people.view'], ministries: {} }
-
-mockNuxtImport('useApi', () => () => ({ get, post }))
-mockNuxtImport('useCan', () => () => permissionChecker(permissions))
-
-beforeEach(() => {
-  get.mockReset()
-  post.mockReset()
-  permissions.global = ['people.view']
-})
-
-const person = (over = {}) => ({
-  id: 'p1', last_name: 'Прокопенко', first_name: 'Мария', full_name: 'Прокопенко Мария',
-  status: 'member', archived: false, has_account: false, has_global_roles: false, ...over,
-})
-
-describe('people list', () => {
-  it('searches with a debounce and passes the query to the api', async () => {
-    vi.useFakeTimers()
-    get.mockResolvedValue({ data: [person()], meta: { current_page: 1, last_page: 1, total: 1 } })
-
-    const page = await mountSuspended(PeopleIndex)
-    await page.find('[data-test="search"]').setValue('прокопенк')
-    vi.advanceTimersByTime(299)
-    expect(get).toHaveBeenCalledTimes(1)
-
-    vi.advanceTimersByTime(1)
-    expect(get).toHaveBeenLastCalledWith('/people', expect.objectContaining({ search: 'прокопенк' }))
-    vi.useRealTimers()
-  })
-
-  it('hides the create button without people.manage', async () => {
-    get.mockResolvedValue({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } })
-
-    const page = await mountSuspended(PeopleIndex)
-
-    expect(page.find('[data-test="create-person"]').exists()).toBe(false)
-  })
-
-  it('shows the create button with people.manage', async () => {
-    permissions.global = ['people.view', 'people.manage']
-    get.mockResolvedValue({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } })
-
-    const page = await mountSuspended(PeopleIndex)
-
-    expect(page.find('[data-test="create-person"]').exists()).toBe(true)
-  })
-
-  it('marks a person without global roles', async () => {
-    get.mockResolvedValue({ data: [person({ has_global_roles: false })], meta: { current_page: 1, last_page: 1, total: 1 } })
-
-    const page = await mountSuspended(PeopleIndex)
-
-    expect(page.text()).toContain('без ролей')
-  })
-
-  it('asks the api for archived people only when the filter is on', async () => {
-    get.mockResolvedValue({ data: [], meta: { current_page: 1, last_page: 1, total: 0 } })
-
-    const page = await mountSuspended(PeopleIndex)
-    expect(get).toHaveBeenLastCalledWith('/people', expect.not.objectContaining({ archived: 1 }))
-
-    await page.find('[data-test="filter-archived"]').setValue(true)
-    expect(get).toHaveBeenLastCalledWith('/people', expect.objectContaining({ archived: 1 }))
-  })
-})
-
-describe('person card', () => {
-  it('hides the contacts block when the api returned no contacts', async () => {
-    get.mockResolvedValue({ data: person() })
-
-    const page = await mountSuspended(PersonCard)
-
-    expect(page.find('[data-test="contacts"]').exists()).toBe(false)
-  })
-
-  it('shows contacts when the api returned them', async () => {
-    get.mockResolvedValue({ data: person({ contacts: { phone: '+79123456789', email: null, birth_date: null } }) })
-
-    const page = await mountSuspended(PersonCard)
-
-    expect(page.find('[data-test="contacts"]').text()).toContain('+79123456789')
-  })
-
-  it('explains why the invite button is disabled without a global role', async () => {
-    permissions.global = ['people.view', 'people.invite']
-    get.mockResolvedValue({ data: person({ has_global_roles: false }) })
-
-    const page = await mountSuspended(PersonCard)
-    const button = page.find('[data-test="invite"]')
-
-    expect(button.attributes('disabled')).toBeDefined()
-    expect(button.attributes('title')).toContain('глобальную роль')
-  })
-
-  it('shows the invitation link once with a copy button', async () => {
-    permissions.global = ['people.view', 'people.invite']
-    get.mockResolvedValue({ data: person({ has_global_roles: true }) })
-    post.mockResolvedValue({ data: { url: 'https://church.test/invite/tok123', expires_at: '2026-09-19T00:00:00Z' } })
-
-    const page = await mountSuspended(PersonCard)
-    await page.find('[data-test="invite"]').trigger('click')
-    await new Promise(resolve => setTimeout(resolve))
-
-    expect(page.find('[data-test="invite-link"]').text()).toContain('/invite/tok123')
-    expect(page.find('[data-test="copy-invite-link"]').exists()).toBe(true)
-  })
-})
-```
-
-Предупреждения о дубликате телефона проверяются в форме создания человека тем же приёмом: `post` возвращает `{ data: ..., warnings: [{ code: 'person.duplicate_phone' }] }`, и тест ожидает текст предупреждения в `[data-test="warnings"]`.
-
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
-
-Выполнить: `npm run test tests/component/people.spec.ts`
-Ожидается: FAIL.
-
-- [ ] **Шаг 3: Реализовать**
-
-Список: поиск с задержкой 300 мс, фильтры по статусу, служению, архиву и «без ролей», постраничная подгрузка. Карточка: ФИО, фото, статус, служения, блок контактов (показывается, только если пришёл в ответе), заметка, глобальные роли, кнопки «Пригласить», «Ссылка сброса пароля», «Отключить аккаунт» (у отключённого аккаунта вместо неё «Включить аккаунт», `POST /people/{id}/enable`), «Архивировать». Кнопка приглашения неактивна с подсказкой, если у человека нет глобальной роли или уже есть аккаунт.
-
-Ссылка приглашения показывается один раз в модальном окне с кнопкой копирования и QR-кодом (`qrcode` в зависимостях).
-
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
-
-Выполнить: `npm run test tests/component/people.spec.ts`
-Ожидается: PASS, 8 тестов.
-
-- [ ] **Шаг 5: Коммит**
-
-```bash
-git add apps/web && git commit -m "feat(web): directory list and person card"
-```
+- [x] **Шаг 1: Падающие тесты API.** Пять сценариев: названия ролей без прав; фильтрация служений; оба глобальных права просмотра служений; пустые связи и прежний формат списка. До реализации — 5 failed.
+- [x] **Шаг 2: Контракт карточки.** Загрузка связей только в `show`, фильтрация через существующую Policy, экспорт OpenAPI и генерация клиентских типов. После реализации — 5 passed (16 assertions).
+- [x] **Шаг 3: Клиент через тесты.** На пустой странице — 21 failed, 1 passed. Реализованы контакты, заметка, роли, служения, редактирование, архивация и возврат, приглашение, ссылка сброса, отключение и включение аккаунта. Добавлены проверки поздних ответов, смены прав и переходов во время сохранения: 26 тестов карточки; существующие 19 тестов списка и создания сохранены.
+- [x] **Шаг 4: Проверки и саморевью.** `composer test -- --compact --colors=never`, `composer lint`, `composer types`; `npm test`, `npm run lint`, `npm run typecheck`, `npm run generate`; отсутствие дрейфа OpenAPI/типов. Перечитать диф по границам модулей, ключам прав, словарю и документам.
+- [x] **Шаг 5: Коммит.** Обновить отметки и зафиксировать `feat: person card and account management` в ветке `phase-1/task-27b-person-card`.
 
 **Критерии готовности:**
-- Отсутствие контактов в ответе не рисует пустой блок с прочерками — блока просто нет.
-- Предупреждение о дубликате телефона показывается после создания, не мешая работе.
-- Ссылка приглашения показывается один раз, с копированием и QR — её передают мессенджером или показывают с экрана (раздел 7.2).
-- Неактивная кнопка приглашения объясняет причину.
+- Строка списка открывает карточку. Без контактов в ответе блока контактов нет; невидимые контакты и заметка не отправляются пустыми при редактировании.
+- Действия доступны только по ключам прав. Невозможное приглашение объясняет отсутствие глобальной роли, существующий аккаунт или архивацию.
+- Ссылку можно скопировать или показать QR-кодом; закрытие окна и смена карточки убирают её. Ошибки копирования оставляют возможность скопировать вручную.
+- Выдача ролей сохраняет выбранное при ошибке инварианта. Архивация и отключение требуют подтверждения. Сохранение повторно не отправляется во время запроса.
+- Переход к другому человеку и изменение прав не оставляют предыдущие данные, формы и ссылки; старые ответы не подменяют текущую карточку.
+- Все проверки проходят; предупреждения инструментов фиксируются отдельно, а не скрываются.
+
+**Проверка 2026-09-25:**
+```text
+composer test: Tests: 315 passed (785 assertions)
+composer lint: PASS 214 files
+composer types: [OK] No errors
+npm test: Test Files 10 passed; Tests 86 passed
+npm run lint / npm run typecheck: exit 0
+npm run generate: Generated public .output/public; exit 0
+OpenAPI and generated types: no drift
+```
+При саморевью найден и исправлен переход на вход после отключения собственного аккаунта: отдельный тест сначала упал, затем прошёл. Проверены границы модулей (записи через существующие Actions), ключи прав, словарь и актуальность документов. Предупреждения инструментов: прежний Scramble JR001 в `SessionResource`, предупреждения Nitro о внешнем `cache-driver.mjs` и импортах H3 на Windows. PR не создан: удалённый репозиторий не настроен.
+
+Работу начал другой агент (Codex), у него закончился лимит до коммита; отметки шагов и цифры выше — его. Принявший задачу агент независимо повторил все перечисленные проверки 2026-09-25 в том же окружении (Docker для API, хост для клиента) и получил те же цифры (315/785, 214 файлов, 5/16, 10/86, `exit 0`, дрейфа OpenAPI и типов нет). При сверке разделов 7.2 и 10 `docs/architecture.md` найдено расхождение, оставшееся от 27а: строка 444 всё ещё утверждала, что сервер возвращает «ссылку и QR», хотя раздел 10 (добавлен в этом изменении) верно описывает QR, построенный клиентом. Строка 444 исправлена: сервер возвращает только ссылку, QR строит клиент библиотекой `qrcode`.
 
 ---
-
 ### Задача 28: Служения и состав
 
 **Файлы:**

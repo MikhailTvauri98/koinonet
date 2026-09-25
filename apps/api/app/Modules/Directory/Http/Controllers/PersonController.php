@@ -68,7 +68,9 @@ final class PersonController
     {
         Gate::authorize('view', $person);
 
-        return new PersonResource($this->withFlags($person));
+        return new PersonResource($this->withFlags($person)->load([
+            'globalRoles', 'ministryMemberships.ministry',
+        ]));
     }
 
     public function update(

@@ -1988,7 +1988,18 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "global_roles",
+                                                        "ministries"
+                                                    ]
+                                                }
+                                            ]
                                         }
                                     },
                                     "required": [
@@ -3426,6 +3437,42 @@
                     },
                     "account_disabled": {
                         "type": "boolean"
+                    },
+                    "global_roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name"
+                            ]
+                        }
+                    },
+                    "ministries": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name"
+                            ]
+                        }
                     },
                     "contacts": {
                         "type": "object",

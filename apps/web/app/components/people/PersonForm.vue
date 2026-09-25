@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
-import { personStatuses, peopleErrorMessage, type PeopleError, type PersonCreatedResponse, type PersonStatus } from '~/utils/people'
+import { personStatuses, peopleErrorMessage, type PeopleError, type Person, type PersonCreatedResponse, type PersonStatus } from '~/utils/people'
 
-const emit = defineEmits<{ created: [response: PersonCreatedResponse], cancel: [] }>()
+const props = defineProps<{ person?: Person }>()
+const emit = defineEmits<{ created: [response: PersonCreatedResponse], updated: [], cancel: [] }>()
 const api = useApi()
 const { can } = useCan()
-const fields = reactive({ last_name: '', first_name: '', patronymic: '', phone: '', email: '', birth_date: '', note: '' })
-const status = ref<PersonStatus>('guest')
+const fields = reactive({
+  last_name: props.person?.last_name ?? '', first_name: props.person?.first_name ?? '',
+  patronymic: props.person?.patronymic ?? '', phone: props.person?.contacts?.phone ?? '',
+  email: props.person?.contacts?.email ?? '', birth_date: props.person?.contacts?.birth_date ?? '',
+  note: props.person?.note ?? '',
+})
+const status = ref<PersonStatus>((props.person?.status as PersonStatus) ?? 'guest')
+const contactsVisible = computed(() => !props.person || props.person.contacts !== undefined)
+const noteVisible = computed(() => can('people.view_notes') && (!props.person || props.person.note !== undefined))
 const saving = ref(false)
 const errorMessage = ref('')
 const fieldErrors = ref<Record<string, string[]>>({})
@@ -18,6 +26,7 @@ const textFields = [
   { name: 'email', label: 'Электронная почта', type: 'email', required: false, max: 254 },
   { name: 'birth_date', label: 'Дата рождения', type: 'date', required: false },
 ] as const
+const visibleFields = computed(() => textFields.filter(field => contactsVisible.value || !['phone', 'email', 'birth_date'].includes(field.name)))
 
 async function submit() {
   if (saving.value || !can('people.manage')) return
@@ -30,15 +39,22 @@ async function submit() {
 
   const body: components['schemas']['StorePersonRequest'] = {
     last_name: fields.last_name.trim(), first_name: fields.first_name.trim(),
-    patronymic: fields.patronymic.trim() || null, phone: fields.phone.trim() || null,
-    email: fields.email.trim() || null, birth_date: fields.birth_date || null, status: status.value,
-    ...(can('people.view_notes') ? { note: fields.note.trim() || null } : {}),
+    patronymic: fields.patronymic.trim() || null, status: status.value,
+    ...(contactsVisible.value ? {
+      phone: fields.phone.trim() || null, email: fields.email.trim() || null, birth_date: fields.birth_date || null,
+    } : {}),
+    ...(noteVisible.value ? { note: fields.note.trim() || null } : {}),
   }
   saving.value = true
   try {
-    emit('created', await api.post<PersonCreatedResponse>('/people', body))
+    if (props.person) {
+      await api.patch(`/people/${props.person.id}`, body)
+      emit('updated')
+    } else {
+      emit('created', await api.post<PersonCreatedResponse>('/people', body))
+    }
   } catch (error) {
-    errorMessage.value = peopleErrorMessage(error, 'Не удалось создать человека. Попробуйте ещё раз.')
+    errorMessage.value = peopleErrorMessage(error, 'Не удалось сохранить человека. Попробуйте ещё раз.')
     fieldErrors.value = (error as PeopleError | undefined)?.data?.errors ?? {}
   } finally {
     saving.value = false
@@ -48,10 +64,10 @@ async function submit() {
 
 <template>
   <form class="person-form" aria-labelledby="person-form-title" @submit.prevent="submit">
-    <h2 id="person-form-title">Новый человек</h2>
+    <h2 id="person-form-title">{{ person ? 'Редактирование человека' : 'Новый человек' }}</h2>
     <fieldset :disabled="saving">
       <legend class="visually-hidden">Данные человека</legend>
-      <label v-for="field in textFields" :key="field.name">
+      <label v-for="field in visibleFields" :key="field.name">
         {{ field.label }}{{ field.required ? ' *' : '' }}
         <input
           v-model="fields[field.name]" :name="field.name" :type="field.type" :required="field.required"
@@ -69,7 +85,7 @@ async function submit() {
         </select>
         <span v-if="fieldErrors.status" class="error" role="alert">{{ fieldErrors.status.join(' ') }}</span>
       </label>
-      <label v-if="can('people.view_notes')">
+      <label v-if="noteVisible">
         Заметка
         <textarea v-model="fields.note" name="note" rows="3" :aria-invalid="!!fieldErrors.note" />
         <span v-if="fieldErrors.note" class="error" role="alert">{{ fieldErrors.note.join(' ') }}</span>
@@ -77,7 +93,7 @@ async function submit() {
     </fieldset>
     <p v-if="errorMessage" class="error" role="alert">{{ errorMessage }}</p>
     <div class="person-form__actions">
-      <button type="submit" data-test="save-person" :disabled="saving">{{ saving ? 'Сохранение…' : 'Создать' }}</button>
+      <button type="submit" data-test="save-person" :disabled="saving">{{ saving ? 'Сохранение…' : person ? 'Сохранить' : 'Создать' }}</button>
       <button type="button" data-test="cancel-person" :disabled="saving" @click="emit('cancel')">Отмена</button>
     </div>
   </form>
