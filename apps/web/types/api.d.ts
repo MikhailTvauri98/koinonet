@@ -835,7 +835,7 @@ export interface components {
             name: string;
             description: string | null;
             is_system: boolean;
-            permissions: unknown[];
+            permissions: string[];
         };
         /** SessionResource */
         SessionResource: {
@@ -2344,9 +2344,6 @@ export interface operations {
                                 id: string;
                                 title: string;
                             })[];
-                        } | {
-                            carriers: number;
-                            blockers: string[];
                         };
                     };
                 };

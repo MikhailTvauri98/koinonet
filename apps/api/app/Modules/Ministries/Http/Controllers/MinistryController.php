@@ -67,10 +67,24 @@ final class MinistryController
         Ministry $ministry,
         UpdateMinistry $updateMinistry,
     ): MinistryResource {
-        Gate::authorize('update', $ministry);
-
         /** @var array{name?: string, description?: string|null, default_role_id?: string} $validated */
         $validated = $request->validated();
+
+        // Каждое поле требует своего права (задача 29, доделка задачи 18):
+        // название и описание — ministry.edit, роль по умолчанию —
+        // roles.manage (docs/architecture.md 6.1). Запрос с обоими типами
+        // полей требует оба права, а не хотя бы одно; пустой запрос (ни
+        // одного из полей) по-прежнему требует ministry.edit — то же
+        // поведение, что было у этого маршрута раньше.
+        $touchesGeneralFields = array_key_exists('name', $validated) || array_key_exists('description', $validated);
+        $touchesDefaultRole = array_key_exists('default_role_id', $validated);
+
+        if ($touchesGeneralFields || ! $touchesDefaultRole) {
+            Gate::authorize('update', $ministry);
+        }
+        if ($touchesDefaultRole) {
+            Gate::authorize('changeDefaultRole', $ministry);
+        }
 
         return new MinistryResource($updateMinistry->handle($ministry, $validated));
     }

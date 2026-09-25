@@ -40,6 +40,17 @@ final readonly class MinistryPolicy
         return $this->permissions->canInMinistry($user, Permission::MinistryEdit, $ministry->id);
     }
 
+    // Задача 29 (доделка, дефект задачи 18): docs/architecture.md 6.1 закрепляет
+    // выбор роли по умолчанию за roles.manage, а не ministry.edit — отдельная
+    // способность вместо переиспользования update(), потому что PATCH
+    // /ministries/{id} принимает default_role_id вперемешку с name/description
+    // в одном запросе (MinistryController::update проверяет обе способности
+    // независимо, по тому, какие поля реально пришли).
+    public function changeDefaultRole(User $user, Ministry $ministry): bool
+    {
+        return $this->permissions->canInMinistry($user, Permission::RolesManage, $ministry->id);
+    }
+
     public function archive(User $user, Ministry $ministry): bool
     {
         return $this->permissions->can($user, Permission::MinistriesCreate);

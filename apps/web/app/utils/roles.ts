@@ -1,30 +1,27 @@
-import type { components } from '~~/types/api'
+import type { components, operations } from '~~/types/api'
 
-// RoleResource.permissions генерируется как `unknown[]` (dedoc/scramble не
-// выводит `list<string>` из PHPDoc-формы array-shape, apps/api/.../RoleResource.php
-// уже несёт верную аннотацию — это неточность самого генератора, не форма
-// ответа). Свой тип точнее реального ответа сервера и используется вместо
-// `components['schemas']['RoleResource']` везде, где нужен typed-массив прав.
-export interface RoleLike {
-  id: string
-  name: string
-  description?: string | null
-  is_system?: boolean
-  permissions: string[]
-}
+// Раньше здесь были полностью рукописные типы: RoleResource.permissions
+// генерировался как `unknown[]`, а ответ `role.usage` — объединением двух
+// разных форм (dedoc/scramble путал форму по двум `return` в PHP на разные
+// типы; поправлено в apps/api — RoleResource::toArray и
+// RoleUsageCollector::for проводят массив через типизированную переменную
+// вместо литерала `[]`/пайплайна Collection без явного типа, задача 29,
+// доделка). Теперь оба места производные от `components`/`operations` — при
+// следующем расхождении формы ответа с клиентом это уронит `nuxt typecheck`,
+// а не тихо разойдётся.
+//
+// RoleLike — не сам `RoleResource` целиком: `description`/`is_system`
+// сделаны необязательными, потому что RoleEditor принимает роль и из мест,
+// где сервер их не прислал (тесты компонента передают {id, name,
+// permissions} без scope/ministry_id/description/is_system — тем же
+// набором полей, каким RoleEditor реально пользуется).
+export type RoleLike = Pick<components['schemas']['RoleResource'], 'id' | 'name' | 'permissions'>
+  & Partial<Pick<components['schemas']['RoleResource'], 'description' | 'is_system'>>
 
 export type PermissionCatalogueEntry = components['schemas']['PermissionResource']
 
-export interface RoleUsageBlocker {
-  type: string
-  id: string
-  title: string
-}
-
-export interface RoleUsage {
-  carriers: number
-  blockers: RoleUsageBlocker[]
-}
+export type RoleUsage = operations['role.usage']['responses'][200]['content']['application/json']['data']
+export type RoleUsageBlocker = RoleUsage['blockers'][number]
 
 export interface RolesError {
   statusCode?: number

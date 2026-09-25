@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Access\Http\Resources;
 
 use App\Modules\Access\Models\Role;
+use App\Modules\Access\Models\RolePermission;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,6 +18,11 @@ final class RoleResource extends JsonResource
         $role = $this->resource;
         assert($role instanceof Role);
 
+        /** @var list<string> $permissions */
+        $permissions = $role->relationLoaded('permissions')
+            ? $role->permissions->map(fn (RolePermission $permission): string => $permission->permission)->sort()->values()->all()
+            : [];
+
         return [
             'id' => $role->id,
             'scope' => $role->scope->value,
@@ -24,9 +30,7 @@ final class RoleResource extends JsonResource
             'name' => $role->name,
             'description' => $role->description,
             'is_system' => $role->is_system,
-            'permissions' => $role->relationLoaded('permissions')
-                ? $role->permissions->pluck('permission')->sort()->values()->all()
-                : [],
+            'permissions' => $permissions,
         ];
     }
 }

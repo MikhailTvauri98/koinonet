@@ -75,6 +75,60 @@ it('refuses a default role from another ministry', function () {
         ->assertStatus(422)->assertJsonPath('code', 'role.default_from_other_ministry');
 });
 
+// Задача 29 (доделка, дефект задачи 18): docs/architecture.md 6.1 закрепляет
+// выбор роли по умолчанию за roles.manage, но PATCH /ministries/{id}
+// проверял ministry.edit для всех своих полей без разбора. MinistryPolicy::
+// changeDefaultRole и разбор полей в MinistryController::update теперь
+// требуют право по каждому полю отдельно.
+it('changes the default role with roles.manage but without ministry.edit', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $manager = Role::factory()->ministry($ministry->id)->withPermissions([Permission::RolesManage])->create();
+    memberOf($ministry, $user->person, [$manager->id]);
+    $newDefault = $ministry->roles()->where('name', 'Лидер')->sole();
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['default_role_id' => $newDefault->id])
+        ->assertOk();
+
+    expect($ministry->fresh()->default_role_id)->toBe($newDefault->id);
+});
+
+it('refuses to change the default role with only ministry.edit, but still allows renaming', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $editor = Role::factory()->ministry($ministry->id)->withPermissions([Permission::MinistryEdit])->create();
+    memberOf($ministry, $user->person, [$editor->id]);
+    $newDefault = $ministry->roles()->where('name', 'Лидер')->sole();
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['default_role_id' => $newDefault->id])
+        ->assertForbidden();
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['name' => 'Прославление и музыка'])
+        ->assertOk();
+
+    expect($ministry->fresh()->default_role_id)->not->toBe($newDefault->id)
+        ->and($ministry->fresh()->name)->toBe('Прославление и музыка');
+});
+
+it('refuses a combined change of name and default role to a holder of only one of the two rights', function () {
+    $ministry = ministryWithRoles();
+    $newDefault = $ministry->roles()->where('name', 'Лидер')->sole();
+    $payload = ['name' => 'Прославление и музыка', 'default_role_id' => $newDefault->id];
+
+    $rolesManageOnly = actingAsUser();
+    $manager = Role::factory()->ministry($ministry->id)->withPermissions([Permission::RolesManage])->create();
+    memberOf($ministry, $rolesManageOnly->person, [$manager->id]);
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", $payload)->assertForbidden();
+
+    $ministryEditOnly = actingAsUser();
+    $editor = Role::factory()->ministry($ministry->id)->withPermissions([Permission::MinistryEdit])->create();
+    memberOf($ministry, $ministryEditOnly->person, [$editor->id]);
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", $payload)->assertForbidden();
+
+    expect($ministry->fresh()->name)->toBe('Прославление')
+        ->and($ministry->fresh()->default_role_id)->not->toBe($newDefault->id);
+});
+
 it('refuses to delete a role that is someones only role', function () {
     $ministry = ministryWithRoles();
     actingAsUserWith([Permission::MinistriesManageAll]);
