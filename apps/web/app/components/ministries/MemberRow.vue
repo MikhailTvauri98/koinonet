@@ -59,7 +59,12 @@ async function remove() {
     <img v-if="member.photo_url" :src="member.photo_url" :alt="`Фото: ${member.full_name}`" width="48" height="48" loading="lazy">
     <span v-else class="member-row__placeholder" aria-hidden="true">{{ member.full_name?.slice(0, 1) || '?' }}</span>
     <div class="member-row__body">
-      <strong>{{ member.full_name }}</strong>
+      <!-- Сервер отдаёт full_name только тем, кому видна базовая карточка
+           человека (people.view или сам человек) — тому же кругу, что и
+           photo_url (review round 2, task 28). Без права — нейтральная
+           надпись вместо пустой строки, не объясняющая причину. -->
+      <strong v-if="member.full_name">{{ member.full_name }}</strong>
+      <strong v-else class="member-row__hidden-name">Имя скрыто</strong>
       <ul class="member-row__chips" aria-label="Роли участника">
         <li v-for="role in member.roles" :key="role.id" class="member-row__chip">{{ role.name }}</li>
         <li v-if="!member.roles.length">Без ролей</li>
@@ -92,6 +97,7 @@ async function remove() {
 .member-row img, .member-row__placeholder { width: 3rem; height: 3rem; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .member-row__placeholder { display: grid; place-items: center; background: #edf1f6; color: #34445a; }
 .member-row__body { flex: 1; min-width: 0; }
+.member-row__hidden-name { color: #6b7686; font-weight: 400; font-style: italic; }
 .member-row__chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0.4rem 0; }
 .member-row__chip { padding: 0 0.5rem; border-radius: 1rem; background: #edf1f6; font-size: 0.875rem; }
 .member-row__roles fieldset { border: 0; padding: 0; margin: 0.5rem 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }

@@ -94,9 +94,13 @@ it('removes a member', function () {
     expect($ministry->members()->count())->toBe(0);
 });
 
-it('includes the members full name in the roster', function () {
+// Review round 2 (task 28): `full_name` follows the same gate as `photo_url`
+// right below it (architecture 6.4: "список и базовая карточка: people.view",
+// own exempted) - a fellow member without `people.view` sees the roster row
+// but not the name or photo behind it.
+it('includes a members full name in the roster for a viewer who can see that person', function () {
     $ministry = ministryWithRoles();
-    actingAsUserWith([Permission::MinistriesManageAll]);
+    actingAsUserWith([Permission::MinistriesViewAll, Permission::PeopleView]);
     $person = Person::factory()->create(['last_name' => 'Прокопенко', 'first_name' => 'Мария', 'patronymic' => null]);
     memberOf($ministry, $person);
 
@@ -104,6 +108,30 @@ it('includes the members full name in the roster', function () {
         ->firstWhere('person_id', $person->id);
 
     expect($row['full_name'])->toBe('Прокопенко Мария');
+});
+
+it('hides a members full name from a fellow member without people.view', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+    $person = Person::factory()->create(['last_name' => 'Прокопенко', 'first_name' => 'Мария', 'patronymic' => null]);
+    memberOf($ministry, $person);
+
+    $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
+        ->firstWhere('person_id', $person->id);
+
+    expect($row['full_name'])->toBeNull();
+});
+
+it('shows a member their own full name without people.view', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $member = memberOf($ministry, $user->person);
+
+    $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
+        ->firstWhere('id', $member->id);
+
+    expect($row['full_name'])->not->toBeNull();
 });
 
 it('filters the directory by ministry', function () {

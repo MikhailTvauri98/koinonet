@@ -1,6 +1,7 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
+import { reactive } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MembersTab from '~/pages/ministries/[id]/members.vue'
 import MinistryCard from '~/pages/ministries/[id]/index.vue'
@@ -16,15 +17,20 @@ const del = vi.fn()
 // typecheck — та же природа, что у `ministries: {} as Record<...>` рядом,
 // только про него в брифе не забыли.
 const permissions = { administrator: false, global: [] as string[], ministries: {} as Record<string, string[]> }
+// Реактивен (как в person-card.spec.ts), а не литерал брифа: тест на смену
+// служения посреди сессии (review round 2) должен суметь поменять
+// route.params.id у уже смонтированного компонента.
+const route = reactive({ params: { id: 'm1' } })
 
 mockNuxtImport('useApi', () => () => ({ get, post, put, patch, delete: del }))
 mockNuxtImport('useCan', () => () => permissionChecker(permissions))
-mockNuxtImport('useRoute', () => () => ({ params: { id: 'm1' } }))
+mockNuxtImport('useRoute', () => () => route)
 
 beforeEach(() => {
   [get, post, put, patch, del].forEach(fn => fn.mockReset())
   permissions.global = []
   permissions.ministries = {}
+  route.params.id = 'm1'
 })
 
 const ministry = { id: 'm1', name: 'Прославление', description: null, cover_url: null, default_role_id: 'r-member' }
@@ -121,6 +127,44 @@ describe('ministry members tab', () => {
     const checkbox = page.find('[data-test="role-r-tech"]')
     expect(checkbox.exists()).toBe(true)
     expect((checkbox.element as HTMLInputElement).checked).toBe(false)
+  })
+
+  // Review round 2 (task 28, critical): full_name следует тому же правилу
+  // видимости, что и photo_url (people.view или сам человек) — участник без
+  // этого права видит строку состава, но не имя коллеги. Нейтральная
+  // надпись вместо пустой строки.
+  it('shows a neutral label for a member without a visible name', async () => {
+    mockMembersAndRoles([{ ...member, full_name: null }])
+
+    const page = await mountSuspended(MembersTab)
+
+    expect(page.text()).toContain('Имя скрыто')
+  })
+
+  // Review round 2 (task 28, important): Nuxt переиспользует компонент
+  // страницы между служениями — открытый диалог добавления не должен
+  // пережить смену route.params.id, иначе найденный в старом служении
+  // человек добавится уже в новое.
+  it('closes the add dialog when the ministry changes, so a stale search result cannot be added to the new one', async () => {
+    permissions.ministries = { m1: ['members.manage'], m2: ['members.manage'] }
+    get.mockImplementation((path: string) => Promise.resolve(
+      path.endsWith('/roles') ? { data: [] }
+        : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }] }
+          : { data: [] },
+    ))
+
+    const page = await mountSuspended(MembersTab)
+    await page.find('[data-test="add-member"]').trigger('click')
+    await page.find('[data-test="member-search"]').setValue('Прокопенко')
+    await flushPromises()
+    expect(page.find('[data-test="person-option-p1"]').exists()).toBe(true)
+
+    route.params.id = 'm2'
+    await flushPromises()
+
+    expect(page.find('[data-test="member-search"]').exists()).toBe(false)
+    expect(page.find('[data-test="person-option-p1"]').exists()).toBe(false)
+    expect(post).not.toHaveBeenCalled()
   })
 })
 

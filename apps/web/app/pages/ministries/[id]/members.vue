@@ -78,7 +78,17 @@ watch(canManage, (allowed) => {
     roles.value = []
   }
 })
-watch(() => route.params.id, () => { void Promise.all([load(), loadRoles()]) })
+// Nuxt переиспользует этот компонент страницы между служениями (переход по
+// ссылке между /ministries/{id}/members меняет только route.params.id, не
+// пересоздавая компонент) — открытый диалог добавления, найденный в старом
+// служении, иначе остался бы открытым и добавил бы того человека уже в
+// новое (review round 2, task 28). v-if пересоздаёт AddMemberDialog с нуля
+// при следующем открытии, так что закрытия достаточно и для сброса его
+// внутреннего состояния (поиска и результатов).
+watch(() => route.params.id, () => {
+  showAddDialog.value = false
+  void Promise.all([load(), loadRoles()])
+})
 await Promise.all([load(), loadRoles()])
 </script>
 

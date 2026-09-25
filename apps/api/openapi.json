@@ -3208,8 +3208,10 @@
                         "type": "string"
                     },
                     "full_name": {
-                        "type": "string",
-                        "description": "Task 28 (web, members tab): the roster row needs a name to show\nnext to the photo. Seeing it is the same gate as seeing the row\nitself (`members.manage`/`view_all` or plain membership) - a\nperson's name is not more sensitive than the fact they belong\nto this ministry, which the row already discloses unconditionally."
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "joined_at": {
                         "type": [
@@ -3221,8 +3223,7 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "description": "Seeing this roster row (`members.manage`/`view_all` or plain\nmembership) is a weaker gate than seeing a photo (architecture\n6.4: \"\u0444\u043e\u0442\u043e \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0430 \u0442\u0435\u043c, \u0443 \u043a\u043e\u0433\u043e people.view\", own exempted).\nA fellow member without `people.view` sees the row but not\nthe photo - the same `PersonPolicy::view` `MediaAccess`\nalready uses for the person's own card and photo elsewhere."
+                        ]
                     },
                     "roles": {
                         "type": "array",
