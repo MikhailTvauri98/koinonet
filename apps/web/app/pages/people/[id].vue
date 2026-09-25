@@ -100,7 +100,11 @@ await load()
       <p v-if="notice" role="status">{{ notice }}</p>
       <PersonForm v-if="editing && can('people.manage')" :person="person" @updated="changed" @cancel="editing = false" />
       <template v-else>
-        <button v-if="can('people.manage')" type="button" data-test="edit-person" @click="editing = true">Редактировать</button>
+        <button
+          v-if="can('people.manage')" type="button" data-test="edit-person"
+          :disabled="person.archived" :title="person.archived ? 'Сначала верните человека из архива.' : ''"
+          @click="editing = true"
+        >Редактировать</button>
         <PersonContacts v-if="person.contacts" :contacts="person.contacts" />
         <section v-if="person.note !== undefined" data-test="note"><h2>Заметка</h2><p class="note">{{ person.note || 'Заметка не заполнена.' }}</p></section>
       </template>

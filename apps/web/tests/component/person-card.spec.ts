@@ -118,6 +118,22 @@ describe('person card', () => {
     expect(page.find('form').exists()).toBe(true)
   })
 
+  it('keeps editing enabled for an active person', async () => {
+    permit('people.view', 'people.manage')
+    const page = await mountPage()
+    const button = page.get('[data-test="edit-person"]')
+    expect(button.attributes('disabled')).toBeUndefined()
+  })
+
+  it('disables editing an archived person and explains how to proceed', async () => {
+    permit('people.view', 'people.manage')
+    card.archived = true
+    const page = await mountPage()
+    const button = page.get('[data-test="edit-person"]')
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.attributes('title')).toContain('архива')
+  })
+
   it('hides administrative actions without their permission keys', async () => {
     const page = await mountPage()
     for (const key of ['edit-person', 'archive', 'invite', 'password-reset', 'disable-account', 'edit-roles']) {
