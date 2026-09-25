@@ -5,6 +5,7 @@ import { reactive } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MembersTab from '~/pages/ministries/[id]/members.vue'
 import MinistryCard from '~/pages/ministries/[id]/index.vue'
+import RolesTab from '~/pages/ministries/[id]/roles.vue'
 import MinistriesList from '~/pages/ministries/index.vue'
 
 const get = vi.fn()
@@ -215,6 +216,73 @@ describe('ministry card', () => {
 
     expect(patch).toHaveBeenCalledWith('/ministries/m1', { name: 'Прославление и музыка', description: 'Хвала Богу музыкой' })
     expect(page.text()).toContain('Прославление и музыка')
+  })
+})
+
+describe('ministry roles tab', () => {
+  const roleMember = { id: 'r-member', name: 'Участник', scope: 'ministry', ministry_id: 'm1', description: null, is_system: false, permissions: [] as string[] }
+  const roleTech = { id: 'r-tech', name: 'Звукорежиссёр', scope: 'ministry', ministry_id: 'm1', description: null, is_system: false, permissions: ['events.manage'] }
+  const permissionCatalogue = [
+    { key: 'members.manage', scope: 'ministry', label: 'Управлять составом', description: '...' },
+    { key: 'events.manage', scope: 'ministry', label: 'Управлять событиями служения', description: '...' },
+  ]
+
+  // Три разных GET за один экран (ministries/[id]/roles.vue грузит служение
+  // и каталог ролей, RoleEditor поверх — общий каталог прав) — различаем по
+  // пути, тем же приёмом, что и mockMembersAndRoles выше в этом файле.
+  function mockMinistryAndRoles(defaultRoleId = 'r-member', roles = [roleMember, roleTech]) {
+    get.mockImplementation((path: string) => Promise.resolve(
+      path.endsWith('/roles') ? { data: roles }
+        : path.startsWith('/permissions') ? { data: permissionCatalogue }
+          : { data: { ...ministry, default_role_id: defaultRoleId } },
+    ))
+  }
+
+  it('shows a read-only list without roles.manage in that ministry', async () => {
+    permissions.ministries = { m1: ['members.manage'] }
+    mockMinistryAndRoles()
+
+    const page = await mountSuspended(RolesTab)
+    await flushPromises()
+
+    expect(page.text()).toContain('Звукорежиссёр')
+    expect(page.find('[data-test="create-role"]').exists()).toBe(false)
+    expect(page.find('[data-test="select-role-r-tech"]').exists()).toBe(false)
+  })
+
+  it('creates a ministry role with roles.manage in that ministry', async () => {
+    permissions.ministries = { m1: ['roles.manage'] }
+    mockMinistryAndRoles()
+    post.mockResolvedValue({ data: { id: 'r-new', name: 'Диакон', is_system: false, permissions: [] } })
+
+    const page = await mountSuspended(RolesTab)
+    await flushPromises()
+    await page.find('[data-test="create-role"]').trigger('click')
+    await flushPromises()
+    await page.find('[data-test="role-name"]').setValue('Диакон')
+    await page.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(post).toHaveBeenCalledWith('/ministries/m1/roles', { name: 'Диакон', description: null, permissions: [] })
+    expect(page.text()).toContain('Диакон')
+  })
+
+  // Выбор роли по умолчанию (брифа задачи 29): переключатель на вкладке
+  // ролей шлёт PATCH /ministries/m1 с default_role_id, а не отдельный
+  // эндпоинт ролей — тот же PATCH, что и у названия/описания служения
+  // (docs/architecture.md 6.1, 6.3.4).
+  it('sets a new default role from the roles tab', async () => {
+    permissions.ministries = { m1: ['roles.manage'] }
+    mockMinistryAndRoles('r-member')
+    patch.mockResolvedValue({ data: { ...ministry, default_role_id: 'r-tech' } })
+
+    const page = await mountSuspended(RolesTab)
+    await flushPromises()
+    await page.find('[data-test="set-default-r-tech"]').trigger('click')
+    await flushPromises()
+
+    expect(patch).toHaveBeenCalledWith('/ministries/m1', { default_role_id: 'r-tech' })
+    expect(page.text()).toContain('по умолчанию')
   })
 })
 

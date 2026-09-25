@@ -5267,7 +5267,7 @@ git add apps/web && git commit -m "feat(web): ministries list, card and membersh
 - Потребляет: `GET /permissions`, `GET /roles?scope=global`, `POST /roles`, `PATCH /roles/{id}`, `DELETE /roles/{id}`, `GET /roles/{id}/usage`, `GET /ministries/{id}/roles`, `POST /ministries/{id}/roles`, `PATCH /ministries/{id}` (роль по умолчанию).
 - Отдаёт наружу: `RoleEditor` — один компонент на оба уровня, отличается списком прав по области.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `apps/web/tests/component/roles.spec.ts`:
 
@@ -5374,21 +5374,21 @@ describe('role editor', () => {
 
 Выбор другой роли по умолчанию проверяется в `tests/component/ministries.spec.ts`: переключатель на вкладке ролей шлёт `PATCH /ministries/m1` с `default_role_id`.
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/roles.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Права берутся из `GET /permissions` и группируются по смысловому префиксу ключа (`people.*`, `ministries.*`, …) с русскими названиями и описаниями из ответа. Роль «Администратор» показывается в списке с пометкой «системная» и открывается только для чтения. Перед удалением запрашивается `usage` и показывается число носителей и список блокировок. Роль служения без прав получает пометку «используется как позиция в слотах» (риск 9 из раздела 15).
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test tests/component/roles.spec.ts`
 Ожидается: PASS, 8 тестов.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): global and ministry role editors"

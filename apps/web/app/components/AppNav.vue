@@ -19,6 +19,13 @@ const items = computed<NavItem[]>(() => {
     list.push({ to: '/ministries', label: 'Служения' })
   }
 
+  // Единственный готовый раздел admin/ пока что (задача 29): настройки и
+  // журнал (docs/architecture.md, раздел 10) появятся в своих задачах и
+  // добавят пункты сюда же, не меняя это правило.
+  if (can('roles.manage_global')) {
+    list.push({ to: '/admin/roles', label: 'Роли' })
+  }
+
   list.push({ to: '/settings/profile', label: 'Профиль' })
 
   return list

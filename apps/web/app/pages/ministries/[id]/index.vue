@@ -124,6 +124,7 @@ await load()
       <nav aria-label="Разделы служения" class="ministry-card__tabs">
         <NuxtLink :to="`/ministries/${ministryId}`" class="ministry-card__tabs-active">Обзор</NuxtLink>
         <NuxtLink :to="`/ministries/${ministryId}/members`">Участники</NuxtLink>
+        <NuxtLink :to="`/ministries/${ministryId}/roles`">Роли</NuxtLink>
       </nav>
       <header>
         <img v-if="ministry.cover_url" :src="ministry.cover_url" :alt="`Обложка: ${ministry.name}`" data-test="ministry-cover">

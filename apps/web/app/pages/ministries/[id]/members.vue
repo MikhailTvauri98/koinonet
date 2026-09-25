@@ -97,6 +97,7 @@ await Promise.all([load(), loadRoles()])
     <nav aria-label="Разделы служения" class="members-tab__tabs">
       <NuxtLink :to="`/ministries/${ministryId}`">Обзор</NuxtLink>
       <NuxtLink :to="`/ministries/${ministryId}/members`" class="members-tab__tabs-active">Участники</NuxtLink>
+      <NuxtLink :to="`/ministries/${ministryId}/roles`">Роли</NuxtLink>
     </nav>
     <header>
       <h1>Участники</h1>
