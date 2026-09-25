@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('auth/sessions/{session}', [SessionController::class, 'destroy']);
     Route::post('auth/sessions/logout-others', [SessionController::class, 'logoutOthers']);
 
+    Route::get('me/profile', [ProfileController::class, 'show']);
     Route::patch('me/profile', [ProfileController::class, 'update']);
     Route::put('me/photo', [ProfileController::class, 'updatePhoto']);
     Route::patch('me/login', [ProfileController::class, 'updateLogin']);

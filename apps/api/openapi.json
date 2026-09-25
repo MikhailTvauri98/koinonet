@@ -948,6 +948,69 @@
                 }
             }
         },
+        "/media/{media}/status": {
+            "get": {
+                "operationId": "media.status",
+                "tags": [
+                    "MediaStatus"
+                ],
+                "parameters": [
+                    {
+                        "name": "media",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`MediaResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MediaResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/ministries": {
             "get": {
                 "operationId": "ministry.index",
@@ -2321,6 +2384,36 @@
             }
         },
         "/me/profile": {
+            "get": {
+                "operationId": "profile.show",
+                "summary": "Task 30 addition (brief defect, see {@see MyProfileResource}): the\nplan never listed a \"read\" counterpart to `update` below, but\n`settings/profile.vue` has to load the contacts and the\n`contacts_public` flag it edits from somewhere",
+                "tags": [
+                    "Profile"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`MyProfileResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MyProfileResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
             "patch": {
                 "operationId": "profile.update",
                 "tags": [
@@ -3296,6 +3389,54 @@
                     "archived_at"
                 ],
                 "title": "MinistryResource"
+            },
+            "MyProfileResource": {
+                "type": "object",
+                "properties": {
+                    "photo_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "contacts": {
+                        "type": "object",
+                        "properties": {
+                            "phone": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "email": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "birth_date": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "phone",
+                            "email",
+                            "birth_date"
+                        ]
+                    },
+                    "contacts_public": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "photo_url",
+                    "contacts",
+                    "contacts_public"
+                ],
+                "title": "MyProfileResource"
             },
             "Permission": {
                 "type": "string",

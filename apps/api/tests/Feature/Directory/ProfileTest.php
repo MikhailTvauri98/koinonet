@@ -16,6 +16,33 @@ beforeEach(function (): void {
     $this->withHeader('Origin', 'http://localhost');
 });
 
+it('reads its own contacts and contacts_public without any permission', function () {
+    $user = actingAsUser(Person::factory()->create([
+        'phone' => '+79123456789', 'email' => null, 'birth_date' => '1990-05-01', 'contacts_public' => true,
+    ]));
+
+    $this->getJson('/api/v1/me/profile')
+        ->assertOk()
+        ->assertJson(['data' => [
+            'contacts' => ['phone' => '+79123456789', 'email' => null, 'birth_date' => '1990-05-01'],
+            'contacts_public' => true,
+        ]]);
+
+    expect($user)->not->toBeNull();
+});
+
+it('requires a session to read the profile', function () {
+    $this->getJson('/api/v1/me/profile')->assertStatus(401);
+});
+
+it('reads back the contacts_public flag just changed through the profile', function () {
+    actingAsUser();
+
+    $this->patchJson('/api/v1/me/profile', ['contacts_public' => true])->assertOk();
+
+    $this->getJson('/api/v1/me/profile')->assertOk()->assertJsonPath('data.contacts_public', true);
+});
+
 it('lets anyone edit their own contacts without permissions and leaves the login alone', function () {
     $user = actingAsUser();
     $login = $user->email;

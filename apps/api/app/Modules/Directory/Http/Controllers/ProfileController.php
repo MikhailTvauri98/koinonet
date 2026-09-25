@@ -13,13 +13,29 @@ use App\Modules\Directory\Http\Requests\UpdateLoginRequest;
 use App\Modules\Directory\Http\Requests\UpdatePasswordRequest;
 use App\Modules\Directory\Http\Requests\UpdateProfileRequest;
 use App\Modules\Directory\Http\Resources\MeResource;
+use App\Modules\Directory\Http\Resources\MyProfileResource;
 use App\Modules\Directory\Http\Resources\PersonResource;
 use App\Modules\Directory\Models\User;
 use App\Modules\Media\Models\Media;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 final class ProfileController
 {
+    /**
+     * Task 30 addition (brief defect, see {@see MyProfileResource}): the
+     * plan never listed a "read" counterpart to `update` below, but
+     * `settings/profile.vue` has to load the contacts and the
+     * `contacts_public` flag it edits from somewhere.
+     */
+    public function show(Request $request): MyProfileResource
+    {
+        $user = $request->user();
+        assert($user instanceof User);
+
+        return new MyProfileResource($user->person);
+    }
+
     public function update(UpdateProfileRequest $request, UpdateOwnProfile $updateOwnProfile): PersonResource
     {
         $user = $request->user();

@@ -250,6 +250,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/media/{media}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["media.status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ministries": {
         parameters: {
             query?: never;
@@ -497,7 +513,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Task 30 addition (brief defect, see {@see MyProfileResource}): the
+         *     plan never listed a "read" counterpart to `update` below, but
+         *     `settings/profile.vue` has to load the contacts and the
+         *     `contacts_public` flag it edits from somewhere
+         */
+        get: operations["profile.show"];
         put?: never;
         post?: never;
         delete?: never;
@@ -763,6 +785,16 @@ export interface components {
             cover_url: string | null;
             default_role_id: string | null;
             archived_at: string | null;
+        };
+        /** MyProfileResource */
+        MyProfileResource: {
+            photo_url: string | null;
+            contacts: {
+                phone: string | null;
+                email: string | null;
+                birth_date: string | null;
+            };
+            contacts_public: boolean;
         };
         /**
          * Permission
@@ -1413,6 +1445,46 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "media.status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `MediaResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MediaResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description An error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Error overview.
+                         * @example
+                         */
+                        message: string;
+                    };
+                };
+            };
         };
     };
     "ministry.index": {
@@ -2087,6 +2159,29 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "profile.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `MyProfileResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MyProfileResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
         };
     };
     "profile.update": {
