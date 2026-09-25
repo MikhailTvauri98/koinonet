@@ -43,7 +43,7 @@ final class AddMember
         app(AuditLogger::class)->record('member.added', $member, ['ministry_id' => $ministry->id]);
         MemberAdded::dispatch($ministry->id, $person->id, $person->user?->id);
 
-        return $member->load('roles');
+        return $member->load(['roles', 'person.photo']);
     }
 
     /** @param list<string> $roleIds */

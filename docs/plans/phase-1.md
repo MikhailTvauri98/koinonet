@@ -5127,7 +5127,7 @@ OpenAPI and generated types: no drift
 **Интерфейсы:**
 - Потребляет: `GET /ministries`, `POST /ministries`, `GET /ministries/{id}`, `PATCH /ministries/{id}`, `POST /ministries/{id}/archive`, `GET /ministries/{id}/members`, `POST /ministries/{id}/members`, `PUT /ministries/{id}/members/{memberId}/roles`, `DELETE /ministries/{id}/members/{memberId}`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `apps/web/tests/component/ministries.spec.ts`:
 
@@ -5229,21 +5229,21 @@ describe('ministry card', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/ministries.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Список служений с обложками. Карточка с вкладками «Участники» и «Роли» (вторая — задача 29). Вкладка участников: строка с фото, ФИО, ролями-чипами; диалог добавления с поиском по справочнику; смена ролей чекбоксами; исключение с подтверждением. Действия скрыты, если `canIn(ministryId, 'members.manage')` ложно.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test tests/component/ministries.spec.ts`
 Ожидается: PASS, 5 тестов.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): ministries list, card and membership tab"

@@ -1,5 +1,10 @@
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-type JsonBody = Record<string, unknown>
+// FormData дополнена ради загрузки файлов (обложка служения, задача 28):
+// ofetch отличает её от обычного тела сам (isJSONSerializable в ofetch
+// исключает FormData) и не сериализует в JSON, оставляя fetch() самому
+// выставить заголовок multipart с границей — CSRF и обработка 401/403 ниже
+// от этого не меняются, они читают только путь и метод.
+type JsonBody = Record<string, unknown> | FormData
 
 const UNSAFE_METHODS: ReadonlySet<HttpMethod> = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 

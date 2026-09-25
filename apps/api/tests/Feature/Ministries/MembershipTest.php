@@ -94,6 +94,18 @@ it('removes a member', function () {
     expect($ministry->members()->count())->toBe(0);
 });
 
+it('includes the members full name in the roster', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+    $person = Person::factory()->create(['last_name' => 'Прокопенко', 'first_name' => 'Мария', 'patronymic' => null]);
+    memberOf($ministry, $person);
+
+    $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
+        ->firstWhere('person_id', $person->id);
+
+    expect($row['full_name'])->toBe('Прокопенко Мария');
+});
+
 it('filters the directory by ministry', function () {
     $ministry = ministryWithRoles();
     actingAsUserWith([Permission::PeopleView]);

@@ -55,6 +55,6 @@ final readonly class SetMemberRoles
         ]);
         MemberRolesChanged::dispatch($ministry->id, $member->person_id, $member->person->user?->id);
 
-        return $member->load('roles');
+        return $member->load(['roles', 'person.photo']);
     }
 }

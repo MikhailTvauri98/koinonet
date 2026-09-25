@@ -3207,6 +3207,10 @@
                     "person_id": {
                         "type": "string"
                     },
+                    "full_name": {
+                        "type": "string",
+                        "description": "Task 28 (web, members tab): the roster row needs a name to show\nnext to the photo. Seeing it is the same gate as seeing the row\nitself (`members.manage`/`view_all` or plain membership) - a\nperson's name is not more sensitive than the fact they belong\nto this ministry, which the row already discloses unconditionally."
+                    },
                     "joined_at": {
                         "type": [
                             "string",
@@ -3243,6 +3247,7 @@
                     "id",
                     "ministry_id",
                     "person_id",
+                    "full_name",
                     "joined_at",
                     "photo_url",
                     "roles"

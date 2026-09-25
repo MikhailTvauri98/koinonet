@@ -20,6 +20,7 @@ final class MemberResource extends JsonResource
      *     id: string,
      *     ministry_id: string,
      *     person_id: string,
+     *     full_name: string,
      *     joined_at: string,
      *     photo_url: string|null,
      *     roles: list<array{id: string, name: string}>
@@ -36,6 +37,12 @@ final class MemberResource extends JsonResource
             'id' => $member->id,
             'ministry_id' => $member->ministry_id,
             'person_id' => $member->person_id,
+            // Task 28 (web, members tab): the roster row needs a name to show
+            // next to the photo. Seeing it is the same gate as seeing the row
+            // itself (`members.manage`/`view_all` or plain membership) - a
+            // person's name is not more sensitive than the fact they belong
+            // to this ministry, which the row already discloses unconditionally.
+            'full_name' => $member->person->fullName(),
             'joined_at' => $member->joined_at->toISOString(),
             // Seeing this roster row (`members.manage`/`view_all` or plain
             // membership) is a weaker gate than seeing a photo (architecture

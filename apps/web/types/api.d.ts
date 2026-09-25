@@ -734,6 +734,14 @@ export interface components {
             id: string;
             ministry_id: string;
             person_id: string;
+            /**
+             * @description Task 28 (web, members tab): the roster row needs a name to show
+             *     next to the photo. Seeing it is the same gate as seeing the row
+             *     itself (`members.manage`/`view_all` or plain membership) - a
+             *     person's name is not more sensitive than the fact they belong
+             *     to this ministry, which the row already discloses unconditionally.
+             */
+            full_name: string;
             joined_at: string | null;
             /**
              * @description Seeing this roster row (`members.manage`/`view_all` or plain
