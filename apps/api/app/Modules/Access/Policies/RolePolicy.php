@@ -16,7 +16,20 @@ final readonly class RolePolicy
 
     public function viewAny(User $user, RoleScope $scope, ?string $ministryId = null): bool
     {
-        return $this->canManage($user, $scope, $ministryId);
+        if ($this->canManage($user, $scope, $ministryId)) {
+            return true;
+        }
+
+        // Task 28 follow-up: granting/revoking a ministry role is
+        // `members.manage` territory (architecture 6.1: "Добавлять и
+        // исключать участников, выдавать и снимать роли служения"), but
+        // granting one first requires seeing the ministry's role catalogue.
+        // `roles.manage` (create/edit/delete the roles themselves, pick the
+        // default one) stays strictly stronger and is not widened here -
+        // create/update/delete/viewUsage above still call `canManage` alone.
+        return $scope === RoleScope::Ministry
+            && $ministryId !== null
+            && $this->permissions->canInMinistry($user, Permission::MembersManage, $ministryId);
     }
 
     public function create(User $user, RoleScope $scope, ?string $ministryId = null): bool

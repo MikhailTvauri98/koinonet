@@ -136,11 +136,11 @@ await load()
             <legend class="visually-hidden">Данные служения</legend>
             <label>
               Название
-              <input v-model="name" type="text" maxlength="100" required>
+              <input v-model="name" name="name" type="text" maxlength="100" required>
             </label>
             <label>
               Описание
-              <textarea v-model="description" rows="3" />
+              <textarea v-model="description" name="description" rows="3" />
             </label>
           </fieldset>
           <p v-if="saveError" role="alert">{{ saveError }}</p>

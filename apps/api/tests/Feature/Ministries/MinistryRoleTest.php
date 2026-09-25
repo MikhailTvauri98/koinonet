@@ -126,6 +126,31 @@ it('denies listing ministry roles without roles.manage in that ministry', functi
     $this->getJson("/api/v1/ministries/{$ministry->id}/roles")->assertForbidden();
 });
 
+// Task 28 follow-up: granting a ministry role is `members.manage` territory
+// (architecture 6.1), so seeing the catalogue to grant from is too -
+// `roles.manage` (create/edit/delete the roles themselves) stays a stronger,
+// separate permission (see RolePolicy::viewAny).
+it('lists ministry roles for a members.manage holder without roles.manage', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $leaderless = Role::factory()->ministry($ministry->id)->withPermissions([Permission::MembersManage])->create();
+    memberOf($ministry, $user->person, [$leaderless->id]);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}/roles")
+        ->assertOk()
+        ->assertJsonCount(3, 'data');
+});
+
+it('denies listing ministry roles to a members.manage holder of another ministry', function () {
+    $ministry = ministryWithRoles();
+    $other = ministryWithRoles('Молодёжное');
+    $user = actingAsUser();
+    $role = Role::factory()->ministry($other->id)->withPermissions([Permission::MembersManage])->create();
+    memberOf($other, $user->person, [$role->id]);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}/roles")->assertForbidden();
+});
+
 it('deletes a role that a member still holds alongside another role', function () {
     $ministry = ministryWithRoles();
     actingAsUserWith([Permission::MinistriesManageAll]);

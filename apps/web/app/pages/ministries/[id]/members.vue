@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AddMemberDialog from '~/components/ministries/AddMemberDialog.vue'
 import MemberRow from '~/components/ministries/MemberRow.vue'
-import { ministriesErrorMessage, rolesCatalogue, type Member } from '~/utils/ministries'
+import { ministriesErrorMessage, type Member, type MinistryRole } from '~/utils/ministries'
 
 const api = useApi()
 const route = useRoute()
@@ -9,11 +9,19 @@ const { canIn } = useCan()
 const ministryId = computed(() => String(route.params.id))
 const canManage = computed(() => canIn(ministryId.value, 'members.manage'))
 const members = ref<Member[]>([])
-const roles = computed(() => rolesCatalogue(members.value))
+// Полный каталог ролей служения, не только те, что уже у кого-то есть:
+// GET /ministries/{id}/roles теперь открыт носителю members.manage в этом
+// служении (доделка задачи 28 — раньше требовалось roles.manage, и роль,
+// которую пока никто не носит, выдать было нечем). Запрашивается, только
+// если управление доступно: без members.manage чекбоксы всё равно скрыты,
+// а без roles.manage тот же запрос ответил бы 403.
+const roles = ref<{ id: string, name: string }[]>([])
+const rolesError = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const showAddDialog = ref(false)
 let requestVersion = 0
+let rolesRequestVersion = 0
 
 async function load() {
   const version = ++requestVersion
@@ -27,6 +35,20 @@ async function load() {
     errorMessage.value = ministriesErrorMessage(error, 'Не удалось загрузить состав. Попробуйте ещё раз.')
   } finally {
     if (version === requestVersion) loading.value = false
+  }
+}
+
+async function loadRoles() {
+  if (!canManage.value) return
+  const version = ++rolesRequestVersion
+  rolesError.value = ''
+  try {
+    const response = await api.get<{ data: MinistryRole[] }>(`/ministries/${encodeURIComponent(ministryId.value)}/roles`)
+    if (version === rolesRequestVersion) roles.value = response.data.map(role => ({ id: role.id, name: role.name }))
+  } catch (error) {
+    if (version === rolesRequestVersion) {
+      rolesError.value = ministriesErrorMessage(error, 'Не удалось загрузить роли служения. Попробуйте ещё раз.')
+    }
   }
 }
 
@@ -46,10 +68,18 @@ function onRolesChanged(updated: Member) {
 // Открытый диалог добавления теряет смысл, если members.manage сняли
 // посреди сессии — сами MemberRow скрывают свои действия реактивно
 // (canIn читается заново при каждом вызове, useCan.ts), здесь достаточно
-// закрыть диалог добавления.
-watch(canManage, (allowed) => { if (!allowed) showAddDialog.value = false })
-watch(() => route.params.id, () => { void load() })
-await load()
+// закрыть диалог добавления. Каталог ролей перечитывается, если право
+// появилось посреди сессии, и очищается, если его сняли.
+watch(canManage, (allowed) => {
+  if (allowed) {
+    void loadRoles()
+  } else {
+    showAddDialog.value = false
+    roles.value = []
+  }
+})
+watch(() => route.params.id, () => { void Promise.all([load(), loadRoles()]) })
+await Promise.all([load(), loadRoles()])
 </script>
 
 <template>
@@ -62,6 +92,9 @@ await load()
       <h1>Участники</h1>
       <button v-if="canManage" type="button" data-test="add-member" @click="showAddDialog = true">Добавить участника</button>
     </header>
+    <p v-if="rolesError" role="alert">
+      {{ rolesError }} <button type="button" data-test="retry-roles" @click="loadRoles">Повторить</button>
+    </p>
     <AddMemberDialog
       v-if="showAddDialog && canManage" :ministry-id="ministryId"
       @added="onAdded" @close="showAddDialog = false"
