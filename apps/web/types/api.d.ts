@@ -889,6 +889,7 @@ export interface components {
         SettingsResource: {
             church_name: string;
             timezone: string;
+            phone_region?: string;
         };
         /** StoreMediaRequest */
         StoreMediaRequest: {

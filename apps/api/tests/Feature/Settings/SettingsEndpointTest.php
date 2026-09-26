@@ -23,6 +23,14 @@ it('shows the public settings to any account', function () {
         ->assertJsonMissingPath('data.phone_region');
 });
 
+it('shows the phone region to a settings.manage holder', function () {
+    actingAsUserWith([Permission::SettingsManage]);
+
+    $this->getJson('/api/v1/settings')
+        ->assertOk()
+        ->assertJsonPath('data.phone_region', 'RU');
+});
+
 it('denies changing settings without settings.manage', function () {
     actingAsUser();
 

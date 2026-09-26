@@ -562,7 +562,7 @@ nginx: `client_max_body_size 100m`. PHP: `upload_max_filesize = 100M`, `post_max
 | Chat | `GET /chats` (с непрочитанным и последним сообщением), `POST /chats` (группа или личный), `POST /events/{id}/chat` (чат события, маршрут модуля Chat), `GET /chats/{id}`, `PATCH /chats/{id}`, `POST /chats/{id}/members`, `DELETE /chats/{id}/members/{userId}`, `POST /chats/{id}/leave`, `POST /chats/{id}/mute`, `DELETE /chats/{id}/mute`, `POST /chats/{id}/archive`, `GET /chats/{id}/messages?before&limit`, `POST /chats/{id}/messages`, `PATCH /messages/{id}`, `DELETE /messages/{id}`, `POST /chats/{id}/read`, `POST /messages/{id}/pin`, `DELETE /messages/{id}/pin` |
 | Notifications | `GET /notifications?cursor`, `POST /notifications/read`, `GET /notification-settings`, `PUT /notification-settings`, `POST /push-subscriptions`, `DELETE /push-subscriptions` |
 | Media | `POST /media`, `GET /media/{id}` (подписанный), `GET /media/{id}/status` (JSON-статус по сессии, задача 30), `DELETE /media/{id}` (своё непривязанное) |
-| Settings, Audit | `GET /settings` (публичная часть: название, часовой пояс), `PUT /settings`, `GET /audit?cursor&actor&action&subject` |
+| Settings, Audit | `GET /settings` (публичная часть — название, часовой пояс — всем; носителю `settings.manage` дополнительно регион телефонов, задача 30), `PUT /settings`, `GET /audit?cursor&actor&action&subject&from&to` |
 | Realtime | `POST /broadcasting/auth` |
 
 ## 9. Realtime

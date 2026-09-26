@@ -3806,6 +3806,9 @@
                     },
                     "timezone": {
                         "type": "string"
+                    },
+                    "phone_region": {
+                        "type": "string"
                     }
                 },
                 "required": [
