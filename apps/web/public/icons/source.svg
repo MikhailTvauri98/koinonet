@@ -1,0 +1,17 @@
+<!--
+  Исходник иконок PWA (задача 31). У церкви пока нет фирменного знака —
+  изображение нарочно нейтральное: сплошной фон в цвете, уже
+  использующемся в интерфейсе (см. app/components/ministries/MemberRow.vue),
+  и простой круг, не несущий никакого конфессионального или брендового
+  смысла. Перегенерировать PNG-варианты (192, 512, maskable, apple-touch,
+  favicon) командой из apps/web:
+
+    npm run generate-pwa-icons
+
+  (использует @vite-pwa/assets-generator и pwa-assets.config.ts рядом с
+  nuxt.config.ts). Результат — файлы в этой же папке public/icons/.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#34445a" />
+  <circle cx="256" cy="256" r="160" fill="#edf1f6" />
+</svg>

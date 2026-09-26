@@ -5590,7 +5590,7 @@ git add apps/web && git commit -m "feat(web): profile, login settings, devices, 
 **Интерфейсы:**
 - Отдаёт наружу: `InstallPrompt` — на iOS в Safari (не в standalone) показывает инструкцию «Поделиться → На экран „Домой“»; на Android перехватывает `beforeinstallprompt` и предлагает установку кнопкой.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `apps/web/tests/component/install-prompt.spec.ts`:
 
@@ -5654,18 +5654,18 @@ describe('install prompt', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/install-prompt.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Манифест: русское название, `display: standalone`, `start_url: /`, иконки 192, 512 и maskable. Определение standalone: `window.matchMedia('(display-mode: standalone)').matches || navigator.standalone`. Отказ от подсказки запоминается в `localStorage`.
 
 Service worker собирается через `injectManifest` и в фазе 1 только предкеширует оболочку; запросы к API не кешируются, офлайн-режима нет (раздел 10).
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test tests/component/install-prompt.spec.ts`
 Ожидается: PASS, 4 теста.
@@ -5675,7 +5675,7 @@ Service worker собирается через `injectManifest` и в фазе 1
 Открыть приложение на iPhone в Safari и на Android в Chrome.
 Ожидается: подсказка установки видна в браузере и исчезает после установки на домашний экран; приложение открывается без адресной строки.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): pwa manifest and install prompt"

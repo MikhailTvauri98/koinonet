@@ -11,10 +11,12 @@
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "gen:api": "openapi-typescript ../api/openapi.json -o types/api.d.ts"
+    "gen:api": "openapi-typescript ../api/openapi.json -o types/api.d.ts",
+    "generate-pwa-icons": "pwa-assets-generator"
   },
   "dependencies": {
     "@pinia/nuxt": "^1.0.2",
+    "@vite-pwa/nuxt": "^1.1.1",
     "nuxt": "^4.5.2",
     "pinia": "^4.0.3",
     "qrcode": "^1.5.4",
@@ -25,10 +27,14 @@
     "@nuxt/eslint": "^1.17.0",
     "@nuxt/test-utils": "^4.3.2",
     "@types/qrcode": "^1.5.6",
+    "@vite-pwa/assets-generator": "^1.0.4",
     "@vue/test-utils": "^2.5.1",
     "happy-dom": "^20.14.5",
     "openapi-typescript": "^7.13.0",
     "vitest": "^5.0.1",
-    "vue-tsc": "^3.3.11"
+    "vue-tsc": "^3.3.11",
+    "workbox-core": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1"
   }
 }
