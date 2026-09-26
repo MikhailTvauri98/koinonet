@@ -39,6 +39,16 @@ it('refuses a document as a photo', function () {
         ->assertStatus(422)->assertJsonPath('code', 'media.wrong_kind');
 });
 
+it('refuses a media file that is not ready', function (string $status) {
+    $user = actingAsUser();
+    $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image', 'status' => $status]);
+
+    $this->putJson('/api/v1/me/photo', ['media_id' => $media->id])
+        ->assertStatus(422)->assertJsonPath('code', 'media.not_ready');
+
+    expect($user->person->fresh()->photo_media_id)->toBeNull();
+})->with(['processing', 'failed']);
+
 it('refuses a media file already attached elsewhere', function () {
     $user = actingAsUser();
     $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image']);

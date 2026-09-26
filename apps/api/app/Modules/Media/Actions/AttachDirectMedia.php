@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Media\Actions;
 
 use App\Modules\Media\MediaKind;
+use App\Modules\Media\MediaStatus;
 use App\Modules\Media\MediaUsage;
 use App\Modules\Media\Models\Media;
 use App\Support\DomainRuleException;
@@ -42,6 +43,12 @@ final readonly class AttachDirectMedia
 
         if ($media->kind !== $expected) {
             throw DomainRuleException::because('media.wrong_kind', 'Этот вид файла сюда не подходит.');
+        }
+
+        // A file still in processing has no variants and may yet fail; a
+        // failed one never gets them.
+        if ($media->status !== MediaStatus::Ready) {
+            throw DomainRuleException::because('media.not_ready', 'Файл ещё не обработан или не прошёл обработку.');
         }
 
         if ($this->usage->isUsed($media)) {
