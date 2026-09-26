@@ -52,7 +52,9 @@ async function retry() {
 }
 .connection-lost p { margin: 0; }
 .connection-lost--blocking {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
   flex-direction: column;
   justify-content: center;
   background: #fff;
