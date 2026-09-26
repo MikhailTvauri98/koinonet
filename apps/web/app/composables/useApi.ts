@@ -24,8 +24,14 @@ function readXsrfToken(): string | null {
   return raw === undefined ? null : decodeURIComponent(raw)
 }
 
+// Каждый запрос явно просит JSON. ofetch сам ставит этот заголовок только
+// запросам с JSON-телом, а без него Laravel не считает GET запросом API и
+// строит для гостя перенаправление вместо ответа 401 (найдено сквозными
+// сценариями задачи 32; сервер теперь отвечает 401 и так, это вторая линия).
+const ACCEPT_JSON = { Accept: 'application/json' } as const
+
 async function ensureCsrfCookie(): Promise<void> {
-  await $fetch('/sanctum/csrf-cookie', { credentials: 'include' })
+  await $fetch('/sanctum/csrf-cookie', { credentials: 'include', headers: ACCEPT_JSON })
 }
 
 export function useApi() {
@@ -39,7 +45,7 @@ export function useApi() {
       await ensureCsrfCookie()
     }
 
-    const headers: Record<string, string> = {}
+    const headers: Record<string, string> = { ...ACCEPT_JSON }
     const xsrfToken = readXsrfToken()
     if (xsrfToken) {
       headers['X-XSRF-TOKEN'] = xsrfToken

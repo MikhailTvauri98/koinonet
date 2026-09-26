@@ -1,6 +1,6 @@
 // @vitest-environment nuxt
 import { useRouter } from '#app'
-import { createError } from 'h3'
+import { createError, getRequestHeaders, type H3Event } from 'h3'
 import { createPinia, setActivePinia } from 'pinia'
 import { registerEndpoint } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -102,5 +102,49 @@ describe('useApi 401 handling', () => {
 
     expect(auth.user).toBeNull()
     expect(push).toHaveBeenCalledWith('/login')
+  })
+})
+
+// Тестовая среда передаёт заголовки обработчику как есть, без приведения
+// имён к нижнему регистру, как это делает настоящий HTTP; поэтому имя
+// сравнивается без учёта регистра, а не через getHeader(event, 'accept').
+function acceptOf(event: H3Event): string | undefined {
+  return Object.entries(getRequestHeaders(event)).find(([name]) => name.toLowerCase() === 'accept')?.[1]
+}
+
+describe('useApi Accept header', () => {
+  it('asks for JSON on every request, including GET without a body', async () => {
+    // Без Accept: application/json сервер не считал запрос API-запросом и для
+    // гостя строил перенаправление на вход вместо 401 (задача 32). ofetch сам
+    // ставит этот заголовок только запросам с JSON-телом, поэтому GET и
+    // запрос CSRF-cookie проверяются вместе с POST.
+    const accept: Record<string, string | undefined> = {}
+    registerEndpoint('/sanctum/csrf-cookie', {
+      method: 'GET',
+      handler: (event) => {
+        accept.csrf = acceptOf(event)
+        return ''
+      },
+    })
+    registerEndpoint('/api/v1/people', {
+      method: 'GET',
+      handler: (event) => {
+        accept.get = acceptOf(event)
+        return { data: [] }
+      },
+    })
+    registerEndpoint('/api/v1/roles', {
+      method: 'POST',
+      handler: (event) => {
+        accept.post = acceptOf(event)
+        return { data: {} }
+      },
+    })
+
+    const api = useApi()
+    await api.get('/people')
+    await api.post('/roles', { name: 'Служитель' })
+
+    expect(accept).toEqual({ get: 'application/json', csrf: 'application/json', post: 'application/json' })
   })
 })
