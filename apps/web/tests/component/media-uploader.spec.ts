@@ -1,7 +1,9 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MediaUploader from '~/components/MediaUploader.vue'
+import { grantPermissions } from '../support/permissions'
 
 // Самопроверка брифа задачи 30: что видно при `failed` и при истечении 15
 // секунд опроса — фото в обоих случаях не должно привязываться.
@@ -11,8 +13,90 @@ const put = vi.fn()
 
 mockNuxtImport('useApi', () => () => ({ get, post, put }))
 
+enableAutoUnmount(afterEach)
+
 beforeEach(() => {
   [get, post, put].forEach(fn => fn.mockReset())
+  // Загрузчик живёт на экранах вошедшего; без выясненной сессии middleware
+  // при монтировании спросил бы `/auth/me` через тот же подменённый `get`.
+  grantPermissions()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+// Ответ, который приходит тогда, когда тест решит.
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => { resolve = done })
+  return { promise, resolve }
+}
+
+const file = () => new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' })
+
+describe('media uploader polling', () => {
+  it('asks for the status again only after the previous answer arrived', async () => {
+    post.mockResolvedValue({ data: { id: 'md1', status: 'processing' } })
+    get.mockReturnValue(deferred().promise)
+
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'person_photo', target: '/me/photo' } })
+    vi.useFakeTimers()
+    await uploader.vm.upload(file())
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(get).toHaveBeenCalledTimes(1)
+  })
+
+  it('gives up after 15 seconds even while a status request hangs, and a late ready does not attach', async () => {
+    const slow = deferred<unknown>()
+    post.mockResolvedValue({ data: { id: 'md1', status: 'processing' } })
+    get.mockReturnValue(slow.promise)
+
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'person_photo', target: '/me/photo' } })
+    vi.useFakeTimers()
+    await uploader.vm.upload(file())
+    await vi.advanceTimersByTimeAsync(15_000)
+
+    expect(uploader.find('[data-test="media-error"]').text()).toContain('заняла слишком много времени')
+
+    slow.resolve({ data: { id: 'md1', status: 'ready' } })
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(put).not.toHaveBeenCalled()
+  })
+
+  it('does not attach a file whose status arrives after the uploader was closed', async () => {
+    const slow = deferred<unknown>()
+    post.mockResolvedValue({ data: { id: 'md1', status: 'processing' } })
+    get.mockReturnValue(slow.promise)
+
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'person_photo', target: '/me/photo' } })
+    vi.useFakeTimers()
+    await uploader.vm.upload(file())
+    await vi.advanceTimersByTimeAsync(1000)
+    uploader.unmount()
+
+    slow.resolve({ data: { id: 'md1', status: 'ready' } })
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(put).not.toHaveBeenCalled()
+  })
+
+  it('attaches exactly once when the status turns ready', async () => {
+    post.mockResolvedValue({ data: { id: 'md1', status: 'processing' } })
+    get.mockResolvedValueOnce({ data: { id: 'md1', status: 'processing' } })
+      .mockResolvedValue({ data: { id: 'md1', status: 'ready' } })
+    put.mockResolvedValue({ data: { photo_url: '/photo.webp' } })
+
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'person_photo', target: '/me/photo' } })
+    vi.useFakeTimers()
+    await uploader.vm.upload(file())
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    expect(put).toHaveBeenCalledTimes(1)
+    expect(put).toHaveBeenCalledWith('/me/photo', { media_id: 'md1' })
+  })
 })
 
 describe('media uploader failure paths', () => {
