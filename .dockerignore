@@ -1,0 +1,42 @@
+# Контекст сборки продовых образов — корень репозитория: infra/php/Dockerfile
+# (цель prod) и infra/web/Dockerfile. Исключено всё, кроме явно нужного
+# образам: новый файл или каталог в корне не попадёт в образ, пока его не
+# впишут сюда. В контекст dev-сборки (infra/php) этот файл не действует.
+*
+!apps/api
+!apps/web
+!infra/nginx/prod.conf
+
+# Внутри разрешённого: секреты, локальные зависимости, артефакты сборки,
+# журналы и тесты. Зависимости ставятся в самой сборке, из lock-файлов.
+**/.env
+**/.env.*
+**/node_modules
+**/*.log
+**/.DS_Store
+**/Thumbs.db
+
+apps/api/vendor
+apps/api/storage
+apps/api/bootstrap/cache
+apps/api/tests
+apps/api/.phpunit.cache
+apps/api/.phpunit.result.cache
+apps/api/.editorconfig
+apps/api/.gitattributes
+apps/api/.gitignore
+apps/api/phpunit.xml
+apps/api/phpstan.neon
+apps/api/pint.json
+apps/api/openapi.json
+
+apps/web/.nuxt
+apps/web/.output
+apps/web/.data
+apps/web/.nitro
+apps/web/.cache
+apps/web/dist
+apps/web/test-results
+apps/web/playwright-report
+apps/web/blob-report
+apps/web/playwright

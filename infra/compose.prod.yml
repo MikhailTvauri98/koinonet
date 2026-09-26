@@ -1,0 +1,107 @@
+# Продовый стек (docs/architecture.md, раздел 11; установка — docs/deploy.md).
+# На сервере лежит в /srv/church рядом с .env и deploy.sh; деплой
+# (.github/workflows/deploy.yml) копирует его туда при каждом пуше в main.
+# Подстановки берутся из /srv/church/.env: IMAGE_PREFIX, TAG (его пишет
+# деплой), APP_DOMAIN, DB_DATABASE, DB_USERNAME, DB_PASSWORD.
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: 10m, max-file: '5' }
+
+# Один образ app для всех ролей PHP, роль — команда запуска. .env целиком
+# нужен только им; остальным сервисам передаются отдельные переменные.
+# Том медиафайлов нужен и планировщику: media:prune удаляет файлы с диска.
+x-php: &php
+  image: ${IMAGE_PREFIX:?задайте IMAGE_PREFIX в .env, см. docs/deploy.md}/app:${TAG:?TAG записывает в .env деплой, см. docs/deploy.md}
+  env_file: .env
+  volumes: ['media:/media']
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  restart: unless-stopped
+  logging: *logging
+
+services:
+  web:
+    image: ${IMAGE_PREFIX:?задайте IMAGE_PREFIX в .env, см. docs/deploy.md}/web:${TAG:?TAG записывает в .env деплой, см. docs/deploy.md}
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?задайте APP_DOMAIN в .env}
+    ports: ['80:80', '443:443']
+    volumes:
+      - 'letsencrypt:/etc/letsencrypt:ro'
+      - 'certbot-www:/var/www/certbot:ro'
+      # nocopy: у образа nginx в /media лежат каталоги alpine (cdrom, floppy,
+      # usb). Том медиафайлов заполняет и отдаёт во владение www-data образ app.
+      - type: volume
+        source: media
+        target: /media
+        read_only: true
+        volume: { nocopy: true }
+    depends_on: [app]
+    restart: unless-stopped
+    logging: *logging
+
+  app:
+    <<: *php
+
+  # Образ app наследует от php-fpm сигнал остановки SIGQUIT (мягкая остановка
+  # FPM). Horizon его не обрабатывает и ждал бы SIGKILL через 10 секунд, а
+  # деплой — вместе с ним; по SIGTERM Horizon доделывает текущие задачи и
+  # выходит.
+  worker:
+    <<: *php
+    command: ['php', 'artisan', 'horizon']
+    stop_signal: SIGTERM
+
+  scheduler:
+    <<: *php
+    command: ['php', 'artisan', 'schedule:work']
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:?задайте DB_DATABASE в .env}
+      POSTGRES_USER: ${DB_USERNAME:?задайте DB_USERNAME в .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?задайте DB_PASSWORD в .env}
+    volumes: ['pgdata:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes: ['redisdata:/data']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    logging: *logging
+
+  # Продление сертификата Let's Encrypt: раз в 12 часов `certbot renew`
+  # проверяет срок и при необходимости продлевает через webroot — файлы проверки
+  # в томе certbot-www, их отдаёт web по HTTP; web сам перечитывает сертификат
+  # раз в 12 часов. Первый сертификат выпускается вручную, пока web остановлен
+  # и порт 80 свободен (docs/deploy.md).
+  certbot:
+    image: certbot/certbot:v5.8.0
+    entrypoint: ['/bin/sh', '-c']
+    command: ['trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done']
+    volumes:
+      - 'letsencrypt:/etc/letsencrypt'
+      - 'certbot-www:/var/www/certbot'
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+  media: {}
+  letsencrypt: {}
+  certbot-www: {}

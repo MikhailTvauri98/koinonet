@@ -5814,15 +5814,15 @@ git add apps/web .github && git commit -m "test(web): end-to-end onboarding and 
 **Интерфейсы:**
 - Отдаёт наружу: `deploy.yml` — на push в `main` собирает образы `app` и `web`, публикует в GHCR, по SSH выполняет `docker compose pull`, `up -d --remove-orphans`, `php artisan migrate --force`, сброс кешей и `horizon:terminate`.
 
-- [ ] **Шаг 1: Конфиг nginx для прода**
+- [x] **Шаг 1: Конфиг nginx для прода**
 
 `infra/nginx/prod.conf`: `/` — статика Nuxt с `try_files $uri $uri/ /index.html`; `/api/`, `/sanctum/`, `/broadcasting/` — fastcgi на `app:9000`; `/_protected/` — `internal` с `alias` на каталог медиафайлов; `client_max_body_size 100m`; HTTP → HTTPS; сертификаты Let's Encrypt. Локация `/app/` для Reverb добавляется в фазе 2 — в фазе 1 сервиса `reverb` ещё нет.
 
-- [ ] **Шаг 2: `compose.prod.yml`**
+- [x] **Шаг 2: `compose.prod.yml`**
 
 Сервисы `web`, `app`, `worker`, `scheduler`, `postgres`, `redis`, `certbot`. Образы из GHCR по тегу. Том медиафайлов монтируется в `app`, `worker` и `web` (в `web` — только для чтения).
 
-- [ ] **Шаг 3: `deploy.yml`**
+- [x] **Шаг 3: `deploy.yml`**
 
 ```yaml
 name: deploy
@@ -5864,7 +5864,7 @@ jobs:
 Выполнить: пуш в `main`, затем `curl -s https://домен/api/v1/health`
 Ожидается: `{"status":"ok",...}`; вход администратора с телефона работает.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add infra .github docs/deploy.md && git commit -m "chore: production compose, nginx and deploy workflow"

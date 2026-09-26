@@ -607,27 +607,29 @@ PWA: манифест с `display: standalone`, иконками и русски
 ├── CONTEXT.md
 ├── docs/
 │   ├── architecture.md
+│   ├── deploy.md                установка сервера и чек-лист проверки
 │   └── adr/
 ├── apps/
 │   ├── api/          Laravel
 │   └── web/          Nuxt
 ├── infra/
-│   ├── php/Dockerfile
+│   ├── php/Dockerfile           цели prod и dev
 │   ├── web/Dockerfile           сборка Nuxt → nginx со статикой и конфигом
 │   ├── nginx/                   конфиги
-│   └── compose.yml, compose.prod.yml
+│   ├── compose.yml, compose.prod.yml
+│   └── deploy.sh                выкладка на сервере
 └── .github/workflows/  ci.yml, deploy.yml
 ```
 
-Образы: `app` (php:8.4-fpm-alpine с расширениями pdo_pgsql, redis, pcntl, intl, gd или imagick, bcmath, zip, exif, opcache; `composer install --no-dev`) и `web` (стадия node собирает Nuxt, результат кладётся в nginx:alpine). Один образ `app` для всех PHP-ролей, различается командой запуска.
+Образы: `app` (php:8.4-fpm-alpine с расширениями pdo_pgsql, redis, pcntl, intl, gd или imagick, bcmath, zip, exif, opcache; `composer install --no-dev`) и `web` (стадия node собирает Nuxt, результат кладётся в nginx:alpine). Один образ `app` для всех PHP-ролей, различается командой запуска. `infra/php/Dockerfile` многоэтапный: цель `prod` несёт код и зависимости без dev-пакетов, `php.ini-production`, opcache без проверки времени файлов, процессы от `www-data`; её точка входа выполняет `php artisan optimize` при старте каждого контейнера, потому что окружение приходит из `.env` сервера и в образ кеш конфигурации не запечь. Цель `dev` (по умолчанию) без кода: `compose.yml` монтирует его томом. Образ `web` собирается `nuxt generate` и проверяет собранный service worker (`verify-sw`); конфигурация nginx в нём — шаблон, домен подставляется при старте. Контекст сборки продовых образов — корень репозитория; `.dockerignore` пропускает только `apps/api`, `apps/web` и `infra/nginx/prod.conf`, без `.env`, зависимостей, журналов и артефактов сборки.
 
-Сервисы Compose: `web` (nginx, порты 80 и 443, тома сертификатов и медиафайлов только для чтения), `app` (php-fpm), `worker` (`php artisan horizon`), `scheduler` (`php artisan schedule:work`), `reverb` (`php artisan reverb:start --host=0.0.0.0 --port=8080`), `postgres` (том данных), `redis` (том, `appendonly yes`), `certbot` (получение и продление сертификатов). Медиафайлы в именованном томе, смонтированном в `app`, `worker` и `web`.
+Сервисы Compose: `web` (nginx, порты 80 и 443, тома сертификатов и медиафайлов только для чтения), `app` (php-fpm), `worker` (`php artisan horizon`), `scheduler` (`php artisan schedule:work`), `reverb` (`php artisan reverb:start --host=0.0.0.0 --port=8080`), `postgres` (том данных), `redis` (том, `appendonly yes`), `certbot` (продление сертификатов раз в 12 часов через webroot; первый сертификат выпускается в режиме standalone, пока `web` остановлен, — `docs/deploy.md`). Медиафайлы в именованном томе, смонтированном в `app`, `worker`, `scheduler` (`media:prune` удаляет файлы) и `web`.
 
-Маршрутизация nginx: `/` статика с `try_files … /index.html`; `/api/`, `/sanctum/`, `/broadcasting/` через fastcgi в `app:9000`; `/app/` в `reverb:8080` с заголовками `Upgrade` и `Connection`, `proxy_read_timeout` не меньше 60 секунд; `/_protected/` с `internal` и `alias` на каталог медиафайлов; `client_max_body_size 100m`; HTTP перенаправляется на HTTPS.
+Маршрутизация nginx: `/` статика с `try_files … /index.html`; `/api/`, `/sanctum/`, `/broadcasting/` через fastcgi в `app:9000`, PHP исполняет только `public/index.php`; `/app/` в `reverb:8080` с заголовками `Upgrade` и `Connection`, `proxy_read_timeout` не меньше 60 секунд; `/_protected/` с `internal` и `alias` на каталог медиафайлов; `client_max_body_size 100m`; HTTP перенаправляется на HTTPS, кроме `/.well-known/acme-challenge/` для продления сертификата. Файлы сборки Nuxt с хешем в имени кешируются на год, всё остальное (оболочка, `sw.js`, манифест, манифест сборок) отдаётся с `Cache-Control: no-cache`, чтобы после деплоя клиенты сразу получали новую оболочку.
 
 Окружение: `.env` только на сервере, секреты (`APP_KEY`, пароль базы, VAPID-ключи, SMTP) в репозиторий не попадают. Часовой пояс церкви и остальные настройки в таблице `settings`, не в `.env`.
 
-CI и деплой: `ci.yml` на pull request и push: Pint, PHPStan, Pest; ESLint, проверка типов, Vitest, сборка Nuxt, проверка актуальности OpenAPI-схемы; после них — задание `e2e` со сквозными сценариями Playwright (раздел 12) и трассировкой падения в артефакте. `deploy.yml` на push в `main`: сборка образов, публикация в GHCR, по SSH на сервер `docker compose pull`, `docker compose up -d --remove-orphans`, `php artisan migrate --force`, сброс кешей, `horizon:terminate` для перезапуска воркера. Простой в несколько секунд при деплое допустим.
+CI и деплой: `ci.yml` на pull request и push: Pint, PHPStan, Pest; ESLint, проверка типов, Vitest, сборка Nuxt, проверка актуальности OpenAPI-схемы; после них — задание `e2e` со сквозными сценариями Playwright (раздел 12) и трассировкой падения в артефакте. `deploy.yml` на push в `main`: сборка образов, публикация в GHCR, копирование `compose.prod.yml` и `deploy.sh` на сервер по SSH (OpenSSH раннера, ключ хоста сверяется с секретом), вход Docker сервера в GHCR токеном запуска; затем `deploy.sh` на сервере: `docker compose pull`, `php artisan migrate --force` разовым контейнером нового образа до переключения, `docker compose up -d --remove-orphans`. Сброс кешей и перезапуск воркера — само пересоздание контейнеров с новым тегом: каждый контейнер PHP собирает кеши при старте, а старый Horizon Docker останавливает сигналом SIGTERM (тем же, что посылает `horizon:terminate`), и новый стартует на новом образе. Отдельный `horizon:terminate` не выполняется: в контейнере-воркере он останавливает его главный процесс и обрывает собственный `docker compose exec` с кодом 137, а из другого контейнера сигнал до Horizon не доходит. Простой в несколько секунд при деплое допустим.
 
 Логи: приложение пишет в stderr, читаются через `docker logs`, ротация в настройках драйвера json-file. Эндпоинт `GET /api/v1/health` проверяет базу и Redis. Внешний мониторинг ошибок не ставится, кандидат на будущее GlitchTip.
 

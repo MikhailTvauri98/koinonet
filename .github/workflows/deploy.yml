@@ -1,0 +1,91 @@
+name: deploy
+
+# Выкладка на сервер при каждом пуше в main (docs/architecture.md, раздел 11).
+# Настройка сервера и секретов репозитория — docs/deploy.md.
+on:
+  push:
+    branches: [main]
+
+# Две выкладки одновременно не идут: следующая ждёт окончания предыдущей.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Публикация образов в GHCR; тем же токеном сервер их скачивает.
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR принимает имена образов только в нижнем регистре, а в имени
+      # репозитория GitHub бывают заглавные буквы.
+      - name: Image prefix
+        id: image
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/php/Dockerfile
+          target: prod
+          push: true
+          tags: ${{ steps.image.outputs.prefix }}/app:${{ github.sha }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/web/Dockerfile
+          push: true
+          tags: ${{ steps.image.outputs.prefix }}/web:${{ github.sha }}
+
+      # SSH и scp из образа раннера, без стороннего действия: ключ сервера не
+      # попадает в чужой код. appleboy/ssh-action, закреплённый даже на SHA,
+      # при запуске скачивает бинарник drone-ssh с GitHub Releases без
+      # проверки контрольной суммы. Ключ хоста сверяется с DEPLOY_KNOWN_HOSTS.
+      - name: SSH access
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          {
+            echo 'Host deploy-target'
+            printf '  HostName %s\n  User %s\n' "$DEPLOY_HOST" "$DEPLOY_USER"
+            echo '  IdentityFile ~/.ssh/deploy_key'
+            echo '  IdentitiesOnly yes'
+            echo '  StrictHostKeyChecking yes'
+            echo '  BatchMode yes'
+          } > ~/.ssh/config
+
+      - name: Deploy
+        id: deploy
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          scp infra/compose.prod.yml infra/deploy.sh deploy-target:/srv/church/
+          # Сервер скачивает образы токеном этого запуска: постоянного пароля
+          # от GHCR на сервере нет, токен перестаёт действовать с концом задания.
+          printf '%s' "$REGISTRY_TOKEN" \
+            | ssh deploy-target docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          ssh -n deploy-target "TAG=$GITHUB_SHA sh /srv/church/deploy.sh"
+
+      - name: Registry logout on the server
+        if: always() && steps.deploy.conclusion != 'skipped'
+        run: ssh -n deploy-target docker logout ghcr.io
