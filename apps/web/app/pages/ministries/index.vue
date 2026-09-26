@@ -13,6 +13,10 @@ const name = ref('')
 const description = ref('')
 const saving = ref(false)
 const formError = ref('')
+// Название созданного служения, которого нет в списке смотрящего: создатель
+// не становится участником (docs/architecture.md, 7.3), а без
+// ministries.view_all сервер список ему не отдаёт.
+const createdHidden = ref<string | null>(null)
 
 async function load() {
   loading.value = true
@@ -35,12 +39,18 @@ async function submit() {
   }
   saving.value = true
   formError.value = ''
+  createdHidden.value = null
   try {
-    await api.post('/ministries', { name: name.value.trim(), description: description.value.trim() || null })
+    const created = await api.post<{ data: Ministry }>('/ministries', {
+      name: name.value.trim(), description: description.value.trim() || null,
+    })
     name.value = ''
     description.value = ''
     showForm.value = false
     await load()
+    if (!errorMessage.value && !ministries.value.some(item => item.id === created.data.id)) {
+      createdHidden.value = created.data.name
+    }
   } catch (error) {
     formError.value = apiErrorMessage(error, 'Не удалось создать служение. Попробуйте ещё раз.')
   } finally {
@@ -56,7 +66,7 @@ await load()
   <section class="ministries-page">
     <header>
       <h1>Служения</h1>
-      <button v-if="canCreate && !showForm" type="button" data-test="create-ministry" @click="showForm = true">Создать служение</button>
+      <button v-if="canCreate && !showForm" type="button" data-test="create-ministry" @click="showForm = true; createdHidden = null">Создать служение</button>
     </header>
     <form v-if="showForm && canCreate" class="ministries-page__form" @submit.prevent="submit">
       <fieldset :disabled="saving">
@@ -74,6 +84,10 @@ await load()
       <button type="submit" data-test="save-ministry" :disabled="saving">Создать</button>
       <button type="button" data-test="cancel-ministry" :disabled="saving" @click="showForm = false">Отмена</button>
     </form>
+    <p v-if="createdHidden" role="status" class="ministries-page__notice" data-test="created-hidden">
+      Служение «{{ createdHidden }}» создано. В вашем списке его нет: вы не состоите в нём и не имеете права
+      «Видеть все служения». Оно появится здесь, когда вас добавят в его состав или выдадут роль с этим правом.
+    </p>
     <p v-if="loading" role="status">Загрузка…</p>
     <p v-else-if="errorMessage" role="alert">
       {{ errorMessage }} <button type="button" data-test="retry" @click="load">Повторить</button>
@@ -105,6 +119,7 @@ input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b
 button { cursor: pointer; margin-right: 0.5rem; }
 header button { background: #234e79; color: white; }
 button:disabled { opacity: 0.6; cursor: wait; }
+.ministries-page__notice { padding: 0.75rem 1rem; margin: 0 0 1rem; background: #edf1f6; border-radius: 0.4rem; }
 .ministries-page__list { list-style: none; padding: 0; margin: 0; }
 .ministries-page__item { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 0; border-bottom: 1px solid #d8dce2; color: inherit; text-decoration: none; }
 .ministries-page__item img, .ministries-page__placeholder { width: 3.5rem; height: 3.5rem; border-radius: 0.5rem; object-fit: cover; flex-shrink: 0; }

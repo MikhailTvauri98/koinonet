@@ -38,8 +38,9 @@ export function useCan() {
 
 /**
  * Правило видимости пункта «Служения» в навигации (`AppNav.vue`, `index.vue`):
- * показываем тому, кому есть что там смотреть — состоит хотя бы в одном
- * служении, либо видит или администрирует все служения без участия в них.
+ * показываем тому, кому есть что там делать — состоит хотя бы в одном
+ * служении, видит или администрирует все служения без участия в них, либо
+ * создаёт служения: создание живёт на экране списка.
  *
  * Каталог прав (docs/architecture.md, раздел 6.1) не содержит отдельного
  * права `ministries.view` — список служений сам по себе правом не защищён.
@@ -50,7 +51,8 @@ export function useCan() {
  */
 export function hasVisibleMinistries(permissions: Permissions): boolean {
   const { can } = permissionChecker(permissions)
-  return can('ministries.view_all') || can('ministries.manage_all') || Object.keys(permissions.ministries).length > 0
+  return can('ministries.view_all') || can('ministries.manage_all') || can('ministries.create')
+    || Object.keys(permissions.ministries).length > 0
 }
 
 // Тот же приём, что у useCan(): читаем auth.permissions заново при каждом

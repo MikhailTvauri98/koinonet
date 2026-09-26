@@ -41,6 +41,12 @@ describe('hasVisibleMinistries', () => {
     expect(hasVisibleMinistries({ administrator: false, global: ['ministries.manage_all'], ministries: {} })).toBe(true)
   })
 
+  // Создавать служения можно только из списка служений — носителю
+  // ministries.create пункт нужен, даже если он ещё нигде не состоит.
+  it('is true for a holder of ministries.create, without membership or other global permission', () => {
+    expect(hasVisibleMinistries({ administrator: false, global: ['ministries.create'], ministries: {} })).toBe(true)
+  })
+
   it('is true for plain personal membership, without either global permission', () => {
     expect(hasVisibleMinistries({ administrator: false, global: [], ministries: { m1: [] } })).toBe(true)
   })

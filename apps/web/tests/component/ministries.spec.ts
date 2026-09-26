@@ -432,6 +432,25 @@ describe('ministries list', () => {
     expect(withRight.find('[data-test="create-ministry"]').exists()).toBe(true)
   })
 
+  // Создатель не становится участником (docs/architecture.md, 7.3), а без
+  // ministries.view_all сервер не отдаёт ему созданное служение. Экран
+  // говорит это прямо, а не молча оставляет список без нового служения.
+  it('explains when the created ministry is not visible to its creator', async () => {
+    grantPermissions({ global: ['ministries.create'] })
+    get.mockResolvedValue({ data: [] })
+    post.mockResolvedValue({ data: { id: 'm3', name: 'Молодёжное', description: null, cover_url: null, default_role_id: 'r3', archived_at: null } })
+
+    const page = await mountSuspended(MinistriesList)
+    await page.find('[data-test="create-ministry"]').trigger('click')
+    await page.find('[data-test="ministry-name"]').setValue('Молодёжное')
+    await page.find('form').trigger('submit')
+    await flushPromises()
+
+    const notice = page.get('[data-test="created-hidden"]')
+    expect(notice.text()).toContain('Служение «Молодёжное» создано')
+    expect(notice.text()).toContain('Видеть все служения')
+  })
+
   it('creates a ministry and refreshes the list', async () => {
     grantPermissions({ global: ['ministries.create'] })
     get.mockResolvedValue({ data: [] })
