@@ -95,6 +95,10 @@ export interface SpawnSpec {
   args: string[]
   cwd: string
   env: NodeJS.ProcessEnv
+  // Контейнер, в котором выполняется команда (способ docker). Завершение
+  // клиента `docker compose run` контейнер не останавливает, поэтому при
+  // остановке и при превышении предела его убирают по этому имени.
+  container?: string
 }
 
 export interface ApiRuntime {
@@ -103,12 +107,19 @@ export interface ApiRuntime {
   artisan(args: string[]): SpawnSpec
   // Долгоживущий процесс: HTTP-сервер API или воркер очереди.
   longRunning(role: LongRunningRole): SpawnSpec
-  // Команда, которая останавливает долгоживущий процесс и убирает его
-  // следы (контейнер); null — достаточно завершить дерево процессов.
-  cleanup(role: LongRunningRole): SpawnSpec | null
+  // Печатает идентификаторы всех контейнеров сквозных тестов, по одному в
+  // строке; null — у способа запуска контейнеров нет.
+  listContainers(): SpawnSpec | null
+  removeContainers(ids: string[]): SpawnSpec
 }
 
 export type LongRunningRole = 'api' | 'worker'
+
+// Метка всех контейнеров сквозных тестов — и разовых, и долгоживущих.
+// Ключ привязан к этому репозиторию: очистка по нему не заденет контейнеры
+// других проектов на той же машине (имя compose-проекта `infra` для этого
+// не годится — оно общее у всех, чей compose-файл лежит в каталоге infra).
+export const containerLabel = { key: 'curchcowork.e2e', value: 'true' } as const
 
 const containerNames: Record<LongRunningRole, string> = {
   api: 'church-e2e-api',
@@ -117,25 +128,28 @@ const containerNames: Record<LongRunningRole, string> = {
 
 function dockerRuntime(): ApiRuntime {
   const environmentFlags = Object.entries(apiEnvironment).flatMap(([key, value]) => ['-e', `${key}=${value}`])
-  const compose = ['compose', '-f', e2e.composeFile, 'run', '--rm', '-T']
-  const spec = (args: string[]): SpawnSpec => ({ command: 'docker', args, cwd: e2e.webDir, env: process.env })
+  const label = `${containerLabel.key}=${containerLabel.value}`
+  const compose = (name: string) => ['compose', '-f', e2e.composeFile, 'run', '--rm', '-T', '--label', label, '--name', name]
+  const spec = (args: string[], container?: string): SpawnSpec => ({ command: 'docker', args, cwd: e2e.webDir, env: process.env, container })
+  let oneOffCount = 0
 
   return {
     name: 'docker',
-    artisan: args => spec([...compose, ...environmentFlags, 'app', 'php', 'artisan', ...args]),
+    artisan: (args) => {
+      const name = `church-e2e-once-${process.pid}-${++oneOffCount}`
+      return spec([...compose(name), ...environmentFlags, 'app', 'php', 'artisan', ...args], name)
+    },
     longRunning: (role) => {
-      const name = ['--name', containerNames[role]]
+      const name = containerNames[role]
       return role === 'api'
         // Внутри контейнера сервер слушает все интерфейсы своего сетевого
         // пространства, наружу порт опубликован только на 127.0.0.1 хоста.
-        ? spec([...compose, ...name, '-p', `127.0.0.1:${e2e.apiPort}:8000`, ...environmentFlags,
-            'app', 'php', 'artisan', 'serve', '--no-reload', '--host=0.0.0.0', '--port=8000'])
-        : spec([...compose, ...name, ...environmentFlags, 'app', 'php', 'artisan', 'queue:work'])
+        ? spec([...compose(name), '-p', `127.0.0.1:${e2e.apiPort}:8000`, ...environmentFlags,
+            'app', 'php', 'artisan', 'serve', '--no-reload', '--host=0.0.0.0', '--port=8000'], name)
+        : spec([...compose(name), ...environmentFlags, 'app', 'php', 'artisan', 'queue:work'], name)
     },
-    // Завершение клиента `docker compose run` контейнер не останавливает:
-    // его убирает сам Docker по имени (и остатки прошлого прерванного
-    // прогона — тоже, до старта).
-    cleanup: role => spec(['rm', '-f', containerNames[role]]),
+    listContainers: () => spec(['ps', '--all', '--quiet', '--filter', `label=${label}`]),
+    removeContainers: ids => spec(['rm', '--force', ...ids]),
   }
 }
 
@@ -153,7 +167,10 @@ function nativeRuntime(): ApiRuntime {
     longRunning: role => role === 'api'
       ? spec(['serve', '--no-reload', '--host=127.0.0.1', `--port=${e2e.apiPort}`])
       : spec(['queue:work']),
-    cleanup: () => null,
+    listContainers: () => null,
+    removeContainers: () => {
+      throw new Error('У способа native нет контейнеров.')
+    },
   }
 }
 

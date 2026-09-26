@@ -15,6 +15,10 @@ export default defineConfig({
   // Забытый test.only молча выключил бы остальные сценарии.
   forbidOnly: true,
   timeout: 120_000,
+  // Верхний предел всего прогона, включая подготовку API и сборку клиента
+  // (сейчас прогон занимает около 3,5 минут). Разовые команды подготовки
+  // ограничены и сами — global-setup.ts.
+  globalTimeout: 15 * 60_000,
   expect: { timeout: 10_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
   outputDir: './test-results',
