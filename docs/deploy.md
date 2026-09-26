@@ -167,7 +167,7 @@ docker compose -f compose.prod.yml run --rm --entrypoint certbot certbot \
   renew --dry-run --webroot -w /var/www/certbot
 ```
 
-### 6. Секреты GitHub
+### 6. Секреты GitHub и защита ветки `main`
 
 В репозитории: Settings → Secrets and variables → Actions → New repository secret.
 
@@ -180,7 +180,13 @@ docker compose -f compose.prod.yml run --rm --entrypoint certbot certbot \
 
 Токен для GHCR заводить не нужно: workflow публикует и скачивает образы токеном `GITHUB_TOKEN` с правом `packages: write`.
 
-Правило защиты ветки `main` для деплоя не требуется: `deploy.yml` сам не выкладывает коммит, пока в том же запуске не прошли `api`, `web` и `e2e`.
+Правило защиты ветки `main` обеспечивает требование раздела 12 архитектуры: CI блокирует слияние при падении любого шага. Деплой закрывает другую дыру: `deploy.yml` не выкладывает коммит, пока в том же запуске не прошли `api`, `web` и `e2e`. Попасть в `main` без проверок коммиту он не мешает — это делает только правило. В Settings → Branches → Add classic branch protection rule, шаблон `main`:
+
+- **Require a pull request before merging** — в `main` только через pull request;
+- **Require status checks to pass before merging** и в нём **Require branches to be up to date before merging**. Обязательные проверки — `api`, `web`, `e2e`: так называются задания в `ci.yml`. Для выбора в поиске они появляются после первого прогона `ci.yml` в pull request;
+- **Do not allow bypassing the above settings** — правило действует и на администраторов. По умолчанию они его обходят.
+
+Ограничение GitHub: правила защиты веток и rulesets доступны в публичных репозиториях на GitHub Free, а в приватных — только на GitHub Pro, Team и Enterprise. Документация: «About protected branches» и «About rulesets», блок «Who can use this feature?». На приватном репозитории личного аккаунта GitHub Free правило не создать. Тогда гейт слияния держится на дисциплине: в `main` попадают только pull request с зелёными `api`, `web` и `e2e`, прямых пушей в `main` нет. Нарушение этой договорённости прод не сломает — деплой такой коммит не выложит, — но `main` окажется непроверенным. Техническим гейт становится, если перевести аккаунт на GitHub Pro или сделать репозиторий публичным.
 
 ### 7. Первый деплой
 
