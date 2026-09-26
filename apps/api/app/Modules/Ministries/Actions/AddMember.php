@@ -17,6 +17,8 @@ final class AddMember
     /** @param list<string> $roleIds дополнительные роли сверх роли по умолчанию */
     public function handle(Ministry $ministry, Person $person, array $roleIds = []): MinistryMember
     {
+        $ministry->ensureNotArchived();
+
         if ($person->archived_at !== null) {
             throw DomainRuleException::because('member.person_archived', 'Человек архивирован.');
         }

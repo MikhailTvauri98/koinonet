@@ -8,6 +8,7 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Media\MediaAccess;
 use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Actions\SetMinistryCover;
+use App\Support\DomainRuleException;
 use Database\Factories\MinistryFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -45,6 +46,19 @@ final class Ministry extends Model
         return [
             'archived_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Refuses any change to an archived ministry - its details, cover,
+     * membership and roles stay as history (architecture 7.3). Checked by
+     * the Actions themselves, because the administrator and holders of
+     * `ministries.manage_all` pass every permission check.
+     */
+    public function ensureNotArchived(): void
+    {
+        if ($this->archived_at !== null) {
+            throw DomainRuleException::because('ministry.archived', 'Архивное служение изменить нельзя.');
+        }
     }
 
     /** @return BelongsTo<Role, $this> */

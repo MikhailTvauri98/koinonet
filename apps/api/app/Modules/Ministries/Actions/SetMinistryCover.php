@@ -8,7 +8,6 @@ use App\Modules\Media\Actions\AttachDirectMedia;
 use App\Modules\Media\MediaKind;
 use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Models\Ministry;
-use App\Support\DomainRuleException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,9 +27,7 @@ final readonly class SetMinistryCover
 
     public function handle(Ministry $ministry, Media $media): Ministry
     {
-        if ($ministry->archived_at !== null) {
-            throw DomainRuleException::because('ministry.archived', 'Архивное служение изменить нельзя.');
-        }
+        $ministry->ensureNotArchived();
 
         DB::transaction(function () use ($ministry, $media): void {
             $this->attachDirectMedia->handle($media, MediaKind::Image);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Access\Actions;
 
 use App\Modules\Access\AuditLogger;
+use App\Modules\Access\MinistryRoleGuard;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionCache;
@@ -17,6 +18,7 @@ final readonly class UpdateRole
         private SetRolePermissions $setPermissions,
         private PermissionCache $cache,
         private AuditLogger $audit,
+        private MinistryRoleGuard $ministryGuard,
     ) {}
 
     /** @param list<Permission>|null $permissions */
@@ -28,6 +30,8 @@ final readonly class UpdateRole
                 'Роль «Администратор» изменить нельзя.',
             );
         }
+
+        $this->ministryGuard->ensureEditable($role->ministry_id);
 
         if ($name !== null && $name !== $role->name) {
             $exists = Role::query()

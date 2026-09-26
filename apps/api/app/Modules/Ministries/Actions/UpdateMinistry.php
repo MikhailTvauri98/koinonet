@@ -13,12 +13,7 @@ final class UpdateMinistry
     /** @param array{name?: string, description?: string|null, default_role_id?: string} $attributes */
     public function handle(Ministry $ministry, array $attributes): Ministry
     {
-        if ($ministry->archived_at !== null) {
-            throw DomainRuleException::because(
-                'ministry.archived',
-                'Архивное служение изменить нельзя.',
-            );
-        }
+        $ministry->ensureNotArchived();
 
         $name = $attributes['name'] ?? null;
 

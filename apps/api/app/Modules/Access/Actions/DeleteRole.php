@@ -7,6 +7,7 @@ namespace App\Modules\Access\Actions;
 use App\Modules\Access\AuditLogger;
 use App\Modules\Access\Contracts\RoleCarrierDetacher;
 use App\Modules\Access\Events\RoleDeleted;
+use App\Modules\Access\MinistryRoleGuard;
 use App\Modules\Access\Models\PersonRole;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\PermissionCache;
@@ -21,6 +22,7 @@ final readonly class DeleteRole
         private PermissionCache $cache,
         private AuditLogger $audit,
         private RoleCarrierDetacher $detachRoleFromMembers,
+        private MinistryRoleGuard $ministryGuard,
     ) {}
 
     public function handle(Role $role): void
@@ -31,6 +33,8 @@ final readonly class DeleteRole
                 'Роль «Администратор» удалить нельзя.',
             );
         }
+
+        $this->ministryGuard->ensureEditable($role->ministry_id);
 
         $usage = $this->usage->for($role);
 

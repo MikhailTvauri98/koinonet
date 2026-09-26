@@ -16,6 +16,8 @@ final readonly class RemoveMember
 
     public function handle(Ministry $ministry, MinistryMember $member): void
     {
+        $ministry->ensureNotArchived();
+
         $personId = $member->person_id;
         $userId = $member->person->user?->id;
 

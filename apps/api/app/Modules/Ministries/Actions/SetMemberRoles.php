@@ -19,6 +19,8 @@ final readonly class SetMemberRoles
     /** @param list<string> $roleIds */
     public function handle(Ministry $ministry, MinistryMember $member, array $roleIds): MinistryMember
     {
+        $ministry->ensureNotArchived();
+
         if ($roleIds === []) {
             throw DomainRuleException::because(
                 'member.last_role_cannot_be_removed',

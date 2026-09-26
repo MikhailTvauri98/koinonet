@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Access\Actions;
 
 use App\Modules\Access\AuditLogger;
+use App\Modules\Access\MinistryRoleGuard;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Access\RoleScope;
@@ -16,6 +17,7 @@ final readonly class CreateRole
     public function __construct(
         private SetRolePermissions $setPermissions,
         private AuditLogger $audit,
+        private MinistryRoleGuard $ministryGuard,
     ) {}
 
     /** @param list<Permission> $permissions */
@@ -26,6 +28,7 @@ final readonly class CreateRole
         ?string $description,
         array $permissions,
     ): Role {
+        $this->ministryGuard->ensureEditable($ministryId);
         $this->ensureNameIsAvailable($scope, $ministryId, $name);
 
         return DB::transaction(function () use ($scope, $ministryId, $name, $description, $permissions): Role {
