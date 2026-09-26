@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
 import RoleEditor from '~/components/roles/RoleEditor.vue'
 import type { Ministry } from '~/utils/ministries'
 import type { RoleLike } from '~/utils/roles'
@@ -112,11 +113,7 @@ await load()
 
 <template>
   <section class="roles-tab">
-    <nav aria-label="Разделы служения" class="roles-tab__tabs">
-      <NuxtLink :to="`/ministries/${ministryId}`">Обзор</NuxtLink>
-      <NuxtLink :to="`/ministries/${ministryId}/members`">Участники</NuxtLink>
-      <NuxtLink :to="`/ministries/${ministryId}/roles`" class="roles-tab__tabs-active">Роли</NuxtLink>
-    </nav>
+    <MinistryTabs :ministry-id="ministryId" />
     <h1>Роли служения</h1>
     <p v-if="!canSeeRoles" role="alert">Нет права видеть роли этого служения.</p>
     <template v-else>
@@ -154,8 +151,6 @@ await load()
 
 <style scoped>
 .roles-tab { max-width: 64rem; margin: 0 auto; color: #202b3a; }
-.roles-tab__tabs { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.roles-tab__tabs-active { font-weight: 600; }
 h1 { margin: 0 0 1rem; }
 .roles-tab__layout { display: grid; grid-template-columns: minmax(14rem, 18rem) 1fr; gap: 2rem; align-items: start; }
 .roles-tab__list ul { list-style: none; padding: 0; margin: 0.75rem 0 0; }

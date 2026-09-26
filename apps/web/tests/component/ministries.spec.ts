@@ -193,6 +193,42 @@ describe('ministry members tab', () => {
   })
 })
 
+describe('ministry tabs', () => {
+  // Вкладка «Роли» — только тем, кому есть что на ней делать: список ролей
+  // читают носители roles.manage и members.manage в этом служении
+  // (docs/architecture.md, 6.1).
+  it('hides the roles tab from someone who manages neither roles nor members in that ministry', async () => {
+    get.mockResolvedValue({ data: ministry })
+
+    const page = await mountSuspended(MinistryCard)
+    const tabs = page.get('nav[aria-label="Разделы служения"]')
+
+    expect(tabs.find('a[href="/ministries/m1"]').exists()).toBe(true)
+    expect(tabs.find('a[href="/ministries/m1/members"]').exists()).toBe(true)
+    expect(tabs.find('a[href="/ministries/m1/roles"]').exists()).toBe(false)
+  })
+
+  it.each(['roles.manage', 'members.manage'])('shows the roles tab with %s in that ministry', async (key) => {
+    grantPermissions({ ministries: { m1: [key] } })
+    get.mockResolvedValue({ data: [member] })
+
+    const page = await mountSuspended(MembersTab)
+
+    expect(page.get('nav[aria-label="Разделы служения"]').find('a[href="/ministries/m1/roles"]').exists()).toBe(true)
+  })
+
+  it('hides the roles tab again when the right is withdrawn mid-session', async () => {
+    grantPermissions({ ministries: { m1: ['roles.manage'] } })
+    get.mockResolvedValue({ data: ministry })
+
+    const page = await mountSuspended(MinistryCard)
+    grantPermissions({ ministries: { m1: [] } })
+    await flushPromises()
+
+    expect(page.find('a[href="/ministries/m1/roles"]').exists()).toBe(false)
+  })
+})
+
 describe('ministry card', () => {
   it('says the ministry is gone instead of the server text, which names the model class', async () => {
     get.mockRejectedValue(Object.assign(new Error('failed'), {

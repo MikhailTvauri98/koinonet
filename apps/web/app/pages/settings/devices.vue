@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import type { components } from '~~/types/api'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
 import { apiErrorMessage } from '~/utils/apiError'
@@ -74,11 +75,7 @@ await load()
 
 <template>
   <section class="devices-page">
-    <nav aria-label="Разделы настроек" class="devices-page__tabs">
-      <NuxtLink to="/settings/profile">Профиль</NuxtLink>
-      <NuxtLink to="/settings/login">Вход</NuxtLink>
-      <NuxtLink to="/settings/devices" class="devices-page__tabs-active">Устройства</NuxtLink>
-    </nav>
+    <SettingsTabs />
     <h1>Устройства</h1>
     <p v-if="loading" role="status">Загрузка…</p>
     <p v-else-if="loadError" role="alert">
@@ -113,8 +110,6 @@ await load()
 
 <style scoped>
 .devices-page { max-width: 36rem; margin: 0 auto; color: #202b3a; }
-.devices-page__tabs { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.devices-page__tabs-active { font-weight: 600; }
 .devices-page__list { list-style: none; padding: 0; margin: 1rem 0 0; }
 .devices-page__list li { padding: 0.85rem 0; border-bottom: 1px solid #dfe4ea; }
 .devices-page__meta { color: #4b5563; }

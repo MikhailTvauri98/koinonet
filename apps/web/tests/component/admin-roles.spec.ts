@@ -41,6 +41,15 @@ describe('admin global roles page', () => {
     expect(page.find('[data-test="create-role"]').exists()).toBe(false)
   })
 
+  it('has no section navigation of a single item', async () => {
+    grantPermissions({ global: ['roles.manage_global'] })
+
+    const page = await mountSuspended(AdminRoles)
+    await flushPromises()
+
+    expect(page.find('nav').exists()).toBe(false)
+  })
+
   it('lists global roles and opens the editor for a selected one with roles.manage_global', async () => {
     grantPermissions({ global: ['roles.manage_global'] })
 

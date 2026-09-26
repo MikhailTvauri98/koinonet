@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import type { components } from '~~/types/api'
 import MediaUploader from '~/components/MediaUploader.vue'
 import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
@@ -104,11 +105,7 @@ await load()
 
 <template>
   <section class="profile-page">
-    <nav aria-label="Разделы настроек" class="profile-page__tabs">
-      <NuxtLink to="/settings/profile" class="profile-page__tabs-active">Профиль</NuxtLink>
-      <NuxtLink to="/settings/login">Вход</NuxtLink>
-      <NuxtLink to="/settings/devices">Устройства</NuxtLink>
-    </nav>
+    <SettingsTabs />
     <h1>Профиль</h1>
     <p v-if="loading" role="status">Загрузка…</p>
     <p v-else-if="loadError" role="alert">
@@ -155,8 +152,6 @@ await load()
 
 <style scoped>
 .profile-page { max-width: 32rem; margin: 0 auto; color: #202b3a; }
-.profile-page__tabs { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.profile-page__tabs-active { font-weight: 600; }
 .profile-page__photo { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
 .profile-page__photo img { border-radius: 50%; object-fit: cover; }
 form { display: flex; flex-direction: column; gap: 1rem; }

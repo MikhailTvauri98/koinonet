@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import PasswordField from '~/components/PasswordField.vue'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -67,11 +68,7 @@ async function submitPassword() {
 
 <template>
   <section class="login-settings">
-    <nav aria-label="Разделы настроек" class="login-settings__tabs">
-      <NuxtLink to="/settings/profile">Профиль</NuxtLink>
-      <NuxtLink to="/settings/login" class="login-settings__tabs-active">Вход</NuxtLink>
-      <NuxtLink to="/settings/devices">Устройства</NuxtLink>
-    </nav>
+    <SettingsTabs />
     <h1>Вход</h1>
 
     <section>
@@ -111,8 +108,6 @@ async function submitPassword() {
 
 <style scoped>
 .login-settings { max-width: 32rem; margin: 0 auto; color: #202b3a; }
-.login-settings__tabs { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.login-settings__tabs-active { font-weight: 600; }
 section { margin-bottom: 2rem; }
 form { display: flex; flex-direction: column; gap: 1rem; }
 label { display: flex; flex-direction: column; gap: 0.3rem; }

@@ -73,9 +73,6 @@ if (canManage.value) await load()
 
 <template>
   <section class="admin-roles">
-    <nav aria-label="Разделы администрирования" class="admin-roles__tabs">
-      <NuxtLink to="/admin/roles" class="admin-roles__tabs-active">Роли</NuxtLink>
-    </nav>
     <h1>Глобальные роли</h1>
     <p v-if="!canManage" role="alert">Нет права на управление глобальными ролями.</p>
     <template v-else>
@@ -106,8 +103,6 @@ if (canManage.value) await load()
 
 <style scoped>
 .admin-roles { max-width: 64rem; margin: 0 auto; color: #202b3a; }
-.admin-roles__tabs { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.admin-roles__tabs-active { font-weight: 600; }
 h1 { margin: 0 0 1rem; }
 .admin-roles__layout { display: grid; grid-template-columns: minmax(12rem, 16rem) 1fr; gap: 2rem; align-items: start; }
 .admin-roles__list ul { list-style: none; padding: 0; margin: 0.75rem 0 0; }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AddMemberDialog from '~/components/ministries/AddMemberDialog.vue'
 import MemberRow from '~/components/ministries/MemberRow.vue'
+import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
 import type { Member, MinistryRole } from '~/utils/ministries'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -95,11 +96,7 @@ await Promise.all([load(), loadRoles()])
 
 <template>
   <section class="members-tab">
-    <nav aria-label="Разделы служения" class="members-tab__tabs">
-      <NuxtLink :to="`/ministries/${ministryId}`">Обзор</NuxtLink>
-      <NuxtLink :to="`/ministries/${ministryId}/members`" class="members-tab__tabs-active">Участники</NuxtLink>
-      <NuxtLink :to="`/ministries/${ministryId}/roles`">Роли</NuxtLink>
-    </nav>
+    <MinistryTabs :ministry-id="ministryId" />
     <header>
       <h1>Участники</h1>
       <button v-if="canManage" type="button" data-test="add-member" @click="showAddDialog = true">Добавить участника</button>
@@ -127,8 +124,6 @@ await Promise.all([load(), loadRoles()])
 
 <style scoped>
 .members-tab { max-width: 48rem; margin: 0 auto; color: #202b3a; }
-.members-tab__tabs { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.members-tab__tabs-active { font-weight: 600; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
 h1 { margin: 0; }
 .members-tab__list { list-style: none; padding: 0; margin: 0; }

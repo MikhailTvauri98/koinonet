@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MediaUploader from '~/components/MediaUploader.vue'
+import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
 import type { Ministry } from '~/utils/ministries'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -104,11 +105,7 @@ await load()
       {{ errorMessage }} <button type="button" data-test="retry-ministry" @click="load">Повторить</button>
     </p>
     <template v-if="ministry">
-      <nav aria-label="Разделы служения" class="ministry-card__tabs">
-        <NuxtLink :to="`/ministries/${ministryId}`" class="ministry-card__tabs-active">Обзор</NuxtLink>
-        <NuxtLink :to="`/ministries/${ministryId}/members`">Участники</NuxtLink>
-        <NuxtLink :to="`/ministries/${ministryId}/roles`">Роли</NuxtLink>
-      </nav>
+      <MinistryTabs :ministry-id="ministryId" />
       <header>
         <img v-if="ministry.cover_url" :src="ministry.cover_url" :alt="`Обложка: ${ministry.name}`" data-test="ministry-cover">
         <h1>{{ ministry.name }}</h1>
@@ -168,8 +165,6 @@ await load()
 
 <style scoped>
 .ministry-card { max-width: 48rem; margin: 0 auto; color: #202b3a; overflow-wrap: anywhere; }
-.ministry-card__tabs { display: flex; gap: 1rem; margin: 1rem 0; }
-.ministry-card__tabs-active { font-weight: 600; }
 header { margin: 1rem 0; }
 header img { display: block; width: 100%; max-height: 16rem; object-fit: cover; border-radius: 0.5rem; margin-bottom: 0.75rem; }
 h1 { margin: 0; }
