@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { operations } from '~~/types/api'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
+import { apiErrorMessage } from '~/utils/apiError'
+import { AUDIT_ACTION_LABELS, auditActionLabel, auditSubjectLabel } from '~/utils/audit'
 import { churchDayEndToUtc, churchDayStartToUtc, formatChurchDateTime } from '~/utils/churchTime'
 
 type AuditResponse = operations['access.audit']['responses'][200]['content']['application/json']
@@ -32,13 +34,15 @@ const fromDate = ref('')
 const toDate = ref('')
 
 let requestVersion = 0
-let actionTimer: ReturnType<typeof setTimeout> | undefined
+// Какую загрузку повторяет «Повторить»: первую страницу по фильтрам или
+// следующую по курсору. Сбой «Показать ещё» не прячет уже загруженное.
+let failedReset = true
 
 function buildQuery(cursor: string | null): URLSearchParams {
   const query = new URLSearchParams()
   if (cursor) query.set('cursor', cursor)
   if (actorId.value) query.set('actor', actorId.value)
-  if (actionFilter.value.trim()) query.set('action', actionFilter.value.trim())
+  if (actionFilter.value) query.set('action', actionFilter.value)
   if (subjectType.value && subjectId.value) {
     query.set('subject_type', subjectType.value)
     query.set('subject_id', subjectId.value)
@@ -71,9 +75,10 @@ async function load(reset: boolean) {
     if (version !== requestVersion) return
     entries.value = reset ? response.data : [...entries.value, ...response.data]
     nextCursor.value = response.next_cursor
-  } catch {
+  } catch (error) {
     if (version !== requestVersion) return
-    loadError.value = 'Не удалось загрузить журнал. Попробуйте ещё раз.'
+    failedReset = reset
+    loadError.value = apiErrorMessage(error, 'Не удалось загрузить журнал. Попробуйте ещё раз.')
   } finally {
     if (version === requestVersion) {
       loading.value = false
@@ -117,19 +122,16 @@ function loadMore() {
   void load(false)
 }
 
+function retry() {
+  void load(failedReset)
+}
+
 function formatCreatedAt(iso: string) {
   return formatChurchDateTime(iso, timezone.value)
 }
 
-// Свободный ввод — с той же задержкой, что поиск в справочнике людей
-// (pages/people/index.vue): каждое нажатие клавиши не должно бить по сети.
-watch(actionFilter, () => {
-  clearTimeout(actionTimer)
-  actionTimer = setTimeout(resetList, 300)
-})
-watch([fromDate, toDate], resetList)
+watch([actionFilter, fromDate, toDate], resetList)
 watch(canView, (allowed) => {
-  clearTimeout(actionTimer)
   requestVersion++
   entries.value = []
   nextCursor.value = null
@@ -138,7 +140,6 @@ watch(canView, (allowed) => {
   if (allowed) void load(true)
 })
 onBeforeUnmount(() => {
-  clearTimeout(actionTimer)
   requestVersion++
 })
 
@@ -156,7 +157,10 @@ if (canView.value) {
       <div class="admin-audit__filters">
         <label>
           Действие
-          <input v-model="actionFilter" data-test="filter-action" type="text" placeholder="например, person.archived">
+          <select v-model="actionFilter" data-test="filter-action">
+            <option value="">Все действия</option>
+            <option v-for="(label, code) in AUDIT_ACTION_LABELS" :key="code" :value="code">{{ label }}</option>
+          </select>
         </label>
         <label>
           С
@@ -172,14 +176,11 @@ if (canView.value) {
         <button type="button" data-test="clear-actor" @click="clearActorFilter">×</button>
       </p>
       <p v-if="subjectType" class="admin-audit__chip" data-test="subject-chip">
-        Объект: {{ subjectType }} {{ subjectId }}
+        Объект: {{ auditSubjectLabel(subjectType) }} {{ subjectId }}
         <button type="button" data-test="clear-subject" @click="clearSubjectFilter">×</button>
       </p>
 
       <p v-if="loading" role="status">Загрузка…</p>
-      <p v-else-if="loadError" role="alert">
-        {{ loadError }} <button type="button" data-test="retry" @click="resetList">Повторить</button>
-      </p>
       <template v-else>
         <ul class="admin-audit__list">
           <li v-for="entry in entries" :key="entry.id">
@@ -189,17 +190,20 @@ if (canView.value) {
                 @click="filterByActor(entry)"
               >{{ entry.actor.name }}</button>
               <span v-else>Система</span>
-              — <strong>{{ entry.action }}</strong>
+              — <strong>{{ auditActionLabel(entry.action) }}</strong>
               <button
                 v-if="entry.subject_type && entry.subject_id" type="button" class="admin-audit__link"
                 :data-test="`entry-subject-${entry.id}`" @click="filterBySubject(entry)"
-              >{{ entry.subject_type }} {{ entry.subject_id }}</button>
+              >{{ auditSubjectLabel(entry.subject_type) }} {{ entry.subject_id }}</button>
             </p>
             <p class="admin-audit__meta">{{ formatCreatedAt(entry.created_at) }}</p>
           </li>
         </ul>
-        <p v-if="!entries.length">Записей не найдено.</p>
-        <button v-if="nextCursor" type="button" data-test="load-more" :disabled="loadingMore" @click="loadMore">
+        <p v-if="!entries.length && !loadError">Записей не найдено.</p>
+        <p v-if="loadError" role="alert">
+          {{ loadError }} <button type="button" data-test="retry" @click="retry">Повторить</button>
+        </p>
+        <button v-else-if="nextCursor" type="button" data-test="load-more" :disabled="loadingMore" @click="loadMore">
           {{ loadingMore ? 'Загрузка…' : 'Показать ещё' }}
         </button>
       </template>
@@ -208,16 +212,16 @@ if (canView.value) {
 </template>
 
 <style scoped>
-.admin-audit { max-width: 48rem; margin: 0 auto; color: #202b3a; }
+.admin-audit { max-width: 48rem; margin: 0 auto; color: #202b3a; overflow-wrap: anywhere; }
 .admin-audit__filters { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.admin-audit__filters label { display: flex; flex-direction: column; gap: 0.3rem; }
-.admin-audit__chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #edf1f6; padding: 0.4rem 0.7rem; border-radius: 999px; margin: 0 0.5rem 0.5rem 0; }
+.admin-audit__filters label { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; }
+.admin-audit__chip { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 0.4rem; background: #edf1f6; padding: 0.4rem 0.7rem; border-radius: 999px; margin: 0 0.5rem 0.5rem 0; }
 .admin-audit__chip button { border: 0; background: none; cursor: pointer; font: inherit; }
 .admin-audit__list { list-style: none; padding: 0; margin: 0; }
 .admin-audit__list li { padding: 0.75rem 0; border-bottom: 1px solid #dfe4ea; }
 .admin-audit__meta { color: #4b5563; }
 .admin-audit__link { border: 0; background: none; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
-input, button { font: inherit; padding: 0.55rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
+input, select, button { font: inherit; padding: 0.55rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; max-width: 100%; }
 button { cursor: pointer; }
 button:disabled { opacity: 0.6; cursor: wait; }
 [role='alert'] { color: #a32020; }
