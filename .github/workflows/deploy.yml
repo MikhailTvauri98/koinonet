@@ -2,17 +2,34 @@ name: deploy
 
 # Выкладка на сервер при каждом пуше в main (docs/architecture.md, раздел 11).
 # Настройка сервера и секретов репозитория — docs/deploy.md.
+#
+# CI входит в этот же запуск (ci.yml как вызываемый workflow), и выкладка
+# ждёт всех его заданий: api, web, e2e. Проверенный и выложенный коммит один и
+# тот же — github.sha этого запуска. Сам ci.yml на пуши в main не запускается,
+# чтобы не гонять его дважды. Почему не `on: workflow_run`: тот запускается в
+# контексте main с токеном на запись и на завершение любого прогона ci,
+# включая pull request; выкладывать пришлось бы отдельно переданный head_sha,
+# а прогоны ci разных коммитов могут закончиться не по порядку, и старый
+# коммит выкатился бы поверх нового.
 on:
   push:
     branches: [main]
 
-# Две выкладки одновременно не идут: следующая ждёт окончания предыдущей.
+# Запуски идут по одному, в порядке пушей: следующий ждёт окончания
+# предыдущего, а ожидающий заменяется более новым, так что старый коммит
+# никогда не выкатывается поверх нового.
 concurrency:
   group: deploy
   cancel-in-progress: false
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   deploy:
+    needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,28 +44,38 @@ jobs:
         id: image
         run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      # Действия docker/* работают с токеном, который может публиковать
+      # образы, поэтому закреплены на коммитах: подменённый тег не подложит
+      # образ под тем тегом, который скачает сервер.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      # Кеш слоёв в кеше GitHub Actions: без него каждая сборка заново
+      # компилирует расширения PHP, слой получает новый дайджест, и сервер
+      # скачивает и хранит его заново на каждом деплое.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: infra/php/Dockerfile
           target: prod
           push: true
           tags: ${{ steps.image.outputs.prefix }}/app:${{ github.sha }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,scope=app,mode=max
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: infra/web/Dockerfile
           push: true
           tags: ${{ steps.image.outputs.prefix }}/web:${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
 
       # SSH и scp из образа раннера, без стороннего действия: ключ сервера не
       # попадает в чужой код. appleboy/ssh-action, закреплённый даже на SHA,

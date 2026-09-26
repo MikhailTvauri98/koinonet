@@ -1,6 +1,12 @@
 name: ci
 
-on: [push, pull_request]
+# Пуши в main проверяет deploy.yml: он вызывает этот workflow и выкладывает
+# коммит только после всех его заданий.
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_call:
 
 jobs:
   api:

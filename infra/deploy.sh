@@ -12,6 +12,10 @@ compose() {
     docker compose -f compose.prod.yml "$@"
 }
 
+# Версия, которая работает сейчас: цель отката и образ, который очистка
+# в конце оставит на сервере.
+running=$(sed -n 's/^TAG=//p' .env)
+
 compose pull
 
 # Миграции — до переключения, разовым контейнером нового образа: новый код не
@@ -20,15 +24,22 @@ compose pull
 # версией кода (добавить сейчас, удалять старое — следующим деплоем).
 compose run --rm -T app php artisan migrate --force
 
-# Пересоздаёт контейнеры с новым тегом. Это и сброс кешей: каждый контейнер PHP
-# собирает кеши конфигурации, маршрутов и событий при старте (точка входа
-# образа app). И это перезапуск Horizon: Docker останавливает старый worker
-# сигналом SIGTERM — тем же, что посылает `horizon:terminate`, Horizon
-# доделывает текущие задачи — и запускает новый на новом образе. Отдельный
-# `horizon:terminate` после этого только перезапустил бы свежий Horizon, а сам
-# `docker compose exec` падал бы с кодом 137, когда контейнер останавливается
-# раньше, чем команда вернёт управление.
-compose up -d --remove-orphans
+# Horizon останавливается до переключения, пока старый app ещё отвечает: по
+# SIGTERM он доделывает текущие задачи (до stop_grace_period), новые задачи
+# копятся в Redis и достаются новому воркеру. Это и есть перезапуск Horizon,
+# который делал бы `horizon:terminate`.
+compose stop worker
+
+# Пересоздаёт контейнеры с новым тегом (заодно это сброс кешей: каждый
+# контейнер PHP собирает их при старте) и ждёт, пока web и app станут здоровы,
+# а остальные — запущены. Иначе контейнеры в цикле перезапуска дали бы зелёный
+# деплой и 502 в проде.
+if ! compose up -d --remove-orphans --wait --wait-timeout 180; then
+    echo "Новая версия ${TAG} не поднялась. В .env остался тег работавшей версии (${running:-нет}); откат — docs/deploy.md, «Откат»." >&2
+    compose ps -a >&2
+    compose logs --no-color --tail 40 web app worker scheduler >&2
+    exit 1
+fi
 
 # Ручные команды `docker compose` на сервере берут тег из .env.
 if grep -q '^TAG=' .env; then
@@ -36,3 +47,25 @@ if grep -q '^TAG=' .env; then
 else
     printf 'TAG=%s\n' "$TAG" >> .env
 fi
+
+# Очистка: из образов app и web на сервере остаются выложенный и предыдущий —
+# на него откатываются без GHCR. Предыдущий — работавшая до деплоя версия; при
+# повторной выкладке того же тега — самый новый из остальных. Неудачное
+# удаление деплой не роняет: версия уже выложена.
+for repo in $(compose config --images | sed -n "s|:${TAG}\$||p"); do
+    previous=$running
+    if [ -z "$previous" ] || [ "$previous" = "$TAG" ]; then
+        previous=$(docker image ls --format '{{.Tag}}' "$repo" | grep -vx -e "$TAG" -e '<none>' | head -n 1 || true)
+    fi
+    docker image ls --format '{{.Tag}} {{.ID}}' "$repo" | while read -r tag id; do
+        if [ "$tag" = "$TAG" ] || [ "$tag" = "$previous" ]; then
+            continue
+        fi
+        if [ "$tag" = '<none>' ]; then
+            target=$id
+        else
+            target=$repo:$tag
+        fi
+        docker image rm "$target" > /dev/null || echo "Не удалось удалить образ $target" >&2
+    done
+done
