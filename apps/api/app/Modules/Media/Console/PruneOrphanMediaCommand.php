@@ -43,6 +43,9 @@ final class PruneOrphanMediaCommand extends Command
             ->where(fn (Builder $query): Builder => $query
                 ->where('created_at', '<', now()->subDay())
                 ->orWhereNull('uploader_user_id'))
+            // By id, not by offset: rows deleted from one batch must not
+            // shift the next one past files it never looked at.
+            ->lazyById()
             ->each(function (Media $candidate) use ($usage, &$deleted): void {
                 DB::transaction(function () use ($candidate, $usage, &$deleted): void {
                     $media = Media::lockedFind($candidate->id);
