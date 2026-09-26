@@ -17,6 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        // Экран входа живёт в SPA, у API его нет, поэтому гостя некуда
+        // перенаправлять. По умолчанию Authenticate строит route('login') для
+        // запроса без Accept: application/json и падает с 500 раньше, чем
+        // shouldRenderJsonWhen ниже отдаст 401. Без адреса перенаправления
+        // AuthenticationException доходит до обработчика, и тот отвечает на
+        // api/* — а других защищённых маршрутов нет — 401 в JSON.
+        $middleware->redirectGuestsTo(fn (): ?string => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
