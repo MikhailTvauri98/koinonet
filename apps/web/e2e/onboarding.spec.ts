@@ -66,4 +66,13 @@ test('an administrator installs, creates a role, a person and invites them', asy
   // интерфейсе ведёт на экран входа, а не оставляет экран с ошибкой.
   await openSection(phone, 'Люди', 'Вход')
   await expect(phone).toHaveURL('/login')
+
+  // Выход со второго телефона завершает его сессию на сервере, а не только
+  // на экране: после перезагрузки приложение остаётся на входе.
+  await openSection(anotherPhone, 'Профиль', 'Профиль')
+  await anotherPhone.getByRole('button', { name: 'Выйти' }).click()
+  await expect(anotherPhone).toHaveURL('/login')
+  await anotherPhone.reload()
+  await expect(anotherPhone.getByRole('heading', { level: 1, name: 'Вход' })).toBeVisible()
+  await expect(anotherPhone).toHaveURL('/login')
 })

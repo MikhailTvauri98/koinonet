@@ -71,13 +71,18 @@ export const useAuthStore = defineStore('auth', () => {
     setMe(me)
   }
 
+  // Выход завершает сессию на сервере и только после этого чистит стор:
+  // если сервер не ответил, сессия жива, и перезагрузка вернула бы человека в
+  // систему — притворяться вышедшим нельзя, ошибка уходит экрану. 401 значит,
+  // что сессии уже нет, — это тоже выход.
   async function logout() {
     const api = useApi()
     try {
       await api.post('/auth/logout')
-    } finally {
-      reset()
+    } catch (error) {
+      if (apiErrorStatus(error) !== 401) throw error
     }
+    reset()
   }
 
   async function fetchMe() {

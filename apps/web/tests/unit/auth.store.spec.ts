@@ -47,6 +47,30 @@ describe('auth store', () => {
     expect(auth.permissions.global).toEqual([])
   })
 
+  it('keeps the account when the server did not confirm the logout', async () => {
+    post.mockResolvedValue(me)
+    const auth = useAuthStore()
+    await auth.login('ivan@example.com', 'secret123', false)
+
+    post.mockRejectedValue(new TypeError('Failed to fetch'))
+    await expect(auth.logout()).rejects.toThrow()
+
+    // Сессия на сервере жива: притворяться вышедшим нельзя — перезагрузка
+    // вернула бы человека в систему.
+    expect(auth.user?.id).toBe('u1')
+  })
+
+  it('treats a 401 on logout as already signed out', async () => {
+    post.mockResolvedValue(me)
+    const auth = useAuthStore()
+    await auth.login('ivan@example.com', 'secret123', false)
+
+    post.mockRejectedValue(Object.assign(new Error('unauthenticated'), { statusCode: 401 }))
+    await auth.logout()
+
+    expect(auth.user).toBeNull()
+  })
+
   it('stays empty when fetchMe gets a 401', async () => {
     get.mockRejectedValue(Object.assign(new Error('unauthenticated'), { statusCode: 401 }))
 

@@ -1,13 +1,14 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { enableAutoUnmount } from '@vue/test-utils'
+import { useRouter } from '#app'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppNav from '~/components/AppNav.vue'
 import DevicesPage from '~/pages/settings/devices.vue'
 import LoginSettingsPage from '~/pages/settings/login.vue'
 import MediaUploader from '~/components/MediaUploader.vue'
 import ProfilePage from '~/pages/settings/profile.vue'
-import type { MeResponse } from '~/stores/auth'
+import { useAuthStore, type MeResponse } from '~/stores/auth'
 import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
@@ -38,6 +39,7 @@ beforeEach(() => {
 // следующим тестам.
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('login settings', () => {
@@ -84,6 +86,41 @@ describe('profile', () => {
     await new Promise(resolve => setTimeout(resolve))
 
     expect(patch).toHaveBeenCalledWith('/me/profile', expect.objectContaining({ contacts_public: true }))
+  })
+})
+
+describe('logout', () => {
+  function mockProfile() {
+    get.mockResolvedValue({ data: { photo_url: null, contacts: { phone: null, email: null, birth_date: null }, contacts_public: false } })
+  }
+
+  it('ends the session on the server, clears the store and goes to the login screen', async () => {
+    mockProfile()
+    post.mockResolvedValue(undefined)
+    const push = vi.spyOn(useRouter(), 'push').mockResolvedValue(undefined)
+
+    const page = await mountSuspended(ProfilePage)
+    await page.find('[data-test="logout"]').trigger('click')
+    await flushPromises()
+
+    expect(post).toHaveBeenCalledWith('/auth/logout')
+    expect(useAuthStore().user).toBeNull()
+    expect(useAuthStore().permissions.global).toEqual([])
+    expect(push).toHaveBeenCalledWith('/login')
+  })
+
+  it('stays signed in and explains when the server did not end the session', async () => {
+    mockProfile()
+    post.mockRejectedValue(new TypeError('Failed to fetch'))
+    const push = vi.spyOn(useRouter(), 'push').mockResolvedValue(undefined)
+
+    const page = await mountSuspended(ProfilePage)
+    await page.find('[data-test="logout"]').trigger('click')
+    await flushPromises()
+
+    expect(page.find('[data-test="logout-error"]').text()).toBe('Не удалось выйти. Попробуйте ещё раз.')
+    expect(useAuthStore().user).not.toBeNull()
+    expect(push).not.toHaveBeenCalled()
   })
 })
 

@@ -76,6 +76,26 @@ function onPhotoUploaded(newPhotoUrl: string | null) {
   photoUrl.value = newPhotoUrl
 }
 
+const loggingOut = ref(false)
+const logoutError = ref('')
+
+// Выход — здесь, в профиле: он есть у каждого вошедшего, а нижняя панель
+// вкладок телефона и так заполнена разделами. Стор чистится только после
+// ответа сервера (stores/auth.ts).
+async function logout() {
+  if (loggingOut.value) return
+  loggingOut.value = true
+  logoutError.value = ''
+  try {
+    await authStore.logout()
+    await navigateTo('/login')
+  } catch (error) {
+    logoutError.value = apiErrorMessage(error, 'Не удалось выйти. Попробуйте ещё раз.')
+  } finally {
+    loggingOut.value = false
+  }
+}
+
 await load()
 </script>
 
@@ -121,6 +141,12 @@ await load()
         <button type="submit" data-test="save-profile" :disabled="saving">{{ saving ? 'Сохранение…' : 'Сохранить' }}</button>
       </form>
     </template>
+    <section class="profile-page__logout">
+      <button type="button" data-test="logout" :disabled="loggingOut" @click="logout">
+        {{ loggingOut ? 'Выходим…' : 'Выйти' }}
+      </button>
+      <p v-if="logoutError" class="error" role="alert" data-test="logout-error">{{ logoutError }}</p>
+    </section>
   </section>
 </template>
 
@@ -136,5 +162,6 @@ label { display: flex; flex-direction: column; gap: 0.3rem; }
 input, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
 button { cursor: pointer; align-self: flex-start; }
 button:disabled { opacity: 0.6; cursor: wait; }
+.profile-page__logout { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #d8dce2; }
 .error { color: #a32020; }
 </style>
