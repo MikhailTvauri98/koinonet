@@ -19,7 +19,7 @@
 - Каждое уведомление — класс-наследник `App\Modules\Notifications\AppNotification`, реализует `ShouldQueue`. Прямая отправка пушей и запись в `notifications` в обход него запрещены.
 - Модуль Notifications пишет только в свои таблицы (`notifications`, `notification_settings`, `push_subscriptions`) и только реагирует на события; ни один другой модуль не вызывает его классы напрямую.
 - Все события broadcast (`ShouldBroadcast`) ставятся в очередь (`ShouldBroadcastNow` не используется).
-- Полезная нагрузка пуша — JSON не более 3 КБ: `title`, `body` (обрезан до 140 символов), `icon`, `tag`, `url`. Ключи VAPID живут только в `.env` сервера и секретах CI.
+- Полезная нагрузка пуша — JSON не более 3 КБ: `title`, `body` (обрезан до 140 символов), `icon`, `tag`, `url`. Ключи VAPID живут только в `.env` сервера, как остальные секреты (раздел 11 архитектуры): их нет ни в репозитории, ни в образах, ни в секретах GitHub; тесты подставляют свои значения через `config()`.
 - Ответы push-сервиса `404` и `410` удаляют подписку; любая другая ошибка увеличивает `failures`, десятая подряд удаляет подписку; успех обнуляет счётчик.
 - Markdown объявления очищается на сервере при каждом сохранении: HTML-теги удаляются, ссылки допускаются только со схемами `http`, `https`, `mailto`, `tel` и относительные. Клиент рендерит `marked` с отключённым HTML и пропускает результат через `DOMPurify`.
 - Даты `hide_after` и все отображения дат на клиенте считаются в часовом поясе церкви (`church.timezone`), не устройства.
@@ -45,6 +45,7 @@
 12. **Дата и время на клиенте — один composable `useChurchDate()`.** Фаза 1 требовала показывать даты в часовом поясе церкви, но имя помощника не фиксировала. Здесь оно фиксируется; если задача 30 фазы 1 завела помощник под другим именем, задача 9 переименовывает его в `useChurchDate` и переводит журнал на него.
 13. **Отметка прочитанного — списком или всё сразу:** `POST /notifications/read` принимает либо `ids`, либо `all: true`. Отдельного эндпоинта «прочитать одно» нет: клиент шлёт список из одного.
 14. **Миграции фазы нумеруются с `2026_10_01_000600`,** чтобы гарантированно идти после миграций фазы 1 (`2026_09_12_*`). Дата в имени — порядок, не срок.
+15. **Адрес WebSocket — источник страницы, ключ Reverb — из `GET /settings`** (решение итогового ревью фазы 1, раздел 9 архитектуры). Echo подключается к хосту, порту и схеме из `window.location` по пути `/app`, как клиент ходит в API относительными путями; публичный ключ приложения Reverb приходит полем `reverb_key` в `GET /settings`, как `vapid_public_key` (решение 9). Переменных `NUXT_PUBLIC_REVERB_*` и build-args нет: образ `web` не зависит от домена. Поэтому `/app` на том же источнике везде: в проде его проксирует nginx, в dev — dev-сервер Nuxt (задача 1), в сквозных тестах — окружение задачи 13. `REVERB_HOST`, `REVERB_PORT`, `REVERB_SCHEME` в `.env` API — только адрес, по которому Laravel публикует события в Reverb внутри сети.
 
 ---
 
@@ -128,12 +129,13 @@ infra/
 
 **Файлы:**
 - Создать: `apps/api/routes/channels.php`, `apps/api/config/broadcasting.php`, `apps/api/config/reverb.php` (публикуются установкой)
-- Изменить: `apps/api/bootstrap/app.php` (`withBroadcasting`), `apps/api/.env.example`, `apps/api/phpunit.xml`, `apps/api/composer.json`, `infra/compose.yml` (сервис `reverb`), `infra/nginx/dev.conf` (локация `/app/`)
-- Тест: `apps/api/tests/Feature/Realtime/ChannelAuthTest.php`
+- Изменить: `apps/api/bootstrap/app.php` (`withBroadcasting`), `apps/api/.env.example`, `apps/api/phpunit.xml`, `apps/api/composer.json`, `apps/api/app/Modules/Settings/Http/Resources/SettingsResource.php` (`reverb_key`), `infra/compose.yml` (сервис `reverb`), `infra/nginx/dev.conf` (локация `/app/`), `apps/web/nuxt.config.ts` (прокси `/app` dev-сервера с WebSocket)
+- Тест: `apps/api/tests/Feature/Realtime/ChannelAuthTest.php`, `apps/api/tests/Feature/Settings/SettingsEndpointTest.php` (`reverb_key`)
 
 **Интерфейсы:**
 - Отдаёт наружу: `POST /broadcasting/auth` по cookie-сессии; приватный канал `user.{userId}` доступен только аккаунту с этим `id` и только если он не отключён.
-- Отдаёт наружу: сервис `reverb` в Compose на порту `8080` внутри сети, снаружи — `ws://localhost:8080/app/{key}` через nginx.
+- Отдаёт наружу: `GET /settings` дополнительно отдаёт `reverb_key` — публичный ключ приложения Reverb (решение 15).
+- Отдаёт наружу: сервис `reverb` в Compose на порту `8080` внутри сети; снаружи — `/app/{key}` на том же источнике, что и клиент: через nginx, а в dev — через прокси dev-сервера Nuxt (`http://localhost:3000/app/{key}`), который ведёт туда же, куда `/api` (`NUXT_API_PROXY_TARGET`).
 - Отдаёт наружу: переменные окружения `BROADCAST_CONNECTION=reverb`, `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `REVERB_HOST`, `REVERB_PORT`, `REVERB_SCHEME`; в тестах `BROADCAST_CONNECTION=log`.
 - Потребляет: `User::isDisabled()` и `actingAsUser()` из фазы 1.
 
@@ -186,10 +188,12 @@ it('refuses a disabled account even on its own channel', function () {
 });
 ```
 
+В `apps/api/tests/Feature/Settings/SettingsEndpointTest.php` — тест того же вида, что `exposes the vapid public key in settings` задачи 4: `config(['broadcasting.connections.reverb.key' => 'local-key'])`, затем `GET /api/v1/settings` отдаёт `data.reverb_key = 'local-key'`.
+
 - [ ] **Шаг 2: Запустить тесты, убедиться что падают**
 
-Выполнить: `./vendor/bin/pest tests/Feature/Realtime/ChannelAuthTest.php`
-Ожидается: FAIL, маршрут `/broadcasting/auth` не определён (404).
+Выполнить: `./vendor/bin/pest tests/Feature/Realtime/ChannelAuthTest.php tests/Feature/Settings/SettingsEndpointTest.php`
+Ожидается: FAIL, маршрут `/broadcasting/auth` не определён (404), в настройках нет `reverb_key`.
 
 - [ ] **Шаг 3: Установить Reverb и подключить каналы**
 
@@ -235,7 +239,9 @@ REVERB_SCHEME=http
 
 В `apps/api/phpunit.xml` добавить `<env name="BROADCAST_CONNECTION" value="log"/>`: тесты, которые не проверяют канал явно, не должны ходить в Reverb. Тест авторизации переключает драйвер на `reverb` в `beforeEach` — драйвер считает подпись локально, без сети.
 
-- [ ] **Шаг 4: Сервис в Compose и локация nginx**
+`SettingsResource` отдаёт `reverb_key` из `config('broadcasting.connections.reverb.key')` — публичную часть, как `vapid_public_key`; адреса сокета в ответе нет (решение 15). После правки — `composer openapi` и `npm run gen:api`.
+
+- [ ] **Шаг 4: Сервис в Compose, локация nginx и прокси dev-сервера Nuxt**
 
 В `infra/compose.yml` рядом с `worker`:
 
@@ -262,26 +268,29 @@ REVERB_SCHEME=http
     }
 ```
 
+В `apps/web/nuxt.config.ts` — прокси `/app` dev-сервера Nuxt на тот же адрес, что и `/api` (`apiProxyTarget`), с поддержкой WebSocket: `routeRules`-прокси запросы upgrade не пропускает, поэтому нужен прокси dev-сервера с `ws: true` (например, `nitro.devProxy`). Клиент в dev ходит в сокет так же, как в проде, — на свой источник (решение 15).
+
 - [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
 
-Выполнить: `./vendor/bin/pest tests/Feature/Realtime/ChannelAuthTest.php`
-Ожидается: PASS, 4 теста.
+Выполнить: `./vendor/bin/pest tests/Feature/Realtime/ChannelAuthTest.php tests/Feature/Settings/SettingsEndpointTest.php`
+Ожидается: PASS.
 
 - [ ] **Шаг 6: Проверить рукопожатие вручную**
 
-Выполнить: `make up`, затем `curl -si -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" http://localhost:8080/app/local-key | head -1`
+Выполнить: `make up`, `npm run dev` в `apps/web`, затем `curl -si -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" http://localhost:3000/app/local-key | head -1` — через прокси dev-сервера Nuxt, как ходит клиент: в адресе проверки порт dev-сервера, а куда прокси ведёт дальше, задаёт `NUXT_API_PROXY_TARGET`, как для `/api`.
 Ожидается: `HTTP/1.1 101 Switching Protocols`.
 
 - [ ] **Шаг 7: Коммит**
 
 ```bash
-git add apps/api infra && git commit -m "feat(realtime): reverb, channel authorization, user channel"
+git add apps/api apps/web infra && git commit -m "feat(realtime): reverb, channel authorization, user channel"
 ```
 
 **Критерии готовности:**
 - `/broadcasting/auth` работает по cookie-сессии: без сессии `401`, чужой канал `403`, свой — ответ с `auth`.
 - Отключённый аккаунт не получает даже свой канал (инвариант 6.3.9 распространяется на realtime).
 - WebSocket-рукопожатие проходит через nginx, а не только напрямую в Reverb; `proxy_read_timeout` не меньше 60 секунд (риск 7).
+- Рукопожатие проходит и через прокси dev-сервера Nuxt на его собственном порту; `GET /settings` отдаёт `reverb_key`.
 - Тесты не зависят от запущенного Reverb: драйвер по умолчанию `log`.
 
 ---
@@ -2153,13 +2162,13 @@ git add . && git commit -m "feat(notifications): announcement notifications to c
 
 **Файлы:**
 - Создать: `apps/web/app/composables/useChurchDate.ts`, `useEcho.ts`; `app/plugins/echo.client.ts`; `app/stores/settings.ts`, `app/stores/notifications.ts`; `app/pages/notifications.vue`, `app/pages/settings/notifications.vue`; `app/components/notifications/NotificationList.vue`
-- Изменить: `app/components/AppNav.vue` (пункт «Уведомления» с бейджем), `app/stores/auth.ts` (после `fetchMe`/`login` — подписка на канал, при `logout` — отписка), `nuxt.config.ts` (`runtimeConfig.public.reverb*`), `package.json` (`laravel-echo`, `pusher-js`)
+- Изменить: `app/components/AppNav.vue` (пункт «Уведомления» с бейджем), `app/stores/auth.ts` (после `fetchMe`/`login` — подписка на канал, при `logout` — отписка), `nuxt.config.ts` (`/broadcasting/**` в прокси `routeRules`, рядом с `/api/**` и `/sanctum/**`), `package.json` (`laravel-echo`, `pusher-js`)
 - Тест: `tests/unit/useChurchDate.spec.ts`, `tests/unit/notifications.store.spec.ts`, `tests/component/notifications.spec.ts`
 
 **Интерфейсы:**
 - Отдаёт наружу: `useChurchDate()` → `{ formatDate(iso: string): string, formatTime(iso: string): string, formatDateTime(iso: string): string, todayInChurch(): string }` — форматирование через `Intl.DateTimeFormat('ru-RU', { timeZone })`, пояс из `useSettingsStore().timezone`.
-- Отдаёт наружу: `useSettingsStore()` с `churchName`, `timezone`, `vapidPublicKey`, `fetch()` (`GET /settings`).
-- Отдаёт наружу: `useEcho()` → экземпляр Laravel Echo (`broadcaster: 'reverb'`), авторизация через `useApi().post('/broadcasting/auth')`, чтобы уходили cookie и CSRF.
+- Отдаёт наружу: `useSettingsStore()` с `churchName`, `timezone`, `vapidPublicKey`, `reverbKey`, `fetch()` (`GET /settings`).
+- Отдаёт наружу: `useEcho()` → экземпляр Laravel Echo (`broadcaster: 'reverb'`) на источнике страницы (решение 15), авторизация через `useApi().post('/broadcasting/auth')`, чтобы уходили cookie и CSRF.
 - Отдаёт наружу: `useNotificationsStore()` с `items`, `unreadCount`, `nextCursor`, `fetch(reset?)`, `markRead(ids)`, `markAllRead()`, `subscribe(userId)`, `unsubscribe()`, `push(notification)` — последнее вызывается из события `notification.created`.
 - Потребляет: `GET /notifications`, `POST /notifications/read`, `GET /notification-settings`, `PUT /notification-settings`, `GET /settings`.
 
@@ -2391,7 +2400,7 @@ export function useChurchDate() {
 cd apps/web && npm i laravel-echo pusher-js
 ```
 
-`app/plugins/echo.client.ts` создаёт `new Echo({ broadcaster: 'reverb', key, wsHost, wsPort, wssPort, forceTLS: scheme === 'https', enabledTransports: ['ws', 'wss'], authorizer: (channel) => ({ authorize: (socketId, callback) => useApi().post('/broadcasting/auth', { socket_id: socketId, channel_name: channel.name }).then(r => callback(null, r)).catch(e => callback(e, null)) }) })` и отдаёт его через `provide('echo')`; `useEcho()` возвращает его. Значения из `runtimeConfig.public.reverbKey`, `reverbHost`, `reverbPort`, `reverbScheme` (переменные `NUXT_PUBLIC_REVERB_*`).
+`app/plugins/echo.client.ts` создаёт `new Echo({ broadcaster: 'reverb', key, wsHost, wsPort, wssPort, forceTLS: scheme === 'https', enabledTransports: ['ws', 'wss'], authorizer: (channel) => ({ authorize: (socketId, callback) => useApi().post('/broadcasting/auth', { socket_id: socketId, channel_name: channel.name }).then(r => callback(null, r)).catch(e => callback(e, null)) }) })` и отдаёт его через `provide('echo')`; `useEcho()` возвращает его. Адрес — источник страницы (решение 15): `wsHost = location.hostname`, `wsPort` и `wssPort` — `location.port` или порт схемы по умолчанию (80, 443), `scheme = location.protocol === 'https:' ? 'https' : 'http'`, путь Echo по умолчанию — `/app`. `key` — `useSettingsStore().reverbKey`, поэтому Echo создаётся после загрузки настроек. `runtimeConfig` и переменных `NUXT_PUBLIC_REVERB_*` нет. В `nuxt.config.ts` в `routeRules` добавляется `'/broadcasting/**': { proxy: \`${apiProxyTarget}/broadcasting/**\` }`: авторизация каналов в dev и в сквозных тестах идёт тем же прокси, что `/api`.
 
 Store: `subscribe(userId)` — `echo.private(\`user.${userId}\`).notification(n => push(n))`; `unsubscribe()` — `echo.leave(\`user.${userId}\`)`. `push` добавляет в начало, увеличивает `unreadCount`, дубликаты по `id` отбрасывает. Auth store вызывает `subscribe` после успешного `fetchMe`/`login` и `unsubscribe` в `logout`.
 
@@ -2869,7 +2878,8 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
 ### Задача 12: Продовый контур — Reverb, VAPID, документация деплоя
 
 **Файлы:**
-- Изменить: `infra/compose.prod.yml` (сервис `reverb`), `infra/nginx/prod.conf` (локация `/app/`), `docs/deploy.md` (VAPID, Reverb, переменные), `.github/workflows/deploy.yml` (без изменений по шагам; проверить, что `horizon:terminate` перезапускает воркер с новыми слушателями), `apps/web/Dockerfile`-переменные `NUXT_PUBLIC_REVERB_*` в `infra/web/Dockerfile` (build args)
+- Изменить: `infra/compose.prod.yml` (сервис `reverb`), `infra/nginx/prod.conf` (локация `/app/`), `infra/deploy.sh` (журналы `reverb` при неудачной выкладке), `docs/deploy.md` (VAPID, Reverb, переменные, чек-лист)
+- Не меняются: `infra/web/Dockerfile` и `.github/workflows/deploy.yml` — образ `web` не зависит от домена (решение 15), а новый сервис выкладывает тот же `deploy.sh`
 - Тест: чек-лист в `docs/deploy.md`, ручная проверка на сервере
 
 **Интерфейсы:**
@@ -2878,13 +2888,12 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
 
 - [ ] **Шаг 1: Сервис в `compose.prod.yml`**
 
+Как `worker` и `scheduler` — через якорь `x-php` (образ `${IMAGE_PREFIX}/app:${TAG}`, `.env`, зависимости от здоровых `postgres` и `redis`, перезапуск, журналы):
+
 ```yaml
   reverb:
-    image: ghcr.io/${GITHUB_REPOSITORY}/app:${TAG}
-    command: php artisan reverb:start --host=0.0.0.0 --port=8080
-    env_file: .env
-    depends_on: [redis]
-    restart: unless-stopped
+    <<: *php
+    command: ['php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080']
 ```
 
 - [ ] **Шаг 2: Локация в `prod.conf`**
@@ -2902,15 +2911,17 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
     }
 ```
 
-`REVERB_SCHEME=https` и `REVERB_HOST=домен` для клиента; сам сервис Reverb слушает `http` внутри сети — TLS терминирует nginx.
+Своих `add_header` в локации нет: они отменили бы заголовки безопасности уровня `server` (раздел 11 архитектуры).
 
-- [ ] **Шаг 3: Сборка клиента с адресом WebSocket**
+В `.env` сервера `REVERB_HOST=reverb`, `REVERB_PORT=8080`, `REVERB_SCHEME=http` — адрес, по которому Laravel публикует события в Reverb внутри сети; TLS терминирует nginx. Клиенту эти значения не нужны: он подключается к своему источнику (решение 15).
 
-В `infra/web/Dockerfile` — `ARG NUXT_PUBLIC_REVERB_HOST`, `NUXT_PUBLIC_REVERB_KEY`, `NUXT_PUBLIC_REVERB_PORT=443`, `NUXT_PUBLIC_REVERB_SCHEME=https`, передаваемые в `npm run generate`; в `deploy.yml` — `build-args` из секретов `REVERB_APP_KEY` и переменной `APP_DOMAIN`.
+- [ ] **Шаг 3: Выкладка и журналы**
+
+В `infra/deploy.sh` при неудачном `up --wait` журналы печатаются и для `reverb`: `compose logs --no-color --tail 40 web app worker scheduler reverb`. Отдельного перезапуска Reverb выкладка не требует: `up -d` пересоздаёт его с новым тегом, клиенты переподключаются (раздел 9). `horizon:terminate` не выполняется (раздел 11 архитектуры): воркер перезапускается пересозданием контейнера и получает новых слушателей на новом образе.
 
 - [ ] **Шаг 4: Документация**
 
-В `docs/deploy.md` добавить раздел «Фаза 2»: выполнить `php artisan webpush:vapid` в контейнере `app`, вписать ключи и `VAPID_SUBJECT=mailto:…` в `.env`, добавить `REVERB_*`, перезапустить `app`, `worker`, `reverb`; проверка: `curl -si -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" https://домен/app/{key} | head -1` даёт `101`.
+В `docs/deploy.md` добавить раздел «Фаза 2»: `docker compose -f compose.prod.yml exec app php artisan webpush:vapid`, вписать ключи и `VAPID_SUBJECT=mailto:…` в `.env`, добавить `BROADCAST_CONNECTION=reverb` и `REVERB_*`, затем `docker compose -f compose.prod.yml up -d --wait` — пересоздаёт контейнеры с новым окружением. В список сервисов, в пункт чек-листа про `compose ps` и в «Повседневные действия» (`logs`) добавить `reverb`. Проверка: `curl -si -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" https://домен/app/{key} | head -1` даёт `101`, где `{key}` — `REVERB_APP_KEY` из `.env`.
 
 - [ ] **Шаг 5: Проверить деплой**
 
@@ -2920,13 +2931,13 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
 - [ ] **Шаг 6: Коммит**
 
 ```bash
-git add infra docs/deploy.md .github && git commit -m "chore: reverb and vapid in production, deploy notes for phase 2"
+git add infra docs/deploy.md && git commit -m "chore: reverb and vapid in production, deploy notes for phase 2"
 ```
 
 **Критерии готовности:**
 - Reverb работает за nginx по `wss` с таймаутами не меньше 60 секунд (раздел 11, риск 7).
 - Ключи VAPID созданы на сервере и не покидают его `.env`.
-- Клиент собран с продовым адресом WebSocket; deploy остаётся одной командой.
+- Образ `web` не зависит от домена: адрес сокета — источник страницы, ключ Reverb — из `GET /settings`; deploy остаётся одной командой.
 
 ---
 
@@ -2934,63 +2945,69 @@ git add infra docs/deploy.md .github && git commit -m "chore: reverb and vapid i
 
 **Файлы:**
 - Создать: `apps/web/e2e/announcements.spec.ts`
-- Изменить: `apps/web/playwright.config.ts` (в `webServer` добавляется `php artisan reverb:start` на тестовом порту и `php artisan queue:work --once`-цикл или `QUEUE_CONNECTION=sync` для API e2e), `.github/workflows/ci.yml` (задание `e2e` поднимает Reverb)
+- Изменить: `apps/web/e2e/environment.ts` (роль `reverb` у `ApiRuntime.longRunning` в обоих способах запуска, порт Reverb сквозных тестов, переменные `BROADCAST_CONNECTION` и `REVERB_*` процессов API), `apps/web/e2e/global-setup.ts` (Reverb поднимается и останавливается вместе с API и воркером), `apps/web/playwright.config.ts` (WebSocket `/app` на источнике клиента, см. шаг 2)
+- Не меняется: `.github/workflows/ci.yml` — Reverb, как API и воркер, поднимает сама обвязка; в CI это способ `native` (`E2E_API_RUNTIME`)
 - Тест: сам сценарий
 
 **Интерфейсы:**
-- Потребляет: `login`, `createInvitedAccount` из `e2e/fixtures.ts` фазы 1.
+- Потребляет обвязку фазы 1: `test` с фикстурой `openPhone`, `loginAsAdmin(page)`, `createGlobalRole(page, name, permissions)`, `createMinistry(page, name)`, `createInvitedAccount(adminPage, openPhone, person)` с `InvitedPerson` (`lastName`, `firstName`, `login`, `globalRole`), `openSection(page, section, heading)` из `e2e/fixtures.ts`; учётные данные и адреса — только из `e2e/environment.ts`; способ запуска PHP — `E2E_API_RUNTIME` и `ApiRuntime.longRunning`.
 
 - [ ] **Шаг 1: Написать сценарий**
 
+Разделы открываются через основную навигацию, как в сценариях фазы 1; имена данных — свои у этого файла, поэтому сценарии не зависят друг от друга и от порядка запуска (база сквозных тестов одна на прогон).
+
 ```ts
-import { expect, test } from '@playwright/test'
-import { createInvitedAccount, login } from './fixtures'
+import { createGlobalRole, createInvitedAccount, createMinistry, expect, loginAsAdmin, openSection, test } from './fixtures'
 
-test('a published announcement reaches the notification center live', async ({ page, browser }) => {
-  await login(page, 'admin@example.com', 'secret123')
-  const reader = await createInvitedAccount(page, browser, { lastName: 'Смирнова', firstName: 'Анна' })
+const reader = { lastName: 'Смирнова', firstName: 'Анна', login: 'smirnova@e2e.test', globalRole: 'Читатель' }
+const stranger = { lastName: 'Кузнецов', firstName: 'Олег', login: 'kuznetsov@e2e.test', globalRole: 'Посетитель' }
 
-  await reader.goto('/')
-  await expect(reader.getByTestId('nav-notifications-badge')).toHaveCount(0)
+test('a published announcement reaches the notification center live', async ({ page, openPhone }) => {
+  await loginAsAdmin(page)
+  await createGlobalRole(page, reader.globalRole, ['Видеть справочник'])
+  const readerPhone = await createInvitedAccount(page, openPhone, reader)
+  await expect(readerPhone.getByTestId('nav-notifications-badge')).toHaveCount(0)
 
-  await page.goto('/announcements')
+  await openSection(page, 'Объявления', 'Объявления')
   await page.getByTestId('publish').click()
   await page.getByLabel('Заголовок').fill('Общее собрание')
   await page.getByLabel('Текст').fill('В воскресенье в **10:00**')
   await page.getByRole('button', { name: 'Опубликовать' }).click()
   await expect(page.getByText('Общее собрание')).toBeVisible()
 
-  await expect(reader.getByTestId('nav-notifications-badge')).toHaveText('1', { timeout: 10_000 })
+  // Без перезагрузки: бейдж обновляет канал user.{id} через Reverb.
+  await expect(readerPhone.getByTestId('nav-notifications-badge')).toHaveText('1', { timeout: 10_000 })
 
-  await reader.goto('/notifications')
-  await reader.getByText('Общее собрание').click()
-  await expect(reader).toHaveURL(/\/announcements\//)
-  await expect(reader.locator('strong', { hasText: '10:00' })).toBeVisible()
+  await openSection(readerPhone, 'Уведомления', 'Уведомления')
+  await readerPhone.getByText('Общее собрание').click()
+  await expect(readerPhone).toHaveURL(/\/announcements\//)
+  await expect(readerPhone.locator('strong', { hasText: '10:00' })).toBeVisible()
 })
 
-test('a ministry announcement is not shown to a non-member', async ({ page, browser }) => {
-  await login(page, 'admin@example.com', 'secret123')
-  const stranger = await createInvitedAccount(page, browser, { lastName: 'Кузнецов', firstName: 'Олег' })
+test('a ministry announcement is not shown to a non-member', async ({ page, openPhone }) => {
+  await loginAsAdmin(page)
+  await createGlobalRole(page, stranger.globalRole, ['Видеть справочник'])
+  const strangerPhone = await createInvitedAccount(page, openPhone, stranger)
 
-  await page.goto('/ministries')
-  await page.getByRole('button', { name: 'Создать служение' }).click()
-  await page.getByLabel('Название').fill('Прославление')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
-  await page.getByRole('tab', { name: 'Объявления' }).click()
+  await createMinistry(page, 'Воскресная школа')
+  await page.getByRole('link', { name: 'Воскресная школа' }).click()
+  await page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'Объявления' }).click()
   await page.getByTestId('publish').click()
   await page.getByLabel('Заголовок').fill('Репетиция')
   await page.getByLabel('Текст').fill('В субботу')
   await page.getByRole('button', { name: 'Опубликовать' }).click()
 
-  await stranger.goto('/announcements')
-  await expect(stranger.getByText('Репетиция')).toHaveCount(0)
-  await expect(stranger.getByTestId('nav-notifications-badge')).toHaveCount(0)
+  await openSection(strangerPhone, 'Объявления', 'Объявления')
+  await expect(strangerPhone.getByText('Репетиция')).toHaveCount(0)
+  await expect(strangerPhone.getByTestId('nav-notifications-badge')).toHaveCount(0)
 })
 ```
 
-- [ ] **Шаг 2: Поднять Reverb в e2e**
+- [ ] **Шаг 2: Поднять Reverb в обвязке e2e**
 
-В `playwright.config.ts` — второй `webServer` с `command: 'php artisan reverb:start --port=8081'` из `apps/api` и `url: 'http://localhost:8081/app/local-key'`? Reverb не отвечает на обычный GET; вместо `url` использовать `port: 8081` с `reuseExistingServer`. Клиент для e2e собирается с `NUXT_PUBLIC_REVERB_PORT=8081`, `NUXT_PUBLIC_REVERB_HOST=localhost`, `NUXT_PUBLIC_REVERB_SCHEME=http`. Очередь в e2e-окружении API — `QUEUE_CONNECTION=sync`, чтобы не поднимать воркер.
+Reverb — третий долгоживущий процесс рядом с API и воркером: `LongRunningRole = 'api' | 'worker' | 'reverb'`. Способ `docker` — одноразовый контейнер сервиса `app` с меткой сквозных тестов (`php artisan reverb:start --host=0.0.0.0 --port=8080`), способ `native` — `php artisan reverb:start` на раннере; порт — в `e2e`, рядом с `apiPort` и `webPort`. Процессам API в `apiEnvironment` добавляются `BROADCAST_CONNECTION=reverb` и ключи приложения Reverb сквозных тестов; адрес, по которому API публикует события (`REVERB_HOST`, `REVERB_PORT`), различается по способу запуска: имя контейнера Reverb в сети Compose или `127.0.0.1`. Подготовка ждёт, пока Reverb примет соединение, и останавливает его вместе с остальными процессами. Очередь остаётся настоящей — воркер фазы 1, не `QUEUE_CONNECTION=sync`: broadcast и уведомления уходят в очередь, как в проде.
+
+Клиент подключается к сокету на своём источнике (решение 15), поэтому `/app` должен проксироваться туда же, где браузер открывает предпросмотр, как это делает nginx в проде. Прокси `routeRules` сервера предпросмотра Nuxt запросы upgrade не пропускает; как пропустить WebSocket `/app` к Reverb сквозных тестов (например, небольшим прокси обвязки перед предпросмотром, который отдаёт `/app` в Reverb, а остальное — в предпросмотр), решает эта задача. Критерий — бейдж в первом сценарии обновляется без перезагрузки.
 
 - [ ] **Шаг 3: Запустить сценарии**
 
@@ -3010,7 +3027,7 @@ test('a ministry announcement is not shown to a non-member', async ({ page, brow
 - [ ] **Шаг 5: Коммит**
 
 ```bash
-git add apps/web .github && git commit -m "test(web): end-to-end announcement and live notification scenarios"
+git add apps/web && git commit -m "test(web): end-to-end announcement and live notification scenarios"
 ```
 
 **Критерии готовности:**
@@ -3040,3 +3057,4 @@ git add apps/web .github && git commit -m "test(web): end-to-end announcement an
 - Раздел 2, строка «Пуши»: собственный канал поверх `minishlink/web-push` вместо `laravel-notification-channels/webpush` (решение 2).
 - Раздел 5.5: `announcements.author_user_id` допускает `null` после стирания автора (решение 5).
 - Раздел 7.9 о вызове `AccountEraser` правок не требует: контракт и перечень реализаций, включая Notifications и Announcements, внесены в фазе 1 (решение 5).
+- Раздел 9: адрес сокета — источник страницы, ключ Reverb — из `GET /settings` (решение 15); внесено в архитектуру при итоговом ревью фазы 1.
