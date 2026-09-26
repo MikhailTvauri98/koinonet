@@ -13,7 +13,7 @@ uses(RefreshDatabase::class);
 it('answers a guest on a protected endpoint with 401 JSON, not a redirect or 500', function (array $headers) {
     $response = $this->withHeaders($headers)->get('/api/v1/auth/me');
 
-    $response->assertStatus(401)->assertExactJson(['message' => 'Unauthenticated.']);
+    $response->assertStatus(401)->assertExactJson(['message' => 'Требуется вход.']);
     expect($response->headers->get('Location'))->toBeNull();
 })->with([
     'no Accept header set by the caller' => [[]],
