@@ -1,13 +1,38 @@
-import { defineConfig, minimal2023Preset as preset } from '@vite-pwa/assets-generator/config'
+// Конфиг перегенерации иконок PWA (задача 31, правка по ревью): исходник и
+// этот конфиг лежат в репозитории, но сам генератор — нет. Разовый инструмент
+// (`@vite-pwa/assets-generator` тянет нативный `sharp`/`sharp-ico`, десятки
+// мегабайт ради генерации, которая нужна раз в долгое время) в постоянных
+// зависимостях не держим — только `@vite-pwa/nuxt`, названный в брифе задачи,
+// действительно нужен рабочей сборке. Перегенерация — через npx, без строки в
+// package.json:
+//
+//   npx --yes @vite-pwa/assets-generator@1
+//
+// Пакет при этом не импортируется здесь ни в рантайме, ни в типах: он находит
+// и читает этот файл сам (unconfig ищет pwa-assets.config.*), а не наоборот —
+// поэтому `npm run lint`/`npm run typecheck` не спотыкаются об отсутствующий
+// в node_modules пакет.
+//
+// Пресет — ровно то, что содержимое `minimal2023Preset` пакета на момент
+// задачи 31 (сверено при первом запуске генератора): прозрачные иконки
+// 64/192/512, favicon.ico 48×48, maskable 512 (паддинг 30% по умолчанию
+// пакета — безопасная зона) и apple-touch-icon 180. Источник —
+// public/icons/source.svg (нейтральное изображение, см. комментарий в нём
+// самом), результат пишется туда же, в public/icons/.
+const preset = {
+  transparent: {
+    sizes: [64, 192, 512],
+    favicons: [[48, 'favicon.ico']],
+  },
+  maskable: {
+    sizes: [512],
+  },
+  apple: {
+    sizes: [180],
+  },
+}
 
-// Конфиг перегенерации иконок PWA (задача 31): `npm run generate-pwa-icons`.
-// Источник — public/icons/source.svg (нейтральное изображение, у церкви пока
-// нет фирменного знака, см. комментарий в самом source.svg). Пресет
-// minimal2023 даёт ровно то, что нужно манифесту и iOS: прозрачные 64/192/512,
-// maskable 512 (с безопасной зоной — паддинг 30% по умолчанию пресета) и
-// apple-touch-icon 180, плюс favicon.ico. Результат пишется туда же, где
-// лежит source.svg — в public/icons/.
-export default defineConfig({
+export default {
   preset,
   images: ['public/icons/source.svg'],
-})
+}

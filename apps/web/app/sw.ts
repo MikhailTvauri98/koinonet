@@ -36,8 +36,20 @@ const EXCLUDED_FROM_SHELL: RegExp[] = [
   /^\/_protected\//,
 ]
 
+// Ключ '/' — не угадан, а взят из собранного манифеста предкеша: сборка
+// (`injectManifest`) кладёт корневой `index.html` под ключом '/', а не
+// '/index.html' (так же вложенные `login/index.html`, `admin/settings/
+// index.html` и т.д. становятся ключами 'login', 'admin/settings' — без
+// 'index.html' на конце и без ведущего слеша). '/index.html' в манифесте нет
+// вовсе, а `createHandlerBoundToURL` для отсутствующего ключа не откладывает
+// ошибку до первого запроса — она бросается синхронно прямо здесь, на
+// верхнем уровне модуля, до регистрации install/fetch, и валит весь service
+// worker целиком (см. отчёт задачи 31: воспроизведено `scripts/verify-sw.mjs`
+// и в песочнице Node). '/' — тот же самый файл, что nginx отдаёт как
+// запасной документ для SPA (`docs/architecture.md`, раздел 11: `try_files …
+// /index.html`), только под другим именем ключа в манифесте.
 registerRoute(
-  new NavigationRoute(createHandlerBoundToURL('/index.html'), {
+  new NavigationRoute(createHandlerBoundToURL('/'), {
     denylist: EXCLUDED_FROM_SHELL,
   }),
 )

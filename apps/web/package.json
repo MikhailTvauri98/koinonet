@@ -12,29 +12,28 @@
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "gen:api": "openapi-typescript ../api/openapi.json -o types/api.d.ts",
-    "generate-pwa-icons": "pwa-assets-generator"
+    "verify-sw": "node scripts/verify-sw.mjs"
   },
   "dependencies": {
     "@pinia/nuxt": "^1.0.2",
-    "@vite-pwa/nuxt": "^1.1.1",
     "nuxt": "^4.5.2",
     "pinia": "^4.0.3",
     "qrcode": "^1.5.4",
     "vue": "^3.5.43",
-    "vue-router": "^5.3.1"
+    "vue-router": "^5.3.1",
+    "workbox-core": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
     "@nuxt/test-utils": "^4.3.2",
     "@types/qrcode": "^1.5.6",
-    "@vite-pwa/assets-generator": "^1.0.4",
+    "@vite-pwa/nuxt": "^1.1.1",
     "@vue/test-utils": "^2.5.1",
     "happy-dom": "^20.14.5",
     "openapi-typescript": "^7.13.0",
     "vitest": "^5.0.1",
-    "vue-tsc": "^3.3.11",
-    "workbox-core": "^7.4.1",
-    "workbox-precaching": "^7.4.1",
-    "workbox-routing": "^7.4.1"
+    "vue-tsc": "^3.3.11"
   }
 }

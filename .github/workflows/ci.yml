@@ -81,3 +81,15 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
+      # Продакшен по архитектуре — статика `nuxt generate` за nginx
+      # (docs/architecture.md, разделы 10-11), не Node-сервер из `npm run
+      # build` выше: инфраструктура для последнего (infra/web/Dockerfile,
+      # compose.prod.yml, деплой) в репозитории ещё не заведена, но
+      # собранный service worker (injectManifest) зависит от того, какие
+      # файлы реально оказались в public/ — а это отличается между двумя
+      # командами (см. отчёт задачи 31: у `npm run build` в паблике нет ни
+      # одной HTML-оболочки вовсе, только у `generate` есть ключ '/').
+      # Поэтому service worker проверяется именно на статике.
+      - run: npm run generate
+      - name: Service worker survives execution (see task 31 review)
+        run: npm run verify-sw

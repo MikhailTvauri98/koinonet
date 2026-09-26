@@ -55,4 +55,32 @@ describe('install prompt', () => {
 
     expect(second.find('[data-test="install-prompt"]').exists()).toBe(false)
   })
+
+  it('does not crash when localStorage throws (private browsing), and still dismisses for the session', async () => {
+    platform(IOS_SAFARI)
+    vi.stubGlobal('localStorage', {
+      getItem() {
+        throw new DOMException('blocked', 'SecurityError')
+      },
+      setItem() {
+        throw new DOMException('blocked', 'SecurityError')
+      },
+      removeItem() {},
+      clear() {},
+      key() {
+        return null
+      },
+      length: 0,
+    })
+
+    const prompt = await mountSuspended(InstallPrompt)
+
+    // Чтение бросило — компонент не падает и считает подсказку неотклонённой.
+    expect(prompt.find('[data-test="install-prompt"]').exists()).toBe(true)
+
+    // Запись тоже бросает, но в рамках этой сессии (реактивное состояние) отказ
+    // всё равно работает — просто не переживёт перезагрузку страницы.
+    await prompt.find('[data-test="dismiss-install"]').trigger('click')
+    expect(prompt.find('[data-test="install-prompt"]').exists()).toBe(false)
+  })
 })
