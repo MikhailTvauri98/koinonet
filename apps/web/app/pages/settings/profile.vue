@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import type { components } from '~~/types/api'
 import MediaUploader from '~/components/MediaUploader.vue'
+import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
 import type { Person } from '~/utils/people'
 

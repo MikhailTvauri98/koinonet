@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import PasswordField from '~/components/PasswordField.vue'
+import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import { apiErrorMessage } from '~/utils/apiError'
 
 // «Вход» — единственный экран, где меняются логин и пароль (CONTEXT.md:

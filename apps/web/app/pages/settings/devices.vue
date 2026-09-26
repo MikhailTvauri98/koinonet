@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import type { components } from '~~/types/api'
+import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
 import { apiErrorMessage } from '~/utils/apiError'
 import { formatChurchDateTime } from '~/utils/churchTime'
