@@ -61,12 +61,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pixel limit
+    |--------------------------------------------------------------------------
+    |
+    | The largest image, in pixels, that processing agrees to decode: the
+    | dimensions are read from the file header first, so a small file that
+    | declares huge dimensions is refused before memory is spent on it. 50
+    | megapixels let through photos from 48 and 50 megapixel phone cameras.
+    |
+    */
+
+    'max_image_pixels' => 50_000_000,
+
+    /*
+    |--------------------------------------------------------------------------
     | HEIC support
     |--------------------------------------------------------------------------
     |
-    | HEIC needs imagick built with libheif to convert to JPEG later (task
-    | 21). Computed once at config load so StoreMedia can reject HEIC with
-    | a clear error instead of accepting a file the pipeline cannot process.
+    | HEIC needs imagick built with libheif to be read and converted to JPEG
+    | during processing. Computed once at config load so StoreMedia can reject
+    | HEIC with a clear error instead of accepting a file the pipeline cannot
+    | process.
     |
     */
 

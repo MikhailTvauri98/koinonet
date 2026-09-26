@@ -9,6 +9,7 @@ use App\Modules\Media\Models\Media;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -49,12 +50,22 @@ final class ProcessUploadedImage implements ShouldQueue
             return;
         }
 
+        $originalPath = $media->path;
+
         $media->update([
+            'path' => $result['path'],
+            'mime' => $result['mime'],
             'width' => $result['width'],
             'height' => $result['height'],
             'variants' => $result['variants'],
             'status' => MediaStatus::Ready,
         ]);
+
+        // A converted original (HEIC to JPEG) lives under a new path; the old
+        // file is removed only once the row points at the new one.
+        if ($result['path'] !== $originalPath) {
+            Storage::disk($media->disk)->delete($originalPath);
+        }
     }
 
     public function failed(?Throwable $exception): void
