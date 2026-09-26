@@ -8,6 +8,29 @@ interface NavItem {
   label: string
 }
 
+// Раздел администрирования виден тому, у кого есть хотя бы один пункт в нём
+// (задача 29 добавила «Роли» тем же приёмом; задача 30 — «Настройки церкви»
+// и «Журнал», docs/architecture.md, раздел 10). `nav-admin` — сама секция,
+// а не один из пунктов: тест на скрытие/показ (profile.spec.ts) проверяет
+// именно её.
+const adminItems = computed<NavItem[]>(() => {
+  const list: NavItem[] = []
+
+  if (can('roles.manage_global')) {
+    list.push({ to: '/admin/roles', label: 'Роли' })
+  }
+
+  if (can('settings.manage')) {
+    list.push({ to: '/admin/settings', label: 'Настройки церкви' })
+  }
+
+  if (can('audit.view')) {
+    list.push({ to: '/admin/audit', label: 'Журнал' })
+  }
+
+  return list
+})
+
 const items = computed<NavItem[]>(() => {
   const list: NavItem[] = [{ to: '/', label: 'Главная' }]
 
@@ -17,13 +40,6 @@ const items = computed<NavItem[]>(() => {
 
   if (hasMinistries.value) {
     list.push({ to: '/ministries', label: 'Служения' })
-  }
-
-  // Единственный готовый раздел admin/ пока что (задача 29): настройки и
-  // журнал (docs/architecture.md, раздел 10) появятся в своих задачах и
-  // добавят пункты сюда же, не меняя это правило.
-  if (can('roles.manage_global')) {
-    list.push({ to: '/admin/roles', label: 'Роли' })
   }
 
   list.push({ to: '/settings/profile', label: 'Профиль' })
@@ -43,6 +59,17 @@ const items = computed<NavItem[]>(() => {
     >
       {{ item.label }}
     </NuxtLink>
+    <div v-if="adminItems.length" data-test="nav-admin" class="app-nav__admin">
+      <NuxtLink
+        v-for="item in adminItems"
+        :key="item.to"
+        :to="item.to"
+        class="app-nav__item"
+        active-class="app-nav__item--active"
+      >
+        {{ item.label }}
+      </NuxtLink>
+    </div>
   </nav>
 </template>
 
@@ -61,6 +88,12 @@ const items = computed<NavItem[]>(() => {
 
 .app-nav__item--active {
   font-weight: 600;
+}
+
+.app-nav__admin {
+  display: flex;
+  gap: inherit;
+  flex-direction: inherit;
 }
 
 /* Телефон: нижняя панель вкладок. */

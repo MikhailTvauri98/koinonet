@@ -5412,7 +5412,7 @@ git add apps/web && git commit -m "feat(web): global and ministry role editors"
 - Потребляет: `PATCH /me/profile`, `PATCH /me/login`, `PATCH /me/password`, `PUT /me/photo`, `POST /media`, `GET /auth/sessions`, `DELETE /auth/sessions/{id}`, `POST /auth/sessions/logout-others`, `GET /settings`, `PUT /settings`, `GET /audit`.
 - Экран «Профиль» правит контакты человека и не содержит полей логина. Экран «Вход» содержит две формы: смена логина (новый логин, текущий пароль) и смена пароля (текущий, новый, повтор).
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `apps/web/tests/component/profile.spec.ts`:
 
@@ -5549,23 +5549,23 @@ describe('navigation', () => {
 
 Постраничная подгрузка журнала проверяется отдельным тестом на `admin/audit.vue`: второй вызов `get` уходит с `cursor` из `next_cursor` первого ответа.
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/profile.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `MediaUploader`: выбор файла, `POST /media` с `purpose`, ожидание `status = ready` опросом раз в секунду до 15 секунд, затем привязка (`PUT /me/photo`). Даты в журнале и везде — в часовом поясе церкви из `GET /settings`, не устройства (раздел 10).
 
 `settings/login.vue`: две независимые формы. Смена логина шлёт `PATCH /me/login`, ошибки `login.taken` и `auth.invalid_password` показываются у соответствующего поля. Смена пароля шлёт `PATCH /me/password`; несовпадение повтора ловится на клиенте до запроса. После успешной смены пароля показывается уведомление, что другие устройства разлогинены.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test tests/component/profile.spec.ts`
 Ожидается: PASS, 8 тестов.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): profile, login settings, devices, church settings and journal"
