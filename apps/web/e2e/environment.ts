@@ -68,6 +68,10 @@ export const apiEnvironment: Readonly<Record<string, string>> = {
   // Браузер шлёт Referer предпросмотра, прокси передаёт его API как есть.
   SANCTUM_STATEFUL_DOMAINS: `127.0.0.1:${webPort}`,
   LOG_CHANNEL: 'stderr',
+  // Язык ответов — как в production (.env.example), независимо от локального
+  // apps/api/.env: клиент показывает текст сервера у 422, и сценарии видят
+  // ровно то, что увидит человек.
+  APP_LOCALE: 'ru',
 }
 
 // Установка: `app:install` с фиксированными опциями.
