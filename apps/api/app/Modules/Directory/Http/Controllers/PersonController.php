@@ -15,6 +15,7 @@ use App\Modules\Directory\Http\Requests\StorePersonRequest;
 use App\Modules\Directory\Http\Requests\UpdatePersonRequest;
 use App\Modules\Directory\Http\Resources\PersonResource;
 use App\Modules\Directory\Models\Person;
+use App\Modules\Directory\Models\User;
 use App\Modules\Directory\PersonStatus;
 use App\Modules\Media\Models\Media;
 use Illuminate\Http\JsonResponse;
@@ -47,7 +48,10 @@ final class PersonController
             'per_page' => (int) ($validated['per_page'] ?? 25),
         ];
 
-        return PersonResource::collection($query->paginate($filters));
+        $viewer = $request->user();
+        assert($viewer instanceof User);
+
+        return PersonResource::collection($query->paginate($filters, $viewer));
     }
 
     public function store(StorePersonRequest $request, CreatePerson $createPerson): JsonResponse

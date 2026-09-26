@@ -201,9 +201,9 @@ it('shows a member their own full name without people.view', function () {
     expect($row['full_name'])->not->toBeNull();
 });
 
-it('filters the directory by ministry', function () {
+it('filters the directory by a ministry the viewer can see', function () {
     $ministry = ministryWithRoles();
-    actingAsUserWith([Permission::PeopleView]);
+    actingAsUserWith([Permission::PeopleView, Permission::MinistriesViewAll]);
     $inside = Person::factory()->create();
     $outside = Person::factory()->create();
     memberOf($ministry, $inside);
@@ -211,6 +211,26 @@ it('filters the directory by ministry', function () {
     $ids = collect($this->getJson("/api/v1/people?ministry={$ministry->id}")->json('data'))->pluck('id');
 
     expect($ids)->toContain($inside->id)->not->toContain($outside->id);
+});
+
+it('filters the directory by the viewers own ministry', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUserWith([Permission::PeopleView]);
+    memberOf($ministry, $user->person);
+    $inside = Person::factory()->create();
+    memberOf($ministry, $inside);
+
+    $ids = collect($this->getJson("/api/v1/people?ministry={$ministry->id}")->json('data'))->pluck('id');
+
+    expect($ids)->toContain($inside->id)->toContain($user->person_id)->toHaveCount(2);
+});
+
+it('does not reveal the members of a ministry the viewer cannot see', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::PeopleView]);
+    memberOf($ministry, Person::factory()->create());
+
+    $this->getJson("/api/v1/people?ministry={$ministry->id}")->assertOk()->assertJsonCount(0, 'data');
 });
 
 it('shows a members photo url to a viewer who can see that person', function () {
