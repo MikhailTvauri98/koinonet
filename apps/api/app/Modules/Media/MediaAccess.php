@@ -53,6 +53,6 @@ final readonly class MediaAccess
         }
 
         // Not attached to any owner yet: only the account that uploaded it can see it.
-        return $media->uploader_user_id === $user->id;
+        return $media->isUploadedBy($user->id);
     }
 }

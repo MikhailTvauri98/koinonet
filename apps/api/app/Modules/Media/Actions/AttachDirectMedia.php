@@ -36,7 +36,7 @@ final readonly class AttachDirectMedia
     {
         $media = Media::lockedFind($media->id);
 
-        if ($media->uploader_user_id !== auth()->id()) {
+        if (! $media->isUploadedBy(auth()->id())) {
             throw DomainRuleException::because('media.not_owned', 'Файл загрузил другой аккаунт.');
         }
 

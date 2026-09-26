@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Directory\Console;
 
 use App\Modules\Access\AuditLogger;
+use App\Modules\Directory\Contracts\AccountEraser;
 use App\Modules\Directory\Events\PersonErased;
 use App\Modules\Directory\Models\AccessLink;
 use App\Modules\Directory\Models\Person;
@@ -15,7 +16,7 @@ final class ErasePersonCommand extends Command
 {
     protected $signature = 'people:erase {id : Идентификатор человека} {--force : Не спрашивать подтверждения}';
 
-    protected $description = 'Обезличить человека по его просьбе: ФИО, контакты, заметка и аккаунт стираются, история остаётся';
+    protected $description = 'Обезличить человека по его просьбе: ФИО, контакты, заметка, фото и аккаунт стираются, история остаётся';
 
     public function handle(AuditLogger $audit): int
     {
@@ -39,16 +40,8 @@ final class ErasePersonCommand extends Command
             $user = $person->user()->lockForUpdate()->first();
             $userId = $user?->id;
 
-            if ($user !== null) {
-                DB::table('sessions')->where('user_id', $user->id)->delete();
-                AccessLink::query()
-                    ->where('created_by_user_id', $user->id)
-                    ->update(['created_by_user_id' => null]);
-                $user->delete();
-            }
-
-            AccessLink::query()->where('person_id', $person->id)->delete();
-
+            // The photo leaves the card first, so that Media's eraser below
+            // already sees it as unused.
             $person->forceFill([
                 'last_name' => 'Удалённый человек',
                 'first_name' => '',
@@ -57,9 +50,28 @@ final class ErasePersonCommand extends Command
                 'email' => null,
                 'birth_date' => null,
                 'note' => null,
+                'photo_media_id' => null,
                 'contacts_public' => false,
                 'archived_at' => $person->archived_at ?? now(),
             ])->save();
+
+            if ($user !== null) {
+                DB::table('sessions')->where('user_id', $user->id)->delete();
+                AccessLink::query()
+                    ->where('created_by_user_id', $user->id)
+                    ->update(['created_by_user_id' => null]);
+
+                /** @var iterable<AccountEraser> $erasers */
+                $erasers = app()->tagged('directory.account_erasers');
+
+                foreach ($erasers as $eraser) {
+                    $eraser->eraseAccount($user->id);
+                }
+
+                $user->delete();
+            }
+
+            AccessLink::query()->where('person_id', $person->id)->delete();
 
             $audit->record('person.erased', $person, ['user_erased' => $userId !== null]);
 
@@ -68,7 +80,7 @@ final class ErasePersonCommand extends Command
 
         PersonErased::dispatch($person->id, $userId);
 
-        $this->components->info('Персональные данные стёрты.');
+        $this->components->info('Персональные данные стёрты. Освободившиеся файлы удалит ежедневная очистка.');
 
         return self::SUCCESS;
     }

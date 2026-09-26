@@ -35,7 +35,7 @@
 2. **Собственный канал `webpush` поверх `minishlink/web-push`, без `laravel-notification-channels/webpush`.** Таблица пакета (`subscribable_type/id`, без `failures`, `last_success_at`, `user_agent`) не совпадает с разделом 5.7, а его обработка ошибок не считает десять неудач подряд. Канал занимает один класс; в том же изменении правится строка «Пуши» в таблице раздела 2 архитектуры.
 3. **Контракт владельца медиафайла фиксируется здесь.** Фаза 1 (задача 22) объявила `Media\Contracts\MediaOwnerResolver` как точку расширения, не зафиксировав сигнатуру. С этой фазы контракт такой: `public function canView(User $viewer, Media $media): ?bool` — `null`, если медиафайл не принадлежит объекту этого модуля; реализации регистрируются тегом контейнера `media.owner_resolvers`, `MediaAccess::canView` опрашивает их после прямых ссылок (фото человека, обложка служения) и до правила «свой непривязанный файл». Если задача 22 реализовала контракт иначе, задача 7 этой фазы приводит его к этому виду; сигнатура `MediaAccess::canView(User, Media): bool` не меняется.
 4. **Привязка вложений — один Action модуля Media.** `SyncAttachments::handle(Model $attachable, list<string> $mediaIds, User $uploader): void` привязывает новые файлы и отвязывает с физическим удалением те, что исчезли из списка. Его же используют события (фаза 3) и сообщения (фаза 4). Правила те же, что у `AttachDirectMedia` фазы 1: файл загрузил тот же аккаунт, файл ещё никуда не привязан.
-5. **Стирание аккаунта расширяется контрактом.** `people:erase` фазы 1 удаляет строку `users`, но подписки и настройки уведомлений лежат в таблицах Notifications, куда Directory писать не может, а внешний ключ `RESTRICT` не даст удалить аккаунт. Directory объявляет `Directory\Contracts\AccountEraser { public function eraseAccount(string $userId): void; }`; модули регистрируют реализации тегом `directory.account_erasers`; команда вызывает их все в той же транзакции до удаления аккаунта. Notifications регистрирует свою реализацию в задаче 4, Chat — в фазе 4. Колонка `announcements.author_user_id` по той же причине допускает `null`: автор стёрт, объявление осталось.
+5. **Стирание аккаунта расширяется контрактом.** `people:erase` фазы 1 удаляет строку `users`, но подписки и настройки уведомлений лежат в таблицах Notifications, куда Directory писать не может, а внешний ключ `RESTRICT` не даст удалить аккаунт. Контракт `Directory\Contracts\AccountEraser { public function eraseAccount(string $userId): void; }` и тег `directory.account_erasers` уже есть с фазы 1: команда вызывает все помеченные реализации в той же транзакции до удаления аккаунта, реализации Access, Ministries и Media там уже зарегистрированы. Notifications добавляет свою в задаче 4, Announcements — в задаче 5, Chat — в фазе 4. Колонка `announcements.author_user_id` по той же причине допускает `null`: автор стёрт, объявление осталось.
 6. **Новое право служения не выдаётся существующим ролям «Лидер».** Роль «Лидер» получила все права служения в момент создания служения. `announcements.publish` появляется в каталоге позже; администратор или носитель `roles.manage` выдаёт его в редакторе роли. Автоматическая раздача противоречила бы ADR-0003 (никаких неявных выдач).
 7. **`hide_after` — дата в часовом поясе церкви.** Список показывает объявление, пока `hide_after >= сегодня` по календарю церкви; по прямой ссылке скрытое по дате объявление открывается. Архивное объявление из списка исчезает для всех, по прямой ссылке открывается только тем, кто может его править; остальным — `404`.
 8. **Просмотр фиксируется при `GET /announcements/{id}`,** одна строка на аккаунт, повторные открытия строку не дублируют. `views_count` отдаётся только тем, кто может править объявление.
@@ -95,8 +95,6 @@ apps/api/
 │   └── routes.php
 ├── app/Modules/Media/Actions/SyncAttachments.php          новый Action
 ├── app/Modules/Media/Contracts/MediaOwnerResolver.php     контракт зафиксирован
-├── app/Modules/Directory/Contracts/AccountEraser.php      новый контракт
-├── app/Modules/Directory/Console/ErasePersonCommand.php   вызывает erasers
 ├── app/Modules/Directory/Models/User.php                  receivesBroadcastNotificationsOn()
 ├── app/Modules/Access/Permission.php                      +2 ключа
 ├── config/broadcasting.php, config/reverb.php, config/webpush.php
@@ -774,8 +772,8 @@ composer openapi && git add . && git commit -m "feat(notifications): base notifi
 ### Задача 4: Web Push — подписки, канал, ключи VAPID, обработка ошибок
 
 **Файлы:**
-- Создать: `app/Modules/Notifications/Channels/WebPushChannel.php`; `Push/PushTransport.php`, `Push/PushResult.php`, `Push/MinishlinkPushTransport.php`, `Push/WebPushSender.php`; `PushGate.php`; `Actions/SavePushSubscription.php`, `Actions/DeletePushSubscription.php`; `Http/Controllers/PushSubscriptionController.php`, `Http/Requests/StorePushSubscriptionRequest.php`, `Http/Requests/DeletePushSubscriptionRequest.php`; `Listeners/RemovePushSubscriptionsOnDisable.php`; `NotificationsAccountEraser.php`; `Console/GenerateVapidKeysCommand.php`; `config/webpush.php`; `app/Modules/Directory/Contracts/AccountEraser.php`; `tests/Support/FakePushTransport.php`
-- Изменить: `AppNotification::via()` (канал `webpush`), `app/Modules/Notifications/routes.php`, `app/Modules/Directory/Console/ErasePersonCommand.php` (вызов erasers), `app/Modules/Settings/Http/Controllers/SettingsController.php` (`vapid_public_key`), `AppServiceProvider` (тег `directory.account_erasers`, привязка `PushTransport`), `.env.example`, `composer.json`
+- Создать: `app/Modules/Notifications/Channels/WebPushChannel.php`; `Push/PushTransport.php`, `Push/PushResult.php`, `Push/MinishlinkPushTransport.php`, `Push/WebPushSender.php`; `PushGate.php`; `Actions/SavePushSubscription.php`, `Actions/DeletePushSubscription.php`; `Http/Controllers/PushSubscriptionController.php`, `Http/Requests/StorePushSubscriptionRequest.php`, `Http/Requests/DeletePushSubscriptionRequest.php`; `Listeners/RemovePushSubscriptionsOnDisable.php`; `NotificationsAccountEraser.php`; `Console/GenerateVapidKeysCommand.php`; `config/webpush.php`; `tests/Support/FakePushTransport.php`
+- Изменить: `AppNotification::via()` (канал `webpush`), `app/Modules/Notifications/routes.php`, `app/Modules/Settings/Http/Controllers/SettingsController.php` (`vapid_public_key`), `AppServiceProvider` (`NotificationsAccountEraser` в тег `directory.account_erasers`, привязка `PushTransport`), `.env.example`, `composer.json`
 - Тест: `tests/Feature/Notifications/PushSubscriptionTest.php`, `tests/Feature/Notifications/WebPushChannelTest.php`
 
 **Интерфейсы:**
@@ -784,7 +782,7 @@ composer openapi && git add . && git commit -m "feat(notifications): base notifi
 - Отдаёт наружу: `interface PushTransport { public function push(PushSubscription $subscription, string $payload): PushResult; }`, `final class PushResult { public function __construct(public readonly bool $success, public readonly ?int $status) {} }`. В тестах привязывается `Tests\Support\FakePushTransport` с методом `willRespond(string $endpoint, PushResult $result)` и списком `sent: list<array{endpoint: string, payload: array}>`.
 - Отдаёт наружу: `WebPushSender::send(User $user, array<string, mixed> $payload): void` — обходит подписки аккаунта, применяет правило ошибок из глобальных ограничений.
 - Отдаёт наружу: `PushGate::allows(User $user, AppNotification $notification): bool` — категория включена и есть хотя бы одна подписка.
-- Отдаёт наружу: `interface AccountEraser { public function eraseAccount(string $userId): void; }` в Directory; реализации регистрируются тегом `directory.account_erasers`.
+- Пользуется: контракт `Directory\Contracts\AccountEraser` (`eraseAccount(string $userId): void`) и тег `directory.account_erasers` фазы 1; `people:erase` уже вызывает все помеченные реализации, `NotificationsAccountEraser` — ещё одна.
 - Отдаёт наружу: `php artisan webpush:vapid` печатает пару ключей для `.env`.
 - Коды ошибок: `push.subscription_not_found`.
 
@@ -1134,30 +1132,7 @@ if ($notifiable instanceof User && app(PushGate::class)->allows($notifiable, $th
 
 `RemovePushSubscriptionsOnDisable` (`ShouldQueue`) слушает `UserDisabled` и удаляет все подписки аккаунта.
 
-`AccountEraser` и его использование:
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Modules\Directory\Contracts;
-
-interface AccountEraser
-{
-    public function eraseAccount(string $userId): void;
-}
-```
-
-В `ErasePersonCommand` перед удалением `User`, внутри той же транзакции:
-
-```php
-foreach (app()->tagged('directory.account_erasers') as $eraser) {
-    $eraser->eraseAccount($user->id);
-}
-```
-
-`NotificationsAccountEraser` удаляет `push_subscriptions`, `notification_settings` и `notifications` аккаунта. В `AppServiceProvider`: `$this->app->bind(PushTransport::class, MinishlinkPushTransport::class); $this->app->tag([NotificationsAccountEraser::class], 'directory.account_erasers');`.
+Контракт `Directory\Contracts\AccountEraser` и его вызов в `ErasePersonCommand` (перед удалением `User`, в той же транзакции) заведены в фазе 1; здесь добавляется только реализация. `NotificationsAccountEraser implements AccountEraser` удаляет `push_subscriptions`, `notification_settings` и `notifications` аккаунта. В `AppServiceProvider`: `$this->app->bind(PushTransport::class, MinishlinkPushTransport::class);` и `NotificationsAccountEraser::class` в существующий список `$this->app->tag([...], 'directory.account_erasers')`.
 
 `GenerateVapidKeysCommand` (`webpush:vapid`) печатает результат `Minishlink\WebPush\VAPID::createVapidKeys()` в виде строк `VAPID_PUBLIC_KEY=…` и `VAPID_PRIVATE_KEY=…`. В `.env.example` — три пустые переменные `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` с комментарием про команду.
 
@@ -3064,4 +3039,4 @@ git add apps/web .github && git commit -m "test(web): end-to-end announcement an
 
 - Раздел 2, строка «Пуши»: собственный канал поверх `minishlink/web-push` вместо `laravel-notification-channels/webpush` (решение 2).
 - Раздел 5.5: `announcements.author_user_id` допускает `null` после стирания автора (решение 5).
-- Раздел 7.9: стирание вызывает зарегистрированные `AccountEraser` модулей до удаления аккаунта (решение 5).
+- Раздел 7.9 о вызове `AccountEraser` правок не требует: контракт и перечень реализаций, включая Notifications и Announcements, внесены в фазе 1 (решение 5).

@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
- * @property string $uploader_user_id
+ * @property string|null $uploader_user_id null once the uploading account is erased
  * @property string $disk
  * @property string $path
  * @property string $original_name
@@ -67,6 +67,16 @@ final class Media extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploader_user_id');
+    }
+
+    /**
+     * Whether `$userId` is the account that uploaded this file. A file whose
+     * uploader was erased belongs to no account, not even to a caller
+     * without one.
+     */
+    public function isUploadedBy(int|string|null $userId): bool
+    {
+        return $this->uploader_user_id !== null && $this->uploader_user_id === $userId;
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Modules\Access\Actions\AccessAccountEraser;
 use App\Modules\Access\Contracts\MinistryPermissionSource;
 use App\Modules\Access\Contracts\RoleCarrierDetacher;
 use App\Modules\Access\Events\PersonRolesChanged;
@@ -20,10 +21,12 @@ use App\Modules\Directory\Events\UserDisabled;
 use App\Modules\Directory\Events\UserEnabled;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Policies\PersonPolicy;
+use App\Modules\Media\Actions\MediaAccountEraser;
 use App\Modules\Media\Console\PruneOrphanMediaCommand;
 use App\Modules\Ministries\Access\DatabaseMinistryPermissionSource;
 use App\Modules\Ministries\Access\DatabaseSharedMinistryFinder;
 use App\Modules\Ministries\Actions\DetachRoleFromMembers;
+use App\Modules\Ministries\Actions\MinistriesAccountEraser;
 use App\Modules\Ministries\Events\MemberAdded;
 use App\Modules\Ministries\Events\MemberRemoved;
 use App\Modules\Ministries\Events\MemberRolesChanged;
@@ -47,6 +50,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(MinistryPermissionSource::class, DatabaseMinistryPermissionSource::class);
         $this->app->bind(SharedMinistryFinder::class, DatabaseSharedMinistryFinder::class);
         $this->app->bind(RoleCarrierDetacher::class, DetachRoleFromMembers::class);
+        $this->app->tag(
+            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class],
+            'directory.account_erasers',
+        );
     }
 
     /**

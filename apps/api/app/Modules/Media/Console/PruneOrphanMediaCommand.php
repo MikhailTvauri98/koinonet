@@ -7,6 +7,7 @@ namespace App\Modules\Media\Console;
 use App\Modules\Media\MediaUsage;
 use App\Modules\Media\Models\Media;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,7 +17,10 @@ use Illuminate\Support\Facades\Storage;
  * polymorphic attachment or a direct reference alike (the same
  * {@see MediaUsage} predicate `AttachDirectMedia` and `DeleteOwnMedia`
  * check). A fresh unattached upload survives the window so an in-progress
- * form submission never loses its file mid-flight.
+ * form submission never loses its file mid-flight. A file without an
+ * uploader - left behind by an erased account (architecture 7.9) - has no
+ * such submission to wait for, since nobody can attach it any more, and goes
+ * on the next run whatever its age.
  *
  * Each candidate's check-then-delete runs in its own `DB::transaction()`
  * against a row-locked re-read ({@see Media::lockedFind()}), not one
@@ -36,7 +40,9 @@ final class PruneOrphanMediaCommand extends Command
         $deleted = 0;
 
         Media::query()
-            ->where('created_at', '<', now()->subDay())
+            ->where(fn (Builder $query): Builder => $query
+                ->where('created_at', '<', now()->subDay())
+                ->orWhereNull('uploader_user_id'))
             ->each(function (Media $candidate) use ($usage, &$deleted): void {
                 DB::transaction(function () use ($candidate, $usage, &$deleted): void {
                     $media = Media::lockedFind($candidate->id);
