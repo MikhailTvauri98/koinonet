@@ -29,7 +29,7 @@ function toggle(key: string, current: string[], checked: boolean) {
 </template>
 
 <style scoped>
-.permission-group { border: 0; padding: 0; margin: 0 0 1rem; }
+.permission-group { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
 .permission-group legend { font-weight: 600; padding: 0; margin-bottom: 0.4rem; }
 .permission-group label { display: flex; align-items: center; gap: 0.4rem; margin: 0.3rem 0; }
 </style>

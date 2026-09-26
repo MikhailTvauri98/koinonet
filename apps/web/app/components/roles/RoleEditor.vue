@@ -174,12 +174,12 @@ function onDeleted(roleId: string) {
 </template>
 
 <style scoped>
-.role-editor { max-width: 32rem; }
+.role-editor { max-width: 32rem; min-width: 0; }
 label { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
-input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
+input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; }
 button { cursor: pointer; margin-right: 0.5rem; }
 button:disabled { opacity: 0.6; cursor: wait; }
-fieldset { border: 0; padding: 0; margin: 0 0 1rem; }
+fieldset { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
 .role-editor__notice { background: #edf1f6; padding: 0.75rem 1rem; border-radius: 0.4rem; margin: 0.5rem 0 1rem; }
 [role='alert'] { color: #a32020; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

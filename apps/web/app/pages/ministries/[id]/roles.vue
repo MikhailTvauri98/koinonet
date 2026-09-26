@@ -150,14 +150,22 @@ await load()
 </template>
 
 <style scoped>
-.roles-tab { max-width: 64rem; margin: 0 auto; color: #202b3a; }
+.roles-tab { max-width: 64rem; margin: 0 auto; color: #202b3a; overflow-wrap: anywhere; }
 h1 { margin: 0 0 1rem; }
-.roles-tab__layout { display: grid; grid-template-columns: minmax(14rem, 18rem) 1fr; gap: 2rem; align-items: start; }
+/* Телефон: список ролей и редактор друг под другом; с 768px — рядом.
+   minmax(0, …) даёт колонке сжиматься уже содержимого, иначе редактор
+   выталкивал страницу за край экрана. */
+.roles-tab__layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (min-width: 768px) {
+  .roles-tab__layout { grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr); gap: 2rem; }
+}
 .roles-tab__list ul { list-style: none; padding: 0; margin: 0.75rem 0 0; }
-.roles-tab__row { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
-.roles-tab__row button:first-child { flex: 1; text-align: left; }
+.roles-tab__row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
+/* Основа 12rem: на узком экране кнопка «Сделать ролью по умолчанию»
+   переносится на свою строку, а не сжимает название роли по буквам. */
+.roles-tab__row button:first-child { flex: 1 1 12rem; text-align: left; }
 .roles-tab__badge { padding: 0 0.5rem; border-radius: 1rem; background: #edf1f6; font-size: 0.875rem; white-space: nowrap; }
-input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
+input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; }
 button { cursor: pointer; }
 button:disabled { opacity: 0.6; cursor: wait; }
 [role='alert'] { color: #a32020; }

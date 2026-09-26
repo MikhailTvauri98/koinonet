@@ -60,6 +60,17 @@ export async function expectPhoneTabBar(page: Page): Promise<void> {
   expect(Math.round(box!.width)).toBe(viewport!.width)
 }
 
+// Экран не шире телефона: ничего не выталкивает страницу вбок. Сравнение —
+// с шириной экрана устройства, а не с `innerWidth`: мобильный браузер
+// растягивает `innerWidth` под вылезшее содержимое. Навигация прокручивается
+// внутри себя и ширину документа не меняет.
+export async function expectNoHorizontalScroll(page: Page, where: string): Promise<void> {
+  const viewport = page.viewportSize()
+  expect(viewport, 'у телефона задан размер экрана').not.toBeNull()
+  const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+  expect(documentWidth, `${where}: страница не шире экрана`).toBeLessThanOrEqual(viewport!.width)
+}
+
 export function fullName(person: NewPerson): string {
   return `${person.lastName} ${person.firstName}`
 }

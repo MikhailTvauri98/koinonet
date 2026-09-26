@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import {
-  createGlobalRole, createInvitedAccount, createMinistry, createPerson, expect, fullName, loginAsAdmin, mainNav,
-  openSection, test,
+  createGlobalRole, createInvitedAccount, createMinistry, createPerson, expect, expectNoHorizontalScroll, fullName,
+  loginAsAdmin, mainNav, openSection, test,
 } from './fixtures'
 
 // Лидер управляет составом своего служения и не может управлять чужим.
@@ -83,6 +83,29 @@ test('a leader manages members of their own ministry only', async ({ page, openP
   // Лидер сам добавляет человека в своё служение.
   await addMember(leaderPhone, newcomer.lastName, fullName(newcomer))
   await expect(memberRow(leaderPhone, fullName(newcomer))).toBeVisible()
+  await expectNoHorizontalScroll(leaderPhone, 'состав служения')
+
+  // Лидер правит роль своего служения с телефона: список ролей и редактор
+  // встают друг под другом и помещаются в экран.
+  const description = 'Все, кто служит в прославлении'
+  const tabs = leaderPhone.getByRole('navigation', { name: 'Разделы служения' })
+  await tabs.getByRole('link', { name: 'Роли' }).click()
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Роли служения' })).toBeVisible()
+  await leaderPhone.getByRole('button', { name: 'Участник', exact: true }).click()
+  await leaderPhone.getByLabel('Описание').fill(description)
+  await expectNoHorizontalScroll(leaderPhone, 'редактор роли служения')
+  // Экран редактора не пишет «Сохранено», поэтому ждём ответ на правку роли,
+  // прежде чем перезагрузить страницу.
+  const saved = leaderPhone.waitForResponse(response => response.request().method() === 'PATCH'
+    && new URL(response.url()).pathname.startsWith('/api/v1/roles/'))
+  await leaderPhone.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  expect((await saved).status(), 'роль сохранена').toBe(200)
+  // Правка сохранена на сервере: после перезагрузки описание на месте.
+  await leaderPhone.reload()
+  await leaderPhone.getByRole('button', { name: 'Участник', exact: true }).click()
+  await expect(leaderPhone.getByLabel('Описание')).toHaveValue(description)
+  await tabs.getByRole('link', { name: 'Участники' }).click()
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
 
   // Состав чужого служения по прямой ссылке закрыт, и управлять им нечем.
   await leaderPhone.goto(`${youthHref}/members`)

@@ -1,13 +1,15 @@
 import { credentials } from './environment'
-import { expectPhoneTabBar, loginAsAdmin, openSection, test } from './fixtures'
+import { expect, expectNoHorizontalScroll, expectPhoneTabBar, loginAsAdmin, openSection, test } from './fixtures'
 
 // Фаза 1 готова, когда администратор управляет системой с телефона
 // (docs/architecture.md, раздел 13): все его разделы, включая
 // администрирование, открываются из нижней панели вкладок, а не только
-// вводом адреса. Данных сценарий не создаёт.
+// вводом адреса, и ни один не шире узкого телефона (375 px). Данных сценарий
+// не создаёт.
 
 test('the administrator reaches every section from the phone tab bar', async ({ openPhone }) => {
   const phone = await openPhone()
+  await phone.setViewportSize({ width: 375, height: 812 })
   await loginAsAdmin(phone)
   await expectPhoneTabBar(phone)
 
@@ -23,5 +25,12 @@ test('the administrator reaches every section from the phone tab bar', async ({ 
   for (const [section, heading] of sections) {
     await openSection(phone, section, heading)
     await expectPhoneTabBar(phone)
+    await expectNoHorizontalScroll(phone, section)
   }
+
+  // Редактор глобальной роли на узком экране встаёт под список ролей.
+  await openSection(phone, 'Роли', 'Глобальные роли')
+  await phone.getByTestId('create-role').click()
+  await expect(phone.getByLabel('Название')).toBeVisible()
+  await expectNoHorizontalScroll(phone, 'редактор глобальной роли')
 })
