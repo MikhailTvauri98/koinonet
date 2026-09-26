@@ -84,7 +84,7 @@ async function submitPassword() {
 </script>
 
 <template>
-  <main class="login-settings">
+  <section class="login-settings">
     <nav aria-label="Разделы настроек" class="login-settings__tabs">
       <NuxtLink to="/settings/profile">Профиль</NuxtLink>
       <NuxtLink to="/settings/login" class="login-settings__tabs-active">Вход</NuxtLink>
@@ -124,7 +124,7 @@ async function submitPassword() {
         <button type="submit" data-test="save-password" :disabled="passwordSaving">{{ passwordSaving ? 'Сохранение…' : 'Изменить пароль' }}</button>
       </form>
     </section>
-  </main>
+  </section>
 </template>
 
 <style scoped>

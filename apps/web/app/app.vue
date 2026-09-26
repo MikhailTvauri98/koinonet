@@ -30,7 +30,15 @@ onMounted(() => {
 <template>
   <div>
     <NuxtRouteAnnouncer />
-    <NuxtPage />
+    <!-- Подсказка установки — до макета: в конце документа её вместе с
+         кнопкой «Не сейчас» закрывала нижняя панель вкладок телефона
+         (AppNav, position: fixed). -->
     <InstallPrompt />
+    <!-- Макет layouts/default.vue (навигация AppNav) применяется ко всем
+         страницам; вход, приглашение и сброс пароля отказываются от него
+         сами через definePageMeta({ layout: false }). -->
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </div>
 </template>

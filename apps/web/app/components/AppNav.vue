@@ -96,16 +96,29 @@ const items = computed<NavItem[]>(() => {
   flex-direction: inherit;
 }
 
-/* Телефон: нижняя панель вкладок. */
+/* Телефон: нижняя панель вкладок. Семь разделов администратора в ширину
+   телефона не помещаются: панель прокручивается вбок, а не обрезает
+   «Роли», «Настройки церкви» и «Журнал» за краем экрана. Пока разделов
+   немного, они делят ширину поровну. */
 @media (max-width: 767px) {
   .app-nav {
     position: fixed;
     inset-inline: 0;
     bottom: 0;
-    justify-content: space-around;
+    overflow-x: auto;
     padding: 0.5rem;
     border-top: 1px solid var(--border-color, #ddd);
     background: var(--surface-color, #fff);
+  }
+
+  .app-nav__item,
+  .app-nav__admin {
+    flex: 1 0 auto;
+  }
+
+  .app-nav__item {
+    white-space: nowrap;
+    text-align: center;
   }
 }
 

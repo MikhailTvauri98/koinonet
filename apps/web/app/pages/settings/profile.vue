@@ -80,7 +80,7 @@ await load()
 </script>
 
 <template>
-  <main class="profile-page">
+  <section class="profile-page">
     <nav aria-label="Разделы настроек" class="profile-page__tabs">
       <NuxtLink to="/settings/profile" class="profile-page__tabs-active">Профиль</NuxtLink>
       <NuxtLink to="/settings/login">Вход</NuxtLink>
@@ -121,7 +121,7 @@ await load()
         <button type="submit" data-test="save-profile" :disabled="saving">{{ saving ? 'Сохранение…' : 'Сохранить' }}</button>
       </form>
     </template>
-  </main>
+  </section>
 </template>
 
 <style scoped>

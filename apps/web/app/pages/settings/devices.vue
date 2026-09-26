@@ -72,7 +72,7 @@ await load()
 </script>
 
 <template>
-  <main class="devices-page">
+  <section class="devices-page">
     <nav aria-label="Разделы настроек" class="devices-page__tabs">
       <NuxtLink to="/settings/profile">Профиль</NuxtLink>
       <NuxtLink to="/settings/login">Вход</NuxtLink>
@@ -107,7 +107,7 @@ await load()
       </ul>
       <p v-if="!sessions.length">Нет активных устройств.</p>
     </template>
-  </main>
+  </section>
 </template>
 
 <style scoped>
