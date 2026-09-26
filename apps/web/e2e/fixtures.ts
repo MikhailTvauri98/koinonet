@@ -1,4 +1,4 @@
-import { test as base, devices, expect, type BrowserContext, type Page } from '@playwright/test'
+import { test as base, devices, expect, type BrowserContext, type Locator, type Page } from '@playwright/test'
 import { credentials, e2e } from './environment'
 
 // Общие шаги сценариев. Всё — через интерфейс, как это делает человек:
@@ -38,12 +38,36 @@ export const test = base.extend<{ openPhone: () => Promise<Page> }>({
 
 export { expect }
 
+// Основная навигация (AppNav): боковая панель на десктопе, нижняя панель
+// вкладок на телефоне. Разделы открываются через неё, как это делает
+// человек, а не вводом адреса.
+export function mainNav(page: Page): Locator {
+  return page.getByRole('navigation', { name: 'Основная навигация' })
+}
+
+export async function openSection(page: Page, section: string, heading: string): Promise<void> {
+  await mainNav(page).getByRole('link', { name: section, exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible()
+}
+
+// На телефоне навигация — панель вкладок, прижатая к нижнему краю экрана.
+export async function expectPhoneTabBar(page: Page): Promise<void> {
+  const viewport = page.viewportSize()
+  const box = await mainNav(page).boundingBox()
+  expect(viewport, 'у телефона задан размер экрана').not.toBeNull()
+  expect(box, 'навигация видна').not.toBeNull()
+  expect(Math.round(box!.y + box!.height)).toBe(viewport!.height)
+  expect(Math.round(box!.width)).toBe(viewport!.width)
+}
+
 export function fullName(person: NewPerson): string {
   return `${person.lastName} ${person.firstName}`
 }
 
+// Человек открывает приложение и, не войдя, попадает на экран входа.
 export async function login(page: Page, loginValue: string, password: string): Promise<void> {
-  await page.goto('/login')
+  await page.goto('/')
+  await expect(page).toHaveURL('/login')
   await page.getByLabel('Телефон или email').fill(loginValue)
   await page.getByLabel('Пароль', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -59,7 +83,7 @@ export async function loginAsAdmin(page: Page): Promise<void> {
 // Глобальная роль с правами из каталога; права называются так, как их
 // показывает редактор ролей.
 export async function createGlobalRole(page: Page, name: string, permissions: string[]): Promise<void> {
-  await page.goto('/admin/roles')
+  await openSection(page, 'Роли', 'Глобальные роли')
   await page.getByTestId('create-role').click()
   await page.getByLabel('Название').fill(name)
   for (const permission of permissions) {
@@ -70,7 +94,7 @@ export async function createGlobalRole(page: Page, name: string, permissions: st
 }
 
 export async function createMinistry(page: Page, name: string): Promise<void> {
-  await page.goto('/ministries')
+  await openSection(page, 'Служения', 'Служения')
   await page.getByRole('button', { name: 'Создать служение' }).click()
   await page.getByLabel('Название').fill(name)
   await page.getByRole('button', { name: 'Создать', exact: true }).click()
@@ -78,7 +102,7 @@ export async function createMinistry(page: Page, name: string): Promise<void> {
 }
 
 export async function createPerson(page: Page, person: NewPerson): Promise<void> {
-  await page.goto('/people')
+  await openSection(page, 'Люди', 'Люди')
   await page.getByRole('button', { name: 'Создать человека' }).click()
   const form = page.getByRole('form', { name: 'Новый человек' })
   await form.getByLabel('Фамилия').fill(person.lastName)
@@ -89,7 +113,7 @@ export async function createPerson(page: Page, person: NewPerson): Promise<void>
 
 // Карточка открывается из справочника через поиск по фамилии.
 export async function openPersonCard(page: Page, person: NewPerson): Promise<void> {
-  await page.goto('/people')
+  await openSection(page, 'Люди', 'Люди')
   await page.getByLabel('Поиск по имени и фамилии').fill(person.lastName)
   await page.getByRole('list', { name: 'Список людей' }).getByRole('link', { name: fullName(person) }).click()
   await expect(page.getByRole('heading', { level: 1, name: fullName(person) })).toBeVisible()

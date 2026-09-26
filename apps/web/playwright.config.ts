@@ -22,6 +22,10 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     baseURL: e2e.webOrigin,
     testIdAttribute: 'data-test',
+    // Без предела действие ждало бы до таймаута всего теста: недоступный
+    // элемент падал бы через две минуты вместо пятнадцати секунд.
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
     // Service worker проверяется отдельно на статике (`npm run verify-sw`);
     // здесь он только вмешивался бы в навигацию предпросмотра.
     serviceWorkers: 'block',
