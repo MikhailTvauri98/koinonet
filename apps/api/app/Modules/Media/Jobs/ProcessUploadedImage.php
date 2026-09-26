@@ -14,12 +14,15 @@ use Throwable;
 
 /**
  * Runs {@see ImageProcessor} for one uploaded image and persists its result.
- * A file that fails to process (corrupt, unreadable, an unsupported HEIC
- * variant, ...) marks the media `failed` instead of leaving it stuck in
- * `processing` forever - that is handled inside handle() itself, since a
- * bad file is an expected outcome, not a reason to retry. `failed()` is a
- * backstop for the unexpected case where every attempt of a transient
- * failure (disk full, OOM, ...) is exhausted without handle() catching it.
+ * Any exception from processing - a corrupt or oversized file and a
+ * transient disk or memory failure alike - marks the media `failed` at once,
+ * without a retry, and is logged with its trace: telling the two apart is
+ * not worth it when the person can simply upload the picture again.
+ *
+ * `$tries` and `failed()` therefore only cover what happens outside that
+ * block - loading or saving the media row while the database is briefly
+ * unavailable. `failed()` runs once those attempts are exhausted, so the
+ * media never stays in `processing` forever.
  */
 final class ProcessUploadedImage implements ShouldQueue
 {
@@ -42,7 +45,7 @@ final class ProcessUploadedImage implements ShouldQueue
         } catch (Throwable $e) {
             Log::warning('Image processing failed', [
                 'media_id' => $media->id,
-                'exception' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             $media->update(['status' => MediaStatus::Failed]);

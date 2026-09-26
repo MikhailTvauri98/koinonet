@@ -8,6 +8,7 @@ use App\Modules\Media\Models\Media;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 use Intervention\Image\ImageManager;
@@ -82,6 +83,17 @@ it('marks the media failed when the file is not a readable image', function () {
     ProcessUploadedImage::dispatchSync($media->id);
 
     expect($media->fresh()->status->value)->toBe('failed');
+});
+
+it('logs the exception itself, not only its message, when processing fails', function () {
+    Log::spy();
+    $media = Media::factory()->create(['status' => 'processing', 'path' => '2026/09/missing.jpg']);
+
+    ProcessUploadedImage::dispatchSync($media->id);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => ($context['exception'] ?? null) instanceof Throwable)
+        ->once();
 });
 
 it('marks the media failed when the file holds corrupt bytes', function (string $path, string $mime) {
