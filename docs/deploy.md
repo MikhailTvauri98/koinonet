@@ -48,7 +48,7 @@
 
 ### 1. Сервер
 
-- Linux x86_64, Docker Engine и плагин Compose v2: `docker compose version` отвечает.
+- Linux x86_64, Docker Engine 25 или новее и плагин Compose v2: `docker version --format '{{.Server.Version}}'` не ниже 25, `docker compose version` отвечает. Более старый Engine не знает `start_interval` в проверках здоровья `compose.prod.yml`, и Compose откажется поднимать стек.
 - Пользователь для деплоя, например `deploy`, в группе `docker`. Членство в этой группе равно правам root на сервере.
 - Открыты порты 22, 80 и 443.
 - Запись A домена (и AAAA, если у сервера есть IPv6) указывает на сервер.
@@ -74,11 +74,16 @@ ssh-keygen -lf known_hosts
 
 ### 3. Каталог и `.env`
 
-На сервере под пользователем `deploy`:
+Каталог в `/srv` создаёт администратор сервера — от `root` или через `sudo` — и отдаёт его пользователю деплоя:
 
 ```bash
 sudo mkdir -p /srv/church
 sudo chown deploy: /srv/church
+```
+
+Дальше на сервере всё — под пользователем `deploy`, без `sudo`:
+
+```bash
 cd /srv/church
 touch .env
 chmod 600 .env
@@ -135,10 +140,10 @@ MAIL_MAILER=log
 
 ### 4. `compose.prod.yml` на сервер
 
-Для выпуска сертификата на шаге 5 файлу Compose нужно быть на сервере раньше первого деплоя. Со своего компьютера, из клона репозитория:
+Для выпуска сертификата на шаге 5 файлу Compose нужно быть на сервере раньше первого деплоя. Со своего компьютера, из клона репозитория, ключом деплоя из шага 2 (укажите путь к файлу `church-deploy`, если он лежит не в текущем каталоге):
 
 ```bash
-scp infra/compose.prod.yml deploy@<адрес сервера>:/srv/church/
+scp -i church-deploy infra/compose.prod.yml deploy@<адрес сервера>:/srv/church/
 ```
 
 Дальше его обновляет каждый деплой.

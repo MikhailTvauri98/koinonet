@@ -51,8 +51,9 @@ fi
 # Очистка: из образов app и web на сервере остаются выложенный и предыдущий —
 # на него откатываются без GHCR. Предыдущий — работавшая до деплоя версия; при
 # повторной выкладке того же тега — самый новый из остальных. Неудачное
-# удаление деплой не роняет: версия уже выложена.
-for repo in $(compose config --images | sed -n "s|:${TAG}\$||p"); do
+# удаление деплой не роняет: версия уже выложена. Образ app записан у трёх
+# сервисов, `sort -u` оставляет каждый репозиторий один раз.
+for repo in $(compose config --images | sed -n "s|:${TAG}\$||p" | sort -u); do
     previous=$running
     if [ -z "$previous" ] || [ "$previous" = "$TAG" ]; then
         previous=$(docker image ls --format '{{.Tag}}' "$repo" | grep -vx -e "$TAG" -e '<none>' | head -n 1 || true)

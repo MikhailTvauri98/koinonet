@@ -89,8 +89,12 @@ services:
       POSTGRES_USER: ${DB_USERNAME:?задайте DB_USERNAME в .env}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?задайте DB_PASSWORD в .env}
     volumes: ['pgdata:/var/lib/postgresql/data']
+    # Проверка по TCP (-h 127.0.0.1), как подключаются app и миграции. При
+    # первом запуске образ создаёт базу на временном сервере, который слушает
+    # только unix-сокет: по сокету он уже «готов», а затем перезапускается, и
+    # зависимые сервисы получили бы отказ соединения.
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
       timeout: 5s
       retries: 12
