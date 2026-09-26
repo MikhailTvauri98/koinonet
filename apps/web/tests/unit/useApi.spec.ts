@@ -42,6 +42,31 @@ describe('useApi 403 handling', () => {
     expect(auth.permissions.global).toContain('people.view')
   })
 
+  it('keeps the signed-in account when refreshing permissions after a 403 gets no answer', async () => {
+    registerEndpoint('/api/v1/roles', {
+      method: 'GET',
+      handler: () => {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      },
+    })
+    registerEndpoint('/api/v1/auth/me', {
+      method: 'GET',
+      handler: () => {
+        throw createError({ statusCode: 502, statusMessage: 'Bad Gateway' })
+      },
+    })
+
+    const auth = useAuthStore()
+    auth.setMe(me)
+    auth.initialized = true
+    const api = useApi()
+
+    await expect(api.get('/roles')).rejects.toMatchObject({ statusCode: 403 })
+
+    expect(auth.user?.id).toBe('u1')
+    expect(auth.connectionLost).toBe(true)
+  })
+
   it('does not loop when /auth/me itself answers 403', async () => {
     registerEndpoint('/api/v1/auth/me', {
       method: 'GET',

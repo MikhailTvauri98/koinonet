@@ -36,9 +36,13 @@ onMounted(() => {
     <InstallPrompt />
     <!-- Макет layouts/default.vue (навигация AppNav) применяется ко всем
          страницам; вход, приглашение и сброс пароля отказываются от него
-         сами через definePageMeta({ layout: false }). -->
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
+         сами через definePageMeta({ layout: false }). ConnectionGate
+         закрывает их экраном «Нет связи с сервером», пока сервер не ответил,
+         кто вошёл. -->
+    <ConnectionGate>
+      <NuxtLayout>
+        <NuxtPage />
+      </NuxtLayout>
+    </ConnectionGate>
   </div>
 </template>

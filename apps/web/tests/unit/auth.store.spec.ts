@@ -57,6 +57,85 @@ describe('auth store', () => {
     expect(auth.permissions.administrator).toBe(false)
   })
 
+  it('forgets the connection trouble once the server answers 401', async () => {
+    get.mockRejectedValueOnce(new Error('network'))
+    const auth = useAuthStore()
+    await auth.fetchMe()
+    expect(auth.connectionLost).toBe(true)
+
+    get.mockRejectedValueOnce(Object.assign(new Error('unauthenticated'), { statusCode: 401 }))
+    await auth.fetchMe()
+
+    expect(auth.connectionLost).toBe(false)
+    expect(auth.user).toBeNull()
+    expect(auth.initialized).toBe(true)
+  })
+
+  describe('when the server does not say who is signed in', () => {
+    // Сеть пропала или идёт выкладка (502): это не ответ «гость». Сброс
+    // сессии — только по 401, иначе вошедший человек оказался бы на экране
+    // входа из-за мигнувшей связи.
+
+    it('keeps the signed-in account and its permissions after a network failure', async () => {
+      post.mockResolvedValue(me)
+      const auth = useAuthStore()
+      await auth.login('ivan@example.com', 'secret123', false)
+      auth.initialized = true
+
+      get.mockRejectedValue(new TypeError('Failed to fetch'))
+      await auth.fetchMe()
+
+      expect(auth.user?.id).toBe('u1')
+      expect(auth.permissions.global).toContain('people.view')
+      expect(auth.connectionLost).toBe(true)
+      expect(auth.initialized).toBe(true)
+    })
+
+    it('keeps the signed-in account after a 502 during a deploy', async () => {
+      post.mockResolvedValue(me)
+      const auth = useAuthStore()
+      await auth.login('ivan@example.com', 'secret123', false)
+
+      get.mockRejectedValue(Object.assign(new Error('bad gateway'), { statusCode: 502 }))
+      await auth.fetchMe()
+
+      expect(auth.user?.id).toBe('u1')
+      expect(auth.connectionLost).toBe(true)
+    })
+
+    it('leaves the first check unfinished, so the next attempt asks again', async () => {
+      get.mockRejectedValue(new TypeError('Failed to fetch'))
+      const auth = useAuthStore()
+
+      await auth.fetchMe()
+
+      expect(auth.initialized).toBe(false)
+      expect(auth.connectionLost).toBe(true)
+    })
+
+    it('clears the connection trouble when the next attempt succeeds', async () => {
+      const auth = useAuthStore()
+      get.mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(me)
+
+      await auth.fetchMe()
+      await auth.fetchMe()
+
+      expect(auth.connectionLost).toBe(false)
+      expect(auth.initialized).toBe(true)
+      expect(auth.user?.id).toBe('u1')
+    })
+  })
+
+  it('gives every reset its own empty permissions, not one shared object', () => {
+    const auth = useAuthStore()
+    auth.reset()
+    auth.permissions.ministries.m1 = ['members.manage']
+
+    auth.reset()
+
+    expect(auth.permissions.ministries).toEqual({})
+  })
+
   describe('forgetSession', () => {
     // pages/password-reset/[token].vue зовёт forgetSession() перед переходом
     // на /login, не зная, чья сессия была в этой вкладке — своя (сервер её

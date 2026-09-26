@@ -15,6 +15,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await auth.fetchMe()
   }
 
+  // Сервер не ответил, кто вошёл: вести на вход нельзя — человек, возможно,
+  // вошёл. Экран «Нет связи с сервером» (ConnectionGate.vue) закрывает
+  // приложение и повторяет проверку через этот же middleware.
+  if (!auth.initialized) return
+
   const authenticated = auth.user !== null
 
   if (!authenticated && !isPublicPath(to.path)) {

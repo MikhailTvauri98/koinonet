@@ -1,5 +1,6 @@
 import type { components } from '~~/types/api'
 import type { Permissions } from '~/composables/useCan'
+import { apiErrorStatus } from '~/utils/apiError'
 
 // Снимок вошедшего — тот же `MeResource`, что отдают вход, `/auth/me` и приём
 // приглашения; тип берётся из схемы, чтобы расхождение с сервером роняло
@@ -8,16 +9,25 @@ export type MeResponse = components['schemas']['MeResource']
 export type MeUser = MeResponse['user']
 export type MePerson = MeResponse['person']
 
-const emptyPermissions: Permissions = { administrator: false, global: [], ministries: {} }
+// Фабрика, а не общий объект: каждый сброс получает свои пустые права, и
+// правка словаря служений у одного снимка не протекает в следующий.
+function emptyPermissions(): Permissions {
+  return { administrator: false, global: [], ministries: {} }
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<MeUser | null>(null)
   const person = ref<MePerson | null>(null)
-  const permissions = ref<Permissions>({ ...emptyPermissions })
+  const permissions = ref<Permissions>(emptyPermissions())
   // Отличает "ещё не проверяли сессию после перезагрузки" от "проверили и
   // гостя": глобальный middleware дергает fetchMe один раз за загрузку
   // страницы, а не перед каждым переходом.
   const initialized = ref(false)
+  // Сервер не ответил на `/auth/me` (сеть, 5xx при выкладке): это не ответ
+  // «гость», поэтому сессия не сбрасывается, а экран показывает «Нет связи с
+  // сервером» с повтором (ConnectionGate.vue). Сбрасывает флаг любой ответ
+  // сервера о сессии: снимок вошедшего или 401.
+  const connectionLost = ref(false)
 
   // Публично: экран приглашения (`pages/invite/[token].vue`) принимает
   // `POST /access-links/{token}/accept`, который для kind=invite логинит
@@ -28,12 +38,14 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = me.user
     person.value = me.person
     permissions.value = me.permissions
+    connectionLost.value = false
   }
 
   function reset() {
     user.value = null
     person.value = null
-    permissions.value = { ...emptyPermissions }
+    permissions.value = emptyPermissions()
+    connectionLost.value = false
   }
 
   // Публично: экран сброса пароля (`pages/password-reset/[token].vue`) зовёт
@@ -71,17 +83,23 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchMe() {
     const api = useApi()
     try {
-      const me = await api.get<MeResponse>('/auth/me')
-      setMe(me)
-    } catch {
-      // Сервер остаётся единственным источником правды: любая неудача (401,
-      // сеть, что угодно) на этапе выяснения "кто вошёл" трактуется как
-      // "гость" — middleware решит, вести ли на /login.
-      reset()
-    } finally {
+      setMe(await api.get<MeResponse>('/auth/me'))
       initialized.value = true
+    } catch (error) {
+      if (apiErrorStatus(error) === 401) {
+        // Сервер ответил: сессии нет. Это гость — middleware решит, вести ли
+        // на /login.
+        reset()
+        initialized.value = true
+        return
+      }
+      // Ответа о сессии нет. Вошедший остаётся вошедшим со своими правами;
+      // первая проверка после загрузки остаётся незавершённой
+      // (`initialized` не меняется), и следующий переход или «Повторить»
+      // спросят сервер снова.
+      connectionLost.value = true
     }
   }
 
-  return { user, person, permissions, initialized, login, logout, fetchMe, reset, setMe, forgetSession }
+  return { user, person, permissions, initialized, connectionLost, login, logout, fetchMe, reset, setMe, forgetSession }
 })

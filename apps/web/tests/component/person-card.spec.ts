@@ -1,5 +1,6 @@
 // @vitest-environment nuxt
-import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { mountSuspended, mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime'
+import { createError } from 'h3'
 import { useRouter } from '#app'
 import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -301,8 +302,15 @@ describe('account actions', () => {
     auth.person = { id: 'p1', last_name: 'Прокопенко', first_name: 'Мария', patronymic: null, status: 'member' }
     auth.user = { id: 'u1', phone: null, email: 'maria@example.com' }
     auth.initialized = true
-    get.mockImplementation((path: string) => path === '/auth/me'
-      ? Promise.reject({ statusCode: 401 }) : Promise.resolve({ data: { ...card } }))
+    // Стор этого файла ходит за `/auth/me` настоящим `useApi`, мимо подменённого
+    // `get`, — поэтому ответ задан конечной точкой тестового сервера. Раньше
+    // тест проходил на любой ошибке: стор считал гостем любой сбой.
+    registerEndpoint('/api/v1/auth/me', {
+      method: 'GET',
+      handler: () => {
+        throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+      },
+    })
     const push = vi.spyOn(useRouter(), 'push').mockResolvedValue(undefined)
     const page = await mountPage()
     await page.get('[data-test="disable-account"]').trigger('click')
