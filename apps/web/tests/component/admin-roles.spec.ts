@@ -1,16 +1,15 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { flushPromises } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminRoles from '~/pages/admin/roles.vue'
+import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
 const post = vi.fn()
 const del = vi.fn()
-const permissions = { administrator: false, global: [] as string[], ministries: {} as Record<string, string[]> }
 
 mockNuxtImport('useApi', () => () => ({ get, post, delete: del }))
-mockNuxtImport('useCan', () => () => permissionChecker(permissions))
 
 const catalogue = [
   { key: 'people.view', scope: 'global', label: 'Видеть справочник', description: '...' },
@@ -21,9 +20,14 @@ const roles = [
   { id: 'r1', name: 'Пастор', scope: 'global', ministry_id: null, description: null, is_system: false, permissions: ['people.view'] },
 ]
 
+// Смонтированный экран прошлого теста живёт дальше и реагирует на права,
+// которые следующий тест пишет в тот же стор, — поэтому экраны снимаются
+// после каждого теста.
+enableAutoUnmount(afterEach)
+
 beforeEach(() => {
   [get, post, del].forEach(fn => fn.mockReset())
-  permissions.global = []
+  grantPermissions()
   get.mockImplementation((path: string) => Promise.resolve(
     path.startsWith('/permissions') ? { data: catalogue } : { data: roles },
   ))
@@ -38,7 +42,7 @@ describe('admin global roles page', () => {
   })
 
   it('lists global roles and opens the editor for a selected one with roles.manage_global', async () => {
-    permissions.global = ['roles.manage_global']
+    grantPermissions({ global: ['roles.manage_global'] })
 
     const page = await mountSuspended(AdminRoles)
     await flushPromises()
@@ -53,7 +57,7 @@ describe('admin global roles page', () => {
   })
 
   it('creates a global role from the create button and adds it to the list', async () => {
-    permissions.global = ['roles.manage_global']
+    grantPermissions({ global: ['roles.manage_global'] })
     post.mockResolvedValue({ data: { id: 'r2', name: 'Диакон', is_system: false, permissions: [] } })
 
     const page = await mountSuspended(AdminRoles)
@@ -71,7 +75,7 @@ describe('admin global roles page', () => {
   // Инвариант 6.3.1: интерфейс не должен предлагать снять права или удалить
   // системную роль, даже держателю roles.manage_global.
   it('does not offer to edit permissions or delete the system role', async () => {
-    permissions.global = ['roles.manage_global']
+    grantPermissions({ global: ['roles.manage_global'] })
 
     const page = await mountSuspended(AdminRoles)
     await flushPromises()

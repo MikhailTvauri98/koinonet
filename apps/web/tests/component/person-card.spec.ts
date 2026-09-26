@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PersonCard from '~/pages/people/[id].vue'
 import { useAuthStore } from '~/stores/auth'
 import type { Person } from '~/utils/people'
+import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
 const post = vi.fn()
@@ -22,7 +23,7 @@ let card: Person
 const roles = [{ id: 'r1', name: 'Читатель', scope: 'global', ministry_id: null, description: null, is_system: false, permissions: [] }]
 
 function permit(...keys: string[]) {
-  useAuthStore(pinia).permissions = { administrator: false, global: keys, ministries: {} }
+  grantPermissions({ global: keys }, pinia)
 }
 async function mountPage() {
   const page = await mountSuspended(PersonCard, { global: { plugins: [pinia] } })

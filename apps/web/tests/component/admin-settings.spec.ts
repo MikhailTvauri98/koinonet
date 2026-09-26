@@ -1,21 +1,25 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { flushPromises } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminSettings from '~/pages/admin/settings.vue'
+import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
 const put = vi.fn()
-const permissions = { administrator: false, global: [] as string[], ministries: {} as Record<string, string[]> }
 
 mockNuxtImport('useApi', () => () => ({ get, put }))
-mockNuxtImport('useCan', () => () => permissionChecker(permissions))
 
 const settings = { church_name: 'Дом хлеба', timezone: 'Europe/Moscow', phone_region: 'RU' }
 
+// Смонтированный экран прошлого теста живёт дальше и реагирует на права,
+// которые следующий тест пишет в тот же стор, — поэтому экраны снимаются
+// после каждого теста.
+enableAutoUnmount(afterEach)
+
 beforeEach(() => {
   [get, put].forEach(fn => fn.mockReset())
-  permissions.global = []
+  grantPermissions()
   get.mockResolvedValue({ data: { ...settings } })
   put.mockResolvedValue({ data: { ...settings } })
 })
@@ -30,7 +34,7 @@ describe('admin church settings page', () => {
   })
 
   it('loads the current name, timezone and phone region with settings.manage', async () => {
-    permissions.global = ['settings.manage']
+    grantPermissions({ global: ['settings.manage'] })
 
     const page = await mountSuspended(AdminSettings)
     await flushPromises()
@@ -41,7 +45,7 @@ describe('admin church settings page', () => {
   })
 
   it('saves the edited settings', async () => {
-    permissions.global = ['settings.manage']
+    grantPermissions({ global: ['settings.manage'] })
 
     const page = await mountSuspended(AdminSettings)
     await flushPromises()
@@ -60,7 +64,7 @@ describe('admin church settings page', () => {
   })
 
   it('shows a validation error next to the field', async () => {
-    permissions.global = ['settings.manage']
+    grantPermissions({ global: ['settings.manage'] })
     put.mockRejectedValue(Object.assign(new Error('failed'), {
       statusCode: 422,
       data: { message: 'Ошибка валидации.', errors: { timezone: ['Часовой пояс не найден.'] } },

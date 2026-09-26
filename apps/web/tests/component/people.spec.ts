@@ -5,7 +5,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { components, operations } from '~~/types/api'
 import PeopleIndex from '~/pages/people/index.vue'
-import { useAuthStore } from '~/stores/auth'
+import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
 const post = vi.fn()
@@ -37,7 +37,7 @@ async function mountPage() {
   return page
 }
 function permit(...keys: string[]) {
-  useAuthStore(testPinia).permissions = { administrator: false, global: keys, ministries: {} }
+  grantPermissions({ global: keys }, testPinia)
 }
 beforeEach(() => {
   testPinia = createPinia()

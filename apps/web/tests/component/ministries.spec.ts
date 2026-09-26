@@ -1,37 +1,36 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { flushPromises } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { reactive } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MembersTab from '~/pages/ministries/[id]/members.vue'
 import MinistryCard from '~/pages/ministries/[id]/index.vue'
 import RolesTab from '~/pages/ministries/[id]/roles.vue'
 import MinistriesList from '~/pages/ministries/index.vue'
 import type { Member, Ministry } from '~/utils/ministries'
+import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
 const post = vi.fn()
 const put = vi.fn()
 const patch = vi.fn()
 const del = vi.fn()
-// Дефект плана: `global: []` без аннотации типа выводится как `never[]`,
-// и позднейшее `permissions.global = ['ministries.create']` не проходит
-// typecheck — та же природа, что у `ministries: {} as Record<...>` рядом,
-// только про него в брифе не забыли.
-const permissions = { administrator: false, global: [] as string[], ministries: {} as Record<string, string[]> }
 // Реактивен (как в person-card.spec.ts), а не литерал брифа: тест на смену
 // служения посреди сессии (review round 2) должен суметь поменять
 // route.params.id у уже смонтированного компонента.
 const route = reactive({ params: { id: 'm1' } })
 
 mockNuxtImport('useApi', () => () => ({ get, post, put, patch, delete: del }))
-mockNuxtImport('useCan', () => () => permissionChecker(permissions))
 mockNuxtImport('useRoute', () => () => route)
+
+// Смонтированный экран прошлого теста живёт дальше и реагирует на права,
+// которые следующий тест пишет в тот же стор, — поэтому экраны снимаются
+// после каждого теста.
+enableAutoUnmount(afterEach)
 
 beforeEach(() => {
   [get, post, put, patch, del].forEach(fn => fn.mockReset())
-  permissions.global = []
-  permissions.ministries = {}
+  grantPermissions()
   route.params.id = 'm1'
 })
 
@@ -68,7 +67,7 @@ describe('ministry members tab', () => {
   })
 
   it('shows member actions with members.manage in that ministry', async () => {
-    permissions.ministries = { m1: ['members.manage'] }
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
     get.mockResolvedValue({ data: [member] })
 
     const page = await mountSuspended(MembersTab)
@@ -76,8 +75,23 @@ describe('ministry members tab', () => {
     expect(page.find('[data-test="add-member"]').exists()).toBe(true)
   })
 
+  it('hides member actions when members.manage is withdrawn mid-session', async () => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    mockMembersAndRoles([member])
+
+    const page = await mountSuspended(MembersTab)
+    await flushPromises()
+    expect(page.find('[data-test="add-member"]').exists()).toBe(true)
+
+    grantPermissions({ ministries: {} })
+    await flushPromises()
+
+    expect(page.find('[data-test="add-member"]').exists()).toBe(false)
+    expect(page.find('[data-test="remove-member"]').exists()).toBe(false)
+  })
+
   it('shows the default role on a freshly added member', async () => {
-    permissions.ministries = { m1: ['members.manage'] }
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
     // Дефект плана: исходный текст теста брифа кликал по
     // `person-option-p1` сразу после открытия диалога, не введя текст
     // поиска — диалог ищет по `GET /people?search=…` (см. "Фундамент" в
@@ -101,7 +115,7 @@ describe('ministry members tab', () => {
   })
 
   it('shows the domain error text when the last role is removed', async () => {
-    permissions.ministries = { m1: ['members.manage'] }
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
     mockMembersAndRoles([member])
     put.mockRejectedValue(Object.assign(new Error('failed'), {
       statusCode: 422,
@@ -121,7 +135,7 @@ describe('ministry members tab', () => {
   // ролей служения, а не из ролей уже загруженных участников. Роль, которую
   // пока никто не носит, должна быть предложена для выдачи.
   it('offers a role nobody currently holds for granting', async () => {
-    permissions.ministries = { m1: ['members.manage'] }
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
     mockMembersAndRoles([member], [
       { id: 'r-member', name: 'Участник' },
       { id: 'r-tech', name: 'Звукорежиссёр' },
@@ -152,7 +166,7 @@ describe('ministry members tab', () => {
   // пережить смену route.params.id, иначе найденный в старом служении
   // человек добавится уже в новое.
   it('closes the add dialog when the ministry changes, so a stale search result cannot be added to the new one', async () => {
-    permissions.ministries = { m1: ['members.manage'], m2: ['members.manage'] }
+    grantPermissions({ ministries: { m1: ['members.manage'], m2: ['members.manage'] } })
     get.mockImplementation((path: string) => Promise.resolve(
       path.endsWith('/roles') ? { data: [] }
         : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }] }
@@ -184,7 +198,7 @@ describe('ministry card', () => {
   })
 
   it('asks for confirmation before archiving', async () => {
-    permissions.global = ['ministries.create']
+    grantPermissions({ global: ['ministries.create'] })
     get.mockResolvedValue({ data: ministry })
 
     const page = await mountSuspended(MinistryCard)
@@ -205,7 +219,7 @@ describe('ministry card', () => {
   })
 
   it('edits the name and description with ministry.edit in that ministry', async () => {
-    permissions.ministries = { m1: ['ministry.edit'] }
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
     get.mockResolvedValue({ data: ministry })
     patch.mockResolvedValue({ data: { ...ministry, name: 'Прославление и музыка', description: 'Хвала Богу музыкой' } })
 
@@ -244,7 +258,7 @@ describe('ministry roles tab', () => {
   }
 
   it('shows a read-only list without roles.manage in that ministry', async () => {
-    permissions.ministries = { m1: ['members.manage'] }
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
     mockMinistryAndRoles()
 
     const page = await mountSuspended(RolesTab)
@@ -256,7 +270,7 @@ describe('ministry roles tab', () => {
   })
 
   it('creates a ministry role with roles.manage in that ministry', async () => {
-    permissions.ministries = { m1: ['roles.manage'] }
+    grantPermissions({ ministries: { m1: ['roles.manage'] } })
     mockMinistryAndRoles()
     post.mockResolvedValue({ data: { id: 'r-new', name: 'Диакон', is_system: false, permissions: [] } })
 
@@ -277,7 +291,7 @@ describe('ministry roles tab', () => {
   // эндпоинт ролей — тот же PATCH, что и у названия/описания служения
   // (docs/architecture.md 6.1, 6.3.4).
   it('sets a new default role from the roles tab', async () => {
-    permissions.ministries = { m1: ['roles.manage'] }
+    grantPermissions({ ministries: { m1: ['roles.manage'] } })
     mockMinistryAndRoles('r-member')
     patch.mockResolvedValue({ data: { ...ministry, default_role_id: 'r-tech' } })
 
@@ -312,13 +326,13 @@ describe('ministries list', () => {
     const withoutRight = await mountSuspended(MinistriesList)
     expect(withoutRight.find('[data-test="create-ministry"]').exists()).toBe(false)
 
-    permissions.global = ['ministries.create']
+    grantPermissions({ global: ['ministries.create'] })
     const withRight = await mountSuspended(MinistriesList)
     expect(withRight.find('[data-test="create-ministry"]').exists()).toBe(true)
   })
 
   it('creates a ministry and refreshes the list', async () => {
-    permissions.global = ['ministries.create']
+    grantPermissions({ global: ['ministries.create'] })
     get.mockResolvedValue({ data: [] })
     post.mockResolvedValue({ data: { id: 'm3', name: 'Молодёжное', description: null, cover_url: null, default_role_id: 'r3' } })
 

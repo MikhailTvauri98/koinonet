@@ -1,44 +1,43 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppNav from '~/components/AppNav.vue'
 import DevicesPage from '~/pages/settings/devices.vue'
 import LoginSettingsPage from '~/pages/settings/login.vue'
 import MediaUploader from '~/components/MediaUploader.vue'
 import ProfilePage from '~/pages/settings/profile.vue'
+import type { MeResponse } from '~/stores/auth'
+import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
 const post = vi.fn()
 const put = vi.fn()
 const patch = vi.fn()
 const del = vi.fn()
-const permissions = { administrator: false, global: [] as string[], ministries: {} }
 
 mockNuxtImport('useApi', () => () => ({ get, post, put, patch, delete: del }))
-mockNuxtImport('useCan', () => () => permissionChecker(permissions))
-// Тот же приём, что в login.spec.ts/invite.spec.ts: mockNuxtImport подменяет
-// useRouter везде в модульном графе файла, включая служебный код
-// @nuxt/test-utils (afterEach/replace) и плагин навигации (beforeResolve) —
-// без заглушек рядом с push они падают на голом `{ push }`.
-mockNuxtImport('useRouter', () => () => ({
-  push: () => {},
-  replace: () => {},
-  afterEach: () => {},
-  beforeResolve: () => {},
-}))
+
+const me: MeResponse = {
+  user: { id: 'u1', phone: null, email: 'maria@example.com' },
+  person: { id: 'p1', last_name: 'Прокопенко', first_name: 'Мария', patronymic: null, status: 'member' },
+  permissions: { administrator: false, global: [], ministries: {} },
+}
+
+// Смонтированный экран прошлого теста живёт дальше и реагирует на права,
+// которые следующий тест пишет в тот же стор, — поэтому экраны снимаются
+// после каждого теста.
+enableAutoUnmount(afterEach)
 
 beforeEach(() => {
   [get, post, put, patch, del].forEach(fn => fn.mockReset())
-  permissions.global = []
-  // Дефект плана: бриф не заводит Pinia, но `AppNav` зовёт настоящий
-  // `useHasVisibleMinistries()` (useCan.ts), а он — настоящий
-  // `useAuthStore()`, а не замоканный `useCan()` из этого файла (то же
-  // самое затрагивает fetchMe() у settings/profile.vue и settings/login.vue
-  // после успешной записи) — без активной Pinia он падает на
-  // "getActivePinia() was called but there was no active Pinia", как и в
-  // person-card.spec.ts.
-  setActivePinia(createPinia())
+  grantPermissions()
+})
+
+// Упавшее ожидание в тесте с поддельными таймерами не должно оставить их
+// следующим тестам.
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('login settings', () => {
@@ -72,7 +71,11 @@ describe('login settings', () => {
 
 describe('profile', () => {
   it('sends the contacts_public toggle', async () => {
-    get.mockResolvedValue({ data: { contacts: { phone: null, email: null, birth_date: null }, contacts_public: false } })
+    // После записи экран перечитывает и профиль, и `/auth/me` — у каждого
+    // свой ответ, иначе стор получил бы профиль вместо снимка вошедшего.
+    get.mockImplementation((path: string) => Promise.resolve(path === '/auth/me'
+      ? me
+      : { data: { contacts: { phone: null, email: null, birth_date: null }, contacts_public: false } }))
     patch.mockResolvedValue({ data: {} })
 
     const page = await mountSuspended(ProfilePage)
@@ -139,7 +142,7 @@ describe('navigation', () => {
   })
 
   it('shows the admin section with audit.view', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
 
     const nav = await mountSuspended(AppNav)
 

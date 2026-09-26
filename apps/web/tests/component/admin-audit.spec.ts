@@ -1,14 +1,13 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { flushPromises } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminAudit from '~/pages/admin/audit.vue'
+import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
-const permissions = { administrator: false, global: [] as string[], ministries: {} as Record<string, string[]> }
 
 mockNuxtImport('useApi', () => () => ({ get }))
-mockNuxtImport('useCan', () => () => permissionChecker(permissions))
 
 function entry(overrides: Record<string, unknown> = {}) {
   return {
@@ -24,9 +23,14 @@ function entry(overrides: Record<string, unknown> = {}) {
   }
 }
 
+// Смонтированный экран прошлого теста живёт дальше и реагирует на права,
+// которые следующий тест пишет в тот же стор, — поэтому экраны снимаются
+// после каждого теста.
+enableAutoUnmount(afterEach)
+
 beforeEach(() => {
   get.mockReset()
-  permissions.global = []
+  grantPermissions()
   // Часовой пояс церкви (`GET /settings`) — отдельный запрос от `GET /audit`;
   // различаем по началу пути, как ministries.spec.ts различает состав и
   // каталог ролей за одним замоканным `get`.
@@ -46,7 +50,7 @@ describe('admin audit page', () => {
   })
 
   it('shows entries with audit.view', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
 
     const page = await mountSuspended(AdminAudit)
     await flushPromises()
@@ -56,7 +60,7 @@ describe('admin audit page', () => {
   })
 
   it('loads the next page with the cursor from next_cursor', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
     get.mockImplementation((path: string) => {
       if (path.startsWith('/settings')) return Promise.resolve({ data: { church_name: 'Дом хлеба', timezone: 'Europe/Moscow' } })
       if (path.includes('cursor=next-page')) return Promise.resolve({ data: [entry({ id: 'a2', action: 'role.created' })], next_cursor: null })
@@ -79,7 +83,7 @@ describe('admin audit page', () => {
   })
 
   it('filters by action', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
 
     const page = await mountSuspended(AdminAudit)
     await flushPromises()
@@ -93,7 +97,7 @@ describe('admin audit page', () => {
   })
 
   it('sets the actor filter by clicking the actor in a row and can clear it', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
 
     const page = await mountSuspended(AdminAudit)
     await flushPromises()
@@ -115,7 +119,7 @@ describe('admin audit page', () => {
   })
 
   it('sets the subject filter by clicking the subject in a row', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
 
     const page = await mountSuspended(AdminAudit)
     await flushPromises()
@@ -130,7 +134,7 @@ describe('admin audit page', () => {
   })
 
   it('converts the period filter to church-timezone day boundaries, not the machine one', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
 
     const page = await mountSuspended(AdminAudit)
     await flushPromises()
@@ -147,7 +151,7 @@ describe('admin audit page', () => {
   })
 
   it('ignores a stale response after the filter changed again before it resolved', async () => {
-    permissions.global = ['audit.view']
+    grantPermissions({ global: ['audit.view'] })
     const page = await mountSuspended(AdminAudit)
     await flushPromises()
 
