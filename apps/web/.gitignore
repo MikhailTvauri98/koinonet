@@ -22,3 +22,9 @@ logs
 .env
 .env.*
 !.env.example
+
+# Playwright (npm run e2e): отчёт, трассировки падений, журналы API
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

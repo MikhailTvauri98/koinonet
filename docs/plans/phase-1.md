@@ -5700,7 +5700,7 @@ git add apps/web && git commit -m "feat(web): pwa manifest and install prompt"
 **Интерфейсы:**
 - Отдаёт наружу: `npm run e2e` — поднимает API через `php artisan serve` на тестовой базе, выполняет `app:install` с фиксированными опциями, запускает Nuxt в режиме предпросмотра и гоняет сценарии.
 
-- [ ] **Шаг 1: Написать сценарии**
+- [x] **Шаг 1: Написать сценарии**
 
 `e2e/onboarding.spec.ts`:
 
@@ -5782,7 +5782,7 @@ test('a leader manages members of their own ministry only', async ({ page, brows
 
 `e2e/fixtures.ts` содержит `login(page, login, password)` и `createInvitedAccount(adminPage, browser, person)` — последняя создаёт человека, выдаёт ему глобальную роль, берёт ссылку приглашения и принимает её в отдельном контексте браузера, возвращая страницу вошедшего человека.
 
-- [ ] **Шаг 2: Запустить сценарии, убедиться что падают или проходят честно**
+- [x] **Шаг 2: Запустить сценарии, убедиться что падают или проходят честно**
 
 Выполнить: `npm run e2e`
 Ожидается: сценарии проходят на собранном приложении; каждый упавший шаг — настоящий дефект интерфейса, а не «подождать подольше».
@@ -5791,7 +5791,7 @@ test('a leader manages members of their own ministry only', async ({ page, brows
 
 Запускается после `api` и `web`, на тех же сервисах Postgres и Redis, с артефактом-трассировкой при падении.
 
-- [ ] **Шаг 4: Коммит**
+- [x] **Шаг 4: Коммит**
 
 ```bash
 git add apps/web .github && git commit -m "test(web): end-to-end onboarding and ministry scenarios"

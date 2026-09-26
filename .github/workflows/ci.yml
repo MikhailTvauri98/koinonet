@@ -93,3 +93,80 @@ jobs:
       - run: npm run generate
       - name: Service worker survives execution (see task 31 review)
         run: npm run verify-sw
+
+  # Сквозные сценарии Playwright (apps/web/e2e). Та же команда `npm run e2e`,
+  # что и локально; различие окружений — только E2E_API_RUNTIME (см.
+  # apps/web/e2e/environment.ts): здесь PHP стоит на раннере, а Postgres и
+  # Redis — сервисы задания, как в задании api.
+  e2e:
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_USER: church
+          # Прикладной базы здесь нет: `church_e2e` создаёт подготовка
+          # сквозных тестов (migrate:fresh), как и локально.
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    env:
+      E2E_API_RUNTIME: native
+      # Подключение для процессов API; базу и номера баз Redis сквозных
+      # тестов задаёт сама их конфигурация (apps/web/e2e/environment.ts).
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USERNAME: church
+      DB_PASSWORD: secret
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, redis, intl, imagick, bcmath, zip, exif, gd
+      - run: composer install --no-interaction --prefer-dist
+        working-directory: apps/api
+      - run: cp .env.example .env && php artisan key:generate
+        working-directory: apps/api
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      # Только Chromium и его системные зависимости, не весь набор браузеров.
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run e2e
+        working-directory: apps/web
+      - name: Traces, screenshots and API logs of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure
+          path: |
+            apps/web/test-results/
+            apps/web/playwright-report/
+          if-no-files-found: ignore
