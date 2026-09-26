@@ -215,11 +215,12 @@ docker compose -f compose.prod.yml exec app php artisan app:install
 4. `curl -sI https://<домен>/sw.js` и `curl -sI https://<домен>/manifest.webmanifest` → `Cache-Control: no-cache`. Любой файл `/_nuxt/<хеш>.js` из исходника главной страницы → `Cache-Control: max-age=31536000`.
 5. `curl -sI https://<домен>/sanctum/csrf-cookie` → `204`, `Set-Cookie: XSRF-TOKEN=…; secure`.
 6. `curl -sI https://<домен>/_protected/x` и `curl -sI https://<домен>/index.php` → `404`.
-7. `docker compose -f compose.prod.yml ps` → `web`, `app`, `worker`, `scheduler`, `postgres`, `redis`, `certbot` запущены; `web`, `app`, `postgres` и `redis` в состоянии `healthy`.
-8. `docker compose -f compose.prod.yml exec worker php artisan horizon:status` → `Horizon is running`; `docker compose -f compose.prod.yml exec scheduler php artisan schedule:list` показывает `media:prune`. После деплоя `docker compose -f compose.prod.yml ps worker` показывает, что контейнер запущен секунды назад: Horizon перезапущен на новом образе.
-9. Проверка продления сертификата из шага 5 проходит.
-10. С телефона: администратор входит, ставит PWA на домашний экран, загружает своё фото в профиле, и фото показывается. Фото отдаёт nginx по `X-Accel-Redirect`, так что это проверка тома медиафайлов и подписанных ссылок.
-11. Следующий пуш в `main`: в запуске `deploy` сначала проходят `ci / api`, `ci / web`, `ci / e2e`, затем выкладка. `health` отвечает, `grep ^TAG= /srv/church/.env` показывает новый коммит, `docker image ls "$(sed -n 's/^IMAGE_PREFIX=//p' .env)/app"` — два образа: новый и предыдущий.
+7. `curl -sI https://<домен>/` и `curl -sI https://<домен>/api/v1/health` → в обоих ответах по одному разу `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`, `Referrer-Policy: strict-origin-when-cross-origin`.
+8. `docker compose -f compose.prod.yml ps` → `web`, `app`, `worker`, `scheduler`, `postgres`, `redis`, `certbot` запущены; `web`, `app`, `postgres` и `redis` в состоянии `healthy`.
+9. `docker compose -f compose.prod.yml exec worker php artisan horizon:status` → `Horizon is running`; `docker compose -f compose.prod.yml exec scheduler php artisan schedule:list` показывает `media:prune`. После деплоя `docker compose -f compose.prod.yml ps worker` показывает, что контейнер запущен секунды назад: Horizon перезапущен на новом образе.
+10. Проверка продления сертификата из шага 5 проходит.
+11. С телефона: администратор входит, ставит PWA на домашний экран, загружает своё фото в профиле, и фото показывается. Фото отдаёт nginx по `X-Accel-Redirect`, так что это проверка тома медиафайлов и подписанных ссылок, а заодно и `Referrer-Policy` из пункта 7: запрос `<img>` Sanctum узнаёт по `Referer`, без него фото ответило бы `401`.
+12. Следующий пуш в `main`: в запуске `deploy` сначала проходят `ci / api`, `ci / web`, `ci / e2e`, затем выкладка. `health` отвечает, `grep ^TAG= /srv/church/.env` показывает новый коммит, `docker image ls "$(sed -n 's/^IMAGE_PREFIX=//p' .env)/app"` — два образа: новый и предыдущий.
 
 ## Откат
 
