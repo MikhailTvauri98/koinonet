@@ -12,7 +12,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Storage::fake('media');
-    // An image upload queues ProcessUploadedImage (task 21). Faked here so
+    // An image upload queues ProcessUploadedImage. Faked here so
     // these tests observe the upload's own immediate result - `processing`,
     // not whatever the sync test queue turns it into a moment later. The
     // job itself is exercised in ImageProcessingTest.php.

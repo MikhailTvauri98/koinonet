@@ -70,12 +70,11 @@ final class MinistryController
         /** @var array{name?: string, description?: string|null, default_role_id?: string} $validated */
         $validated = $request->validated();
 
-        // Каждое поле требует своего права (задача 29, доделка задачи 18):
-        // название и описание — ministry.edit, роль по умолчанию —
-        // roles.manage (docs/architecture.md 6.1). Запрос с обоими типами
-        // полей требует оба права, а не хотя бы одно; пустой запрос (ни
-        // одного из полей) по-прежнему требует ministry.edit — то же
-        // поведение, что было у этого маршрута раньше.
+        // Каждое поле требует своего права: название и описание —
+        // ministry.edit, роль по умолчанию — roles.manage
+        // (docs/architecture.md 6.1). Запрос с обоими типами полей требует
+        // оба права, а не хотя бы одно; пустой запрос (ни одного из полей)
+        // требует ministry.edit.
         $touchesGeneralFields = array_key_exists('name', $validated) || array_key_exists('description', $validated);
         $touchesDefaultRole = array_key_exists('default_role_id', $validated);
 

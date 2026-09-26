@@ -10,16 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The "read" half of `PATCH /me/profile` (task 30, brief defect: the plan's
- * `settings/profile.vue` needs to load what it edits, but no endpoint
- * returned it - `GET /people/{id}` comes closest, yet it never exposes
- * `contacts_public`, the very flag this screen toggles - see PersonResource
- * for the visibility rules that field would otherwise have to earn). Own
- * profile is always readable without any permission (architecture 6.1's
- * "Всегда доступно без прав" list), so this resource skips every visibility
- * check PersonResource carries for viewing *someone else's* card - there is
- * no "someone else" here, `$request->user()->person` is always the caller's
- * own record.
+ * The "read" half of `PATCH /me/profile`: what the profile screen edits.
+ * `GET /people/{id}` does not fit, since it never exposes `contacts_public`,
+ * the very flag this screen toggles (see PersonResource for the visibility
+ * rules that field would otherwise have to earn). Own profile is always
+ * readable without any permission (architecture 6.1's "Всегда доступно без
+ * прав" list), so this resource skips every visibility check PersonResource
+ * carries for viewing *someone else's* card - there is no "someone else"
+ * here, `$request->user()->person` is always the caller's own record.
  *
  * @mixin Person
  */

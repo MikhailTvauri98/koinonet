@@ -11,16 +11,14 @@ use App\Modules\Media\Models\Media;
 use Illuminate\Http\Request;
 
 /**
- * Task 30 brief defect: `MediaUploader` (client) is meant to poll a file's
- * processing status once a second until it turns `ready` - but the only
- * `GET /media/{media}` route in the plan is the signed delivery from task 22
- * ({@see MediaDownloadController}), which answers with bytes behind
+ * A file's processing status as JSON, for `MediaUploader` (client) to poll
+ * once a second until it turns `ready`. `GET /media/{media}` is the signed
+ * delivery ({@see MediaDownloadController}), which answers with bytes behind
  * `X-Accel-Redirect`, not JSON, and 403s outright without a valid signature.
- * This is the JSON counterpart the plan never listed: same {@see MediaResource}
- * `POST /media` already returns, on its own path so it never competes with
- * the signed route, reachable by session instead of signature (the client
- * polls it long before it has any signed link to show - `url` only appears
- * once a variant exists).
+ * This returns the same {@see MediaResource} `POST /media` already returns,
+ * on its own path so it never competes with the signed route, reachable by
+ * session instead of signature (the client polls it before it has any signed
+ * link to show - `url` only appears once a variant exists).
  *
  * Deliberately mirrors {@see MediaDownloadController}'s route-model-binding
  * choice and its reasoning: `{media}` arrives as a plain string, looked up

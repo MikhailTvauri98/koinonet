@@ -75,11 +75,11 @@ it('refuses a default role from another ministry', function () {
         ->assertStatus(422)->assertJsonPath('code', 'role.default_from_other_ministry');
 });
 
-// Задача 29 (доделка, дефект задачи 18): docs/architecture.md 6.1 закрепляет
-// выбор роли по умолчанию за roles.manage, но PATCH /ministries/{id}
-// проверял ministry.edit для всех своих полей без разбора. MinistryPolicy::
-// changeDefaultRole и разбор полей в MinistryController::update теперь
-// требуют право по каждому полю отдельно.
+// docs/architecture.md 6.1 закрепляет выбор роли по умолчанию за
+// roles.manage, а название и описание — за ministry.edit: PATCH
+// /ministries/{id} требует право по каждому пришедшему полю отдельно
+// (MinistryPolicy::changeDefaultRole и разбор полей в
+// MinistryController::update).
 it('changes the default role with roles.manage but without ministry.edit', function () {
     $ministry = ministryWithRoles();
     $user = actingAsUser();
@@ -180,7 +180,7 @@ it('denies listing ministry roles without roles.manage in that ministry', functi
     $this->getJson("/api/v1/ministries/{$ministry->id}/roles")->assertForbidden();
 });
 
-// Task 28 follow-up: granting a ministry role is `members.manage` territory
+// Granting a ministry role is `members.manage` territory
 // (architecture 6.1), so seeing the catalogue to grant from is too -
 // `roles.manage` (create/edit/delete the roles themselves) stays a stronger,
 // separate permission (see RolePolicy::viewAny).

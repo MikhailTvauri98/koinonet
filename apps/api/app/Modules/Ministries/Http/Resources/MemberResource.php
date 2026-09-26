@@ -38,9 +38,8 @@ final class MemberResource extends JsonResource
         // 6.4: "список и базовая карточка: people.view", own exempted). A
         // fellow member without `people.view` sees the row but not the name
         // or the photo behind it - the same `PersonPolicy::view` check
-        // `MediaAccess` already uses for the person's own card and photo
-        // elsewhere (review round 2, task 28: `full_name` had skipped this
-        // check that `photo_url` right below it already had).
+        // `MediaAccess` uses for the person's own card and photo elsewhere,
+        // applied to `full_name` and `photo_url` alike.
         $canViewPerson = Gate::forUser($viewer)->allows('view', $member->person);
 
         return [

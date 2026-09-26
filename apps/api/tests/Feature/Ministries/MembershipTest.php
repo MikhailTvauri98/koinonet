@@ -161,8 +161,8 @@ it('removes a member', function () {
     expect($ministry->members()->count())->toBe(0);
 });
 
-// Review round 2 (task 28): `full_name` follows the same gate as `photo_url`
-// right below it (architecture 6.4: "список и базовая карточка: people.view",
+// `full_name` follows the same gate as `photo_url`
+// (architecture 6.4: "список и базовая карточка: people.view",
 // own exempted) - a fellow member without `people.view` sees the roster row
 // but not the name or photo behind it.
 it('includes a members full name in the roster for a viewer who can see that person', function () {

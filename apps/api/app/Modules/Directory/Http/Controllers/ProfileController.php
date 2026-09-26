@@ -23,10 +23,8 @@ use Illuminate\Http\Request;
 final class ProfileController
 {
     /**
-     * Task 30 addition (brief defect, see {@see MyProfileResource}): the
-     * plan never listed a "read" counterpart to `update` below, but
-     * `settings/profile.vue` has to load the contacts and the
-     * `contacts_public` flag it edits from somewhere.
+     * The caller's own contacts and `contacts_public` flag: what the profile
+     * screen edits through `PATCH /me/profile`.
      */
     public function show(Request $request): MyProfileResource
     {

@@ -19,13 +19,11 @@ final class SettingsResource extends JsonResource
     }
 
     /**
-     * Architecture 8 lists `GET /settings` as returning only "the public
-     * part": name and timezone. `phone_region` is written through
-     * `PUT /settings` behind `settings.manage` (SettingsPolicy::update) but
-     * was never readable at all - task 30's `admin/settings.vue` needs to
-     * show the current value before letting its holder change it, so the
-     * non-public part is exposed here to whoever can write it, using the
-     * same gate as the write side.
+     * The public part - name and timezone - for every account (architecture
+     * 8). `phone_region` is added for whoever may change it through
+     * `PUT /settings` (`settings.manage`, the same SettingsPolicy::update
+     * gate as the write side), so the settings screen can show the current
+     * value before it is changed.
      *
      * @return array{church_name: string, timezone: string, phone_region?: string}
      */

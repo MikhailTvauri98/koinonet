@@ -2386,7 +2386,7 @@
         "/me/profile": {
             "get": {
                 "operationId": "profile.show",
-                "summary": "Task 30 addition (brief defect, see {@see MyProfileResource}): the\nplan never listed a \"read\" counterpart to `update` below, but\n`settings/profile.vue` has to load the contacts and the\n`contacts_public` flag it edits from somewhere",
+                "summary": "The caller's own contacts and `contacts_public` flag: what the profile\nscreen edits through `PATCH /me/profile`",
                 "tags": [
                     "Profile"
                 ],
@@ -3365,7 +3365,7 @@
                             "string",
                             "null"
                         ],
-                        "description": "`large` (1080px), not `thumb` (320px, architecture 7.8 defines\nboth sizes but not which screen uses which): unlike a\nperson's photo or a member row's avatar, a ministry cover is\nshown banner-style at close to full card width (task 28), and\na 320px source would visibly blur stretched that wide."
+                        "description": "`large` (1080px), not `thumb` (320px, architecture 7.8 defines\nboth sizes but not which screen uses which): unlike a\nperson's photo or a member row's avatar, a ministry cover is\nshown banner-style at close to full card width, and\na 320px source would visibly blur stretched that wide."
                     },
                     "default_role_id": {
                         "type": [

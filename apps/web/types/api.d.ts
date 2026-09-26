@@ -514,10 +514,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Task 30 addition (brief defect, see {@see MyProfileResource}): the
-         *     plan never listed a "read" counterpart to `update` below, but
-         *     `settings/profile.vue` has to load the contacts and the
-         *     `contacts_public` flag it edits from somewhere
+         * The caller's own contacts and `contacts_public` flag: what the profile
+         *     screen edits through `PATCH /me/profile`
          */
         get: operations["profile.show"];
         put?: never;
@@ -779,7 +777,7 @@ export interface components {
              * @description `large` (1080px), not `thumb` (320px, architecture 7.8 defines
              *     both sizes but not which screen uses which): unlike a
              *     person's photo or a member row's avatar, a ministry cover is
-             *     shown banner-style at close to full card width (task 28), and
+             *     shown banner-style at close to full card width, and
              *     a 320px source would visibly blur stretched that wide.
              */
             cover_url: string | null;

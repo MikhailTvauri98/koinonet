@@ -12,10 +12,7 @@ use Illuminate\Support\Facades\URL;
 /** @mixin Media */
 final class MediaResource extends JsonResource
 {
-    /**
-     * The lifetime of `url` and `thumb_url` (architecture 7.8): 60 minutes,
-     * matching the plan's global limit on signed media links.
-     */
+    /** The lifetime of `url` and `thumb_url`: 60 minutes (architecture 7.8). */
     private const SIGNATURE_LIFETIME_MINUTES = 60;
 
     /**

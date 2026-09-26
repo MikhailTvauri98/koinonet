@@ -47,7 +47,7 @@ return new class extends Migration
         });
 
         // Direct references: person photo and ministry cover (section 5.8).
-        // Created here because the media table appears here; task 23 fills them in.
+        // Created here because the media table they point at appears here.
         Schema::table('people', function (Blueprint $table): void {
             $table->char('photo_media_id', 26)->nullable();
             $table->foreign('photo_media_id')->references('id')->on('media')->restrictOnDelete();

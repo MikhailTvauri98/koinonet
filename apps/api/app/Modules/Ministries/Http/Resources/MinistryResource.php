@@ -34,7 +34,7 @@ final class MinistryResource extends JsonResource
             // `large` (1080px), not `thumb` (320px, architecture 7.8 defines
             // both sizes but not which screen uses which): unlike a
             // person's photo or a member row's avatar, a ministry cover is
-            // shown banner-style at close to full card width (task 28), and
+            // shown banner-style at close to full card width, and
             // a 320px source would visibly blur stretched that wide.
             'cover_url' => SignedMediaUrl::variant($ministry->cover, 'large'),
             'default_role_id' => $ministry->default_role_id,
