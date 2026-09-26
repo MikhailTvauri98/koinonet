@@ -2,6 +2,7 @@
 import type { components } from '~~/types/api'
 import MediaUploader from '~/components/MediaUploader.vue'
 import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
+import type { Person } from '~/utils/people'
 
 // «Профиль» правит контакты человека и не содержит полей логина — логин и
 // пароль меняются на отдельном экране «Вход» (settings/login.vue), так
@@ -72,8 +73,10 @@ async function submit() {
   }
 }
 
-function onPhotoUploaded(newPhotoUrl: string | null) {
-  photoUrl.value = newPhotoUrl
+// `PUT /me/photo` отвечает карточкой человека — из неё нужен только новый
+// адрес фото.
+function onPhotoAttached(person: Person) {
+  photoUrl.value = person.photo_url
 }
 
 const loggingOut = ref(false)
@@ -114,7 +117,7 @@ await load()
     <template v-else>
       <section class="profile-page__photo">
         <img v-if="photoUrl" :src="photoUrl" alt="Моё фото" width="96" height="96" data-test="photo">
-        <MediaUploader purpose="person_photo" target="/me/photo" @uploaded="onPhotoUploaded" />
+        <MediaUploader purpose="person_photo" target="/me/photo" label="Выбрать фото" @attached="onPhotoAttached" />
       </section>
       <form @submit.prevent="submit">
         <label>

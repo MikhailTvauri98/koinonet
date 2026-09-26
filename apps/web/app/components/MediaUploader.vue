@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import type { MediaLike, MediaPurpose } from '~/utils/media'
+<script setup lang="ts" generic="P extends DirectLinkPurpose">
+import type { DirectLinkPurpose, DirectLinkResources, MediaLike } from '~/utils/media'
 import { apiErrorMessage } from '~/utils/apiError'
 
 // Опрос статуса раз в секунду, всего не дольше 15 секунд (docs/architecture.md,
@@ -9,16 +9,23 @@ import { apiErrorMessage } from '~/utils/apiError'
 const POLL_INTERVAL_MS = 1000
 const POLL_TIMEOUT_MS = 15_000
 
+// Один загрузчик на все прямые ссылки на медиафайл (фото человека, обложка
+// служения): загрузить → дождаться `ready` → `PUT target { media_id }`. Ответ
+// цели — обновлённый ресурс, его тип следует из назначения файла
+// (`DirectLinkResources`); экран сам решает, что из него взять, не
+// перечитывая себя целиком.
 const props = defineProps<{
-  purpose: MediaPurpose
+  purpose: P
+  // Эндпоинт привязки, принимающий `{ media_id }`.
   target: string
+  // Подпись кнопки выбора файла: «Выбрать фото», «Изменить обложку».
+  label: string
+  disabled?: boolean
+  // Почему выбор файла недоступен — подсказка на выключенной кнопке.
+  disabledReason?: string
 }>()
 const emit = defineEmits<{
-  // photo_url из ответа `target` (PersonResource у `/me/photo` и `/people/{id}/photo`,
-  // где формат совпадает — раздел 6.4: "фото человека тем, у кого people.view"):
-  // компонент-потребитель сам решает, что делать с новым адресом фото, не
-  // перечитывая профиль целиком.
-  uploaded: [photoUrl: string | null]
+  attached: [resource: DirectLinkResources[P]]
 }>()
 
 type Phase = 'idle' | 'uploading' | 'processing' | 'attaching' | 'failed'
@@ -53,11 +60,11 @@ async function attach(token: number, mediaId: string) {
   stopTimers()
   phase.value = 'attaching'
   try {
-    const response = await api.put<{ data: { photo_url?: string | null } }>(props.target, { media_id: mediaId })
+    const response = await api.put<{ data: DirectLinkResources[P] }>(props.target, { media_id: mediaId })
     if (token !== run) return
     phase.value = 'idle'
     errorMessage.value = ''
-    emit('uploaded', response.data.photo_url ?? null)
+    emit('attached', response.data)
   } catch (error) {
     fail(token, apiErrorMessage(error, 'Не удалось сохранить файл. Попробуйте ещё раз.'))
   }
@@ -125,7 +132,7 @@ const busy = computed(() => phase.value === 'uploading' || phase.value === 'proc
 const statusLabel = computed(() => {
   if (phase.value === 'processing') return 'Обрабатывается…'
   if (phase.value === 'uploading' || phase.value === 'attaching') return 'Загружается…'
-  return 'Выбрать фото'
+  return props.label
 })
 
 onBeforeUnmount(() => {
@@ -133,15 +140,18 @@ onBeforeUnmount(() => {
   stopTimers()
 })
 
-// Тест компонента (tests/component/profile.spec.ts) вызывает загрузку
-// напрямую через `uploader.vm.upload(file)`, минуя `<input type="file">`.
+// Тесты компонента вызывают загрузку напрямую через `uploader.vm.upload(file)`,
+// минуя `<input type="file">`.
 defineExpose({ upload })
 </script>
 
 <template>
   <div class="media-uploader">
-    <label class="media-uploader__button">
-      <input type="file" accept="image/*" data-test="file-input" :disabled="busy" @change="onFileChange">
+    <label
+      class="media-uploader__button" :class="{ 'media-uploader__button--disabled': busy || disabled }"
+      :title="disabled ? disabledReason : undefined"
+    >
+      <input type="file" accept="image/*" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
       <span>{{ statusLabel }}</span>
     </label>
     <p v-if="errorMessage" role="alert" data-test="media-error">{{ errorMessage }}</p>
@@ -156,6 +166,7 @@ defineExpose({ upload })
   border-radius: 0.4rem;
   cursor: pointer;
 }
+.media-uploader__button--disabled { opacity: 0.6; cursor: default; }
 .media-uploader__button input { display: none; }
 [role='alert'] { color: #a32020; }
 </style>

@@ -7,6 +7,7 @@ import MembersTab from '~/pages/ministries/[id]/members.vue'
 import MinistryCard from '~/pages/ministries/[id]/index.vue'
 import RolesTab from '~/pages/ministries/[id]/roles.vue'
 import MinistriesList from '~/pages/ministries/index.vue'
+import MediaUploader from '~/components/MediaUploader.vue'
 import type { Member, Ministry } from '~/utils/ministries'
 import { grantPermissions } from '../support/permissions'
 
@@ -27,6 +28,10 @@ mockNuxtImport('useRoute', () => () => route)
 // которые следующий тест пишет в тот же стор, — поэтому экраны снимаются
 // после каждого теста.
 enableAutoUnmount(afterEach)
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 beforeEach(() => {
   [get, post, put, patch, del].forEach(fn => fn.mockReset())
@@ -205,7 +210,42 @@ describe('ministry card', () => {
 
     const page = await mountSuspended(MinistryCard)
 
-    expect(page.find('[data-test="change-cover"]').exists()).toBe(false)
+    expect(page.findComponent(MediaUploader).exists()).toBe(false)
+    expect(page.text()).not.toContain('Изменить обложку')
+  })
+
+  // Обложка идёт через тот же загрузчик, что и фото: привязать можно только
+  // обработанный файл (иначе сервер отвечает media.not_ready).
+  it('sets the cover only after the file is processed, then shows the new cover', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    get.mockImplementation((path: string) => Promise.resolve(path === '/media/md1/status'
+      ? { data: { id: 'md1', kind: 'image', status: 'ready', url: '/media/md1', thumb_url: null } }
+      : { data: ministry }))
+    post.mockResolvedValue({ data: { id: 'md1', kind: 'image', status: 'processing', url: '/media/md1', thumb_url: null } })
+    put.mockResolvedValue({ data: { ...ministry, cover_url: 'https://church.test/cover.webp' } })
+
+    const page = await mountSuspended(MinistryCard)
+    const uploader = page.findComponent(MediaUploader)
+    expect(uploader.text()).toContain('Изменить обложку')
+    vi.useFakeTimers()
+    await (uploader.vm as unknown as { upload: (file: File) => Promise<void> }).upload(new File(['bytes'], 'cover.jpg', { type: 'image/jpeg' }))
+
+    expect(post).toHaveBeenCalledWith('/media', expect.any(FormData))
+    expect(put).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(put).toHaveBeenCalledWith('/ministries/m1/cover', { media_id: 'md1' })
+    expect(page.get('[data-test="ministry-cover"]').attributes('src')).toBe('https://church.test/cover.webp')
+  })
+
+  it('does not offer to change the cover of an archived ministry', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    get.mockResolvedValue({ data: { ...ministry, archived_at: '2026-09-01T10:00:00Z' } })
+
+    const page = await mountSuspended(MinistryCard)
+
+    expect(page.get('[data-test="file-input"]').attributes('disabled')).toBeDefined()
   })
 
   it('asks for confirmation before archiving', async () => {

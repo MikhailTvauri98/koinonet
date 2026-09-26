@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MediaUploader from '~/components/MediaUploader.vue'
 import type { Ministry } from '~/utils/ministries'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -19,9 +20,6 @@ const saveError = ref('')
 const confirmArchive = ref(false)
 const archiving = ref(false)
 const archiveError = ref('')
-const coverInput = ref<HTMLInputElement>()
-const uploadingCover = ref(false)
-const coverError = ref('')
 let requestVersion = 0
 
 async function load() {
@@ -87,27 +85,11 @@ async function archive() {
   }
 }
 
-async function onCoverChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file || uploadingCover.value || !canEdit.value) return
-  uploadingCover.value = true
-  coverError.value = ''
-  try {
-    const form = new FormData()
-    form.append('file', file)
-    form.append('purpose', 'ministry_cover')
-    const media = await api.post<{ data: { id: string } }>('/media', form)
-    const response = await api.put<{ data: Ministry }>(`/ministries/${encodeURIComponent(ministryId.value)}/cover`, {
-      media_id: media.data.id,
-    })
-    ministry.value = response.data
-  } catch (error) {
-    coverError.value = apiErrorMessage(error, 'Не удалось обновить обложку. Попробуйте ещё раз.')
-  } finally {
-    uploadingCover.value = false
-  }
+// Обложка — тем же загрузчиком, что и фото: привязать можно только
+// обработанный файл. Ответ `PUT /ministries/{id}/cover` — обновлённое
+// служение с новой `cover_url`.
+function onCoverAttached(updated: Ministry) {
+  ministry.value = updated
 }
 
 watch(() => route.params.id, () => { void load() })
@@ -161,15 +143,14 @@ await load()
       </template>
       <section v-if="canEdit">
         <h2>Обложка</h2>
-        <button
-          type="button" data-test="change-cover" :disabled="uploadingCover || !!ministry.archived_at"
-          :title="ministry.archived_at ? 'Архивное служение изменить нельзя.' : ''"
-          @click="coverInput?.click()"
-        >
-          {{ uploadingCover ? 'Загрузка…' : 'Изменить обложку' }}
-        </button>
-        <input ref="coverInput" type="file" accept="image/*" class="visually-hidden" data-test="cover-file" @change="onCoverChange">
-        <p v-if="coverError" role="alert">{{ coverError }}</p>
+        <!-- Ключ по служению: загрузка, начатая в одном служении, не
+             привяжет файл к другому, если экран переиспользован для
+             следующего адреса. -->
+        <MediaUploader
+          :key="ministryId" purpose="ministry_cover" :target="`/ministries/${encodeURIComponent(ministryId)}/cover`"
+          label="Изменить обложку" :disabled="!!ministry.archived_at"
+          disabled-reason="Архивное служение изменить нельзя." @attached="onCoverAttached"
+        />
       </section>
       <section v-if="canArchive && !ministry.archived_at">
         <h2>Архивация</h2>

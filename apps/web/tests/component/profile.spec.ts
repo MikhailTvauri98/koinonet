@@ -132,7 +132,7 @@ describe('media uploader', () => {
       .mockResolvedValueOnce({ data: { id: 'md1', status: 'ready', url: '/api/v1/media/md1?signature=x' } })
     put.mockResolvedValue({ data: {} })
 
-    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'person_photo', target: '/me/photo' } })
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'person_photo', target: '/me/photo', label: 'Выбрать фото' } })
     await uploader.vm.upload(new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' }))
 
     expect(put).not.toHaveBeenCalled()
