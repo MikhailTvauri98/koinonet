@@ -1,28 +1,10 @@
 <script setup lang="ts">
 import PasswordField from '~/components/PasswordField.vue'
+import { apiErrorMessage } from '~/utils/apiError'
 
 // «Вход» — единственный экран, где меняются логин и пароль (CONTEXT.md:
 // "Аккаунт" — избегать "логин" как синоним профиля). Две независимые формы,
 // каждая со своим текущим паролем (docs/architecture.md, раздел 7.2).
-interface FieldError {
-  statusCode?: number
-  status?: number
-  data?: { code?: string, message?: string, errors?: Record<string, string[]> }
-}
-
-function describeError(error: unknown, fallback: string): { message: string, field?: string } {
-  const failure = error as FieldError | undefined
-  const data = failure?.data
-  if (!data) return { message: fallback }
-  // Нарушение доменного правила (раздел 8): `login.taken` и
-  // `auth.invalid_password` приходят с `code`, без `errors` по полям —
-  // экран сам решает, у какого поля их показать.
-  if (data.code === 'login.taken') return { message: data.message ?? fallback, field: 'login' }
-  if (data.code === 'auth.invalid_password') return { message: data.message ?? fallback, field: 'password' }
-  if (data.code) return { message: data.message ?? fallback }
-  return { message: data.errors?.login?.[0] ?? data.message ?? fallback }
-}
-
 const api = useApi()
 const authStore = useAuthStore()
 
@@ -40,7 +22,7 @@ async function submitLogin() {
     loginCurrentPassword.value = ''
     await authStore.fetchMe()
   } catch (error) {
-    loginError.value = describeError(error, 'Не удалось изменить логин. Попробуйте ещё раз.').message
+    loginError.value = apiErrorMessage(error, 'Не удалось изменить логин. Попробуйте ещё раз.')
   } finally {
     loginSaving.value = false
   }
@@ -76,7 +58,7 @@ async function submitPassword() {
     newPasswordConfirmation.value = ''
     passwordChanged.value = true
   } catch (error) {
-    passwordError.value = describeError(error, 'Не удалось изменить пароль. Попробуйте ещё раз.').message
+    passwordError.value = apiErrorMessage(error, 'Не удалось изменить пароль. Попробуйте ещё раз.')
   } finally {
     passwordSaving.value = false
   }

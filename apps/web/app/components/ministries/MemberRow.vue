@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ministriesErrorMessage, type Member } from '~/utils/ministries'
+import type { Member } from '~/utils/ministries'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const props = defineProps<{
   member: Member
@@ -32,7 +33,7 @@ async function saveRoles() {
     )
     emit('rolesChanged', response.data)
   } catch (error) {
-    rolesError.value = ministriesErrorMessage(error, 'Не удалось сохранить роли. Попробуйте ещё раз.')
+    rolesError.value = apiErrorMessage(error, 'Не удалось сохранить роли. Попробуйте ещё раз.')
   } finally {
     savingRoles.value = false
   }
@@ -46,7 +47,7 @@ async function remove() {
     await api.delete(`/ministries/${encodeURIComponent(props.ministryId)}/members/${encodeURIComponent(props.member.id)}`)
     emit('removed', props.member.id)
   } catch (error) {
-    removeError.value = ministriesErrorMessage(error, 'Не удалось исключить участника. Попробуйте ещё раз.')
+    removeError.value = apiErrorMessage(error, 'Не удалось исключить участника. Попробуйте ещё раз.')
     confirmRemove.value = false
   } finally {
     removing.value = false

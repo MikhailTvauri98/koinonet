@@ -3,7 +3,8 @@ import PersonForm from '~/components/people/PersonForm.vue'
 import PersonContacts from '~/components/people/PersonContacts.vue'
 import PersonRoles from '~/components/people/PersonRoles.vue'
 import PersonAccountActions from '~/components/people/PersonAccountActions.vue'
-import { personStatuses, peopleErrorMessage, type PeopleError, type Person, type PersonStatus } from '~/utils/people'
+import { personStatuses, type Person, type PersonStatus } from '~/utils/people'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const route = useRoute()
@@ -41,9 +42,7 @@ async function load() {
     if (version === requestVersion && active) person.value = response.data
   } catch (error) {
     if (version !== requestVersion || !active) return
-    const failure = error as PeopleError | undefined
-    errorMessage.value = failure?.statusCode === 404 || failure?.status === 404
-      ? 'Человек не найден.' : peopleErrorMessage(error, 'Не удалось загрузить карточку. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить карточку. Попробуйте ещё раз.')
   } finally {
     if (version === requestVersion) loading.value = false
   }
@@ -71,7 +70,7 @@ async function archive(restore = false) {
     await api.post(`/people/${encodeURIComponent(id)}/${restore ? 'restore' : 'archive'}`)
     if (active && id === personId.value) await changed()
   } catch (error) {
-    if (active && id === personId.value) actionError.value = peopleErrorMessage(error, 'Не удалось выполнить действие. Попробуйте ещё раз.')
+    if (active && id === personId.value) actionError.value = apiErrorMessage(error, 'Не удалось выполнить действие. Попробуйте ещё раз.')
   } finally {
     busy.value = false
   }

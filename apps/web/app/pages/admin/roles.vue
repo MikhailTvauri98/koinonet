@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import RoleEditor from '~/components/roles/RoleEditor.vue'
-import { rolesErrorMessage, type RoleLike } from '~/utils/roles'
+import type { RoleLike } from '~/utils/roles'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const { can } = useCan()
@@ -21,7 +22,7 @@ async function load() {
     const response = await api.get<{ data: RoleLike[] }>('/roles?scope=global')
     if (version === requestVersion) roles.value = response.data
   } catch (error) {
-    if (version === requestVersion) errorMessage.value = rolesErrorMessage(error, 'Не удалось загрузить роли. Попробуйте ещё раз.')
+    if (version === requestVersion) errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить роли. Попробуйте ещё раз.')
   } finally {
     if (version === requestVersion) loading.value = false
   }

@@ -1,9 +1,5 @@
 <script setup lang="ts">
-interface LoginErrorData {
-  code?: string
-  message?: string
-  errors?: Record<string, string[]>
-}
+import { apiErrorMessage } from '~/utils/apiError'
 
 definePageMeta({ layout: false })
 
@@ -24,20 +20,6 @@ const remember = ref(false)
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 
-function describeError(error: unknown): string {
-  const data = (error as { data?: LoginErrorData } | undefined)?.data
-  const fallback = 'Не удалось войти. Попробуйте ещё раз.'
-
-  if (!data) return fallback
-
-  // Нарушение доменного правила (docs/architecture.md, раздел 8): код без
-  // errors по полям — например отключённый аккаунт. Показываем отдельно от
-  // обычной ошибки валидации логина/пароля.
-  if (data.code) return data.message ?? fallback
-
-  return data.errors?.login?.[0] ?? data.message ?? fallback
-}
-
 async function onSubmit() {
   errorMessage.value = null
   loading.value = true
@@ -46,7 +28,9 @@ async function onSubmit() {
     await authStore.login(loginValue.value, password.value, remember.value)
     router.push('/')
   } catch (error) {
-    errorMessage.value = describeError(error)
+    // Неверный логин или пароль и отключённый аккаунт приходят `422` с
+    // русским текстом сервера; частые попытки — `429`.
+    errorMessage.value = apiErrorMessage(error, 'Не удалось войти. Попробуйте ещё раз.')
   } finally {
     loading.value = false
   }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { mediaErrorMessage, type MediaLike, type MediaPurpose } from '~/utils/media'
+import type { MediaLike, MediaPurpose } from '~/utils/media'
+import { apiErrorMessage } from '~/utils/apiError'
 
 // Опрос раз в секунду до 15 секунд (docs/architecture.md, раздел 7.8;
 // бриф задачи 30): `POST /media` возвращает `processing` для изображений
@@ -48,7 +49,7 @@ async function attach(mediaId: string) {
     errorMessage.value = ''
     emit('uploaded', response.data.photo_url ?? null)
   } catch (error) {
-    fail(mediaErrorMessage(error, 'Не удалось сохранить файл. Попробуйте ещё раз.'))
+    fail(apiErrorMessage(error, 'Не удалось сохранить файл. Попробуйте ещё раз.'))
   }
 }
 
@@ -108,7 +109,7 @@ async function upload(file: File) {
     const response = await api.post<{ data: MediaLike }>('/media', body)
     await handleUploaded(response.data)
   } catch (error) {
-    fail(mediaErrorMessage(error, 'Не удалось загрузить файл. Попробуйте ещё раз.'))
+    fail(apiErrorMessage(error, 'Не удалось загрузить файл. Попробуйте ещё раз.'))
   }
 }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { pluralizeCarriers, rolesErrorMessage, type RoleLike, type RoleUsage } from '~/utils/roles'
+import { pluralizeCarriers, type RoleLike, type RoleUsage } from '~/utils/roles'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const props = defineProps<{ role: RoleLike }>()
 const emit = defineEmits<{ deleted: [roleId: string], close: [] }>()
@@ -23,7 +24,7 @@ async function loadUsage() {
     const response = await api.get<{ data: RoleUsage }>(`/roles/${encodeURIComponent(props.role.id)}/usage`)
     if (active) usage.value = response.data
   } catch (error) {
-    if (active) loadErrorMessage.value = rolesErrorMessage(error, 'Не удалось проверить использование роли. Попробуйте ещё раз.')
+    if (active) loadErrorMessage.value = apiErrorMessage(error, 'Не удалось проверить использование роли. Попробуйте ещё раз.')
   } finally {
     if (active) loading.value = false
   }
@@ -40,7 +41,7 @@ async function confirmDelete() {
     await api.delete(`/roles/${encodeURIComponent(props.role.id)}`)
     if (active) emit('deleted', props.role.id)
   } catch (error) {
-    if (active) deleteErrorMessage.value = rolesErrorMessage(error, 'Не удалось удалить роль. Попробуйте ещё раз.')
+    if (active) deleteErrorMessage.value = apiErrorMessage(error, 'Не удалось удалить роль. Попробуйте ещё раз.')
   } finally {
     if (active) deleting.value = false
   }

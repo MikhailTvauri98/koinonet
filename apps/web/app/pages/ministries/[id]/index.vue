@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ministriesErrorMessage, type Ministry } from '~/utils/ministries'
+import type { Ministry } from '~/utils/ministries'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const route = useRoute()
@@ -35,7 +36,7 @@ async function load() {
     ministry.value = response.data
   } catch (error) {
     if (version !== requestVersion) return
-    errorMessage.value = ministriesErrorMessage(error, 'Не удалось загрузить служение. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить служение. Попробуйте ещё раз.')
   } finally {
     if (version === requestVersion) loading.value = false
   }
@@ -65,7 +66,7 @@ async function save() {
     ministry.value = response.data
     editing.value = false
   } catch (error) {
-    saveError.value = ministriesErrorMessage(error, 'Не удалось сохранить служение. Попробуйте ещё раз.')
+    saveError.value = apiErrorMessage(error, 'Не удалось сохранить служение. Попробуйте ещё раз.')
   } finally {
     saving.value = false
   }
@@ -80,7 +81,7 @@ async function archive() {
     ministry.value = response.data
     confirmArchive.value = false
   } catch (error) {
-    archiveError.value = ministriesErrorMessage(error, 'Не удалось архивировать служение. Попробуйте ещё раз.')
+    archiveError.value = apiErrorMessage(error, 'Не удалось архивировать служение. Попробуйте ещё раз.')
   } finally {
     archiving.value = false
   }
@@ -103,7 +104,7 @@ async function onCoverChange(event: Event) {
     })
     ministry.value = response.data
   } catch (error) {
-    coverError.value = ministriesErrorMessage(error, 'Не удалось обновить обложку. Попробуйте ещё раз.')
+    coverError.value = apiErrorMessage(error, 'Не удалось обновить обложку. Попробуйте ещё раз.')
   } finally {
     uploadingCover.value = false
   }

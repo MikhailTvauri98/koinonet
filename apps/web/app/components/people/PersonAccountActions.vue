@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
 import AccessLinkDialog from '~/components/people/AccessLinkDialog.vue'
-import { peopleErrorMessage, type Person } from '~/utils/people'
+import type { Person } from '~/utils/people'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const props = defineProps<{ person: Person }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -37,7 +38,7 @@ async function act(action: 'invite' | 'password-reset-link' | 'disable' | 'enabl
     }
     confirmDisable.value = false
   } catch (error) {
-    if (active) errorMessage.value = peopleErrorMessage(error, 'Не удалось выполнить действие. Попробуйте ещё раз.')
+    if (active) errorMessage.value = apiErrorMessage(error, 'Не удалось выполнить действие. Попробуйте ещё раз.')
   } finally {
     if (active) busy.value = false
   }

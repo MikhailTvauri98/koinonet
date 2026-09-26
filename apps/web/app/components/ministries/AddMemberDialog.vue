@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Person } from '~/utils/people'
-import { ministriesErrorMessage, type Member } from '~/utils/ministries'
+import type { Member } from '~/utils/ministries'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const props = defineProps<{ ministryId: string }>()
 const emit = defineEmits<{ added: [member: Member], close: [] }>()
@@ -36,7 +37,7 @@ watch(search, async (value) => {
     if (version === searchVersion && active) results.value = response.data
   } catch (error) {
     if (version === searchVersion && active) {
-      searchError.value = ministriesErrorMessage(error, 'Не удалось найти людей. Попробуйте ещё раз.')
+      searchError.value = apiErrorMessage(error, 'Не удалось найти людей. Попробуйте ещё раз.')
     }
   } finally {
     if (version === searchVersion && active) searching.value = false
@@ -51,7 +52,7 @@ async function add(person: Person) {
     const response = await api.post<{ data: Member }>(`/ministries/${encodeURIComponent(props.ministryId)}/members`, { person_id: person.id })
     if (active) emit('added', response.data)
   } catch (error) {
-    if (active) addError.value = ministriesErrorMessage(error, 'Не удалось добавить участника. Попробуйте ещё раз.')
+    if (active) addError.value = apiErrorMessage(error, 'Не удалось добавить участника. Попробуйте ещё раз.')
   } finally {
     if (active) adding.value = false
   }

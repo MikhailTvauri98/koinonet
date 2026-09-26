@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import PermissionGroup from '~/components/roles/PermissionGroup.vue'
 import RoleUsageDialog from '~/components/roles/RoleUsageDialog.vue'
-import {
-  PERMISSION_GROUP_LABELS, permissionGroupPrefix, rolesErrorMessage,
-  type PermissionCatalogueEntry, type RoleLike,
-} from '~/utils/roles'
+import { PERMISSION_GROUP_LABELS, permissionGroupPrefix, type PermissionCatalogueEntry, type RoleLike } from '~/utils/roles'
+import { apiErrorMessage } from '~/utils/apiError'
 
 // Один компонент на оба уровня (глобальные роли и роли служения, критерий
 // готовности задачи 29): область различает только каталог прав, показанный
@@ -54,7 +52,7 @@ async function loadCatalogue() {
   try {
     catalogue.value = (await api.get<{ data: PermissionCatalogueEntry[] }>('/permissions')).data
   } catch (error) {
-    loadErrorMessage.value = rolesErrorMessage(error, 'Не удалось загрузить каталог прав. Попробуйте ещё раз.')
+    loadErrorMessage.value = apiErrorMessage(error, 'Не удалось загрузить каталог прав. Попробуйте ещё раз.')
   }
 }
 
@@ -119,7 +117,7 @@ async function save() {
       emit('created', response.data)
     }
   } catch (error) {
-    saveError.value = rolesErrorMessage(error, 'Не удалось сохранить роль. Попробуйте ещё раз.')
+    saveError.value = apiErrorMessage(error, 'Не удалось сохранить роль. Попробуйте ещё раз.')
   } finally {
     saving.value = false
   }

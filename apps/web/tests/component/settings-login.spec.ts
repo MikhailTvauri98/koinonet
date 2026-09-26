@@ -92,4 +92,17 @@ describe('password settings form', () => {
     expect((page.get('[data-test="password-current"]').element as HTMLInputElement).value).toBe('')
     expect((page.get('[data-test="password-new"]').element as HTMLInputElement).value).toBe('')
   })
+
+  it('asks to wait instead of showing the server text after too many attempts', async () => {
+    patch.mockRejectedValue(Object.assign(new Error('failed'), { statusCode: 429, data: { message: 'Too Many Attempts.' } }))
+
+    const page = await mountSuspended(LoginSettingsPage)
+    await page.find('[data-test="password-current"]').setValue('oldpassword')
+    await page.find('[data-test="password-new"]').setValue('newpassword1')
+    await page.find('[data-test="password-confirmation"]').setValue('newpassword1')
+    await page.find('[data-test="password-form"]').trigger('submit')
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(page.find('[data-test="password-error"]').text()).toBe('Слишком много попыток. Подождите минуту.')
+  })
 })

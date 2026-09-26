@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
+import { apiErrorMessage } from '~/utils/apiError'
 import { formatChurchDateTime } from '~/utils/churchTime'
 
 // «Устройства»: список сессий, любую кроме текущей можно завершить —
@@ -29,8 +30,8 @@ async function load() {
     ])
     sessions.value = sessionsResponse.data
     timezone.value = tz
-  } catch {
-    loadError.value = 'Не удалось загрузить список устройств. Попробуйте ещё раз.'
+  } catch (error) {
+    loadError.value = apiErrorMessage(error, 'Не удалось загрузить список устройств. Попробуйте ещё раз.')
   } finally {
     loading.value = false
   }
@@ -47,8 +48,8 @@ async function end(session: Session) {
   try {
     await api.delete(`/auth/sessions/${session.id}`)
     await load()
-  } catch {
-    actionError.value = 'Не удалось завершить это устройство. Попробуйте ещё раз.'
+  } catch (error) {
+    actionError.value = apiErrorMessage(error, 'Не удалось завершить это устройство. Попробуйте ещё раз.')
   } finally {
     busyId.value = null
   }
@@ -61,8 +62,8 @@ async function endOthers() {
   try {
     await api.post('/auth/sessions/logout-others')
     await load()
-  } catch {
-    actionError.value = 'Не удалось завершить остальные устройства. Попробуйте ещё раз.'
+  } catch (error) {
+    actionError.value = apiErrorMessage(error, 'Не удалось завершить остальные устройства. Попробуйте ещё раз.')
   } finally {
     busyAll.value = false
   }

@@ -78,4 +78,17 @@ describe('admin church settings page', () => {
 
     expect(page.text()).toContain('Часовой пояс не найден')
   })
+
+  it('shows its own text instead of a server error page', async () => {
+    grantPermissions({ global: ['settings.manage'] })
+    put.mockRejectedValue(Object.assign(new Error('failed'), { statusCode: 500, data: { message: 'Server Error' } }))
+
+    const page = await mountSuspended(AdminSettings)
+    await flushPromises()
+    await page.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(page.text()).toContain('Не удалось сохранить настройки. Попробуйте ещё раз.')
+    expect(page.text()).not.toContain('Server Error')
+  })
 })

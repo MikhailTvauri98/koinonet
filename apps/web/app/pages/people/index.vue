@@ -2,7 +2,8 @@
 import type { components } from '~~/types/api'
 import PersonForm from '~/components/people/PersonForm.vue'
 import PersonListItem from '~/components/people/PersonListItem.vue'
-import { personStatuses, peopleErrorMessage, type Person, type PersonStatus, type PeopleResponse, type PersonCreatedResponse } from '~/utils/people'
+import { personStatuses, type Person, type PersonStatus, type PeopleResponse, type PersonCreatedResponse } from '~/utils/people'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const { can } = useCan()
@@ -54,7 +55,7 @@ async function loadPeople(page = 1) {
     lastPage.value = response.meta.last_page
   } catch (error) {
     if (version !== requestVersion || !canView.value) return
-    errorMessage.value = peopleErrorMessage(error, 'Не удалось загрузить людей. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить людей. Попробуйте ещё раз.')
     failedPage = page
   } finally {
     if (version === requestVersion) loading.value = false
@@ -67,8 +68,8 @@ async function loadMinistries() {
   try {
     const response = await api.get<{ data: components['schemas']['MinistryResource'][] }>('/ministries')
     if (version === ministryVersion && canView.value) ministries.value = response.data
-  } catch {
-    if (version === ministryVersion && canView.value) ministryError.value = 'Не удалось загрузить служения для фильтра.'
+  } catch (error) {
+    if (version === ministryVersion && canView.value) ministryError.value = apiErrorMessage(error, 'Не удалось загрузить служения для фильтра.')
   }
 }
 

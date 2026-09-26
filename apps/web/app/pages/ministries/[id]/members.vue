@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import AddMemberDialog from '~/components/ministries/AddMemberDialog.vue'
 import MemberRow from '~/components/ministries/MemberRow.vue'
-import { ministriesErrorMessage, type Member, type MinistryRole } from '~/utils/ministries'
+import type { Member, MinistryRole } from '~/utils/ministries'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const route = useRoute()
@@ -32,7 +33,7 @@ async function load() {
     if (version === requestVersion) members.value = response.data
   } catch (error) {
     if (version !== requestVersion) return
-    errorMessage.value = ministriesErrorMessage(error, 'Не удалось загрузить состав. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить состав. Попробуйте ещё раз.')
   } finally {
     if (version === requestVersion) loading.value = false
   }
@@ -47,7 +48,7 @@ async function loadRoles() {
     if (version === rolesRequestVersion) roles.value = response.data.map(role => ({ id: role.id, name: role.name }))
   } catch (error) {
     if (version === rolesRequestVersion) {
-      rolesError.value = ministriesErrorMessage(error, 'Не удалось загрузить роли служения. Попробуйте ещё раз.')
+      rolesError.value = apiErrorMessage(error, 'Не удалось загрузить роли служения. Попробуйте ещё раз.')
     }
   }
 }

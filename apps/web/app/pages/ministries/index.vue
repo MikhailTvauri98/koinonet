@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ministriesErrorMessage, type Ministry } from '~/utils/ministries'
+import type { Ministry } from '~/utils/ministries'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const { can } = useCan()
@@ -20,7 +21,7 @@ async function load() {
     const response = await api.get<{ data: Ministry[] }>('/ministries')
     ministries.value = response.data
   } catch (error) {
-    errorMessage.value = ministriesErrorMessage(error, 'Не удалось загрузить служения. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить служения. Попробуйте ещё раз.')
   } finally {
     loading.value = false
   }
@@ -41,7 +42,7 @@ async function submit() {
     showForm.value = false
     await load()
   } catch (error) {
-    formError.value = ministriesErrorMessage(error, 'Не удалось создать служение. Попробуйте ещё раз.')
+    formError.value = apiErrorMessage(error, 'Не удалось создать служение. Попробуйте ещё раз.')
   } finally {
     saving.value = false
   }

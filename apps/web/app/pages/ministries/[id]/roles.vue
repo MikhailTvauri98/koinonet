@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import RoleEditor from '~/components/roles/RoleEditor.vue'
-import { ministriesErrorMessage, type Ministry } from '~/utils/ministries'
-import { rolesErrorMessage, type RoleLike } from '~/utils/roles'
+import type { Ministry } from '~/utils/ministries'
+import type { RoleLike } from '~/utils/roles'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const route = useRoute()
@@ -42,7 +43,7 @@ async function load() {
     roles.value = rolesResponse.data
   } catch (error) {
     if (version !== requestVersion) return
-    errorMessage.value = ministriesErrorMessage(error, 'Не удалось загрузить роли служения. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить роли служения. Попробуйте ещё раз.')
   } finally {
     if (version === requestVersion) loading.value = false
   }
@@ -86,7 +87,7 @@ async function setDefaultRole(roleId: string) {
     })
     ministry.value = response.data
   } catch (error) {
-    defaultRoleError.value = rolesErrorMessage(error, 'Не удалось изменить роль по умолчанию. Попробуйте ещё раз.')
+    defaultRoleError.value = apiErrorMessage(error, 'Не удалось изменить роль по умолчанию. Попробуйте ещё раз.')
   } finally {
     settingDefaultId.value = null
   }

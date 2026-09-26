@@ -23,18 +23,6 @@ export type PermissionCatalogueEntry = components['schemas']['PermissionResource
 export type RoleUsage = operations['role.usage']['responses'][200]['content']['application/json']['data']
 export type RoleUsageBlocker = RoleUsage['blockers'][number]
 
-export interface RolesError {
-  statusCode?: number
-  status?: number
-  data?: { code?: string, message?: string, errors?: Record<string, string[]> }
-}
-
-export function rolesErrorMessage(error: unknown, fallback: string): string {
-  const failure = error as RolesError | undefined
-  if (failure?.statusCode === 403 || failure?.status === 403) return 'Нет права на это действие.'
-  return failure?.data?.message || fallback
-}
-
 // Каталог прав (GET /permissions) не отдаёт группу — только ключ, область,
 // название и описание (docs/architecture.md 6.1). Группировка "по смысловому
 // префиксу ключа" (шаг 3 брифа задачи 29) остаётся решением клиента:

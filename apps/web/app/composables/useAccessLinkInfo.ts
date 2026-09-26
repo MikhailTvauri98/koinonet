@@ -1,12 +1,8 @@
 import type { components } from '~~/types/api'
+import { apiErrorCode, apiErrorMessage } from '~/utils/apiError'
 
 export type AccessLinkInfo = components['schemas']['AccessLinkResource']
 export type AccessLinkKindValue = 'invite' | 'password_reset'
-
-interface ApiErrorData {
-  code?: string
-  message?: string
-}
 
 // Тексты по коду ссылки — дословно из ensureUsable() и
 // AccessLinkController::show() (apps/api/app/Modules/Directory/{Models/AccessLink.php,
@@ -21,11 +17,11 @@ const LINK_ERROR_MESSAGES: Record<string, string> = {
 }
 
 function describeLinkError(error: unknown): string {
-  const data = (error as { data?: ApiErrorData } | undefined)?.data
-  if (data?.code && data.code in LINK_ERROR_MESSAGES) {
-    return LINK_ERROR_MESSAGES[data.code]!
+  const code = apiErrorCode(error)
+  if (code && code in LINK_ERROR_MESSAGES) {
+    return LINK_ERROR_MESSAGES[code]!
   }
-  return data?.message ?? 'Не удалось открыть ссылку.'
+  return apiErrorMessage(error, 'Не удалось открыть ссылку. Попробуйте ещё раз.')
 }
 
 /**

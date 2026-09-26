@@ -48,6 +48,17 @@ describe('login page', () => {
     expect(push).not.toHaveBeenCalled()
   })
 
+  it('asks to wait instead of showing the server text after too many attempts', async () => {
+    login.mockRejectedValue(Object.assign(new Error('failed'), { statusCode: 429, data: { message: 'Too Many Attempts.' } }))
+
+    const page = await mountSuspended(LoginPage)
+    await page.find('form').trigger('submit')
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(page.text()).toContain('Слишком много попыток. Подождите минуту.')
+    expect(page.text()).not.toContain('Too Many Attempts')
+  })
+
   it('explains a disabled account separately', async () => {
     login.mockRejectedValue(Object.assign(new Error('failed'), {
       statusCode: 422,

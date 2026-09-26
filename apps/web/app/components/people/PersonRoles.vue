@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
-import { peopleErrorMessage, type Person } from '~/utils/people'
+import type { Person } from '~/utils/people'
+import { apiErrorMessage } from '~/utils/apiError'
 
 const props = defineProps<{ person: Person }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -25,7 +26,7 @@ async function edit() {
     choices.value = (await api.get<{ data: components['schemas']['RoleResource'][] }>('/roles?scope=global')).data
     loaded.value = true
   } catch (error) {
-    errorMessage.value = peopleErrorMessage(error, 'Не удалось загрузить роли. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить роли. Попробуйте ещё раз.')
   } finally {
     loading.value = false
   }
@@ -40,7 +41,7 @@ async function save() {
     editing.value = false
     emit('changed')
   } catch (error) {
-    errorMessage.value = peopleErrorMessage(error, 'Не удалось сохранить роли. Попробуйте ещё раз.')
+    errorMessage.value = apiErrorMessage(error, 'Не удалось сохранить роли. Попробуйте ещё раз.')
   } finally {
     saving.value = false
   }

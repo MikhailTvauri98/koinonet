@@ -189,6 +189,17 @@ describe('ministry members tab', () => {
 })
 
 describe('ministry card', () => {
+  it('says the ministry is gone instead of the server text, which names the model class', async () => {
+    get.mockRejectedValue(Object.assign(new Error('failed'), {
+      statusCode: 404, data: { message: 'No query results for model [App\\Modules\\Ministries\\Models\\Ministry] m1' },
+    }))
+
+    const page = await mountSuspended(MinistryCard)
+
+    expect(page.text()).toContain('Запись не найдена — возможно, её удалили.')
+    expect(page.text()).not.toContain('App\\Modules')
+  })
+
   it('hides the cover uploader without ministry.edit', async () => {
     get.mockResolvedValue({ data: ministry })
 

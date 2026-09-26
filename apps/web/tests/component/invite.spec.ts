@@ -101,6 +101,21 @@ describe('invite page', () => {
     expect(page.text()).toContain('Пароли не совпадают')
   })
 
+  it('asks to wait instead of showing the server text after too many attempts', async () => {
+    get.mockResolvedValue({ data: { kind: 'invite', person: { first_name: 'Мария' }, login_hint: {} } })
+    post.mockRejectedValue(Object.assign(new Error('failed'), { statusCode: 429, data: { message: 'Too Many Attempts.' } }))
+
+    const page = await mountSuspended(InvitePage)
+    await page.find('[data-test=login]').setValue('maria@example.com')
+    await page.find('[data-test=password]').setValue('secret123')
+    await page.find('[data-test=password-confirmation]').setValue('secret123')
+    await page.find('form').trigger('submit')
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(page.text()).toContain('Слишком много попыток. Подождите минуту.')
+    expect(page.text()).not.toContain('Too Many Attempts')
+  })
+
   it('goes to the home page after accepting', async () => {
     get.mockResolvedValue({ data: { kind: 'invite', person: { first_name: 'Мария' }, login_hint: {} } })
     // POST /access-links/{token}/accept при kind=invite отдаёт MeResource

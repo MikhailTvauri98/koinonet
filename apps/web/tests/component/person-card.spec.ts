@@ -143,7 +143,7 @@ describe('person card', () => {
   })
 
   it.each([
-    [403, 'Нет права'], [404, 'Человек не найден'], [500, 'Не удалось загрузить'],
+    [403, 'Нет права'], [404, 'Запись не найдена — возможно, её удалили.'], [500, 'Не удалось загрузить'],
   ])('reports a %i card failure and offers retry', async (statusCode, message) => {
     get.mockRejectedValueOnce({ statusCode })
     const page = await mountPage()

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
-import { personStatuses, peopleErrorMessage, type PeopleError, type Person, type PersonCreatedResponse, type PersonStatus } from '~/utils/people'
+import { personStatuses, type Person, type PersonCreatedResponse, type PersonStatus } from '~/utils/people'
+import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
 
 const props = defineProps<{ person?: Person }>()
 const emit = defineEmits<{ created: [response: PersonCreatedResponse], updated: [], cancel: [] }>()
@@ -54,8 +55,8 @@ async function submit() {
       emit('created', await api.post<PersonCreatedResponse>('/people', body))
     }
   } catch (error) {
-    errorMessage.value = peopleErrorMessage(error, 'Не удалось сохранить человека. Попробуйте ещё раз.')
-    fieldErrors.value = (error as PeopleError | undefined)?.data?.errors ?? {}
+    errorMessage.value = apiErrorMessage(error, 'Не удалось сохранить человека. Попробуйте ещё раз.')
+    fieldErrors.value = apiFieldErrors(error)
   } finally {
     saving.value = false
   }

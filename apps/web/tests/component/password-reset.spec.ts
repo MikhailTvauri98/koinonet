@@ -68,6 +68,20 @@ describe('password reset page', () => {
     expect(page.text()).toContain('Пароли не совпадают')
   })
 
+  it('shows its own text instead of a server error page', async () => {
+    get.mockResolvedValue({ data: { kind: 'password_reset', person: { first_name: 'Мария' }, login_hint: {} } })
+    post.mockRejectedValue(Object.assign(new Error('failed'), { statusCode: 500, data: { message: 'Server Error' } }))
+
+    const page = await mountSuspended(PasswordResetPage)
+    await page.find('[data-test=password]').setValue('secret123')
+    await page.find('[data-test=password-confirmation]').setValue('secret123')
+    await page.find('form').trigger('submit')
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(page.text()).toContain('Не удалось изменить пароль. Попробуйте ещё раз.')
+    expect(page.text()).not.toContain('Server Error')
+  })
+
   it('goes to the login page with a notice after resetting', async () => {
     get.mockResolvedValue({ data: { kind: 'password_reset', person: { first_name: 'Мария' }, login_hint: {} } })
     // Ответ 200 при kind=password_reset — `{ data: { kind: 'password_reset' } }`

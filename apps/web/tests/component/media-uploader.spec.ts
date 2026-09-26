@@ -26,6 +26,18 @@ describe('media uploader failure paths', () => {
     expect(uploader.find('[data-test="media-error"]').text()).toContain('Слишком большой файл')
   })
 
+  it('says the record is gone instead of the server text when the target no longer exists', async () => {
+    post.mockResolvedValue({ data: { id: 'md1', status: 'ready' } })
+    put.mockRejectedValue(Object.assign(new Error('failed'), {
+      statusCode: 404, data: { message: 'No query results for model [App\\Modules\\Directory\\Models\\Person] p1' },
+    }))
+
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'person_photo', target: '/people/p1/photo' } })
+    await uploader.vm.upload(new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' }))
+
+    expect(uploader.find('[data-test="media-error"]').text()).toBe('Запись не найдена — возможно, её удалили.')
+  })
+
   it('stops polling and shows an error when processing fails, without attaching the photo', async () => {
     vi.useFakeTimers()
     post.mockResolvedValue({ data: { id: 'md1', status: 'processing' } })

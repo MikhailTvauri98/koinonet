@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import type { MeResponse } from '~/stores/auth'
-
-interface ApiErrorData {
-  message?: string
-}
+import { apiErrorMessage } from '~/utils/apiError'
 
 // Маршрут публичный и без сессии (docs/architecture.md, раздел 7.2):
 // middleware/auth.global.ts уже считает `/invite/*` публичным путём по
@@ -32,11 +29,6 @@ const password = ref('')
 const passwordConfirmation = ref('')
 const submitting = ref(false)
 const formError = ref<string | null>(null)
-
-function describeSubmitError(error: unknown): string {
-  const data = (error as { data?: ApiErrorData } | undefined)?.data
-  return data?.message ?? 'Не удалось создать аккаунт. Попробуйте ещё раз.'
-}
 
 async function onSubmit() {
   formError.value = null
@@ -69,7 +61,7 @@ async function onSubmit() {
     // pages/login.vue: переход не блокирует finally ниже.
     router.push('/')
   } catch (error) {
-    formError.value = describeSubmitError(error)
+    formError.value = apiErrorMessage(error, 'Не удалось создать аккаунт. Попробуйте ещё раз.')
   } finally {
     submitting.value = false
   }

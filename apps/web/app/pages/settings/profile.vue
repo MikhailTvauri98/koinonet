@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
 import MediaUploader from '~/components/MediaUploader.vue'
-import { peopleErrorMessage, type PeopleError } from '~/utils/people'
+import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
 
 // «Профиль» правит контакты человека и не содержит полей логина — логин и
 // пароль меняются на отдельном экране «Вход» (settings/login.vue), так
@@ -40,7 +40,7 @@ async function load() {
     const response = await api.get<{ data: Profile }>('/me/profile')
     applyProfile(response.data)
   } catch (error) {
-    loadError.value = peopleErrorMessage(error, 'Не удалось загрузить профиль. Попробуйте ещё раз.')
+    loadError.value = apiErrorMessage(error, 'Не удалось загрузить профиль. Попробуйте ещё раз.')
   } finally {
     loading.value = false
   }
@@ -65,8 +65,8 @@ async function submit() {
     await Promise.all([load(), authStore.fetchMe()])
     savedNotice.value = true
   } catch (error) {
-    errorMessage.value = peopleErrorMessage(error, 'Не удалось сохранить профиль. Попробуйте ещё раз.')
-    fieldErrors.value = (error as PeopleError | undefined)?.data?.errors ?? {}
+    errorMessage.value = apiErrorMessage(error, 'Не удалось сохранить профиль. Попробуйте ещё раз.')
+    fieldErrors.value = apiFieldErrors(error)
   } finally {
     saving.value = false
   }

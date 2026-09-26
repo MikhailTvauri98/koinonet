@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
+import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
 
 type Settings = components['schemas']['SettingsResource']
 
@@ -35,8 +36,8 @@ async function load() {
   try {
     const response = await api.get<{ data: Settings }>('/settings')
     applySettings(response.data)
-  } catch {
-    loadError.value = 'Не удалось загрузить настройки. Попробуйте ещё раз.'
+  } catch (error) {
+    loadError.value = apiErrorMessage(error, 'Не удалось загрузить настройки. Попробуйте ещё раз.')
   } finally {
     loading.value = false
   }
@@ -57,9 +58,8 @@ async function submit() {
     applySettings(response.data)
     savedNotice.value = true
   } catch (error) {
-    const failure = error as { data?: { message?: string, errors?: Record<string, string[]> } } | undefined
-    saveError.value = failure?.data?.message ?? 'Не удалось сохранить настройки. Попробуйте ещё раз.'
-    fieldErrors.value = failure?.data?.errors ?? {}
+    saveError.value = apiErrorMessage(error, 'Не удалось сохранить настройки. Попробуйте ещё раз.')
+    fieldErrors.value = apiFieldErrors(error)
   } finally {
     saving.value = false
   }
