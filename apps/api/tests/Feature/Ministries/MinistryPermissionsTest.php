@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Access\Actions\SetRolePermissions;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
+use App\Modules\Access\PermissionCache;
 use App\Modules\Access\PermissionResolver;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
 use App\Modules\Directory\Models\Person;
@@ -13,6 +14,7 @@ use App\Modules\Ministries\Actions\ArchiveMinistry;
 use App\Modules\Ministries\Actions\RemoveMember;
 use App\Modules\Ministries\Actions\SetMemberRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
@@ -114,6 +116,26 @@ it('refreshes permissions when a role loses a permission', function () {
 
     expect(app(PermissionResolver::class)->canInMinistry($user->fresh(), Permission::MembersManage, $ministry->id))
         ->toBeFalse();
+});
+
+it('bumps the permission cache only once the surrounding transaction commits', function () {
+    $ministry = ministryWithRoles();
+    $person = Person::factory()->create();
+    $user = User::factory()->for($person)->create();
+    $leader = $ministry->roles()->where('name', 'Лидер')->sole();
+    memberOf($ministry, $person, [$leader->id]);
+    $cache = app(PermissionCache::class);
+    $before = $cache->version($user->id);
+
+    DB::transaction(function () use ($leader, $cache, $user, $before): void {
+        app(SetRolePermissions::class)->handle($leader, [Permission::MinistryEdit]);
+
+        // A request recomputing permissions now would still read the old
+        // role_permissions and store them under the new version.
+        expect($cache->version($user->id))->toBe($before);
+    });
+
+    expect($cache->version($user->id))->toBeGreaterThan($before);
 });
 
 it('refreshes permissions when a ministry is archived', function () {

@@ -10,6 +10,7 @@ use App\Modules\Access\PermissionCache;
 use App\Modules\Access\PermissionScope;
 use App\Modules\Access\RoleScope;
 use App\Support\DomainRuleException;
+use Illuminate\Support\Facades\DB;
 
 final readonly class SetRolePermissions
 {
@@ -37,6 +38,11 @@ final readonly class SetRolePermissions
             $permissions,
         ));
 
-        $this->cache->bump(...$role->carrierUserIds());
+        // Inside a caller's transaction the bump waits for its commit: bumped
+        // earlier, a concurrent request would recompute permissions from the
+        // not yet committed rows and cache the old set under the new version
+        // until the cache expires. Outside a transaction it runs at once.
+        $carriers = $role->carrierUserIds();
+        DB::afterCommit(fn () => $this->cache->bump(...$carriers));
     }
 }
