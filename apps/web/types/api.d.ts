@@ -963,7 +963,9 @@ export interface components {
         UserPermissionsResource: {
             administrator: boolean;
             global: string[];
-            ministries: Record<string, never>;
+            ministries: {
+                [key: string]: string[];
+            };
         };
     };
     responses: {

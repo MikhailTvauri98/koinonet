@@ -297,7 +297,7 @@ describe('account actions', () => {
   it('goes to login after disabling the account currently signed in', async () => {
     card.has_account = true
     const auth = useAuthStore(pinia)
-    auth.person = { id: 'p1', last_name: 'Прокопенко', first_name: 'Мария' }
+    auth.person = { id: 'p1', last_name: 'Прокопенко', first_name: 'Мария', patronymic: null, status: 'member' }
     auth.user = { id: 'u1', phone: null, email: 'maria@example.com' }
     auth.initialized = true
     get.mockImplementation((path: string) => path === '/auth/me'

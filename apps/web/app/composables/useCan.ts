@@ -1,8 +1,8 @@
-export interface Permissions {
-  administrator: boolean
-  global: string[]
-  ministries: Record<string, string[]>
-}
+import type { components } from '~~/types/api'
+
+// Права вошедшего из `GET /auth/me`: глобальные ключи и словарь «служение →
+// ключи прав в нём» (docs/architecture.md, раздел 6.2).
+export type Permissions = components['schemas']['UserPermissionsResource']
 
 /**
  * Чистая функция проверки прав: повторяет вычисление сервера (docs/architecture.md

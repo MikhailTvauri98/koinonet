@@ -5,9 +5,9 @@ import { createPinia, setActivePinia } from 'pinia'
 import { registerEndpoint } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApi } from '~/composables/useApi'
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore, type MeResponse } from '~/stores/auth'
 
-const me = {
+const me: MeResponse = {
   user: { id: 'u1', phone: null, email: 'ivan@example.com' },
   person: { id: 'p1', last_name: 'Иванов', first_name: 'Иван', patronymic: null, status: 'member' },
   permissions: { administrator: false, global: ['people.view'], ministries: {} },

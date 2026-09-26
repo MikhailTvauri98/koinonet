@@ -21,6 +21,10 @@ final class UserPermissionsResource extends JsonResource
         return [
             'administrator' => $permissions->administrator,
             'global' => $permissions->global,
+            // ArrayObject — чтобы пустой словарь ушёл в JSON объектом `{}`, а не
+            // массивом `[]`. Для схемы OpenAPI это словарь «служение → ключи
+            // прав», иначе клиент получил бы тип объекта без полей.
+            /** @var array<string, list<string>> */
             'ministries' => new ArrayObject($permissions->ministries),
         ];
     }

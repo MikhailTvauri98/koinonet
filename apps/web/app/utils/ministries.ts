@@ -1,11 +1,8 @@
-import type { components, operations } from '~~/types/api'
+import type { components } from '~~/types/api'
 
 export type Ministry = components['schemas']['MinistryResource']
 export type Member = components['schemas']['MemberResource']
 export type MinistryRole = components['schemas']['RoleResource']
-export type MinistriesResponse = operations['ministry.index']['responses'][200]['content']['application/json']
-export type MembersResponse = operations['ministryMember.index']['responses'][200]['content']['application/json']
-export type AddMemberRequest = operations['ministryMember.store']['requestBody']['content']['application/json']
 
 export interface MinistriesError {
   statusCode?: number

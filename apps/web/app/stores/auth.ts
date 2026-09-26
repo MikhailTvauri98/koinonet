@@ -1,24 +1,12 @@
+import type { components } from '~~/types/api'
 import type { Permissions } from '~/composables/useCan'
 
-export interface MeUser {
-  id: string
-  phone: string | null
-  email: string | null
-}
-
-export interface MePerson {
-  id: string
-  last_name: string
-  first_name: string
-  patronymic?: string | null
-  status?: string
-}
-
-export interface MeResponse {
-  user: MeUser
-  person: MePerson
-  permissions: Permissions
-}
+// Снимок вошедшего — тот же `MeResource`, что отдают вход, `/auth/me` и приём
+// приглашения; тип берётся из схемы, чтобы расхождение с сервером роняло
+// тайпчек, а не расходилось молча.
+export type MeResponse = components['schemas']['MeResource']
+export type MeUser = MeResponse['user']
+export type MePerson = MeResponse['person']
 
 const emptyPermissions: Permissions = { administrator: false, global: [], ministries: {} }
 

@@ -2,16 +2,16 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore, type MeResponse } from '~/stores/auth'
 
 const get = vi.fn()
 const post = vi.fn()
 
 mockNuxtImport('useApi', () => () => ({ get, post }))
 
-const me = {
+const me: MeResponse = {
   user: { id: 'u1', phone: null, email: 'ivan@example.com' },
-  person: { id: 'p1', first_name: 'Иван', last_name: 'Иванов' },
+  person: { id: 'p1', first_name: 'Иван', last_name: 'Иванов', patronymic: null, status: 'member' },
   permissions: { administrator: false, global: ['people.view'], ministries: {} },
 }
 

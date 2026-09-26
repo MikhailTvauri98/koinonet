@@ -7,6 +7,7 @@ import MembersTab from '~/pages/ministries/[id]/members.vue'
 import MinistryCard from '~/pages/ministries/[id]/index.vue'
 import RolesTab from '~/pages/ministries/[id]/roles.vue'
 import MinistriesList from '~/pages/ministries/index.vue'
+import type { Member, Ministry } from '~/utils/ministries'
 
 const get = vi.fn()
 const post = vi.fn()
@@ -34,10 +35,14 @@ beforeEach(() => {
   route.params.id = 'm1'
 })
 
-const ministry = { id: 'm1', name: 'Прославление', description: null, cover_url: null, default_role_id: 'r-member' }
-const member = {
-  id: 'mem1', person: { id: 'p1', full_name: 'Прокопенко Мария' },
-  roles: [{ id: 'r-member', name: 'Участник' }],
+// Тестовые данные — по типам ресурсов из схемы: `MemberResource` плоский,
+// имя и фото лежат в самой строке участника, а не во вложенном `person`.
+const ministry: Ministry = {
+  id: 'm1', name: 'Прославление', description: null, cover_url: null, default_role_id: 'r-member', archived_at: null,
+}
+const member: Member = {
+  id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: 'Прокопенко Мария', joined_at: '2026-09-01T10:00:00Z',
+  photo_url: null, roles: [{ id: 'r-member', name: 'Участник' }],
 }
 // Каталог ролей служения (GET /ministries/{id}/roles, доступен носителю
 // members.manage — доделка задачи 28) содержит роль-по-умолчанию, которую
