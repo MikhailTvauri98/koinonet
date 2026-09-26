@@ -40,8 +40,8 @@ final class ErasePersonCommand extends Command
             $user = $person->user()->lockForUpdate()->first();
             $userId = $user?->id;
 
-            // The photo leaves the card first, so that Media's eraser below
-            // already sees it as unused.
+            // The photo only leaves the card: the file becomes an orphan,
+            // which Media's cleanup deletes (architecture 7.8, 7.9).
             $person->forceFill([
                 'last_name' => 'Удалённый человек',
                 'first_name' => '',
