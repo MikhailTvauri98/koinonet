@@ -8,9 +8,37 @@ on:
   pull_request:
   workflow_call:
 
+# Заданиям нужно только читать код. Из deploy.yml права могут лишь сужаться.
+permissions:
+  contents: read
+
+# Новый пуш в ветку или pull request отменяет его устаревший прогон. Прогоны
+# из deploy.yml (ref main) не отменяются: каждый выкладываемый коммит
+# проверяется целиком, а очередь выкладок держит сам deploy.yml.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   api:
     runs-on: ubuntu-latest
+    # Задание работает на самом раннере, а не в контейнере сети Compose,
+    # поэтому сервисы ниже доступны на localhost (порты проброшены), а не по
+    # имени сервиса. Переменные — на уровне задания: их видят и Pest, и экспорт
+    # OpenAPI (Scramble читает схему таблиц из базы). У DB_* в phpunit.xml нет
+    # force="true", поэтому настоящая переменная окружения сильнее его
+    # умолчания sqlite — так же, как окружение контейнера в infra/compose.yml
+    # для `docker compose exec app`.
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: church_test
+      DB_USERNAME: church
+      DB_PASSWORD: secret
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
     services:
       postgres:
         image: postgres:17-alpine
@@ -39,7 +67,9 @@ jobs:
         working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      # Стороннее действие закреплено на коммите: подменённый тег не выполнит
+      # чужой код в прогоне.
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: '8.4'
           extensions: pdo_pgsql, redis, intl, imagick, bcmath, zip, exif, gd
@@ -47,23 +77,8 @@ jobs:
       - run: cp .env.example .env && php artisan key:generate
       - run: composer lint
       - run: composer types
-      - run: composer test
-        env:
-          # The job runs on the runner itself, not inside a container on the
-          # compose network, so these services are reachable at localhost
-          # (ports mapped above), not by service name. phpunit.xml's DB_*
-          # env vars have no force="true", so a real env var here beats its
-          # sqlite default, same as infra/compose.yml's container env
-          # already does for `docker compose exec app`.
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: church_test
-          DB_USERNAME: church
-          DB_PASSWORD: secret
-          REDIS_HOST: 127.0.0.1
-          REDIS_PORT: 6379
-          CACHE_STORE: redis
+      # --ci: забытый ->only() не сужает прогон до одного теста.
+      - run: composer test -- --ci
       - name: OpenAPI schema is up to date
         run: composer openapi && git diff --exit-code openapi.json
 
@@ -92,12 +107,11 @@ jobs:
       # собирает её той же командой), а не Node-сервер из `npm run build`
       # выше: тот нужен только сквозным тестам (`nuxt preview`). Собранный
       # service worker (injectManifest) зависит от того, какие файлы реально
-      # оказались в public/, а это отличается между двумя командами (см.
-      # отчёт задачи 31: у `npm run build` в паблике нет ни одной
-      # HTML-оболочки вовсе, только у `generate` есть ключ '/'). Поэтому
-      # service worker проверяется именно на статике.
+      # оказались в public/, а это отличается между двумя командами: у
+      # `npm run build` в public/ нет ни одной HTML-оболочки, ключ '/' есть
+      # только у `generate`. Поэтому service worker проверяется на статике.
       - run: npm run generate
-      - name: Service worker survives execution (see task 31 review)
+      - name: Service worker survives execution
         run: npm run verify-sw
 
   # Сквозные сценарии Playwright (apps/web/e2e). Та же команда `npm run e2e`,
@@ -147,7 +161,7 @@ jobs:
       QUEUE_CONNECTION: redis
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: '8.4'
           extensions: pdo_pgsql, redis, intl, imagick, bcmath, zip, exif, gd
