@@ -7,9 +7,12 @@ import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
 const route = useRoute()
-const { canIn } = useCan()
+const { can, canIn } = useCan()
 const ministryId = computed(() => String(route.params.id))
 const canManage = computed(() => canIn(ministryId.value, 'members.manage'))
+// Кандидатов для добавления ищет `GET /people`, а он требует people.view:
+// без справочника кнопка вела бы в поиск, который всегда отказывает.
+const canAdd = computed(() => canManage.value && can('people.view'))
 const members = ref<Member[]>([])
 // Полный каталог ролей служения, не только те, что уже у кого-то есть:
 // GET /ministries/{id}/roles теперь открыт носителю members.manage в этом
@@ -67,19 +70,19 @@ function onRolesChanged(updated: Member) {
   members.value = members.value.map(member => member.id === updated.id ? updated : member)
 }
 
-// Открытый диалог добавления теряет смысл, если members.manage сняли
-// посреди сессии — сами MemberRow скрывают свои действия реактивно
-// (canIn читается заново при каждом вызове, useCan.ts), здесь достаточно
-// закрыть диалог добавления. Каталог ролей перечитывается, если право
-// появилось посреди сессии, и очищается, если его сняли.
+// Открытый диалог добавления теряет смысл, если members.manage или
+// people.view сняли посреди сессии — сами MemberRow скрывают свои действия
+// реактивно (canIn читается заново при каждом вызове, useCan.ts), здесь
+// достаточно закрыть диалог добавления. Каталог ролей перечитывается, если
+// право появилось посреди сессии, и очищается, если его сняли.
 watch(canManage, (allowed) => {
   if (allowed) {
     void loadRoles()
   } else {
-    showAddDialog.value = false
     roles.value = []
   }
 })
+watch(canAdd, (allowed) => { if (!allowed) showAddDialog.value = false })
 // Nuxt переиспользует этот компонент страницы между служениями (переход по
 // ссылке между /ministries/{id}/members меняет только route.params.id, не
 // пересоздавая компонент) — открытый диалог добавления, найденный в старом
@@ -99,13 +102,13 @@ await Promise.all([load(), loadRoles()])
     <MinistryTabs :ministry-id="ministryId" />
     <header>
       <h1>Участники</h1>
-      <button v-if="canManage" type="button" data-test="add-member" @click="showAddDialog = true">Добавить участника</button>
+      <button v-if="canAdd" type="button" data-test="add-member" @click="showAddDialog = true">Добавить участника</button>
     </header>
     <p v-if="rolesError" role="alert">
       {{ rolesError }} <button type="button" data-test="retry-roles" @click="loadRoles">Повторить</button>
     </p>
     <AddMemberDialog
-      v-if="showAddDialog && canManage" :ministry-id="ministryId"
+      v-if="showAddDialog && canAdd" :ministry-id="ministryId"
       @added="onAdded" @close="showAddDialog = false"
     />
     <p v-if="loading" role="status">Загрузка…</p>

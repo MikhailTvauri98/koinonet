@@ -71,8 +71,10 @@ describe('ministry members tab', () => {
     expect(page.find('[data-test="remove-member"]').exists()).toBe(false)
   })
 
-  it('shows member actions with members.manage in that ministry', async () => {
-    grantPermissions({ ministries: { m1: ['members.manage'] } })
+  // Кандидатов для добавления ищет `GET /people`, а он требует people.view:
+  // без справочника кнопка вела бы в поиск, который всегда отказывает.
+  it('offers adding a member with members.manage in that ministry and people.view', async () => {
+    grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'] } })
     get.mockResolvedValue({ data: [member] })
 
     const page = await mountSuspended(MembersTab)
@@ -80,15 +82,27 @@ describe('ministry members tab', () => {
     expect(page.find('[data-test="add-member"]').exists()).toBe(true)
   })
 
-  it('hides member actions when members.manage is withdrawn mid-session', async () => {
+  it('does not offer adding a member without people.view, but keeps the row actions', async () => {
     grantPermissions({ ministries: { m1: ['members.manage'] } })
+    mockMembersAndRoles([member])
+
+    const page = await mountSuspended(MembersTab)
+    await flushPromises()
+
+    expect(page.find('[data-test="add-member"]').exists()).toBe(false)
+    expect(page.find('[data-test="remove-member"]').exists()).toBe(true)
+    expect(page.find('[data-test="save-roles"]').exists()).toBe(true)
+  })
+
+  it('hides member actions when members.manage is withdrawn mid-session', async () => {
+    grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'] } })
     mockMembersAndRoles([member])
 
     const page = await mountSuspended(MembersTab)
     await flushPromises()
     expect(page.find('[data-test="add-member"]').exists()).toBe(true)
 
-    grantPermissions({ ministries: {} })
+    grantPermissions({ global: ['people.view'], ministries: {} })
     await flushPromises()
 
     expect(page.find('[data-test="add-member"]').exists()).toBe(false)
@@ -96,7 +110,7 @@ describe('ministry members tab', () => {
   })
 
   it('shows the default role on a freshly added member', async () => {
-    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'] } })
     // Дефект плана: исходный текст теста брифа кликал по
     // `person-option-p1` сразу после открытия диалога, не введя текст
     // поиска — диалог ищет по `GET /people?search=…` (см. "Фундамент" в
@@ -171,7 +185,7 @@ describe('ministry members tab', () => {
   // пережить смену route.params.id, иначе найденный в старом служении
   // человек добавится уже в новое.
   it('closes the add dialog when the ministry changes, so a stale search result cannot be added to the new one', async () => {
-    grantPermissions({ ministries: { m1: ['members.manage'], m2: ['members.manage'] } })
+    grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'], m2: ['members.manage'] } })
     get.mockImplementation((path: string) => Promise.resolve(
       path.endsWith('/roles') ? { data: [] }
         : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }] }
