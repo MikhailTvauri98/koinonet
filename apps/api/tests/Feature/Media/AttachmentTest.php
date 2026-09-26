@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Media\Models\Media;
@@ -55,7 +56,17 @@ it('sets another persons photo with people.manage', function () {
     $this->putJson("/api/v1/people/{$person->id}/photo", ['media_id' => $media->id])->assertOk();
 });
 
-it('sets a ministry cover with ministry.edit', function () {
+it('refuses to set another persons photo without people.manage', function () {
+    $user = actingAsUserWith([Permission::PeopleView]);
+    $person = Person::factory()->create();
+    $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image']);
+
+    $this->putJson("/api/v1/people/{$person->id}/photo", ['media_id' => $media->id])->assertForbidden();
+
+    expect($person->fresh()->photo_media_id)->toBeNull();
+});
+
+it('sets a ministry cover with ministries.manage_all', function () {
     $ministry = ministryWithRoles();
     $user = actingAsUserWith([Permission::MinistriesManageAll]);
     $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image']);
@@ -63,6 +74,29 @@ it('sets a ministry cover with ministry.edit', function () {
     $this->putJson("/api/v1/ministries/{$ministry->id}/cover", ['media_id' => $media->id])->assertOk();
 
     expect($ministry->fresh()->cover_media_id)->toBe($media->id);
+});
+
+it('sets a ministry cover with ministry.edit in that ministry', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $editor = Role::factory()->ministry($ministry->id)->withPermissions([Permission::MinistryEdit])->create();
+    memberOf($ministry, $user->person, [$editor->id]);
+    $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image']);
+
+    $this->putJson("/api/v1/ministries/{$ministry->id}/cover", ['media_id' => $media->id])->assertOk();
+
+    expect($ministry->fresh()->cover_media_id)->toBe($media->id);
+});
+
+it('refuses to set a ministry cover without ministry.edit', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+    $media = Media::factory()->create(['uploader_user_id' => $user->id, 'kind' => 'image']);
+
+    $this->putJson("/api/v1/ministries/{$ministry->id}/cover", ['media_id' => $media->id])->assertForbidden();
+
+    expect($ministry->fresh()->cover_media_id)->toBeNull();
 });
 
 it('refuses to set a photo on an archived person', function () {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Access\Models\AuditEntry;
+use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Media\Models\Media;
@@ -17,6 +18,72 @@ it('denies managing members without members.manage', function () {
 
     $this->postJson("/api/v1/ministries/{$ministry->id}/members", ['person_id' => Person::factory()->create()->id])
         ->assertForbidden();
+});
+
+it('denies the roster to a non-member without ministries.view_all', function () {
+    $ministry = ministryWithRoles();
+    memberOf($ministry, Person::factory()->create());
+    actingAsUserWith([Permission::PeopleView]);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertForbidden();
+});
+
+it('shows the roster to a non-member with ministries.view_all', function () {
+    $ministry = ministryWithRoles();
+    memberOf($ministry, Person::factory()->create());
+    actingAsUserWith([Permission::MinistriesViewAll]);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->assertJsonCount(1, 'data');
+});
+
+it('denies changing member roles without members.manage', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+    $member = memberOf($ministry, Person::factory()->create());
+    $leader = $ministry->roles()->where('name', 'Лидер')->sole();
+
+    $this->putJson("/api/v1/ministries/{$ministry->id}/members/{$member->id}/roles", ['role_ids' => [$leader->id]])
+        ->assertForbidden();
+
+    expect($member->roles()->pluck('roles.id')->all())->toBe([$ministry->default_role_id]);
+});
+
+it('changes member roles with members.manage in that ministry', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $manager = Role::factory()->ministry($ministry->id)->withPermissions([Permission::MembersManage])->create();
+    memberOf($ministry, $user->person, [$manager->id]);
+    $member = memberOf($ministry, Person::factory()->create());
+    $leader = $ministry->roles()->where('name', 'Лидер')->sole();
+
+    $this->putJson("/api/v1/ministries/{$ministry->id}/members/{$member->id}/roles", ['role_ids' => [$leader->id]])
+        ->assertOk();
+
+    expect($member->roles()->pluck('roles.id')->all())->toBe([$leader->id]);
+});
+
+it('denies removing a member without members.manage', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    memberOf($ministry, $user->person);
+    $member = memberOf($ministry, Person::factory()->create());
+
+    $this->deleteJson("/api/v1/ministries/{$ministry->id}/members/{$member->id}")->assertForbidden();
+
+    expect($ministry->members()->whereKey($member->id)->exists())->toBeTrue();
+});
+
+it('removes a member with members.manage in that ministry', function () {
+    $ministry = ministryWithRoles();
+    $user = actingAsUser();
+    $manager = Role::factory()->ministry($ministry->id)->withPermissions([Permission::MembersManage])->create();
+    memberOf($ministry, $user->person, [$manager->id]);
+    $member = memberOf($ministry, Person::factory()->create());
+
+    $this->deleteJson("/api/v1/ministries/{$ministry->id}/members/{$member->id}")->assertNoContent();
+
+    expect($ministry->members()->whereKey($member->id)->exists())->toBeFalse();
 });
 
 it('adds a member with the default role', function () {

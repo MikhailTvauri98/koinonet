@@ -18,6 +18,11 @@ it('has an authorization test mentioning every permission key', function (Permis
         $corpus .= $file->getContents();
     }
 
-    expect(str_contains($corpus, 'Permission::'.$permission->name) || str_contains($corpus, $permission->value))
+    // Whole tokens only: `people.view` is not mentioned by `people.view_contacts`, nor
+    // `Permission::RolesManage` by `Permission::RolesManageGlobal`.
+    $byCase = '/Permission::'.$permission->name.'(?!\w)/';
+    $byValue = '/(?<![\w.])'.preg_quote($permission->value, '/').'(?![\w.])/';
+
+    expect(preg_match($byCase, $corpus) === 1 || preg_match($byValue, $corpus) === 1)
         ->toBeTrue("Для права {$permission->value} нет ни одного теста.");
 })->with(Permission::cases());
