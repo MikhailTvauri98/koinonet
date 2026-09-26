@@ -28,6 +28,10 @@ services:
   worker:
     build: { context: ./php }
     command: php artisan horizon
+    # От www-data, как рабочие процессы php-fpm в app и воркер в prod: файлы,
+    # которые он пишет в том медиафайлов и в storage, принадлежат тому же
+    # пользователю, что и загруженные через API (README, «Dev-окружение»).
+    user: www-data
     environment: *app-environment
     volumes: ['../apps/api:/app', 'media:/media']
     depends_on: [app]

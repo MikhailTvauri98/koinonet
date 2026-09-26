@@ -84,3 +84,9 @@ CMD ["php-fpm"]
 FROM base AS dev
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Том медиафайлов — как в prod: /media пустой и принадлежит www-data, Docker
+# копирует его владельца в новый пустой том. Пишут в том процессы www-data:
+# рабочие процессы php-fpm (загрузка) и воркер (обработка, compose.yml).
+# Том, созданный до этой строки, так не исправится — README, «Dev-окружение».
+RUN rm -rf /media && mkdir /media && chown www-data:www-data /media
