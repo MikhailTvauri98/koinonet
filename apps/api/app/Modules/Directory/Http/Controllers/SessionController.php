@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Directory\Http\Controllers;
 
+use App\Modules\Directory\Actions\EndDevice;
+use App\Modules\Directory\Actions\EndOtherDevices;
 use App\Modules\Directory\Http\Resources\SessionResource;
 use App\Modules\Directory\Models\User;
-use App\Support\DomainRuleException;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 final class SessionController
@@ -24,33 +27,41 @@ final class SessionController
         );
     }
 
-    public function destroy(Request $request, string $session): Response
+    public function destroy(Request $request, string $session, EndDevice $endDevice): Response
     {
-        if ($session === $request->session()->getId()) {
-            throw DomainRuleException::because(
-                'session.current_cannot_be_revoked',
-                'Текущую сессию из списка устройств завершить нельзя.',
-            );
-        }
+        $user = $this->user($request);
+        $ended = $endDevice->handle($user, $session, $request->session()->getId());
 
-        $deleted = DB::table('sessions')
-            ->where('user_id', $this->user($request)->id)
-            ->where('id', $session)
-            ->delete();
+        abort_unless($ended, 404);
 
-        abort_if($deleted === 0, 404);
+        $this->keepThisDeviceRemembered($request, $user);
 
         return response()->noContent();
     }
 
-    public function logoutOthers(Request $request): Response
+    public function logoutOthers(Request $request, EndOtherDevices $endOtherDevices): Response
     {
-        DB::table('sessions')
-            ->where('user_id', $this->user($request)->id)
-            ->where('id', '!=', $request->session()->getId())
-            ->delete();
+        $user = $this->user($request);
+        $endOtherDevices->handle($user, $request->session()->getId());
+
+        $this->keepThisDeviceRemembered($request, $user);
 
         return response()->noContent();
+    }
+
+    /**
+     * Ending another device gives the account a new remember token, which also voids
+     * the "remember me" cookie of the device that asked. That device stays the one
+     * it was, so it gets its cookie back under the new token.
+     */
+    private function keepThisDeviceRemembered(Request $request, User $user): void
+    {
+        $guard = Auth::guard('web');
+        assert($guard instanceof SessionGuard);
+
+        if ($request->cookies->has($guard->getRecallerName())) {
+            $guard->login($user, remember: true);
+        }
     }
 
     private function user(Request $request): User

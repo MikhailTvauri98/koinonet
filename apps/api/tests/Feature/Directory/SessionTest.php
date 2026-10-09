@@ -8,8 +8,11 @@ use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionResolver;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 
 uses(RefreshDatabase::class);
 
@@ -30,6 +33,46 @@ function sessionRow(User $user, string $id, array $attributes = []): void
         'last_activity' => time(),
         ...$attributes,
     ]);
+}
+
+function recallerCookie(): string
+{
+    $guard = Auth::guard('web');
+    assert($guard instanceof SessionGuard);
+
+    return $guard->getRecallerName();
+}
+
+/**
+ * The session and remember-me cookies a browser keeps from this answer, decrypted.
+ *
+ * @return array<string, string>
+ */
+function keptCookies(TestResponse $response): array
+{
+    $kept = [];
+
+    foreach ([(string) config('session.cookie'), recallerCookie()] as $name) {
+        $cookie = $response->getCookie($name);
+
+        if ($cookie !== null) {
+            $kept[$name] = (string) $cookie->getValue();
+        }
+    }
+
+    return $kept;
+}
+
+/** @return array<string, string> the cookies of the browser that signed in */
+function signInFromNewBrowser(User $user, bool $remember): array
+{
+    $response = test()->asAnotherBrowser([])->postJson('/api/v1/auth/login', [
+        'login' => $user->email,
+        'password' => 'password',
+        'remember' => $remember,
+    ])->assertOk();
+
+    return keptCookies($response);
 }
 
 it('lists devices', function () {
@@ -90,6 +133,71 @@ it('ends all other sessions', function () {
 
     expect(DB::table('sessions')->where('id', 'other-session')->exists())->toBeFalse()
         ->and(DB::table('sessions')->where('id', $current)->exists())->toBeTrue();
+});
+
+it('keeps an ended device out even when it chose to be remembered', function () {
+    $user = User::factory()->create();
+    $phone = signInFromNewBrowser($user, remember: true);
+    $laptop = signInFromNewBrowser($user, remember: false);
+
+    $this->asAnotherBrowser($laptop)
+        ->deleteJson('/api/v1/auth/sessions/'.$phone[(string) config('session.cookie')])
+        ->assertNoContent();
+
+    $this->asAnotherBrowser($phone)->getJson('/api/v1/auth/me')->assertUnauthorized();
+});
+
+it('keeps remembered devices out after ending all other sessions', function () {
+    $user = User::factory()->create();
+    $phone = signInFromNewBrowser($user, remember: true);
+    $laptop = signInFromNewBrowser($user, remember: false);
+
+    $this->asAnotherBrowser($laptop)->postJson('/api/v1/auth/sessions/logout-others')->assertNoContent();
+
+    $this->asAnotherBrowser($phone)->getJson('/api/v1/auth/me')->assertUnauthorized();
+});
+
+it('ends a remembered device that is no longer in the device list', function () {
+    $user = User::factory()->create();
+    $phone = signInFromNewBrowser($user, remember: true);
+    // The phone's session ran out: nothing of it is listed, only its cookie remembers the account.
+    DB::table('sessions')->where('id', $phone[(string) config('session.cookie')])->delete();
+    $laptop = signInFromNewBrowser($user, remember: false);
+
+    $this->asAnotherBrowser($laptop)->postJson('/api/v1/auth/sessions/logout-others')->assertNoContent();
+
+    $this->asAnotherBrowser($phone)->getJson('/api/v1/auth/me')->assertUnauthorized();
+});
+
+it('keeps the current device remembered after ending another one', function () {
+    $user = User::factory()->create();
+    $phone = signInFromNewBrowser($user, remember: true);
+    $laptop = signInFromNewBrowser($user, remember: true);
+
+    $answer = $this->asAnotherBrowser($laptop)
+        ->deleteJson('/api/v1/auth/sessions/'.$phone[(string) config('session.cookie')])
+        ->assertNoContent();
+
+    // Later the laptop's session runs out, and all it has is the remember-me cookie it holds now.
+    $held = keptCookies($answer) + $laptop;
+
+    $this->asAnotherBrowser([recallerCookie() => $held[recallerCookie()]])
+        ->getJson('/api/v1/auth/me')
+        ->assertOk();
+});
+
+it('remembers a device for 365 days', function () {
+    $this->freezeTime();
+    $user = User::factory()->create();
+
+    $response = $this->asAnotherBrowser([])->postJson('/api/v1/auth/login', [
+        'login' => $user->email,
+        'password' => 'password',
+        'remember' => true,
+    ])->assertOk();
+
+    expect($response->getCookie(recallerCookie(), false)?->getExpiresTime())
+        ->toBe(now()->addDays(365)->getTimestamp());
 });
 
 it('denies disabling an account without people.invite', function () {

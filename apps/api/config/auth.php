@@ -43,6 +43,9 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            // "Remember me" lasts 365 days (architecture 7.2); without this key
+            // Laravel keeps the cookie for 400 days.
+            'remember' => 365 * 24 * 60,
         ],
     ],
 
