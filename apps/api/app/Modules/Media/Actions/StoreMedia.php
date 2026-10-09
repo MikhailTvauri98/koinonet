@@ -34,7 +34,7 @@ final readonly class StoreMedia
 
         $nameExtension = mb_strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
 
-        if (! in_array($nameExtension, (array) config('media.extensions'), true)) {
+        if (! MediaKind::allowsNameExtension($nameExtension)) {
             throw DomainRuleException::because(
                 'media.extension_not_allowed',
                 'Медиафайл с таким расширением не принимается.',

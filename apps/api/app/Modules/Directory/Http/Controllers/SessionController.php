@@ -52,7 +52,9 @@ final class SessionController
     /**
      * Ending another device gives the account a new remember token, which also voids
      * the "remember me" cookie of the device that asked. That device stays the one
-     * it was, so it gets its cookie back under the new token.
+     * it was, so it gets its cookie back under the new token. Signing in again also
+     * moves it to a new session id, as every sign-in does; the device list reads
+     * the current id afresh.
      */
     private function keepThisDeviceRemembered(Request $request, User $user): void
     {

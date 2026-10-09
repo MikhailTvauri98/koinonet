@@ -17,7 +17,7 @@ final readonly class EndDevice
         if ($sessionId === $currentSessionId) {
             throw DomainRuleException::because(
                 'session.current_cannot_be_revoked',
-                'Текущую сессию из списка устройств завершить нельзя.',
+                'Текущее устройство завершить нельзя.',
             );
         }
 

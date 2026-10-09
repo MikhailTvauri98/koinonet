@@ -34,18 +34,21 @@ final class PersonIndexQuery
             ->with('photo')
             ->when(
                 $search !== null,
-                // Word similarity compares the query with the closest part of
-                // "surname name", not with the whole of it: "смирн" reaches 0.83
-                // against "смирнова александра", while plain similarity gives 0.24,
-                // under its 0.3 threshold, and the beginning of a surname finds nobody.
+                // Each measure finds what the other misses. The beginning of a
+                // surname is close only to part of "surname name": "смирн" scores
+                // 0.24 against "смирнова александра" as a whole, under the 0.3 of
+                // `%`, and 0.83 by word similarity (`<%`, threshold 0.6). The
+                // beginnings of both words are close to the whole string instead:
+                // "петр ив" scores 0.43 against "петров иван" by `%` but 0.55 by
+                // word similarity, under its threshold.
                 fn (Builder $query): Builder => $query
-                    ->whereRaw(
-                        "? <% lower(last_name || ' ' || first_name)",
-                        [mb_strtolower($search)],
-                    )
+                    ->where(fn (Builder $match): Builder => $match
+                        ->whereRaw("lower(last_name || ' ' || first_name) % ?", [mb_strtolower($search)])
+                        ->orWhereRaw("? <% lower(last_name || ' ' || first_name)", [mb_strtolower($search)]))
                     ->orderByRaw(
-                        "word_similarity(?, lower(last_name || ' ' || first_name)) desc",
-                        [mb_strtolower($search)],
+                        "greatest(similarity(lower(last_name || ' ' || first_name), ?),
+                            word_similarity(?, lower(last_name || ' ' || first_name))) desc",
+                        [mb_strtolower($search), mb_strtolower($search)],
                     ),
             )
             ->when(

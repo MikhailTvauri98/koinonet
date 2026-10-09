@@ -140,15 +140,27 @@ it('rejects a file named without an extension', function () {
     ])->assertStatus(422)->assertJsonPath('code', 'media.extension_not_allowed');
 });
 
-it('accepts a whitelisted extension in any letter case and spelling', function () {
-    actingAsUser();
-    $jpeg = UploadedFile::fake()->image('source.jpg', 40, 30)->getContent();
+/** The first page of an Ogg Opus recording, as a messenger's voice note starts. */
+function oggOpusBytes(): string
+{
+    $opusHead = 'OpusHead'.chr(1).chr(1).pack('v', 312).pack('V', 48000).pack('v', 0).chr(0);
 
-    $this->postJson('/api/v1/media', [
-        'file' => uploadWithContent('IMG_0001.JPEG', $jpeg),
-        'purpose' => 'person_photo',
-    ])->assertCreated();
-});
+    return 'OggS'.chr(0).chr(2).str_repeat(chr(0), 8).pack('V', 1).pack('V', 0).pack('V', 0)
+        .chr(1).chr(strlen($opusHead)).$opusHead.str_repeat("\0", 64);
+}
+
+it('accepts every spelling of an allowed type in the name, in any letter case', function (string $name, Closure $bytes, string $purpose) {
+    actingAsUser();
+
+    $this->postJson('/api/v1/media', ['file' => uploadWithContent($name, $bytes()), 'purpose' => $purpose])
+        ->assertCreated();
+})->with([
+    'JPEG in capitals' => ['IMG_0001.JPEG', fn () => UploadedFile::fake()->image('source.jpg', 40, 30)->getContent(), 'person_photo'],
+    'jfif as Chrome on Windows saves a JPEG' => ['photo.jfif', fn () => UploadedFile::fake()->image('source.jpg', 40, 30)->getContent(), 'person_photo'],
+    'jpe' => ['photo.jpe', fn () => UploadedFile::fake()->image('source.jpg', 40, 30)->getContent(), 'person_photo'],
+    'opus voice note' => ['voice.opus', fn () => oggOpusBytes(), 'message'],
+    'oga' => ['voice.oga', fn () => oggOpusBytes(), 'message'],
+]);
 
 it('accepts an m4a recording', function () {
     actingAsUser();
