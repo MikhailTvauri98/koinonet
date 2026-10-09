@@ -10,6 +10,8 @@ use App\Modules\Media\MediaKind;
 use App\Modules\Media\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 /**
  * Hands the caller a `X-Accel-Redirect` header instead of the file's bytes:
@@ -51,9 +53,22 @@ final class MediaDownloadController
         return response('', 200, [
             'Content-Type' => $media->mimeFor($path),
             'Content-Disposition' => $media->kind === MediaKind::File
-                ? 'attachment; filename="'.addslashes($media->original_name).'"'
-                : 'inline',
+                ? $this->attachmentNamed($media->original_name)
+                : HeaderUtils::DISPOSITION_INLINE,
             'X-Accel-Redirect' => '/_protected/'.$path,
         ]);
+    }
+
+    /**
+     * The original name goes out as RFC 6266's UTF-8 `filename*`, with an ASCII
+     * `filename` for clients that do not read it; neither may hold a path
+     * separator, and the ASCII one no `%`.
+     */
+    private function attachmentNamed(string $originalName): string
+    {
+        $name = str_replace(['/', '\\'], '_', $originalName);
+        $ascii = str_replace(['%', '/', '\\'], '_', (string) preg_replace('/[^\x20-\x7E]/', '_', Str::ascii($name)));
+
+        return HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $name, $ascii);
     }
 }

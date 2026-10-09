@@ -50,6 +50,26 @@ it('serves the file through x-accel-redirect', function () {
         ->assertHeader('Content-Type', 'image/jpeg');
 });
 
+it('names a downloaded document by its original name in a form every browser reads', function () {
+    $user = actingAsUser();
+    $media = Media::factory()->create([
+        'uploader_user_id' => $user->id,
+        'kind' => 'file',
+        'mime' => 'application/pdf',
+        'path' => '2026/09/b.pdf',
+        'original_name' => 'Отчёт.pdf',
+    ]);
+
+    $disposition = $this->get(URL::temporarySignedRoute('media.show', now()->addHour(), ['media' => $media->id]))
+        ->assertOk()
+        ->headers->get('Content-Disposition');
+
+    // An ASCII name for old clients, then the UTF-8 name of RFC 6266 for the rest.
+    expect($disposition)->toMatch(
+        '/^attachment; filename=("[\x20-\x7E]*"|[^;\s]+); filename\*=utf-8\'\'%D0%9E%D1%82%D1%87%D1%91%D1%82\.pdf$/',
+    );
+});
+
 it('serves a variant', function () {
     $user = actingAsUser();
     $media = Media::factory()->create([

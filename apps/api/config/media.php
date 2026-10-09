@@ -64,6 +64,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Extension whitelist
+    |--------------------------------------------------------------------------
+    |
+    | The extension a file's own name must carry (architecture 7.8), checked
+    | after its content passed the type whitelist above. A document is
+    | downloaded under that name, so a script that reads as plain text
+    | (greeting.vbs) must not get through. One list for every kind: the
+    | content can land in another kind than the name suggests, such as an
+    | m4a recording whose generic brand finfo reports as video/mp4.
+    |
+    */
+
+    'extensions' => [
+        'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'zip', 'mp3', 'm4a', 'ogg',
+        'mp4', 'mov', 'webm',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pixel limit
     |--------------------------------------------------------------------------
     |

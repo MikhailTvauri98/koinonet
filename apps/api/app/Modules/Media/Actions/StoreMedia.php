@@ -32,6 +32,15 @@ final readonly class StoreMedia
             throw DomainRuleException::because('media.type_not_allowed', 'Этот тип файла не поддерживается.');
         }
 
+        $nameExtension = mb_strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+
+        if (! in_array($nameExtension, (array) config('media.extensions'), true)) {
+            throw DomainRuleException::because(
+                'media.extension_not_allowed',
+                'Медиафайл с таким расширением не принимается.',
+            );
+        }
+
         $extension = $kind->extensionForMime($mime)
             ?? throw new RuntimeException("media.limits config has no extension for mime {$mime}.");
 

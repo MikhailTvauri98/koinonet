@@ -1400,7 +1400,7 @@ export interface operations {
         responses: {
             200: {
                 headers: {
-                    "Content-Disposition"?: string | "inline";
+                    "Content-Disposition"?: string;
                     "X-Accel-Redirect"?: string;
                     [name: string]: unknown;
                 };

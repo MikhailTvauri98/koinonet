@@ -897,17 +897,7 @@
                         "headers": {
                             "Content-Disposition": {
                                 "schema": {
-                                    "anyOf": [
-                                        {
-                                            "type": "string"
-                                        },
-                                        {
-                                            "type": "string",
-                                            "enum": [
-                                                "inline"
-                                            ]
-                                        }
-                                    ]
+                                    "type": "string"
                                 }
                             },
                             "X-Accel-Redirect": {

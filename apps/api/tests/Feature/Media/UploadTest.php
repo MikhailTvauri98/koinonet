@@ -120,6 +120,36 @@ it('rejects heic with a clear message when libheif is missing', function () {
     ])->assertStatus(422)->assertJsonPath('code', 'media.heic_unsupported');
 });
 
+it('rejects a file named with an extension outside the whitelist', function () {
+    actingAsUser();
+    // A script reads as plain text by its content, which is an allowed type.
+    $script = uploadWithContent('greeting.vbs', "Set shell = CreateObject(\"WScript.Shell\")\r\nshell.Run \"calc\"\r\n");
+
+    $this->postJson('/api/v1/media', ['file' => $script, 'purpose' => 'message'])
+        ->assertStatus(422)->assertJsonPath('code', 'media.extension_not_allowed');
+
+    expect(Media::query()->count())->toBe(0);
+});
+
+it('rejects a file named without an extension', function () {
+    actingAsUser();
+
+    $this->postJson('/api/v1/media', [
+        'file' => uploadWithContent('notes', "Список дел\n"),
+        'purpose' => 'message',
+    ])->assertStatus(422)->assertJsonPath('code', 'media.extension_not_allowed');
+});
+
+it('accepts a whitelisted extension in any letter case and spelling', function () {
+    actingAsUser();
+    $jpeg = UploadedFile::fake()->image('source.jpg', 40, 30)->getContent();
+
+    $this->postJson('/api/v1/media', [
+        'file' => uploadWithContent('IMG_0001.JPEG', $jpeg),
+        'purpose' => 'person_photo',
+    ])->assertCreated();
+});
+
 it('accepts an m4a recording', function () {
     actingAsUser();
 
