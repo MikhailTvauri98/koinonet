@@ -23,6 +23,7 @@ use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Policies\PersonPolicy;
 use App\Modules\Media\Actions\MediaAccountEraser;
 use App\Modules\Media\Console\PruneOrphanMediaCommand;
+use App\Modules\Media\MediaAccess;
 use App\Modules\Ministries\Access\DatabaseMinistryPermissionSource;
 use App\Modules\Ministries\Access\DatabaseSharedMinistryFinder;
 use App\Modules\Ministries\Actions\DetachRoleFromMembers;
@@ -54,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class],
             'directory.account_erasers',
         );
+        $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
     }
 
     /**

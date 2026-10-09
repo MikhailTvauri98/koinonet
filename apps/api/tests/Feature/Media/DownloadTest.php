@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Access\Permission;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Contracts\MediaOwnerResolver;
 use App\Modules\Media\Models\Media;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -68,6 +69,23 @@ it('names a downloaded document by its original name in a form every browser rea
     expect($disposition)->toMatch(
         '/^attachment; filename=("[\x20-\x7E]*"|[^;\s]+); filename\*=utf-8\'\'%D0%9E%D1%82%D1%87%D1%91%D1%82\.pdf$/',
     );
+});
+
+it('asks the owner resolvers bound under media.owner_resolvers', function () {
+    actingAsUser();
+    // Uploaded by another account and used by no photo or cover: by default only its uploader sees it.
+    $media = Media::factory()->create();
+    app()->instance('tests.attachment_owner', new class implements MediaOwnerResolver
+    {
+        public function canView(User $user, Media $media): ?bool
+        {
+            return true;
+        }
+    });
+    app()->tag(['tests.attachment_owner'], 'media.owner_resolvers');
+
+    $this->get(URL::temporarySignedRoute('media.show', now()->addHour(), ['media' => $media->id]))
+        ->assertOk();
 });
 
 it('serves a variant', function () {

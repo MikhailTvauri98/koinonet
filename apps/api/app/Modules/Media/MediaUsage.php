@@ -15,8 +15,8 @@ use App\Modules\Ministries\Models\Ministry;
  * governs both a polymorphic attachment and a direct reference alike).
  * Phase 1 has two direct owners, checked here the same way
  * {@see MediaAccess} checks them for visibility. A later phase that adds a
- * new direct owner (chat avatar) extends this class the same way it will
- * extend `MediaAccess`.
+ * new direct owner (chat avatar) adds its column check to this class; its
+ * visibility goes into a resolver under `media.owner_resolvers` instead.
  */
 final readonly class MediaUsage
 {
