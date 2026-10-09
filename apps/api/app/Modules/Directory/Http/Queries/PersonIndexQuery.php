@@ -34,13 +34,17 @@ final class PersonIndexQuery
             ->with('photo')
             ->when(
                 $search !== null,
+                // Word similarity compares the query with the closest part of
+                // "surname name", not with the whole of it: "смирн" reaches 0.83
+                // against "смирнова александра", while plain similarity gives 0.24,
+                // under its 0.3 threshold, and the beginning of a surname finds nobody.
                 fn (Builder $query): Builder => $query
                     ->whereRaw(
-                        "lower(last_name || ' ' || first_name) % ?",
+                        "? <% lower(last_name || ' ' || first_name)",
                         [mb_strtolower($search)],
                     )
                     ->orderByRaw(
-                        "similarity(lower(last_name || ' ' || first_name), ?) desc",
+                        "word_similarity(?, lower(last_name || ' ' || first_name)) desc",
                         [mb_strtolower($search)],
                     ),
             )

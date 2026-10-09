@@ -34,6 +34,17 @@ it('finds a person by a misspelled surname', function () {
         ->assertJsonPath('data.0.last_name', 'Прокопенко');
 });
 
+it('finds a person by the beginning of the surname', function () {
+    actingAsUserWith([Permission::PeopleView], Person::factory()->create(['last_name' => 'Кузнецов', 'first_name' => 'Олег']));
+    Person::factory()->create(['last_name' => 'Смирнова', 'first_name' => 'Александра']);
+    Person::factory()->create(['last_name' => 'Иванов', 'first_name' => 'Пётр']);
+
+    $this->getJson('/api/v1/people?search=Смирн')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.last_name', 'Смирнова');
+});
+
 it('filters by status', function () {
     actingAsUserWith([Permission::PeopleView]);
     Person::factory()->create(['status' => 'guest']);
