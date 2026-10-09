@@ -40,7 +40,15 @@ services:
     volumes:
       - '../apps/api:/app:ro'
       - './nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro'
-      - 'media:/media:ro'
+      # nocopy, как в compose.prod.yml: у образа nginx в /media лежат каталоги
+      # alpine (cdrom, floppy, usb), и без него Docker скопировал бы их в пустой
+      # том, отдав его корень root, — тогда php-fpm и воркер от www-data не
+      # смогли бы записать загрузку. Том заполняет и отдаёт www-data образ app.
+      - type: volume
+        source: media
+        target: /media
+        read_only: true
+        volume: { nocopy: true }
     ports: ['8080:80']
     depends_on: [app]
 volumes: { pgdata: {}, redisdata: {}, media: {} }
