@@ -19,6 +19,24 @@ beforeEach(function () {
     Bus::fake();
 });
 
+/**
+ * An upload whose type the server detects from these bytes, as with a real browser upload:
+ * a fake UploadedFile reports a type guessed from its name instead.
+ */
+function uploadWithContent(string $name, string $bytes): UploadedFile
+{
+    $path = (string) tempnam(sys_get_temp_dir(), 'upload');
+    file_put_contents($path, $bytes);
+
+    return new UploadedFile($path, $name, null, null, true);
+}
+
+/** The ISO media header (ftyp box) that tells m4a, heic and heif apart by brand. */
+function isoMediaBytes(string $majorBrand, string $compatibleBrand): string
+{
+    return pack('N', 24).'ftyp'.$majorBrand.pack('N', 0).$compatibleBrand.$majorBrand.str_repeat("\0", 64);
+}
+
 it('requires a session to upload', function () {
     $this->postJson('/api/v1/media', ['file' => UploadedFile::fake()->image('photo.jpg')])
         ->assertStatus(401);
@@ -98,6 +116,45 @@ it('rejects heic with a clear message when libheif is missing', function () {
 
     $this->postJson('/api/v1/media', [
         'file' => UploadedFile::fake()->create('photo.heic', 100, 'image/heic'),
+        'purpose' => 'person_photo',
+    ])->assertStatus(422)->assertJsonPath('code', 'media.heic_unsupported');
+});
+
+it('accepts an m4a recording', function () {
+    actingAsUser();
+
+    $this->postJson('/api/v1/media', [
+        'file' => uploadWithContent('voice.m4a', isoMediaBytes('M4A ', 'isom')),
+        'purpose' => 'message',
+    ])->assertCreated();
+
+    $media = Media::query()->sole();
+    expect($media->kind->value)->toBe('file')
+        ->and($media->mime)->toBe('audio/x-m4a')
+        ->and($media->path)->toEndWith('.m4a');
+});
+
+it('accepts a heif photo', function () {
+    actingAsUser();
+    config(['media.heic_supported' => true]);
+
+    $this->postJson('/api/v1/media', [
+        'file' => uploadWithContent('photo.heif', isoMediaBytes('mif1', 'heic')),
+        'purpose' => 'person_photo',
+    ])->assertCreated();
+
+    $media = Media::query()->sole();
+    expect($media->kind->value)->toBe('image')
+        ->and($media->mime)->toBe('image/heif')
+        ->and($media->status->value)->toBe('processing');
+});
+
+it('rejects heif with a clear message when libheif is missing', function () {
+    actingAsUser();
+    config(['media.heic_supported' => false]);
+
+    $this->postJson('/api/v1/media', [
+        'file' => uploadWithContent('photo.heif', isoMediaBytes('mif1', 'heic')),
         'purpose' => 'person_photo',
     ])->assertStatus(422)->assertJsonPath('code', 'media.heic_unsupported');
 });

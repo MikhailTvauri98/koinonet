@@ -146,6 +146,23 @@ it('converts a heic original to jpeg and drops the heic file', function () {
     Storage::disk('media')->assertMissing('2026/09/01JQZHEIC00000000000000000.heic');
 });
 
+it('converts a heif original to jpeg as it does heic', function () {
+    app()->instance(ImageProcessor::class, imageProcessorReadingHeic());
+    $media = Media::factory()->create([
+        'status' => 'processing', 'path' => '2026/09/01JQZHEIF00000000000000000.heif', 'mime' => 'image/heif',
+    ]);
+    Storage::disk('media')->put($media->path, UploadedFile::fake()->image('photo.jpg', 300, 200)->getContent());
+
+    ProcessUploadedImage::dispatchSync($media->id);
+    $media->refresh();
+
+    expect($media->status->value)->toBe('ready')
+        ->and($media->path)->toBe('2026/09/01JQZHEIF00000000000000000.jpg')
+        ->and($media->mime)->toBe('image/jpeg');
+
+    Storage::disk('media')->assertMissing('2026/09/01JQZHEIF00000000000000000.heif');
+});
+
 it('refuses an image over the pixel limit before decoding it', function () {
     config(['media.max_image_pixels' => 100]);
     $decoded = new ArrayObject;

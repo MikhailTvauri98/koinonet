@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Media\Actions;
 
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\HeifImage;
 use App\Modules\Media\Jobs\ProcessUploadedImage;
 use App\Modules\Media\MediaKind;
 use App\Modules\Media\MediaStatus;
@@ -41,10 +42,10 @@ final readonly class StoreMedia
             );
         }
 
-        if ($mime === 'image/heic' && ! config('media.heic_supported')) {
+        if (HeifImage::is($mime) && ! config('media.heic_supported')) {
             throw DomainRuleException::because(
                 'media.heic_unsupported',
-                'Формат HEIC не поддерживается сервером, выберите другой формат изображения.',
+                'Изображения HEIC и HEIF сервер не принимает, выберите другой формат изображения.',
             );
         }
 

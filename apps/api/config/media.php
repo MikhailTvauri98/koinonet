@@ -26,6 +26,7 @@ return [
                 'image/webp' => 'webp',
                 'image/gif' => 'gif',
                 'image/heic' => 'heic',
+                'image/heif' => 'heif',
             ],
         ],
 
@@ -44,6 +45,8 @@ return [
                 'application/zip' => 'zip',
                 'audio/mpeg' => 'mp3',
                 'audio/mp4' => 'm4a',
+                // finfo reports an m4a recording (brand "M4A ") as audio/x-m4a.
+                'audio/x-m4a' => 'm4a',
                 'audio/ogg' => 'ogg',
             ],
         ],
@@ -78,10 +81,10 @@ return [
     | HEIC support
     |--------------------------------------------------------------------------
     |
-    | HEIC needs imagick built with libheif to be read and converted to JPEG
-    | during processing. Computed once at config load so StoreMedia can reject
-    | HEIC with a clear error instead of accepting a file the pipeline cannot
-    | process.
+    | HEIC and HEIF need imagick built with libheif to be read and converted
+    | to JPEG during processing. Computed once at config load so StoreMedia
+    | can reject them with a clear error instead of accepting a file the
+    | pipeline cannot process.
     |
     */
 

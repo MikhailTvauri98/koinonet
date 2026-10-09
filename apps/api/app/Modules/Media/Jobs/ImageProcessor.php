@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Media\Jobs;
 
+use App\Modules\Media\HeifImage;
 use App\Modules\Media\Models\Media;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
@@ -47,7 +48,7 @@ final readonly class ImageProcessor
      * and writes `thumb` (320px) and `large` (1080px) WebP variants
      * alongside it.
      *
-     * A HEIC original comes back as a JPEG under a `.jpg` path (architecture
+     * A HEIC or HEIF original comes back as a JPEG under a `.jpg` path (architecture
      * 7.8): Imagick here reads HEIC but cannot write it, and browsers other
      * than Safari cannot show it. The caller records the new `path` and
      * `mime` and removes the old file.
@@ -79,7 +80,7 @@ final readonly class ImageProcessor
         $directory = pathinfo($media->path, PATHINFO_DIRNAME);
         $basename = pathinfo($media->path, PATHINFO_FILENAME);
 
-        if ($media->mime === 'image/heic') {
+        if (HeifImage::is($media->mime)) {
             $path = "{$directory}/{$basename}.jpg";
             $mime = 'image/jpeg';
             $disk->put($path, (string) $image->encode(new JpegEncoder(quality: self::JPEG_QUALITY)));
