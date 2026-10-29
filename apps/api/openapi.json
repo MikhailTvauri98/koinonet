@@ -5052,6 +5052,91 @@
                     }
                 }
             }
+        },
+        "/templates/{template}/create-event": {
+            "post": {
+                "operationId": "template.createEvent",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "template",
+                        "in": "path",
+                        "required": true,
+                        "description": "The template ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateEventFromTemplateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`EventResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "\u0421\u043e\u0431\u044b\u0442\u0438\u0435 \u043d\u0430 \u044d\u0442\u0443 \u0434\u0430\u0442\u0443 \u0443\u0436\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u043e, \u0448\u0430\u0431\u043b\u043e\u043d \u0438\u043b\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u0435 \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u043d\u044b.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "event.occurrence_exists",
+                                                "template.archived",
+                                                "ministry.archived"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -5341,6 +5426,19 @@
                     "conflicts"
                 ],
                 "title": "CandidateResource"
+            },
+            "CreateEventFromTemplateRequest": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                },
+                "required": [
+                    "date"
+                ],
+                "title": "CreateEventFromTemplateRequest"
             },
             "CreatedAccessLinkResource": {
                 "type": "object",

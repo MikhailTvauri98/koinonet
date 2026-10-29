@@ -2100,7 +2100,7 @@ composer openapi && git add . && git commit -m "feat(calendar): event templates 
 - Отдаёт наружу: `CreateEventFromTemplate::handle(EventTemplate $template, CarbonImmutable $date, ?User $creator): Event` — копирует владельца, название, описание, место, видимость и слоты; `starts_at` = дата + `start_time` по календарю церкви в UTC, `ends_at` = `starts_at + duration_minutes`; заполняет `template_id` и `occurrence_date`; публикует `EventCreated(id, 'none')`. Используется генератором (задача 10).
 - Коды ошибок: `event.occurrence_exists`, `template.archived`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2163,12 +2163,12 @@ it('works for a template without recurrence', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/TemplateInstantiateTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class CreateEventFromTemplate
@@ -2219,12 +2219,12 @@ final class CreateEventFromTemplate
 
 `CreateEventFromTemplateRequest`: `date` — `required|date_format:Y-m-d`. Политика — `canManageTemplate`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): create an event from a template on a chosen date"

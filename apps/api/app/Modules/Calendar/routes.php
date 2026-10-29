@@ -15,6 +15,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('templates/{template}', [TemplateController::class, 'show']);
     Route::patch('templates/{template}', [TemplateController::class, 'update']);
     Route::post('templates/{template}/archive', [TemplateController::class, 'archive']);
+    Route::post('templates/{template}/create-event', [TemplateController::class, 'createEvent']);
     Route::get('events', [EventController::class, 'index']);
     Route::post('events', [EventController::class, 'store']);
     Route::get('events/{event}', [EventController::class, 'show']);

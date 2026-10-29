@@ -5,16 +5,20 @@ declare(strict_types=1);
 namespace App\Modules\Calendar\Http\Controllers;
 
 use App\Modules\Calendar\Actions\ArchiveTemplate;
+use App\Modules\Calendar\Actions\CreateEventFromTemplate;
 use App\Modules\Calendar\Actions\CreateTemplate;
 use App\Modules\Calendar\Actions\UpdateTemplate;
 use App\Modules\Calendar\EventAccess;
 use App\Modules\Calendar\EventOwnerType;
+use App\Modules\Calendar\Http\Requests\CreateEventFromTemplateRequest;
 use App\Modules\Calendar\Http\Requests\IndexTemplateRequest;
 use App\Modules\Calendar\Http\Requests\TemplateRequest;
 use App\Modules\Calendar\Http\Requests\UpdateTemplateRequest;
+use App\Modules\Calendar\Http\Resources\EventResource;
 use App\Modules\Calendar\Http\Resources\EventTemplateResource;
 use App\Modules\Calendar\Models\EventTemplate;
 use App\Modules\Directory\Models\User;
+use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response as OpenApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -75,5 +79,16 @@ final class TemplateController
         Gate::authorize('update', $template);
 
         return new EventTemplateResource($archive->handle($template));
+    }
+
+    #[OpenApiResponse(status: 422, description: 'Событие на эту дату уже создано, шаблон или служение архивированы.', type: "array{message: string, code: 'event.occurrence_exists'|'template.archived'|'ministry.archived'}")]
+    public function createEvent(CreateEventFromTemplateRequest $request, EventTemplate $template, CreateEventFromTemplate $create): JsonResponse
+    {
+        Gate::authorize('update', $template);
+        $creator = $request->user();
+        assert($creator instanceof User);
+        $date = CarbonImmutable::createFromFormat('!Y-m-d', $request->string('date')->toString(), 'UTC');
+
+        return (new EventResource($create->handle($template, $date, $creator)))->response()->setStatusCode(201);
     }
 }

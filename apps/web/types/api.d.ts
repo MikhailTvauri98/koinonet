@@ -1006,6 +1006,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/templates/{template}/create-event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["template.createEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1079,6 +1095,11 @@ export interface components {
                 starts_at: string | null;
                 ends_at: string | null;
             }[];
+        };
+        /** CreateEventFromTemplateRequest */
+        CreateEventFromTemplateRequest: {
+            /** Format: date */
+            date: string;
         };
         /** CreatedAccessLinkResource */
         CreatedAccessLinkResource: {
@@ -4319,6 +4340,51 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "template.createEvent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The template ID */
+                template: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEventFromTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Событие на эту дату уже создано, шаблон или служение архивированы. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @enum {string} */
+                        code: "event.occurrence_exists" | "template.archived" | "ministry.archived";
+                    };
+                };
+            };
         };
     };
 }
