@@ -46,9 +46,11 @@ use App\Modules\Ministries\Policies\MinistryPolicy;
 use App\Modules\Notifications\Actions\NotificationsAccountEraser;
 use App\Modules\Notifications\Console\GenerateVapidKeysCommand;
 use App\Modules\Notifications\Http\Requests\MarkNotificationsReadRequest;
+use App\Modules\Notifications\Http\Requests\UpdateNotificationSettingsRequest;
 use App\Modules\Notifications\Listeners\NotifyAboutAnnouncement;
 use App\Modules\Notifications\Listeners\RemovePushSubscriptionsOnDisable;
 use App\Modules\Notifications\OpenApi\MarkNotificationsReadSchema;
+use App\Modules\Notifications\OpenApi\NotificationSettingsSchema;
 use App\Modules\Notifications\Push\MinishlinkPushTransport;
 use App\Modules\Notifications\Push\PushTransport;
 use App\Modules\Settings\Models\Setting;
@@ -96,6 +98,10 @@ class AppServiceProvider extends ServiceProvider
             }
             if ($document->components->hasSchema(MarkNotificationsReadRequest::class)) {
                 $document->components->addSchema(MarkNotificationsReadRequest::class, Schema::fromType(new MarkNotificationsReadSchema));
+            }
+            if ($document->components->hasSchema(UpdateNotificationSettingsRequest::class)) {
+                $inferred = $document->components->getSchema(UpdateNotificationSettingsRequest::class)->type;
+                $document->components->addSchema(UpdateNotificationSettingsRequest::class, Schema::fromType(new NotificationSettingsSchema($inferred)));
             }
 
             foreach ($document->paths as $path) {

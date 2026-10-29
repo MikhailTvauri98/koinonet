@@ -40,6 +40,7 @@ export function useApi() {
   const router = useRouter()
 
   async function request<T>(method: HttpMethod, path: string, body?: JsonBody, query?: Query): Promise<T> {
+    const sessionVersion = auth.sessionVersion
     // Only this non-API endpoint may escape the versioned API prefix.
     if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')
       || (path.startsWith('/broadcasting') && (path !== '/broadcasting/auth' || method !== 'POST'))) {
@@ -50,6 +51,7 @@ export function useApi() {
     // ними: безопасные GET не меняют состояние и Sanctum её не требует.
     if (UNSAFE_METHODS.has(method)) {
       await ensureCsrfCookie()
+      if (sessionVersion !== auth.sessionVersion) throw new Error('Session changed')
     }
 
     const headers: Record<string, string> = { ...ACCEPT_JSON }
@@ -65,6 +67,9 @@ export function useApi() {
       body,
       query,
       async onResponseError({ response }) {
+        // A late response belongs to the session that sent the request. In
+        // particular, stale push ownership errors must not log out account B.
+        if (sessionVersion !== auth.sessionVersion) return
         if (response.status === 401 && path !== '/auth/me') {
           // Сессия истекла или её не было: чистим состояние и ведём на вход,
           // а не оставляем пустой экран. /auth/me исключён тем же приёмом,

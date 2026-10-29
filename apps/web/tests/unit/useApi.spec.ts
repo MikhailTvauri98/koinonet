@@ -88,6 +88,48 @@ describe('useApi 403 handling', () => {
 })
 
 describe('useApi 401 handling', () => {
+  it.each([401, 403])('does not change B for a delayed push ownership %i response from A', async (statusCode) => {
+    let finish!: () => void
+    registerEndpoint('/sanctum/csrf-cookie', () => '')
+    registerEndpoint('/api/v1/push-subscriptions', {
+      method: 'POST',
+      handler: async () => {
+        await new Promise<void>(resolve => { finish = resolve })
+        throw createError({ statusCode, statusMessage: 'Rejected' })
+      },
+    })
+    const auth = useAuthStore()
+    await auth.setMe(me)
+    const result = useApi().post('/push-subscriptions', {}).catch(error => error)
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    auth.reset()
+    await auth.setMe({ ...me, user: { ...me.user, id: 'B' } })
+    const refresh = vi.spyOn(auth, 'fetchMe')
+    finish()
+    expect(await result).toMatchObject({ statusCode })
+    expect(auth.user?.id).toBe('B')
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('does not send a stale push mutation after CSRF resolves in a different session', async () => {
+    let finish!: () => void
+    const received = vi.fn(() => ({}))
+    registerEndpoint('/sanctum/csrf-cookie', async () => {
+      await new Promise<void>(resolve => { finish = resolve })
+      return ''
+    })
+    registerEndpoint('/api/v1/push-subscriptions', { method: 'POST', handler: received })
+    const auth = useAuthStore()
+    await auth.setMe(me)
+    const result = useApi().post('/push-subscriptions', {}).catch(error => error)
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    auth.reset()
+    await auth.setMe({ ...me, user: { ...me.user, id: 'B' } })
+    finish()
+    await result
+    expect(received).not.toHaveBeenCalled()
+  })
+
   it('leaves navigation to the caller when /auth/me itself answers 401', async () => {
     registerEndpoint('/api/v1/auth/me', {
       method: 'GET',

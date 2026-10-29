@@ -105,6 +105,7 @@ it('rejects malformed settings', function (array $payload, string $field) {
     $this->assertDatabaseCount('notification_settings', 0);
 })->with([
     'missing settings' => [[], 'settings'],
+    'empty settings' => [['settings' => []], 'settings'],
     'scalar settings' => [['settings' => false], 'settings'],
     'null state' => [['settings' => ['chat' => null]], 'settings.chat'],
     'non boolean state' => [['settings' => ['chat' => 'off']], 'settings.chat'],
@@ -200,5 +201,7 @@ it('documents a partial object of known category settings', function () {
     expect($settings['type'])->toBe('object')
         ->and(array_keys($settings['properties']))->toBe(['announcements', 'chat', 'assignments', 'reminders'])
         ->and($settings['properties']['chat']['type'])->toBe('boolean')
+        ->and($settings['minProperties'] ?? null)->toBe(1)
+        ->and($settings['additionalProperties'] ?? null)->toBeFalse()
         ->and($settings['required'] ?? [])->toBe([]);
 });

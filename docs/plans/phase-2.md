@@ -2571,7 +2571,7 @@ self.addEventListener('notificationclick', (event) => {
 
 - [x] **Шаг 4: Подписка и отписка**
 
-`usePush().subscribe()`: `Notification.requestPermission()` → при `granted` `registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) })` → `POST /push-subscriptions` с `subscriptionPayload(sub.toJSON())`. `unsubscribe()`: берёт `pushManager.getSubscription()`, шлёт `DELETE /push-subscriptions` с `endpoint`, затем `sub.unsubscribe()`. `subscribed` инициализируется из `getSubscription()` при монтировании. `auth.logout()` вызывает `usePush().unsubscribe()` до `POST /auth/logout` и не падает, если пушей нет.
+`usePush().subscribe()`: `Notification.requestPermission()` → при `granted` `registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) })` → `POST /push-subscriptions` с `subscriptionPayload(sub.toJSON())`. `unsubscribe()`: берёт `pushManager.getSubscription()`, шлёт `DELETE /push-subscriptions` с `endpoint`, затем `sub.unsubscribe()`. `subscribed` общий для приложения и подтверждается только серверной привязкой к текущему аккаунту из `auth.setMe`; сам факт `getSubscription()` не подтверждает принадлежность. `auth.reset` отменяет браузерную подписку, ошибки и запоздавшие операции обрабатываются согласно разделу 10 архитектуры. `auth.logout()` вызывает `usePush().unsubscribe()` до `POST /auth/logout` и не падает, если пушей нет.
 
 Кнопка живёт в центре уведомлений (вверху, пока не подписан) и в настройках уведомлений. Разрешение запрашивается только по клику (раздел 10).
 
@@ -3029,3 +3029,17 @@ git add apps/web && git commit -m "test(web): end-to-end announcement and live n
 - Раздел 5.5: `announcements.author_user_id` допускает `null` после стирания автора (решение 5).
 - Раздел 7.9 о вызове `AccountEraser` правок не требует: контракт и перечень реализаций, включая Notifications и Announcements, внесены в фазе 1 (решение 5).
 - Раздел 9: адрес сокета — источник страницы, ключ Reverb — из `GET /settings` (решение 15); внесено в архитектуру при итоговом ревью фазы 1.
+
+## Итоговая локальная интеграционная правка F1/F2/M1/M2
+
+Одна ограниченная задача после приёмки задач 1–13 (1–3 часа), зависимости: задачи 2, 6, 9, 10 и 13. Цель: исключить готовность чужой браузерной подписки после смены аккаунта, разрешить выход при уже удалённой записи и согласовать два ограничения OpenAPI с работающим API.
+
+Файлы: auth/useApi/usePush, общий push store и сообщение об ошибке, тесты жизненного цикла; producer схемы настроек и metadata контроллера объявлений, тесты генератора, OpenAPI/client types; раздел 10 архитектуры и этот план.
+
+- [x] Воспроизвести F1/F2 совместными тестами auth + push, затем реализовать подтверждение принадлежности, безопасную отмену и точный missing-subscription teardown.
+- [x] Покрыть запоздавшие ответы/CSRF, сброс из обработчика 401, ожидание разрешения, недоступный браузерный API и общий повтор проверки.
+- [x] Добавить minProperties/additionalProperties и domain 422 на стороне генерации схемы; перегенерировать контракт и типы.
+- [x] Самостоятельно проверить границы модулей, ключи прав, словарь и обновление документации до финальных прогонов.
+- [x] Финальные локальные проверки: frontend 359/38; API 195 (812 assertions); PHPStan 242 и Pint 318; lint/types/generate/verify-sw; E2E 5/5 (4.9m), proxy 2/2, тестовые контейнеры/порты очищены. Изменение подготовлено к локальному коммиту; точная ревизия — в итоговом отчёте исправлений.
+
+Критерий готовности: все новые регрессии и применимые локальные проверки зелёные, нет активных тестовых процессов после E2E. Физические устройства и production остаются непроверенными по указанию заказчика; прежние открытые пункты приёмки не закрываются этой правкой.

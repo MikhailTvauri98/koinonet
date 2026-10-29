@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PushLifecycleError from '~/components/notifications/PushLifecycleError.vue'
 // Регистрация service worker (задача 31). Явным кодом, а не плагином модуля
 // @vite-pwa/nuxt (`pwa.client.registerPlugin: false` в nuxt.config.ts): его
 // плагин уходит через виртуальный модуль `virtual:pwa-register/vue`, который
@@ -34,6 +35,7 @@ onMounted(() => {
          кнопкой «Не сейчас» закрывала нижняя панель вкладок телефона
          (AppNav, position: fixed). -->
     <InstallPrompt />
+    <PushLifecycleError />
     <!-- Макет layouts/default.vue (навигация AppNav) применяется ко всем
          страницам; вход, приглашение и сброс пароля отказываются от него
          сами через definePageMeta({ layout: false }). ConnectionGate

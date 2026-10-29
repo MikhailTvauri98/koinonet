@@ -18,6 +18,7 @@ use App\Modules\Announcements\Http\Requests\UpdateAnnouncementRequest;
 use App\Modules\Announcements\Http\Resources\AnnouncementResource;
 use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Directory\Models\User;
+use Dedoc\Scramble\Attributes\Response as OpenApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -47,6 +48,7 @@ final class AnnouncementController
         return new AnnouncementResource($announcement->load(['ministry', 'author.person', 'attachments.media'])->loadCount('views'));
     }
 
+    #[OpenApiResponse(status: 422, description: 'Архивное объявление изменить нельзя.', type: "array{message: string, code: 'announcement.archived'}")]
     public function pin(Announcement $announcement, PinAnnouncement $pin): AnnouncementResource
     {
         Gate::authorize('update', $announcement);
@@ -54,6 +56,7 @@ final class AnnouncementController
         return new AnnouncementResource($pin->handle($announcement));
     }
 
+    #[OpenApiResponse(status: 422, description: 'Архивное объявление изменить нельзя.', type: "array{message: string, code: 'announcement.archived'}")]
     public function unpin(Announcement $announcement, UnpinAnnouncement $unpin): AnnouncementResource
     {
         Gate::authorize('update', $announcement);

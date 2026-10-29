@@ -10,7 +10,7 @@ const unsubscribePush = vi.fn()
 
 mockNuxtImport('useApi', () => () => ({ get, post }))
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
-mockNuxtImport('usePush', () => () => ({ unsubscribe: unsubscribePush }))
+mockNuxtImport('usePush', () => () => ({ unsubscribe: unsubscribePush, setAccount: async () => {} }))
 
 const me: MeResponse = {
   user: { id: 'u1', phone: null, email: 'ivan@example.com' },

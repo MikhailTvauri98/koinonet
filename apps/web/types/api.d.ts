@@ -1505,6 +1505,19 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
+            /** @description Архивное объявление изменить нельзя. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @constant */
+                        code: "announcement.archived";
+                    };
+                };
+            };
         };
     };
     "announcement.unpin": {
@@ -1533,6 +1546,19 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
+            /** @description Архивное объявление изменить нельзя. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @constant */
+                        code: "announcement.archived";
+                    };
+                };
+            };
         };
     };
     "announcement.archive": {

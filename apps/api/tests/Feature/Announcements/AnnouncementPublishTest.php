@@ -231,3 +231,15 @@ it('documents publication fields and immutable scope accurately', function () {
     $store = $schema['components']['schemas']['StoreAnnouncementRequest'];
     expect($store['oneOf'][1]['required'])->toContain('ministry_id');
 });
+
+it('documents the archived domain error for pin and unpin', function () {
+    $schema = app(Generator::class)();
+
+    foreach (['pin', 'unpin'] as $action) {
+        $response = $schema['paths']['/announcements/{announcement}/'.$action]['post']['responses'][422] ?? [];
+        $body = $response['content']['application/json']['schema'] ?? [];
+        expect($body['properties']['code']['const'] ?? null)->toBe('announcement.archived')
+            ->and($body['properties']['message']['type'] ?? null)->toBe('string')
+            ->and($body['required'] ?? [])->toContain('code', 'message');
+    }
+});

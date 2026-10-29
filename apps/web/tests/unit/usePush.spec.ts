@@ -1,8 +1,10 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { defineComponent } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { subscriptionPayload, urlBase64ToUint8Array, usePush } from '~/composables/usePush'
+import { usePush } from '~/composables/usePush'
+import { subscriptionPayload, urlBase64ToUint8Array } from '~/utils/pushSubscription'
 
 const { post, remove, fetchSettings, settings } = vi.hoisted(() => ({
   post: vi.fn(), remove: vi.fn(), fetchSettings: vi.fn(), settings: { vapidPublicKey: 'BAEC_-8' },
@@ -19,7 +21,8 @@ const json = { endpoint: 'https://push.example/device', expirationTime: null, ke
 const subscription = { endpoint: json.endpoint, toJSON: () => json, unsubscribe: browserUnsubscribe }
 const registration = { active: {}, pushManager: { subscribe: browserSubscribe, getSubscription } }
 
-beforeEach(() => {
+beforeEach(async () => {
+  setActivePinia(createPinia())
   vi.resetAllMocks()
   vi.stubGlobal('Notification', { permission: 'default', requestPermission })
   vi.stubGlobal('PushManager', vi.fn())
@@ -31,6 +34,7 @@ beforeEach(() => {
   browserUnsubscribe.mockResolvedValue(true)
   requestPermission.mockResolvedValue('granted')
   settings.vapidPublicKey = 'BAEC_-8'
+  await usePush().setAccount('A')
 })
 afterEach(() => vi.unstubAllGlobals())
 
@@ -47,11 +51,11 @@ describe('push helpers', () => {
 })
 
 describe('push subscription lifecycle', () => {
-  it('reads the existing subscription on mount without asking permission or posting', async () => {
+  it('does not infer current-account ownership just from a browser subscription on mount', async () => {
     getSubscription.mockResolvedValue(subscription)
     let push!: ReturnType<typeof usePush>
     const wrapper = await mountSuspended(defineComponent({ setup() { push = usePush(); return () => null } }))
-    await vi.waitFor(() => expect(push.subscribed.value).toBe(true))
+    expect(push.subscribed.value).toBe(false)
     expect(requestPermission).not.toHaveBeenCalled()
     expect(post).not.toHaveBeenCalled()
     wrapper.unmount()
@@ -125,11 +129,11 @@ describe('push subscription lifecycle', () => {
     expect(browserSubscribe).not.toHaveBeenCalled()
     expect(post).not.toHaveBeenCalled()
   })
-  it('retains an existing browser subscription on a failed registration update', async () => {
+  it('invalidates even an existing browser subscription on a failed registration update', async () => {
     getSubscription.mockResolvedValue(subscription)
     post.mockRejectedValue(new Error('offline'))
     await expect(usePush().subscribe()).rejects.toThrow('offline')
-    expect(browserUnsubscribe).not.toHaveBeenCalled()
+    expect(browserUnsubscribe).toHaveBeenCalledOnce()
   })
   it('handles a browser without service workers or notification support', async () => {
     vi.stubGlobal('navigator', { userAgent: 'old browser' })

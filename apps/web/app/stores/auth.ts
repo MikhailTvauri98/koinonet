@@ -28,7 +28,7 @@ export const useAuthStore = defineStore('auth', () => {
   // сервером» с повтором (ConnectionGate.vue). Сбрасывает флаг любой ответ
   // сервера о сессии: снимок вошедшего или 401.
   const connectionLost = ref(false)
-  let sessionVersion = 0
+  const sessionVersion = ref(0)
 
   // Публично: экран приглашения (`pages/invite/[token].vue`) принимает
   // `POST /access-links/{token}/accept`, который для kind=invite логинит
@@ -37,18 +37,20 @@ export const useAuthStore = defineStore('auth', () => {
   // Экран переиспользует эту функцию вместо второго похода за `/auth/me`.
   async function setMe(me: MeResponse) {
     if (user.value?.id !== me.user.id) {
-      sessionVersion++
+      sessionVersion.value++
       useSettingsStore().reset()
     }
     user.value = me.user
     person.value = me.person
     permissions.value = me.permissions
     connectionLost.value = false
-    await useNotificationsStore().subscribe(me.user.id)
+    const pushSetup = usePush().setAccount(me.user.id)
+    await Promise.all([pushSetup, useNotificationsStore().subscribe(me.user.id)])
   }
 
   function reset() {
-    sessionVersion++
+    sessionVersion.value++
+    void usePush().setAccount(null)
     useNotificationsStore().unsubscribe()
     useSettingsStore().reset()
     user.value = null
@@ -86,28 +88,30 @@ export const useAuthStore = defineStore('auth', () => {
   // что сессии уже нет, — это тоже выход.
   async function logout() {
     const api = useApi()
+    const version = sessionVersion.value
     await usePush().unsubscribe()
+    if (version !== sessionVersion.value) return
     try {
       await api.post('/auth/logout')
     } catch (error) {
       if (apiErrorStatus(error) !== 401) throw error
     }
-    reset()
+    if (version === sessionVersion.value) reset()
   }
 
   async function fetchMe() {
     const api = useApi()
-    const version = sessionVersion
+    const version = sessionVersion.value
     try {
       const me = await api.get<MeResponse>('/auth/me')
-      if (version !== sessionVersion) return
+      if (version !== sessionVersion.value) return
       const setup = setMe(me)
-      const appliedVersion = sessionVersion
+      const appliedVersion = sessionVersion.value
       await setup
-      if (appliedVersion !== sessionVersion) return
+      if (appliedVersion !== sessionVersion.value) return
       initialized.value = true
     } catch (error) {
-      if (version !== sessionVersion) return
+      if (version !== sessionVersion.value) return
       if (apiErrorStatus(error) === 401) {
         // Сервер ответил: сессии нет. Это гость — middleware решит, вести ли
         // на /login.
@@ -123,5 +127,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, person, permissions, initialized, connectionLost, login, logout, fetchMe, reset, setMe, forgetSession }
+  return { user, person, permissions, sessionVersion, initialized, connectionLost, login, logout, fetchMe, reset, setMe, forgetSession }
 })
