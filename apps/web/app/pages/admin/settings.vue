@@ -24,6 +24,7 @@ const saveError = ref('')
 const fieldErrors = ref<Record<string, string[]>>({})
 
 function applySettings(data: Settings) {
+  useSettingsStore().apply(data)
   churchName.value = data.church_name
   timezone.value = data.timezone
   phoneRegion.value = data.phone_region ?? ''

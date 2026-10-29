@@ -8,6 +8,7 @@
     <NuxtLink to="/settings/profile" exact-active-class="settings-tabs__active">Профиль</NuxtLink>
     <NuxtLink to="/settings/login" exact-active-class="settings-tabs__active">Вход</NuxtLink>
     <NuxtLink to="/settings/devices" exact-active-class="settings-tabs__active">Устройства</NuxtLink>
+    <NuxtLink to="/settings/notifications" exact-active-class="settings-tabs__active">Уведомления</NuxtLink>
   </nav>
 </template>
 

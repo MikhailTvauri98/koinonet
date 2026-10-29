@@ -1,6 +1,8 @@
 import type { Pinia } from 'pinia'
 import { useNuxtApp } from '#app'
+import { vi } from 'vitest'
 import { useAuthStore, type MePerson, type MeUser } from '~/stores/auth'
+import { useNotificationsStore } from '~/stores/notifications'
 
 export interface PermissionGrant {
   administrator?: boolean
@@ -33,6 +35,9 @@ const signedInPerson: MePerson = {
  * весь файл тестов.
  */
 export function grantPermissions(grant: PermissionGrant = {}, pinia: Pinia = useNuxtApp().$pinia): void {
+  // Permission screens do not exercise network/channel initialization; its
+  // real lifecycle has dedicated notifications-auth and store tests.
+  vi.spyOn(useNotificationsStore(pinia), 'subscribe').mockResolvedValue(undefined)
   const auth = useAuthStore(pinia)
   auth.setMe({
     user: auth.user ?? signedInUser,

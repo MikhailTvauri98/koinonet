@@ -2112,26 +2112,28 @@ git add . && git commit -m "feat(notifications): announcement notifications to c
 
 ### Задача 9: Дата церкви, Echo, store и центр уведомлений, настройки категорий
 
+> Исполнение задачи 9: R6/R7 соблюдены. Дополнительно покрыты `setMe` приглашения, `reset`/401, смена аккаунта и запоздавшие ответы, начальный счётчик и переподключение; `chat` исключён из центра. Echo ленивый, после настроек; `wsPath` не задаётся, Pusher сам добавляет `/app/{key}`. Прокси `/broadcasting/**` уже существовал. Настройки общие, даты реактивны; мигрированы журнал и устройства, сохранена числовая совместимость `formatChurchDateTime`. Непосредственная проверка с двумя вкладками и реальным Reverb остаётся в задаче 13; в задаче 9 выполнены локальные автоматические проверки клиента. Отчёт: `.superpowers/sdd/phase-2/task-9-report.md`.
+
 **Файлы:**
 - Создать: `apps/web/app/composables/useChurchDate.ts`, `useEcho.ts`; `app/plugins/echo.client.ts`; `app/stores/settings.ts`, `app/stores/notifications.ts`; `app/pages/notifications.vue`, `app/pages/settings/notifications.vue`; `app/components/notifications/NotificationList.vue`
 - Изменить: `app/components/AppNav.vue` (пункт «Уведомления» с бейджем), `app/stores/auth.ts` (после `fetchMe`/`login` — подписка на канал, при `logout` — отписка), `nuxt.config.ts` (`/broadcasting/**` в прокси `routeRules`, рядом с `/api/**` и `/sanctum/**`), `package.json` (`laravel-echo`, `pusher-js`)
 - Тест: `tests/unit/useChurchDate.spec.ts`, `tests/unit/notifications.store.spec.ts`, `tests/component/notifications.spec.ts`
 
 **Интерфейсы:**
-- Отдаёт наружу: `useChurchDate()` → `{ formatDate(iso: string): string, formatTime(iso: string): string, formatDateTime(iso: string): string, todayInChurch(): string }` — форматирование через `Intl.DateTimeFormat('ru-RU', { timeZone })`, пояс из `useSettingsStore().timezone`.
+- Отдаёт наружу: `useChurchDate()` → `{ formatDate(iso: string): string, formatTime(iso: string): string, formatDateTime(iso: string): string, todayInChurch(): string }` — форматирование через `Intl.DateTimeFormat('ru-RU', { timeZone })`, пояс реактивно читается из `useSettingsStore().timezone`.
 - Отдаёт наружу: `useSettingsStore()` с `churchName`, `timezone`, `vapidPublicKey`, `reverbKey`, `fetch()` (`GET /settings`).
 - Отдаёт наружу: `useEcho()` → экземпляр Laravel Echo (`broadcaster: 'reverb'`) на источнике страницы (решение 15), авторизация через `useApi().post('/broadcasting/auth')`, чтобы уходили cookie и CSRF.
-- Отдаёт наружу: `useNotificationsStore()` с `items`, `unreadCount`, `nextCursor`, `fetch(reset?)`, `markRead(ids)`, `markAllRead()`, `subscribe(userId)`, `unsubscribe()`, `push(notification)` — последнее вызывается из события `notification.created`.
+- Отдаёт наружу: `useNotificationsStore()` с `items`, `unreadCount`, `nextCursor`, `fetch(reset?)`, `markRead(ids)`, `markAllRead()`, `subscribe(userId)`, `unsubscribe()`, `push(notification)` — последнее вызывается через Echo `.notification()` стандартного Laravel wire event; `type: notification.created` — поле полезной нагрузки (R7).
 - Потребляет: `GET /notifications`, `POST /notifications/read`, `GET /notification-settings`, `PUT /notification-settings`, `GET /settings`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/unit/useChurchDate.spec.ts`:
 
 ```ts
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { churchDateFormatter } from '~/app/composables/useChurchDate'
+import { churchDateFormatter } from '~/composables/useChurchDate'
 
 describe('churchDateFormatter', () => {
   beforeEach(() => setActivePinia(createPinia()))
@@ -2160,7 +2162,7 @@ describe('churchDateFormatter', () => {
 import { createPinia, setActivePinia } from 'pinia'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useNotificationsStore } from '~/app/stores/notifications'
+import { useNotificationsStore } from '~/stores/notifications'
 
 const get = vi.fn()
 const post = vi.fn()
@@ -2248,8 +2250,8 @@ describe('notifications store', () => {
 ```ts
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import NotificationsPage from '~/app/pages/notifications.vue'
-import NotificationSettingsPage from '~/app/pages/settings/notifications.vue'
+import NotificationsPage from '~/pages/notifications.vue'
+import NotificationSettingsPage from '~/pages/settings/notifications.vue'
 
 const get = vi.fn()
 const post = vi.fn()
@@ -2316,12 +2318,12 @@ describe('notification settings', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Дата церкви и настройки**
+- [x] **Шаг 3: Дата церкви и настройки**
 
 ```ts
 // app/composables/useChurchDate.ts
@@ -2346,7 +2348,7 @@ export function useChurchDate() {
 
 `useSettingsStore` загружается один раз после входа (в `auth.fetchMe` и `auth.login`) и держит `timezone` со значением по умолчанию `'UTC'` до ответа.
 
-- [ ] **Шаг 4: Echo и store уведомлений**
+- [x] **Шаг 4: Echo и store уведомлений**
 
 ```bash
 cd apps/web && npm i laravel-echo pusher-js
@@ -2358,7 +2360,7 @@ Store: `subscribe(userId)` — `echo.private(\`user.${userId}\`).notification(n 
 
 `AppNav`: пункт «Уведомления» с бейджем `unreadCount` (скрыт при нуле). Даты в центре, в журнале и везде дальше — через `useChurchDate`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
@@ -2368,7 +2370,7 @@ Store: `subscribe(userId)` — `echo.private(\`user.${userId}\`).notification(n 
 Выполнить: `make up`, `npm run dev`, войти в двух вкладках разными аккаунтами, опубликовать объявление из первой.
 Ожидается: во второй вкладке бейдж увеличивается без перезагрузки, в центре появляется запись.
 
-- [ ] **Шаг 7: Коммит**
+- [x] **Шаг 7: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): church date formatter, echo, notification center and category settings"

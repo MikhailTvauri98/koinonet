@@ -3,7 +3,7 @@ import type { operations } from '~~/types/api'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
 import { apiErrorMessage } from '~/utils/apiError'
 import { AUDIT_ACTION_LABELS, auditActionLabel, auditSubjectLabel } from '~/utils/audit'
-import { churchDayEndToUtc, churchDayStartToUtc, formatChurchDateTime } from '~/utils/churchTime'
+import { churchDayEndToUtc, churchDayStartToUtc } from '~/utils/churchTime'
 
 type AuditResponse = operations['access.audit']['responses'][200]['content']['application/json']
 type AuditEntry = AuditResponse['data'][number]
@@ -24,7 +24,8 @@ const loading = ref(false)
 const loadingMore = ref(false)
 const loadError = ref('')
 
-const timezone = ref('UTC')
+const settings = useSettingsStore()
+const { formatDateTime } = useChurchDate()
 const actionFilter = ref('')
 const actorId = ref<string | null>(null)
 const actorName = ref<string | null>(null)
@@ -50,8 +51,8 @@ function buildQuery(cursor: string | null): URLSearchParams {
   // Границы суток — в часовом поясе церкви, не машины (раздел 10; тест
   // churchTime.spec.ts проверяет это отдельно для двух непоказательных
   // поясов): экран сам не разбирает даты, только зовёт churchTime.ts.
-  if (fromDate.value) query.set('from', churchDayStartToUtc(fromDate.value, timezone.value))
-  if (toDate.value) query.set('to', churchDayEndToUtc(toDate.value, timezone.value))
+  if (fromDate.value) query.set('from', churchDayStartToUtc(fromDate.value, settings.timezone))
+  if (toDate.value) query.set('to', churchDayEndToUtc(toDate.value, settings.timezone))
   return query
 }
 
@@ -127,7 +128,7 @@ function retry() {
 }
 
 function formatCreatedAt(iso: string) {
-  return formatChurchDateTime(iso, timezone.value)
+  return formatDateTime(iso)
 }
 
 watch([actionFilter, fromDate, toDate], resetList)
@@ -144,7 +145,7 @@ onBeforeUnmount(() => {
 })
 
 if (canView.value) {
-  timezone.value = await fetchChurchTimezone()
+  await fetchChurchTimezone()
   await load(true)
 }
 </script>

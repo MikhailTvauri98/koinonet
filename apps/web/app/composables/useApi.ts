@@ -5,6 +5,7 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 // выставить заголовок multipart с границей — CSRF и обработка 401/403 ниже
 // от этого не меняются, они читают только путь и метод.
 type JsonBody = Record<string, unknown> | FormData
+type Query = Record<string, string | number | boolean | null | undefined>
 
 const UNSAFE_METHODS: ReadonlySet<HttpMethod> = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -38,7 +39,13 @@ export function useApi() {
   const auth = useAuthStore()
   const router = useRouter()
 
-  async function request<T>(method: HttpMethod, path: string, body?: JsonBody): Promise<T> {
+  async function request<T>(method: HttpMethod, path: string, body?: JsonBody, query?: Query): Promise<T> {
+    // Only this non-API endpoint may escape the versioned API prefix.
+    if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')
+      || (path.startsWith('/broadcasting') && (path !== '/broadcasting/auth' || method !== 'POST'))) {
+      throw new Error('Expected a relative API path')
+    }
+    const url = path === '/broadcasting/auth' ? path : `${API_BASE}${path}`
     // CSRF-cookie запрашивается перед небезопасными методами и только перед
     // ними: безопасные GET не меняют состояние и Sanctum её не требует.
     if (UNSAFE_METHODS.has(method)) {
@@ -51,11 +58,12 @@ export function useApi() {
       headers['X-XSRF-TOKEN'] = xsrfToken
     }
 
-    return await $fetch<T>(`${API_BASE}${path}`, {
+    return await $fetch<T>(url, {
       method,
       credentials: 'include',
       headers,
       body,
+      query,
       async onResponseError({ response }) {
         if (response.status === 401 && path !== '/auth/me') {
           // Сессия истекла или её не было: чистим состояние и ведём на вход,
@@ -88,10 +96,10 @@ export function useApi() {
   }
 
   return {
-    get: <T>(path: string) => request<T>('GET', path),
+    get: <T>(path: string, query?: Query) => request<T>('GET', path, undefined, query),
     post: <T>(path: string, body?: JsonBody) => request<T>('POST', path, body),
     put: <T>(path: string, body?: JsonBody) => request<T>('PUT', path, body),
     patch: <T>(path: string, body?: JsonBody) => request<T>('PATCH', path, body),
-    delete: <T>(path: string) => request<T>('DELETE', path),
+    delete: <T>(path: string, body?: JsonBody) => request<T>('DELETE', path, body),
   }
 }

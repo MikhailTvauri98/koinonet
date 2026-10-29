@@ -8,6 +8,7 @@ const get = vi.fn()
 const post = vi.fn()
 
 mockNuxtImport('useApi', () => () => ({ get, post }))
+mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
 
 const me: MeResponse = {
   user: { id: 'u1', phone: null, email: 'ivan@example.com' },

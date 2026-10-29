@@ -55,7 +55,7 @@ async function onSubmit() {
     // /auth/login: сервер уже залогинил аккаунт (docs/architecture.md:444),
     // и это тот же снимок, что использует authStore.login().
     const me = await api.post<MeResponse>(`/access-links/${token}/accept`, payload)
-    authStore.setMe(me)
+    await authStore.setMe(me)
     // Человек уже вошёл — ведём сразу в приложение, повторный вход на
     // /login не требуется (критерий готовности задачи 26). Без await, как в
     // pages/login.vue: переход не блокирует finally ниже.

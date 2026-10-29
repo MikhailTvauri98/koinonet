@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { can } = useCan()
+const notifications = useNotificationsStore()
 // Правило и обоснование — в useCan.ts (hasVisibleMinistries), общее с index.vue.
 const hasMinistries = useHasVisibleMinistries()
 
@@ -42,6 +43,7 @@ const items = computed<NavItem[]>(() => {
     list.push({ to: '/ministries', label: 'Служения' })
   }
 
+  list.push({ to: '/notifications', label: 'Уведомления' })
   list.push({ to: '/settings/profile', label: 'Профиль' })
 
   return list
@@ -58,6 +60,7 @@ const items = computed<NavItem[]>(() => {
       active-class="app-nav__item--active"
     >
       {{ item.label }}
+      <span v-if="item.to === '/notifications' && notifications.unreadCount" class="app-nav__badge" data-test="notification-badge" :aria-label="`Непрочитанных: ${notifications.unreadCount}`">{{ notifications.unreadCount }}</span>
     </NuxtLink>
     <div v-if="adminItems.length" data-test="nav-admin" class="app-nav__admin">
       <NuxtLink
@@ -89,6 +92,7 @@ const items = computed<NavItem[]>(() => {
 .app-nav__item--active {
   font-weight: 600;
 }
+.app-nav__badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; background: #234e79; color: white; font-size: 0.85em; }
 
 .app-nav__admin {
   display: flex;

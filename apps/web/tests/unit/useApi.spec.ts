@@ -1,11 +1,13 @@
 // @vitest-environment nuxt
 import { useRouter } from '#app'
-import { createError, getRequestHeaders, type H3Event } from 'h3'
+import { createError, getQuery, readBody, getRequestHeaders, type H3Event } from 'h3'
 import { createPinia, setActivePinia } from 'pinia'
-import { registerEndpoint } from '@nuxt/test-utils/runtime'
+import { mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApi } from '~/composables/useApi'
 import { useAuthStore, type MeResponse } from '~/stores/auth'
+
+mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
 
 const me: MeResponse = {
   user: { id: 'u1', phone: null, email: 'ivan@example.com' },
@@ -171,5 +173,35 @@ describe('useApi Accept header', () => {
     await api.post('/roles', { name: 'Служитель' })
 
     expect(accept).toEqual({ get: 'application/json', csrf: 'application/json', post: 'application/json' })
+  })
+})
+
+describe('useApi notification transport', () => {
+  it('encodes cursor query separately and supports JSON DELETE bodies', async () => {
+    registerEndpoint('/sanctum/csrf-cookie', () => '')
+    registerEndpoint('/api/v1/notifications', event => getQuery(event))
+    registerEndpoint('/api/v1/push-subscriptions', { method: 'DELETE', handler: event => readBody(event) })
+    const api = useApi()
+    expect(await api.get('/notifications', { cursor: 'a+b/==' })).toEqual({ cursor: 'a+b/==' })
+    expect(await api.delete('/push-subscriptions', { endpoint: 'https://push.test/one' })).toEqual({ endpoint: 'https://push.test/one' })
+  })
+
+  it('authorizes only the root broadcast route with shared JSON and CSRF headers', async () => {
+    let csrfCalls = 0
+    document.cookie = 'XSRF-TOKEN=csrf%2Btoken; path=/'
+    registerEndpoint('/sanctum/csrf-cookie', () => { csrfCalls++; return '' })
+    registerEndpoint('/broadcasting/auth', {
+      method: 'POST',
+      handler: async (event) => ({ body: await readBody(event), headers: getRequestHeaders(event) }),
+    })
+    const api = useApi()
+    const result = await api.post<{ body: unknown, headers: Record<string, string> }>('/broadcasting/auth', { socket_id: '1.2', channel_name: 'private-user.u1' })
+    expect(result.body).toEqual({ socket_id: '1.2', channel_name: 'private-user.u1' })
+    expect(Object.entries(result.headers).find(([key]) => key.toLowerCase() === 'x-xsrf-token')?.[1]).toBe('csrf+token')
+    expect(csrfCalls).toBe(1)
+    await expect(api.post('https://evil.test/broadcasting/auth')).rejects.toThrow()
+    await expect(api.post('//evil.test/broadcasting/auth')).rejects.toThrow()
+    await expect(api.post('/broadcasting/other')).rejects.toThrow()
+    document.cookie = 'XSRF-TOKEN=; Max-Age=0; path=/'
   })
 })

@@ -1,5 +1,5 @@
 // @vitest-environment nuxt
-import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { mountSuspended, mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import DevicesPage from '~/pages/settings/devices.vue'
@@ -20,6 +20,7 @@ const sessions = [
 
 beforeEach(() => {
   [get, post, del].forEach(fn => fn.mockReset())
+  registerEndpoint('/api/v1/settings', () => ({ data: { church_name: 'Дом хлеба', timezone: 'Pacific/Kiritimati', reverb_key: 'key', vapid_public_key: '' } }))
   get.mockImplementation((path: string) => Promise.resolve(
     path.startsWith('/settings')
       ? { data: { church_name: 'Дом хлеба', timezone: 'Pacific/Kiritimati' } }
@@ -34,7 +35,7 @@ describe('devices page', () => {
     await flushPromises()
 
     // Kiritimati (UTC+14): 23:30 UTC 1 января -> 13:30 2 января по месту.
-    expect(page.text()).toContain('02.01.2026, 13:30')
+    expect(page.text()).toContain('2 янв. 2026 г., 13:30')
   })
 
   it('ends a specific other device', async () => {

@@ -1,5 +1,5 @@
 // @vitest-environment nuxt
-import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { mountSuspended, mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminAudit from '~/pages/admin/audit.vue'
@@ -29,6 +29,7 @@ function entry(overrides: Record<string, unknown> = {}) {
 enableAutoUnmount(afterEach)
 
 beforeEach(() => {
+  registerEndpoint('/api/v1/settings', () => ({ data: { church_name: 'Дом хлеба', timezone: 'Europe/Moscow', reverb_key: 'key', vapid_public_key: '' } }))
   get.mockReset()
   grantPermissions()
   // Часовой пояс церкви (`GET /settings`) — отдельный запрос от `GET /audit`;

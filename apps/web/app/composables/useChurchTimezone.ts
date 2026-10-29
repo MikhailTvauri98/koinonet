@@ -5,10 +5,10 @@
 // маленькая функция вместо разбора полного `SettingsResource` в каждом из
 // них.
 export async function fetchChurchTimezone(): Promise<string> {
-  const api = useApi()
+  const settings = useSettingsStore()
   try {
-    const response = await api.get<{ data: { timezone?: string } }>('/settings')
-    return response.data.timezone ?? 'UTC'
+    await settings.fetch()
+    return settings.timezone
   } catch {
     // Часовой пояс — не критичный для экрана запрос: при сбое даты просто
     // остаются в UTC, а не роняют список устройств или журнал целиком.

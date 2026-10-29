@@ -1,3 +1,5 @@
+import { churchDateFormatter } from '~/composables/useChurchDate'
+
 // Даты показываются в часовом поясе церкви, а не устройства
 // (docs/architecture.md, раздел 10). Часовой пояс приходит из `GET /settings`
 // (useChurchTimezone, composables/useChurchTimezone.ts) — этот файл сам
@@ -81,15 +83,7 @@ export function churchDayEndToUtc(dateOnly: string, timeZone: string): string {
   return new Date(startOfDayInTimeZone(addDays(dateOnly, 1), timeZone).getTime() - 1).toISOString()
 }
 
-const DATE_TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-}
-
 /** Дата и время `iso` в часовом поясе церкви, вид `дд.мм.гггг, чч:мм`. */
 export function formatChurchDateTime(iso: string, timeZone: string): string {
-  return new Intl.DateTimeFormat('ru-RU', { ...DATE_TIME_FORMAT_OPTIONS, timeZone }).format(new Date(iso))
+  return churchDateFormatter(timeZone).formatNumericDateTime(iso)
 }

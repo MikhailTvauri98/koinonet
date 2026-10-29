@@ -3,7 +3,6 @@ import type { components } from '~~/types/api'
 import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
 import { apiErrorMessage } from '~/utils/apiError'
-import { formatChurchDateTime } from '~/utils/churchTime'
 
 // «Устройства»: список сессий, любую кроме текущей можно завершить —
 // сервер и так отказал бы (SessionController::destroy), но интерфейс не
@@ -14,7 +13,7 @@ type Session = components['schemas']['SessionResource']
 const api = useApi()
 
 const sessions = ref<Session[]>([])
-const timezone = ref('UTC')
+const { formatDateTime } = useChurchDate()
 const loading = ref(true)
 const loadError = ref('')
 const busyId = ref<string | null>(null)
@@ -25,12 +24,11 @@ async function load() {
   loading.value = true
   loadError.value = ''
   try {
-    const [sessionsResponse, tz] = await Promise.all([
+    const [sessionsResponse] = await Promise.all([
       api.get<{ data: Session[] }>('/auth/sessions'),
       fetchChurchTimezone(),
     ])
     sessions.value = sessionsResponse.data
-    timezone.value = tz
   } catch (error) {
     loadError.value = apiErrorMessage(error, 'Не удалось загрузить список устройств. Попробуйте ещё раз.')
   } finally {
@@ -39,7 +37,7 @@ async function load() {
 }
 
 function formatLastActivity(iso: string | null) {
-  return iso ? formatChurchDateTime(iso, timezone.value) : '—'
+  return iso ? formatDateTime(iso) : '—'
 }
 
 async function end(session: Session) {

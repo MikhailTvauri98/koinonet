@@ -28,20 +28,29 @@ export const useAuthStore = defineStore('auth', () => {
   // сервером» с повтором (ConnectionGate.vue). Сбрасывает флаг любой ответ
   // сервера о сессии: снимок вошедшего или 401.
   const connectionLost = ref(false)
+  let sessionVersion = 0
 
   // Публично: экран приглашения (`pages/invite/[token].vue`) принимает
   // `POST /access-links/{token}/accept`, который для kind=invite логинит
   // аккаунт на сервере и отдаёт тот же `MeResource`, что и `/auth/login`
   // (docs/architecture.md:444, apps/api/.../MeResource.php `$wrap = null`).
   // Экран переиспользует эту функцию вместо второго похода за `/auth/me`.
-  function setMe(me: MeResponse) {
+  async function setMe(me: MeResponse) {
+    if (user.value?.id !== me.user.id) {
+      sessionVersion++
+      useSettingsStore().reset()
+    }
     user.value = me.user
     person.value = me.person
     permissions.value = me.permissions
     connectionLost.value = false
+    await useNotificationsStore().subscribe(me.user.id)
   }
 
   function reset() {
+    sessionVersion++
+    useNotificationsStore().unsubscribe()
+    useSettingsStore().reset()
     user.value = null
     person.value = null
     permissions.value = emptyPermissions()
@@ -68,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(loginValue: string, password: string, remember: boolean) {
     const api = useApi()
     const me = await api.post<MeResponse>('/auth/login', { login: loginValue, password, remember })
-    setMe(me)
+    await setMe(me)
   }
 
   // Выход завершает сессию на сервере и только после этого чистит стор:
@@ -87,10 +96,17 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchMe() {
     const api = useApi()
+    const version = sessionVersion
     try {
-      setMe(await api.get<MeResponse>('/auth/me'))
+      const me = await api.get<MeResponse>('/auth/me')
+      if (version !== sessionVersion) return
+      const setup = setMe(me)
+      const appliedVersion = sessionVersion
+      await setup
+      if (appliedVersion !== sessionVersion) return
       initialized.value = true
     } catch (error) {
+      if (version !== sessionVersion) return
       if (apiErrorStatus(error) === 401) {
         // Сервер ответил: сессии нет. Это гость — middleware решит, вести ли
         // на /login.
