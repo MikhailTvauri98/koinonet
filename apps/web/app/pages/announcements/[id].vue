@@ -24,8 +24,13 @@ async function load() {
     if (current === version) item.value = result.data
   } catch (error) { if (current === version) errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить объявление. Попробуйте ещё раз.') }
 }
+function startEditing() {
+  if (!editable.value || busy.value || editing.value) return
+  confirming.value = false
+  editing.value = true
+}
 async function act(action: 'pin' | 'unpin' | 'archive') {
-  if (!editable.value || !item.value || busy.value) return
+  if (!editable.value || !item.value || busy.value || editing.value) return
   const current = version
   busy.value = true; actionError.value = ''
   try {
@@ -54,10 +59,10 @@ await load()
       <AttachmentList :attachments="item.attachments" />
       <p v-if="item.views_count !== undefined" data-test="views">Просмотров: {{ item.views_count }}</p>
       <template v-if="editable">
-        <button data-test="edit" :disabled="busy" @click="editing = !editing">Изменить</button>
-        <button data-test="pin" :disabled="busy" @click="act(item.pinned ? 'unpin' : 'pin')">{{ item.pinned ? 'Открепить' : 'Закрепить' }}</button>
-        <button data-test="archive" :disabled="busy" @click="confirming = true">Архивировать</button>
-        <div v-if="confirming" role="alertdialog" aria-label="Архивация объявления">
+        <button data-test="edit" :disabled="busy || editing" @click="startEditing">Изменить</button>
+        <button data-test="pin" :disabled="busy || editing" @click="act(item.pinned ? 'unpin' : 'pin')">{{ item.pinned ? 'Открепить' : 'Закрепить' }}</button>
+        <button data-test="archive" :disabled="busy || editing" @click="confirming = true">Архивировать</button>
+        <div v-if="confirming && !editing" role="alertdialog" aria-label="Архивация объявления">
           <p>Архивировать объявление?</p><button data-test="confirm-archive" :disabled="busy" @click="act('archive')">Архивировать</button><button :disabled="busy" @click="confirming = false">Отмена</button>
         </div>
         <AnnouncementEditor v-if="editing" :key="item.id" :scope="item.scope" :ministry-id="item.ministry?.id" :announcement="item" @saved="item = $event; editing = false" @cancel="editing = false" />
