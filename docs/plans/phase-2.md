@@ -2396,7 +2396,7 @@ git add apps/web && git commit -m "feat(web): church date formatter, echo, notif
 - Отдаёт наружу: `app/sw/handlers.ts` — `notificationOptions(payload: PushPayload): NotificationOptions & { title: string }` и `pickWindow(clients: WindowLike[], url: string): WindowLike | null`.
 - Потребляет: `POST /push-subscriptions`, `DELETE /push-subscriptions`, `useSettingsStore().vapidPublicKey`, `InstallPrompt` фазы 1 (определение standalone).
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/unit/usePush.spec.ts`:
 
@@ -2514,12 +2514,12 @@ describe('enable notifications button', () => {
 
 `usePlatform()` — маленький composable с `isIos`, `isStandalone`, выделенный из `InstallPrompt` фазы 1, чтобы оба компонента определяли платформу одинаково.
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Service worker**
+- [x] **Шаг 3: Service worker**
 
 `app/sw/handlers.ts`:
 
@@ -2570,15 +2570,15 @@ self.addEventListener('notificationclick', (event) => {
 })
 ```
 
-- [ ] **Шаг 4: Подписка и отписка**
+- [x] **Шаг 4: Подписка и отписка**
 
 `usePush().subscribe()`: `Notification.requestPermission()` → при `granted` `registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) })` → `POST /push-subscriptions` с `subscriptionPayload(sub.toJSON())`. `unsubscribe()`: берёт `pushManager.getSubscription()`, шлёт `DELETE /push-subscriptions` с `endpoint`, затем `sub.unsubscribe()`. `subscribed` инициализируется из `getSubscription()` при монтировании. `auth.logout()` вызывает `usePush().unsubscribe()` до `POST /auth/logout` и не падает, если пушей нет.
 
 Кнопка живёт в центре уведомлений (вверху, пока не подписан) и в настройках уведомлений. Разрешение запрашивается только по клику (раздел 10).
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
-Выполнить: `npm run test && npm run typecheck && npm run build`
+Выполнено: `npm run test -- --maxWorkers=2`, `npm run lint`, `npm run typecheck`, `npm run generate`, `npm run verify-sw` — все команды exit 0; 34 файла, 300 тестов; production-предкеш 86 файлов; обработчики push/click исполнены из собранного `sw.js`.
 Ожидается: PASS; в сборке `sw.js` содержит обработчики `push` и `notificationclick`.
 
 - [ ] **Шаг 6: Проверить на устройствах**
@@ -2586,11 +2586,18 @@ self.addEventListener('notificationclick', (event) => {
 Открыть установленную PWA на iPhone и на Android, нажать «Включить уведомления», закрыть приложение, опубликовать объявление с другого аккаунта.
 Ожидается: пуш приходит на оба устройства; нажатие открывает объявление; повторное объявление с тем же тегом не плодит карточки.
 
-- [ ] **Шаг 7: Коммит**
+- [x] **Шаг 7: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): push subscription flow and service worker notification handlers"
 ```
+
+**Локальная реализация (2026-10-29):** тесты и код используют Nuxt-алиас `~/`; отписка ищет `getRegistration('/')` вне компонента и не ждёт `serviceWorker.ready`. Ошибка удаления подписки прерывает выход, ошибка серверного выхода сохраняет аккаунт. `usePlatform` переиспользован в `InstallPrompt`; распознаётся iPadOS с desktop user agent. `renotify` зависит от непустого тега (требование браузерного API). Для серверного пути `/icons/icon-192.png` добавлена копия существующей иконки PWA 192×192; новое оформление не создавалось. Финальная проверка сборки использует `npm run generate` (production-сборка статики) и исполняет обработчики в `npm run verify-sw` вместо одного поиска строк. Физическая доставка не проверяется по указанию заказчика «Пока только локальные проверки».
+
+**Ожидающая ручная приёмка (шаг 6, не выполнен):**
+- [ ] iPhone: установить PWA из Safari на экран «Домой», включить уведомления кнопкой, закрыть приложение, опубликовать объявление с другого аккаунта, подтвердить доставку и переход в объявление.
+- [ ] Android: повторить в установленной PWA из Chrome.
+- [ ] На обоих устройствах повторное уведомление с тем же тегом заменяет карточку; выход удаляет только подписку этого устройства.
 
 **Критерии готовности:**
 - Разрешение на уведомления запрашивается только нажатием кнопки; на iOS вне standalone кнопки нет, есть инструкция по установке (риск 2).

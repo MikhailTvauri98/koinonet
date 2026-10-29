@@ -6,6 +6,7 @@
 // стандартный диалог браузера. Уже установленному приложению (standalone)
 // подсказка не показывается вовсе, отказ от неё запоминается в localStorage.
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { usePlatform } from '~/composables/usePlatform'
 
 // Ключ в localStorage: свой, не завязанный на @vite-pwa/nuxt — его
 // собственный клиентский плагин (и вместе с ним `vite-pwa:hide-install`)
@@ -40,21 +41,10 @@ function writeDismissed(): void {
   }
 }
 
-function isStandalone(): boolean {
-  const nav = navigator as Navigator & { standalone?: boolean }
-  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
-}
-
-function isIosSafari(): boolean {
-  const ua = navigator.userAgent
-  const isIos = /iPad|iPhone|iPod/.test(ua)
-  const isOtherIosBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)
-  return isIos && !isOtherIosBrowser && /Safari/.test(ua)
-}
-
+const platform = usePlatform()
 const dismissed = ref(readDismissed())
-const standalone = ref(isStandalone())
-const iosSafari = ref(isIosSafari())
+const standalone = ref(platform.isStandalone)
+const iosSafari = ref(platform.isIosSafari)
 const deferredPrompt = ref<BeforeInstallPromptEvent | null>(null)
 
 function onBeforeInstallPrompt(event: Event): void {

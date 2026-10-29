@@ -15,12 +15,12 @@
 // показал бы вышедшему человеку чужой интерфейс, а закешированная подписанная
 // ссылка на медиафайл — истёкшую.
 //
-// Фаза 2 добавит сюда обработчики `push` и `notificationclick` (раздел 10
-// архитектуры, ADR-0001).
+// Пуши и переход по ним работают независимо от предкеша оболочки.
 
 import { clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { notificationOptions, pickWindow } from './sw/handlers'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -53,3 +53,24 @@ registerRoute(
     denylist: EXCLUDED_FROM_SHELL,
   }),
 )
+
+self.addEventListener('push', (event) => {
+  let payload = {}
+  try { payload = event.data?.json() ?? {} } catch { /* Пустой/повреждённый JSON: стандартное уведомление. */ }
+  const { title, ...options } = notificationOptions(payload)
+  event.waitUntil(self.registration.showNotification(title, options))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url: string = event.notification.data?.url ?? '/'
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const existing = pickWindow(windows, url)
+    if (existing) {
+      await existing.navigate(url)
+      return existing.focus()
+    }
+    return self.clients.openWindow(url)
+  })())
+})

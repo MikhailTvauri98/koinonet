@@ -86,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
   // что сессии уже нет, — это тоже выход.
   async function logout() {
     const api = useApi()
+    await usePush().unsubscribe()
     try {
       await api.post('/auth/logout')
     } catch (error) {

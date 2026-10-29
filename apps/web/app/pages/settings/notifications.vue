@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
 import SettingsTabs from '~/components/settings/SettingsTabs.vue'
+import EnableNotificationsButton from '~/components/notifications/EnableNotificationsButton.vue'
 import { apiErrorMessage } from '~/utils/apiError'
 
 type Category = components['schemas']['NotificationSettingResource']
@@ -60,6 +61,7 @@ await load()
   <section class="notification-settings">
     <SettingsTabs />
     <h1>Уведомления</h1>
+    <EnableNotificationsButton />
     <p>Выберите категории пушей. Объявления, назначения и напоминания сохраняются в центре уведомлений при выключенной категории.</p>
     <p v-if="loading" role="status">Загрузка…</p>
     <p v-else-if="loadError" role="alert">{{ loadError }} <button type="button" data-test="retry" @click="load">Повторить</button></p>

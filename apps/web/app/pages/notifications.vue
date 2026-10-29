@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AppNotification } from '~/stores/notifications'
 import NotificationList from '~/components/notifications/NotificationList.vue'
+import EnableNotificationsButton from '~/components/notifications/EnableNotificationsButton.vue'
 import { apiErrorMessage } from '~/utils/apiError'
 
 const notifications = useNotificationsStore()
@@ -35,6 +36,7 @@ await load()
 <template>
   <section class="notifications-page">
     <h1>Уведомления</h1>
+    <EnableNotificationsButton />
     <NuxtLink to="/settings/notifications">Настройки уведомлений</NuxtLink>
     <button v-if="notifications.unreadCount" type="button" data-test="mark-all-read" :disabled="notifications.marking" @click="markAll">Отметить всё прочитанным</button>
     <p v-if="actionError" role="alert">{{ actionError }}</p>

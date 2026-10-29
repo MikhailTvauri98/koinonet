@@ -28,6 +28,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createContext, Script } from 'node:vm'
+import assert from 'node:assert/strict'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const swPath = path.resolve(here, '../.output/public/sw.js')
@@ -43,6 +44,9 @@ const source = readFileSync(swPath, 'utf-8')
 const ORIGIN = 'https://church.example'
 
 const listeners = new Map()
+const shownNotifications = []
+const openedWindows = []
+let openClients = []
 function addEventListener(type, handler) {
   const list = listeners.get(type) ?? []
   list.push(handler)
@@ -63,10 +67,17 @@ const fakeCache = {
 const sandbox = {
   console,
   location: { href: `${ORIGIN}/sw.js`, origin: ORIGIN },
-  registration: { scope: `${ORIGIN}/` },
+  registration: {
+    scope: `${ORIGIN}/`,
+    async showNotification(title, options) { shownNotifications.push({ title, options }) },
+  },
   addEventListener,
   skipWaiting() {},
-  clients: { claim: async () => {}, matchAll: async () => [] },
+  clients: {
+    claim: async () => {},
+    matchAll: async () => openClients,
+    async openWindow(url) { openedWindows.push(url) },
+  },
   caches: {
     async open() { return fakeCache },
     async has() { return false },
@@ -158,3 +169,39 @@ for (const blockedUrl of blockedUrls) {
 }
 
 console.log('OK: service worker выполняется без исключений верхнего уровня, обработчик навигаций зарегистрирован, подхватывает не-предкешированные пути и не трогает /api/, /sanctum/, /_protected/.')
+
+// Проверяем исполняемые обработчики именно из production sw.js, а не наличие
+// строк в исходнике. Разрешение и внешний push-сервис здесь не используются.
+async function dispatch(type, event) {
+  const handlers = listeners.get(type) ?? []
+  assert.ok(handlers.length > 0, `Обработчик ${type} не зарегистрирован`)
+  const pending = []
+  for (const handler of handlers) handler({ ...event, waitUntil: promise => pending.push(promise) })
+  await Promise.all(pending)
+}
+
+const target = '/announcements/01K5ZK5ZK5ZK5ZK5ZK5ZK5ZK5Z'
+await dispatch('push', { data: { json: () => ({ title: 'Собрание', body: 'В 10:00', icon: '/icons/icon-192.png', tag: 'announcement-a1', url: target }) } })
+assert.equal(shownNotifications[0].title, 'Собрание')
+assert.equal(shownNotifications[0].options.body, 'В 10:00')
+assert.equal(shownNotifications[0].options.icon, '/icons/icon-192.png')
+assert.equal(shownNotifications[0].options.tag, 'announcement-a1')
+assert.equal(shownNotifications[0].options.data.url, target)
+assert.equal(shownNotifications[0].options.renotify, true)
+assert.ok(existsSync(path.resolve(here, '../.output/public/icons/icon-192.png')), 'Иконка пушей отсутствует в статике')
+
+await dispatch('push', { data: { json() { throw new Error('invalid JSON') } } })
+assert.equal(shownNotifications[1].title, 'Церковь')
+assert.equal(shownNotifications[1].options.data.url, '/')
+assert.equal(shownNotifications[1].options.renotify, false)
+
+const actions = []
+openClients = [{ url: `${ORIGIN}/people`, async navigate(url) { actions.push(['navigate', url]) }, async focus() { actions.push(['focus']) } }]
+await dispatch('notificationclick', { notification: { data: { url: target }, close() { actions.push(['close']) } } })
+assert.deepEqual(actions, [['close'], ['navigate', target], ['focus']])
+assert.equal(openedWindows.length, 0)
+
+openClients = []
+await dispatch('notificationclick', { notification: { data: { url: target }, close() {} } })
+assert.deepEqual(openedWindows, [target])
+console.log('OK: production push показывает title/body/icon/tag, переносит url в data.url; notificationclick закрывает карточку, ожидает navigate перед focus или открывает нужный маршрут.')

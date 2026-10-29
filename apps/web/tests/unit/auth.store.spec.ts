@@ -6,9 +6,11 @@ import { useAuthStore, type MeResponse } from '~/stores/auth'
 
 const get = vi.fn()
 const post = vi.fn()
+const unsubscribePush = vi.fn()
 
 mockNuxtImport('useApi', () => () => ({ get, post }))
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
+mockNuxtImport('usePush', () => () => ({ unsubscribe: unsubscribePush }))
 
 const me: MeResponse = {
   user: { id: 'u1', phone: null, email: 'ivan@example.com' },
@@ -20,9 +22,28 @@ beforeEach(() => {
   setActivePinia(createPinia())
   get.mockReset()
   post.mockReset()
+  unsubscribePush.mockReset()
 })
 
 describe('auth store', () => {
+  it('removes the device push subscription before logging out on the server', async () => {
+    const auth = useAuthStore()
+    await auth.setMe(me)
+    post.mockImplementation(async () => { expect(unsubscribePush).toHaveBeenCalledOnce() })
+    await auth.logout()
+    expect(post).toHaveBeenCalledWith('/auth/logout')
+    expect(auth.user).toBeNull()
+  })
+
+  it('keeps the authenticated account when device push removal fails', async () => {
+    const auth = useAuthStore()
+    await auth.setMe(me)
+    unsubscribePush.mockRejectedValue(new Error('offline'))
+    await expect(auth.logout()).rejects.toThrow('offline')
+    expect(post).not.toHaveBeenCalled()
+    expect(auth.user?.id).toBe('u1')
+  })
+
   it('keeps the person and the permissions after login', async () => {
     post.mockResolvedValue(me)
 
