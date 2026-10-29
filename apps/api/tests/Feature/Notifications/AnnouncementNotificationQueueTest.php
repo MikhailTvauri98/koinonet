@@ -55,7 +55,8 @@ it('delivers committed publications through a real local worker and keeps databa
     }
 
     expect(Queue::size($queue))->toBe(1)->and($recipient->notifications()->count())->toBe(0);
-    $this->artisan('queue:work', ['connection' => 'redis', '--queue' => $queue, '--stop-when-empty' => true, '--sleep' => 0, '--tries' => 1, '--max-time' => 20])->assertSuccessful();
+    // The worker shares Pest's process, which has already run the rest of the suite.
+    $this->artisan('queue:work', ['connection' => 'redis', '--queue' => $queue, '--stop-when-empty' => true, '--sleep' => 0, '--tries' => 1, '--max-time' => 20, '--memory' => 512])->assertSuccessful();
 
     expect(Queue::size($queue))->toBe(0)->and(DB::table('failed_jobs')->count())->toBe(0)
         ->and($publisher->notifications()->count())->toBe(1)->and($recipient->notifications()->count())->toBe(1)

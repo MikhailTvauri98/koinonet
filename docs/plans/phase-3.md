@@ -122,7 +122,7 @@ apps/web/
 - Отдаёт наружу: `enum EventOwnerType: string { Church = 'church'; Ministry = 'ministry'; }`, `enum EventVisibility: string { Church = 'church'; Ministry = 'ministry'; Assigned = 'assigned'; }`, `enum EventStatus: string { Scheduled = 'scheduled'; Cancelled = 'cancelled'; }`, `enum ResourceType: string { Person = 'person'; }`, `enum ReminderKind: string { H24 = 'h24'; H2 = 'h2'; public function offset(): CarbonInterval; }`.
 - Отдаёт наружу: фабрики. `Event::factory()` — церковное событие `scheduled` завтра 10:00–12:00 UTC, видимость `church`; состояния `ministry(Ministry $m)` (владелец и видимость `ministry`), `visibility(EventVisibility $v)`, `cancelled()`, `between(CarbonImmutable $start, CarbonImmutable $end)`, `fromTemplate(EventTemplate $t, string $date)`. `EventSlot::factory()->for($event)` — свободный слот «Помощник» на одного; состояние `withRole(Role $role)`. `EventAssignment::factory()->for($slot)->for($person)`. `EventTemplate::factory()` — церковный шаблон без повторения, 10:00, 120 минут; состояния `ministry(Ministry $m)`, `weekly(int $isoWeekday)`, `biweekly(int $isoWeekday, string $anchorDate)`, `monthlyNth(int $nth, int $isoWeekday)`, `inactive()`, `archived()`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Calendar/CalendarSchemaTest.php`:
 
@@ -205,12 +205,12 @@ it('requires a positive slot capacity', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/CalendarSchemaTest.php`
 Ожидается: FAIL, таблиц и фабрик нет.
 
-- [ ] **Шаг 3: Миграция**
+- [x] **Шаг 3: Миграция**
 
 ```php
 Schema::create('event_templates', function (Blueprint $table) {
@@ -341,7 +341,7 @@ Schema::create('event_reminders', function (Blueprint $table) {
 DB::statement("ALTER TABLE event_reminders ADD CONSTRAINT event_reminders_kind_check CHECK (kind IN ('h24', 'h2'))");
 ```
 
-- [ ] **Шаг 4: Модели, перечисления, фабрики**
+- [x] **Шаг 4: Модели, перечисления, фабрики**
 
 `Event` с `HasUlids`, `$guarded = []`, casts: `owner_type => EventOwnerType`, `visibility => EventVisibility`, `status => EventStatus`, `starts_at`, `ends_at`, `cancelled_at` → `immutable_datetime`, `occurrence_date` → `immutable_date`. Методы: `isCancelled(): bool`, `isPast(): bool` (`ends_at <= now()`), `slots(): HasMany` (по `sort_order`), `assignedPersonIds(): list<string>`.
 
@@ -385,12 +385,12 @@ return [
 
 Состояние `ministry(Ministry $m)` ставит `owner_type = ministry`, `ministry_id`, `visibility = ministry`. `fromTemplate($t, $date)` копирует владельца и видимость, ставит `template_id`, `occurrence_date`. Морф-имена: `'event' => Event::class`, `'event_template' => EventTemplate::class` в `enforceMorphMap`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/CalendarSchemaTest.php`
 Ожидается: PASS, 10 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add apps/api && git commit -m "feat(calendar): tables, models, enums and factories for events, slots, assignments, templates"

@@ -247,9 +247,9 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 Индексы: `(starts_at)`, `(ministry_id, starts_at)`, частичный `UNIQUE (template_id, occurrence_date) WHERE template_id IS NOT NULL`. Колонки `chat_id` у события нет: чат события создаётся по кнопке модулем Chat и хранит связь в `chats.event_id` (`UNIQUE`) (решение планов фаз 3 и 4).
 
-`event_slots`: `id`, `event_id`, `label varchar(100)` (для слота с ролью по умолчанию имя роли, можно переопределить), `resource_type` enum `person`, `role_id` (FK `roles` со `scope = ministry`, null для свободного слота), `required_count smallint > 0`, `sort_order`, `timestamps`. Check: `resource_type = 'person'` (расширяется миграцией при добавлении помещений).
+`event_slots`: `id`, `event_id`, `label varchar(100)` (для слота с ролью по умолчанию имя роли, можно переопределить), `resource_type` enum `person`, `role_id` (FK `roles` со `scope = ministry`, null для свободного слота), `required_count smallint > 0`, `sort_order`, `archived_at`, `timestamps`. Check: `resource_type = 'person'` (расширяется миграцией при добавлении помещений). Удаление слота архивирует его, сохраняя историю.
 
-`event_assignments`: `id`, `slot_id`, `resource_type` enum `person`, `person_id` (FK `people`, null), `assigned_by_user_id` (null после стирания аккаунта), `created_at`. Check: при `resource_type = 'person'` заполнен `person_id`. `UNIQUE (slot_id, person_id)`. Индекс `(person_id)` для поиска пересечений. Слот может быть заполнен сверх `required_count`, интерфейс показывает «3 из 2».
+`event_assignments`: `id`, `slot_id`, `resource_type` enum `person`, `person_id` (FK `people`, null), `assigned_by_user_id` (null после стирания аккаунта), `created_at`, `archived_at`. Check: при `resource_type = 'person'` заполнен `person_id`. Частичный `UNIQUE (slot_id, person_id) WHERE archived_at IS NULL`: снятие назначения архивирует запись, повторное назначение создаёт новую. Индекс `(person_id)` для поиска пересечений. Слот может быть заполнен сверх `required_count`, интерфейс показывает «3 из 2». Активный состав события учитывает только неархивные назначения неархивных слотов; связи для истории сохраняют архивные записи.
 
 `event_templates`
 
@@ -269,7 +269,7 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 Правило повторения `recurrence.type`: `weekly` (каждый `weekday`), `biweekly` (каждые две недели от `anchor_date`), `monthly_nth_weekday` (`nth` от 1 до 5 или −1 для последнего, `weekday`).
 
-`event_template_slots`: как `event_slots`, но с `template_id`.
+`event_template_slots`: как `event_slots`, но с `template_id`, включая `archived_at` для архивации вместо физического удаления.
 
 `event_reminders`: `event_id`, `kind` enum `h24`, `h2`, `sent_at`. Первичный ключ по паре: одно напоминание каждого вида на событие.
 

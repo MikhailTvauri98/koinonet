@@ -22,6 +22,8 @@ use App\Modules\Announcements\Http\Requests\UpdateAnnouncementRequest;
 use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Announcements\OpenApi\AnnouncementRequestSchema;
 use App\Modules\Announcements\Policies\AnnouncementPolicy;
+use App\Modules\Calendar\Models\Event as CalendarEvent;
+use App\Modules\Calendar\Models\EventTemplate;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
@@ -88,7 +90,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Relation::morphMap(['announcement' => Announcement::class]);
+        Relation::morphMap([
+            'announcement' => Announcement::class,
+            'event' => CalendarEvent::class,
+            'event_template' => EventTemplate::class,
+        ]);
         Scramble::configure()->withDocumentTransformers(function (OpenApi $document): void {
             foreach ([StoreAnnouncementRequest::class => true, UpdateAnnouncementRequest::class => false] as $request => $creating) {
                 if ($document->components->hasSchema($request)) {
