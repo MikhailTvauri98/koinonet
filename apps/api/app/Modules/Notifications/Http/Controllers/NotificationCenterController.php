@@ -8,6 +8,7 @@ use App\Modules\Directory\Models\User;
 use App\Modules\Notifications\Actions\MarkNotificationsRead;
 use App\Modules\Notifications\Http\Requests\MarkNotificationsReadRequest;
 use App\Modules\Notifications\Http\Resources\NotificationResource;
+use App\Modules\Notifications\Rules\NotificationCursor;
 use Dedoc\Scramble\Attributes\Response as OpenApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ final class NotificationCenterController
     #[OpenApiResponse(type: self::CENTER_RESPONSE)]
     public function index(Request $request): JsonResponse
     {
-        $request->validate(['cursor' => ['sometimes', 'string', 'max:2048']]);
+        $request->validate(['cursor' => ['bail', 'sometimes', 'string', 'max:2048', new NotificationCursor]]);
         $user = $request->user();
         assert($user instanceof User);
         $notifications = $user->notifications()->reorder()->latest('created_at')->latest('id')->cursorPaginate(30);

@@ -512,7 +512,7 @@ composer openapi && git add . && git commit -m "feat(notifications): tables, cat
 ### Задача 3: Базовый класс уведомления и центр уведомлений
 
 **Файлы:**
-- Создать: `app/Modules/Notifications/AppNotification.php`; `Actions/MarkNotificationsRead.php`; `Http/Controllers/NotificationCenterController.php`, `Http/Requests/MarkNotificationsReadRequest.php`, `Http/Resources/NotificationResource.php`, `OpenApi/MarkNotificationsReadSchema.php`
+- Создать: `app/Modules/Notifications/AppNotification.php`; `Actions/MarkNotificationsRead.php`; `Http/Controllers/NotificationCenterController.php`, `Http/Requests/MarkNotificationsReadRequest.php`, `Http/Resources/NotificationResource.php`, `OpenApi/MarkNotificationsReadSchema.php`, `Rules/NotificationCursor.php`
 - Изменить: `app/Modules/Notifications/routes.php`; `app/Modules/Directory/Models/User.php` (`receivesBroadcastNotificationsOn()`), `app/Providers/AppServiceProvider.php` (уточнение OpenAPI), `lang/ru/validation.php`, `openapi.json`, `apps/web/types/api.d.ts`, `docs/architecture.md`
 - Тест: `tests/Feature/Notifications/NotificationCenterTest.php`, `tests/Unit/Notifications/AppNotificationTest.php`
 

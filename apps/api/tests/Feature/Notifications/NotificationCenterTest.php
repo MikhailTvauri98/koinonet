@@ -6,6 +6,7 @@ use App\Modules\Directory\Models\User;
 use Dedoc\Scramble\Generator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -118,6 +119,38 @@ it('validates the cursor shape', function () {
     actingAsUser();
 
     $this->getJson('/api/v1/notifications?cursor[]=invalid')->assertUnprocessable()->assertJsonValidationErrors('cursor');
+});
+
+it('rejects malformed encoded cursors with a Russian validation error', function (string $cursor) {
+    actingAsUser();
+
+    $this->getJson('/api/v1/notifications?cursor='.urlencode($cursor))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('cursor')
+        ->assertJsonPath('errors.cursor.0', 'Недопустимый курсор уведомлений.');
+})->with([
+    'missing ordered fields' => ['eyJfcG9pbnRzVG9OZXh0SXRlbXMiOnRydWV9'],
+    'not base64 JSON' => ['invalid!'],
+    'invalid UUID' => [(new Cursor(['created_at' => '2026-10-29 10:00:00', 'id' => 'bad']))->encode()],
+    'nonstring UUID' => [(new Cursor(['created_at' => '2026-10-29 10:00:00', 'id' => []]))->encode()],
+    'invalid date' => [(new Cursor(['created_at' => '2026-02-30 10:00:00', 'id' => '8c545e23-3778-44bb-8afe-9d9d5113f144']))->encode()],
+    'invalid time' => [(new Cursor(['created_at' => '2026-10-29 25:00:00', 'id' => '8c545e23-3778-44bb-8afe-9d9d5113f144']))->encode()],
+    'SQL invalid year zero' => [(new Cursor(['created_at' => '0000-10-29 10:00:00', 'id' => '8c545e23-3778-44bb-8afe-9d9d5113f144']))->encode()],
+    'SQL timestamp injection' => [(new Cursor(['created_at' => "2026-10-29 10:00:00'", 'id' => '8c545e23-3778-44bb-8afe-9d9d5113f144']))->encode()],
+    'nonstring timestamp' => [(new Cursor(['created_at' => [], 'id' => '8c545e23-3778-44bb-8afe-9d9d5113f144']))->encode()],
+    'nonboolean direction' => [(new Cursor(['created_at' => '2026-10-29 10:00:00', 'id' => '8c545e23-3778-44bb-8afe-9d9d5113f144'], 'next'))->encode()],
+    'missing direction' => [rtrim(strtr(base64_encode('{"created_at":"2026-10-29 10:00:00","id":"8c545e23-3778-44bb-8afe-9d9d5113f144"}'), '+/', '-_'), '=')],
+]);
+
+it('accepts a generated cursor pointing to previous items', function () {
+    $this->freezeSecond();
+    $user = actingAsUser();
+    $older = centerEntry($user, ['created_at' => now()->subMinute()]);
+    $newer = centerEntry($user);
+    $cursor = (new Cursor(['created_at' => $older->created_at->toDateTimeString(), 'id' => $older->id], false))->encode();
+
+    $this->getJson('/api/v1/notifications?cursor='.urlencode($cursor))->assertOk()
+        ->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $newer->id);
 });
 
 it('returns Russian validation errors for read selections', function () {
