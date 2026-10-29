@@ -394,6 +394,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notification-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["notificationSettings.index"];
+        put: operations["notificationSettings.update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/permissions": {
         parameters: {
             query?: never;
@@ -794,6 +810,12 @@ export interface components {
             };
             contacts_public: boolean;
         };
+        /** NotificationSettingResource */
+        NotificationSettingResource: {
+            category: string;
+            label: string;
+            enabled: boolean;
+        };
         /**
          * Permission
          * @enum {string}
@@ -920,6 +942,16 @@ export interface components {
         UpdateLoginRequest: {
             login: string;
             current_password: string;
+        };
+        /** UpdateNotificationSettingsRequest */
+        UpdateNotificationSettingsRequest: {
+            /** @description Перечисленные категории изменяются, остальные сохраняют состояние. Объект должен содержать хотя бы одну категорию. */
+            settings: {
+                announcements?: boolean;
+                chat?: boolean;
+                assignments?: boolean;
+                reminders?: boolean;
+            };
         };
         /** UpdatePasswordRequest */
         UpdatePasswordRequest: {
@@ -1853,6 +1885,57 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "notificationSettings.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `NotificationSettingResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["NotificationSettingResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "notificationSettings.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Array of `NotificationSettingResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["NotificationSettingResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
             422: components["responses"]["ValidationException"];
         };
     };

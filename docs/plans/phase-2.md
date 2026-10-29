@@ -319,7 +319,7 @@ git add apps/api apps/web infra && git commit -m "feat(realtime): reverb, channe
 - Отдаёт наружу: `PushSubscription::factory()->for($user)` — подписка с уникальным `endpoint`, `public_key`, `auth_token`, `content_encoding = 'aes128gcm'`.
 - Отдаёт наружу: таблица `notifications` в формате Laravel с `notifiable_id char(26)` — базовый класс задачи 3 пишет в неё через канал `database`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Notifications/NotificationSettingsTest.php`:
 
@@ -383,12 +383,12 @@ it('requires a session', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications/NotificationSettingsTest.php`
 Ожидается: FAIL, классов и таблиц нет.
 
-- [ ] **Шаг 3: Миграция**
+- [x] **Шаг 3: Миграция**
 
 ```php
 Schema::create('notifications', function (Blueprint $table) {
@@ -433,7 +433,7 @@ Schema::create('push_subscriptions', function (Blueprint $table) {
 });
 ```
 
-- [ ] **Шаг 4: Перечисление, сервис, Action, эндпоинты**
+- [x] **Шаг 4: Перечисление, сервис, Action, эндпоинты**
 
 ```php
 <?php
@@ -491,12 +491,12 @@ final class NotificationPreferences
 
 `SetNotificationSettings::handle(User $user, array<string, bool> $settings): void` — `updateOrCreate` по паре. `UpdateNotificationSettingsRequest`: `settings` — `required|array`, `settings.*` — `boolean`, плюс проверка ключей по `NotificationCategory::tryFrom` в `withValidator` (ошибка на `settings.{key}`). Маршруты под `auth:sanctum`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications/NotificationSettingsTest.php`
 Ожидается: PASS, 6 тестов.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(notifications): tables, categories and per-account category settings"

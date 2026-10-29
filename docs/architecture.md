@@ -307,9 +307,9 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 ### 5.7 Notifications
 
-`notifications`: стандартная таблица Laravel (`id uuid`, `type`, `notifiable_type`, `notifiable_id`, `data jsonb`, `read_at`, `created_at`). Это центр уведомлений. Сообщения чатов сюда не пишутся: сам список чатов и есть их «входящие».
+`notifications`: стандартная таблица Laravel (`id uuid`, `type`, `notifiable_type`, `notifiable_id char(26)`, `data jsonb`, `read_at`, `created_at`, `updated_at`). UUID записи совместим с каналом `database`, а `notifiable_id` хранит ULID аккаунта. Индексы: `(notifiable_type, notifiable_id, created_at)` и частичный по `notifiable_id WHERE read_at IS NULL`. Это центр уведомлений. Сообщения чатов сюда не пишутся: сам список чатов и есть их «входящие».
 
-`notification_settings`: `user_id`, `category` enum `announcements`, `chat`, `assignments`, `reminders`, `enabled bool`. Отсутствие строки означает «включено».
+`notification_settings`: `user_id`, `category` enum `announcements`, `chat`, `assignments`, `reminders`, `enabled bool`. Первичный ключ — пара `(user_id, category)`, отдельного `id` нет. Отсутствие строки означает «включено»; чтение не создаёт строки. `GET /notification-settings` возвращает все четыре категории с русской подписью и состоянием; `PUT` принимает объект `settings` с перечисленными категориями и меняет только их. Неизвестная категория даёт `422` с ошибкой `settings.{category}`. Аккаунт управляет только своими настройками, без отдельного права.
 
 `push_subscriptions`: `id`, `user_id`, `endpoint text UNIQUE`, `public_key`, `auth_token`, `content_encoding`, `user_agent`, `created_at`, `last_success_at`, `failures smallint`. Удаляется при ответе push-сервиса 404 или 410 и при выходе с устройства.
 

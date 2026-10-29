@@ -1681,6 +1681,85 @@
                 }
             }
         },
+        "/notification-settings": {
+            "get": {
+                "operationId": "notificationSettings.index",
+                "tags": [
+                    "NotificationSettings"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `NotificationSettingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/NotificationSettingResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "notificationSettings.update",
+                "tags": [
+                    "NotificationSettings"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateNotificationSettingsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Array of `NotificationSettingResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/NotificationSettingResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/permissions": {
             "get": {
                 "operationId": "access.permissionCatalog",
@@ -3428,6 +3507,26 @@
                 ],
                 "title": "MyProfileResource"
             },
+            "NotificationSettingResource": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "category",
+                    "label",
+                    "enabled"
+                ],
+                "title": "NotificationSettingResource"
+            },
             "Permission": {
                 "type": "string",
                 "enum": [
@@ -3903,6 +4002,33 @@
                     "current_password"
                 ],
                 "title": "UpdateLoginRequest"
+            },
+            "UpdateNotificationSettingsRequest": {
+                "type": "object",
+                "properties": {
+                    "settings": {
+                        "type": "object",
+                        "description": "\u041f\u0435\u0440\u0435\u0447\u0438\u0441\u043b\u0435\u043d\u043d\u044b\u0435 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438 \u0438\u0437\u043c\u0435\u043d\u044f\u044e\u0442\u0441\u044f, \u043e\u0441\u0442\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u044e\u0442 \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435. \u041e\u0431\u044a\u0435\u043a\u0442 \u0434\u043e\u043b\u0436\u0435\u043d \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u0445\u043e\u0442\u044f \u0431\u044b \u043e\u0434\u043d\u0443 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044e.",
+                        "properties": {
+                            "announcements": {
+                                "type": "boolean"
+                            },
+                            "chat": {
+                                "type": "boolean"
+                            },
+                            "assignments": {
+                                "type": "boolean"
+                            },
+                            "reminders": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "settings"
+                ],
+                "title": "UpdateNotificationSettingsRequest"
             },
             "UpdatePasswordRequest": {
                 "type": "object",
