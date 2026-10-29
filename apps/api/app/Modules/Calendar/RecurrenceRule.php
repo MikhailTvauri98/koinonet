@@ -68,4 +68,41 @@ final readonly class RecurrenceRule
 
         return $data;
     }
+
+    /** @return list<CarbonImmutable> */
+    public function occurrencesBetween(CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $from = $from->startOfDay();
+        $to = CarbonImmutable::createFromFormat('!Y-m-d', $to->toDateString(), $from->timezone);
+        $anchor = $this->anchorDate === null ? null
+            : CarbonImmutable::createFromFormat('!Y-m-d', $this->anchorDate->toDateString(), $from->timezone);
+        if ($anchor !== null) {
+            $anchor = $anchor->addDays(($this->weekday - $anchor->isoWeekday() + 7) % 7);
+            // Compare calendar dates in UTC, so a DST hour never changes the phase.
+            $anchor = CarbonImmutable::createFromFormat('!Y-m-d', $anchor->toDateString(), 'UTC');
+        }
+        $dates = [];
+        for ($date = $from; $date <= $to; $date = $date->addDay()) {
+            if ($date->isoWeekday() !== $this->weekday) {
+                continue;
+            }
+            if ($anchor !== null) {
+                $calendarDate = CarbonImmutable::createFromFormat('!Y-m-d', $date->toDateString(), 'UTC');
+                if ((int) $anchor->diff($calendarDate)->format('%r%a') % 14 !== 0) {
+                    continue;
+                }
+            }
+            if ($this->type === 'monthly_nth_weekday') {
+                $matches = $this->nth === -1
+                    ? $date->addWeek()->month !== $date->month
+                    : intdiv($date->day - 1, 7) + 1 === $this->nth;
+                if (! $matches) {
+                    continue;
+                }
+            }
+            $dates[] = $date;
+        }
+
+        return $dates;
+    }
 }

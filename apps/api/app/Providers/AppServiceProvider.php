@@ -25,6 +25,7 @@ use App\Modules\Announcements\Policies\AnnouncementPolicy;
 use App\Modules\Calendar\Access\CalendarRoleUsageSource;
 use App\Modules\Calendar\Actions\CalendarAccountEraser;
 use App\Modules\Calendar\Actions\DetachHistoricalRoleReferences;
+use App\Modules\Calendar\Console\MaterializeCommand;
 use App\Modules\Calendar\EventMediaOwnerResolver;
 use App\Modules\Calendar\Http\Requests\StoreEventRequest;
 use App\Modules\Calendar\Http\Requests\TemplateRequest;
@@ -159,7 +160,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
-        $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class, GenerateVapidKeysCommand::class]);
+        $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class, GenerateVapidKeysCommand::class, MaterializeCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Announcement::class, AnnouncementPolicy::class);
         Gate::policy(CalendarEvent::class, EventPolicy::class);

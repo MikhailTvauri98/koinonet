@@ -12,3 +12,5 @@ Artisan::command('inspire', function () {
 
 // Architecture 7.8: daily cleanup of media files nobody ever attached.
 Schedule::command('media:prune')->daily();
+
+Schedule::command('calendar:materialize')->dailyAt('03:00');

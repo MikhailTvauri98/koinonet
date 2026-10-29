@@ -2250,7 +2250,7 @@ composer openapi && git add . && git commit -m "feat(calendar): create an event 
 - Отдаёт наружу: `php artisan calendar:materialize` — обходит активные неархивные шаблоны с правилом повторения у неархивных служений; `dailyAt('03:00')`.
 - Потребляет: `CreateEventFromTemplate` (задача 9), `ChurchSettings::all()['calendar.horizon_weeks']`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Unit/Calendar/RecurrenceOccurrencesTest.php`:
 
@@ -2282,7 +2282,7 @@ it('lists every other saturday from the anchor for a biweekly rule', function ()
 
 it('keeps the biweekly phase when the anchor is far in the past', function () {
     expect(dates(['type' => 'biweekly', 'weekday' => 6, 'anchor_date' => '2020-01-04'], '2026-11-01', '2026-11-30'))
-        ->toBe(['2026-11-07', '2026-11-21']);
+        ->toBe(['2026-11-14', '2026-11-28']);
 });
 
 it('finds the second tuesday of each month', function () {
@@ -2417,12 +2417,12 @@ it('leaves already created events alone when the template changes', function () 
 
 Проверка дат: 25 октября 2026 — последнее воскресенье октября, переход на зимнее время в Варшаве происходит в 03:00 этого дня, так что 10:00 местного уже `09:00Z`; до перехода (например, 18 октября) было бы `08:00Z`. Тест начинается с понедельника 19 октября, поэтому первое созданное воскресенье — 25-е; отсутствие события 18-го подтверждает, что генерация не заходит в прошлое.
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Calendar/RecurrenceOccurrencesTest.php tests/Feature/Calendar/MaterializeTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Даты повторения**
+- [x] **Шаг 3: Даты повторения**
 
 ```php
 /** @return list<CarbonImmutable> */
@@ -2478,7 +2478,7 @@ private function nthWeekdayOf(CarbonImmutable $monthStart): ?CarbonImmutable
 
 Для `biweekly` опорная дата приводится к дню недели правила: фаза считается от ближайшего `weekday`, не раньше `anchor_date`.
 
-- [ ] **Шаг 4: Генератор и команда**
+- [x] **Шаг 4: Генератор и команда**
 
 ```php
 final class MaterializeTemplate
@@ -2513,12 +2513,12 @@ final class MaterializeTemplate
 
 `MaterializeCommand`: `today = now(tz)->startOfDay()`; шаблоны — `active`, `archived_at IS NULL`, `recurrence IS NOT NULL`, `whereDoesntHave('ministry', archived)`; итог в вывод. `routes/console.php`: `Schedule::command('calendar:materialize')->dailyAt('03:00');`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Calendar tests/Feature/Calendar`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add . && git commit -m "feat(calendar): recurrence occurrences and daily materialization command"
