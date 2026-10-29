@@ -706,6 +706,177 @@
                 }
             }
         },
+        "/slots/{slot}/assignments": {
+            "post": {
+                "operationId": "assignment.store",
+                "tags": [
+                    "Assignment"
+                ],
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "description": "The slot ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssignRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`EventAssignmentResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventAssignmentResource"
+                                        },
+                                        "warnings": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "code": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "role_mismatch",
+                                                            "time_conflict",
+                                                            "over_capacity"
+                                                        ]
+                                                    },
+                                                    "message": {
+                                                        "type": "string"
+                                                    },
+                                                    "event_ids": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                },
+                                                "required": [
+                                                    "code",
+                                                    "message"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "warnings"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "assignment.duplicate",
+                                                "assignment.person_archived",
+                                                "event.cancelled"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/assignments/{assignment}": {
+            "delete": {
+                "operationId": "assignment.destroy",
+                "tags": [
+                    "Assignment"
+                ],
+                "parameters": [
+                    {
+                        "name": "assignment",
+                        "in": "path",
+                        "required": true,
+                        "description": "The assignment ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "event.cancelled"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/audit": {
             "get": {
                 "operationId": "access.audit",
@@ -1126,6 +1297,71 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/slots/{slot}/candidates": {
+            "get": {
+                "operationId": "candidate.index",
+                "tags": [
+                    "Candidate"
+                ],
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "description": "The slot ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 200
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `CandidateResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CandidateResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -4655,6 +4891,92 @@
                 ],
                 "title": "AnnouncementScope"
             },
+            "AssignRequest": {
+                "type": "object",
+                "properties": {
+                    "person_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "person_id"
+                ],
+                "title": "AssignRequest"
+            },
+            "CandidateResource": {
+                "type": "object",
+                "properties": {
+                    "person": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "full_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "photo_thumb_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "full_name",
+                            "photo_thumb_url"
+                        ]
+                    },
+                    "has_role": {
+                        "type": "boolean"
+                    },
+                    "conflicts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "event_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "starts_at": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "ends_at": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "event_id",
+                                "title",
+                                "starts_at",
+                                "ends_at"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "person",
+                    "has_role",
+                    "conflicts"
+                ],
+                "title": "CandidateResource"
+            },
             "CreatedAccessLinkResource": {
                 "type": "object",
                 "properties": {
@@ -4887,6 +5209,9 @@
                     "sort_order": {
                         "type": "integer"
                     },
+                    "can_fill": {
+                        "type": "boolean"
+                    },
                     "assignments": {
                         "type": "array",
                         "items": {
@@ -4902,6 +5227,7 @@
                     "required_count",
                     "filled_count",
                     "sort_order",
+                    "can_fill",
                     "assignments"
                 ],
                 "title": "EventSlotResource"

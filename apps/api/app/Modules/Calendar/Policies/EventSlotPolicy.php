@@ -16,4 +16,14 @@ final readonly class EventSlotPolicy
     {
         return $this->access->canManage($user, $slot->event);
     }
+
+    public function fill(User $user, EventSlot $slot): bool
+    {
+        return $this->access->canFillSlot($user, $slot);
+    }
+
+    public function assign(User $user, EventSlot $slot): bool
+    {
+        return $this->access->canAssignSlot($user, $slot);
+    }
 }

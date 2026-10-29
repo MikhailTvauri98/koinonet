@@ -170,6 +170,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/slots/{slot}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assignment.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assignments/{assignment}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["assignment.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit": {
         parameters: {
             query?: never;
@@ -226,6 +258,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["auth.me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/slots/{slot}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["candidate.index"];
         put?: never;
         post?: never;
         delete?: never;
@@ -945,6 +993,25 @@ export interface components {
          * @enum {string}
          */
         AnnouncementScope: "church" | "ministry";
+        /** AssignRequest */
+        AssignRequest: {
+            person_id: string;
+        };
+        /** CandidateResource */
+        CandidateResource: {
+            person: {
+                id: string;
+                full_name: string | null;
+                photo_thumb_url: string | null;
+            };
+            has_role: boolean;
+            conflicts: {
+                event_id: string | null;
+                title: string;
+                starts_at: string | null;
+                ends_at: string | null;
+            }[];
+        };
         /** CreatedAccessLinkResource */
         CreatedAccessLinkResource: {
             url: string;
@@ -1005,6 +1072,7 @@ export interface components {
             required_count: number;
             filled_count: number;
             sort_order: number;
+            can_fill: boolean;
             assignments: components["schemas"]["EventAssignmentResource"][];
         };
         /**
@@ -1792,6 +1860,93 @@ export interface operations {
             404: components["responses"]["ModelNotFoundException"];
         };
     };
+    "assignment.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The slot ID */
+                slot: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventAssignmentResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventAssignmentResource"];
+                        warnings: {
+                            /** @enum {string} */
+                            code: "role_mismatch" | "time_conflict" | "over_capacity";
+                            message: string;
+                            event_ids?: string[];
+                        }[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @enum {string} */
+                        code: "assignment.duplicate" | "assignment.person_archived" | "event.cancelled";
+                    };
+                };
+            };
+        };
+    };
+    "assignment.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The assignment ID */
+                assignment: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @constant */
+                        code: "event.cancelled";
+                    };
+                };
+            };
+        };
+    };
     "access.audit": {
         parameters: {
             query?: {
@@ -1943,6 +2098,37 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "candidate.index": {
+        parameters: {
+            query?: {
+                search?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description The slot ID */
+                slot: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `CandidateResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CandidateResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "event.index": {

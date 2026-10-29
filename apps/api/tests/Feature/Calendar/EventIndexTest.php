@@ -101,6 +101,7 @@ it('eager loads active event cards without per-event relationship queries and re
         $slot = EventSlot::factory()->for($event)->create();
         EventAssignment::factory()->for($slot)->for($person)->create();
         EventAssignment::factory()->for($slot)->for($viewer->person)->create(['archived_at' => now()]);
+        EventSlot::factory()->for($event)->create();
         EventSlot::factory()->for($event)->create(['archived_at' => now()]);
     }
     // Warm the shared permission cache before measuring event relationships.
@@ -110,11 +111,12 @@ it('eager loads active event cards without per-event relationship queries and re
     $queries = collect(DB::getQueryLog());
     DB::disableQueryLog();
     foreach ($response->json('data') as $event) {
-        expect($event['slots'])->toHaveCount(1)
+        expect($event['slots'])->toHaveCount(2)
             ->and($event['slots'][0]['assignments'])->toHaveCount(1)
             ->and($event['slots'][0]['assignments'][0]['person']['full_name'])->toBeNull()
             ->and($event['slots'][0]['assignments'][0]['person']['photo_thumb_url'])->toBeNull();
     }
     expect($queries->filter(fn (array $query): bool => str_starts_with($query['query'], 'select * from "event_slots"'))->count())->toBe(1)
-        ->and($queries->filter(fn (array $query): bool => str_starts_with($query['query'], 'select * from "event_assignments"'))->count())->toBe(1);
+        ->and($queries->filter(fn (array $query): bool => str_starts_with($query['query'], 'select * from "event_assignments"'))->count())->toBe(1)
+        ->and($queries->filter(fn (array $query): bool => str_starts_with($query['query'], 'select * from "events"'))->count())->toBe(1);
 });

@@ -7,6 +7,7 @@ namespace App\Modules\Calendar;
 use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionResolver;
 use App\Modules\Calendar\Models\Event;
+use App\Modules\Calendar\Models\EventSlot;
 use App\Modules\Directory\Models\User;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +19,27 @@ final readonly class EventAccess
     public function canManage(User $user, Event $event): bool
     {
         return $this->canManageOwner($user, $event->owner_type, $event->ministry_id);
+    }
+
+    public function canFillSlot(User $user, EventSlot $slot): bool
+    {
+        return ! $slot->event->isCancelled() && $this->canAssignSlot($user, $slot);
+    }
+
+    // Mutation policies allow authorized callers to receive the domain cancellation error.
+    public function canAssignSlot(User $user, EventSlot $slot): bool
+    {
+        if ($user->isDisabled() || $slot->archived_at !== null || $slot->event->archived_at !== null) {
+            return false;
+        }
+        if ($this->canManage($user, $slot->event)) {
+            return true;
+        }
+        $role = $slot->role;
+
+        return $role !== null && $role->ministry_id !== null
+            && $this->permissions->canInMinistry($user, Permission::SlotsAssign, $role->ministry_id)
+            && Ministry::query()->whereKey($role->ministry_id)->whereNull('archived_at')->exists();
     }
 
     public function canManageOwner(User $user, EventOwnerType $owner, ?string $ministryId): bool

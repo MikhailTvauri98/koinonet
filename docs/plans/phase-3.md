@@ -1169,7 +1169,7 @@ composer openapi && git add . && git commit -m "feat(calendar): slot management 
 - Отдаёт наружу: `AssignmentCreated(string $eventId, string $slotId, string $personId, ?string $userId, ?string $actorUserId)`, `AssignmentRemoved(...)` с той же сигнатурой. `userId` — аккаунт назначенного (если есть), `actorUserId` — аккаунт, совершивший действие (`null` для консоли и слушателей). Их слушают Notifications (задача 12) и Chat (фаза 4).
 - Коды ошибок: `assignment.duplicate`, `assignment.person_archived`, `event.cancelled`. Коды предупреждений: `role_mismatch`, `time_conflict`, `over_capacity`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Unit/Calendar/TimeConflictFinderTest.php`:
 
@@ -1455,12 +1455,12 @@ it('denies candidates to someone who cannot fill the slot', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Calendar tests/Feature/Calendar/AssignmentTest.php tests/Feature/Calendar/CandidateTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class TimeConflictFinder
@@ -1502,12 +1502,12 @@ public function canFillSlot(User $user, EventSlot $slot): bool
 
 Кандидаты: слот с ролью — `Person` через `ministry_members` → `ministry_member_roles` с `role_id`, неархивные; свободный слот — `search` от двух символов по триграммному индексу фазы 1, до 20 человек; для каждого `conflicts` через `TimeConflictFinder`, `has_role` для слота с ролью всегда `true`, для свободного — `false`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Calendar tests/Feature/Calendar tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): assignments with warnings, candidates with conflicts, slots.assign"

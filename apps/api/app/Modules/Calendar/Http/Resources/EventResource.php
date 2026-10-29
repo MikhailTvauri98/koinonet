@@ -35,6 +35,9 @@ final class EventResource extends JsonResource
             'slots.assignments' => fn ($query) => $query->whereNull('archived_at')->orderBy('created_at')->orderBy('id'),
             'slots.assignments.person.photo',
         ]);
+        foreach ($event->slots as $slot) {
+            $slot->setRelation('event', $event);
+        }
         $ministry = $event->ministry;
 
         return [
