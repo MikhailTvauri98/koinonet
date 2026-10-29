@@ -1929,7 +1929,7 @@ composer openapi && git add . && git commit -m "feat(media,announcements): attac
 - Отдаёт наружу: `AnnouncementPublishedNotification(Announcement $announcement)` — категория `announcements`, `title` = заголовок объявления, `body` = текст без Markdown-разметки, `url = /announcements/{id}`, `tag = announcement-{id}`.
 - Потребляет: `AnnouncementPublished` из задачи 5, `AppNotification` из задачи 3.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2016,22 +2016,24 @@ it('carries the category, the tag, the url and a plain-text body', function () {
     });
 });
 
-it('is not sent for an announcement whose author was erased before the queue ran', function () {
+it('still sends to an active recipient when the author was erased before the queue ran', function () {
+    $recipient = User::factory()->create();
     $announcement = Announcement::factory()->create(['author_user_id' => null]);
 
     (new \App\Modules\Notifications\Listeners\NotifyAboutAnnouncement())
         ->handle(new \App\Modules\Announcements\Events\AnnouncementPublished($announcement->id));
 
-    Notification::assertSentTimes(AnnouncementPublishedNotification::class, User::query()->count());
+    Notification::assertSentTo($recipient, AnnouncementPublishedNotification::class);
+    Notification::assertCount(1);
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications/AnnouncementNotificationTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class AnnouncementPublishedNotification extends AppNotification
@@ -2071,25 +2073,27 @@ final class NotifyAboutAnnouncement implements ShouldQueue
             : app(Recipients::class)->ministryMembers($announcement->ministry_id);
 
         $recipients->chunk(200)->each(
-            fn ($chunk) => Notification::send($chunk, new AnnouncementPublishedNotification($announcement))
+            fn ($chunk) => Notification::send($chunk->all(), new AnnouncementPublishedNotification($announcement))
         );
     }
 }
 ```
 
-`Recipients::allActive()` — `User::query()->whereNull('disabled_at')->lazy()`; `ministryMembers` — `join ministry_members` по `person_id`, `whereNull('disabled_at')`, `lazy()`.
+`Recipients::allActive()` — аккаунты без `users.disabled_at` со связанным неархивным человеком (`whereHas('person', ...)`), затем `lazy()`; `ministryMembers` добавляет `join ministry_members` по `person_id`, фильтр `ministry_id` и `select('users.*')`, чтобы идентификатор участия не подменял идентификатор аккаунта.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+Уточнение реализации задачи 8: тело переводится из Markdown через существующий CommonMark (`Str::markdown`), затем из HTML в текст с декодированием сущностей и нормализацией пробелов. Это сохраняет подписи ссылок со вложенными скобками и убирает маркеры списков. Ленивый chunk материализуется через `all()` только для текущих 200 адресатов: Laravel Notification принимает массив или обычную Collection.
+
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications tests/Feature/Announcements`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Проверить очередь вручную**
+- [x] **Шаг 5: Проверить очередь вручную**
 
-Выполнить: `make up`, опубликовать объявление через API, посмотреть `docker compose -f infra/compose.yml logs worker`.
-Ожидается: задача слушателя и задачи уведомлений выполнены воркером Horizon, в `notifications` появились строки у всех активных аккаунтов.
+Локальная воспроизводимая замена ручного шага: `./vendor/bin/pest tests/Feature/Notifications/AnnouncementNotificationQueueTest.php`. Тест публикует через API и обрабатывает настоящую Redis-очередь `task-8-{ULID}` ограниченным `queue:work --queue=... --stop-when-empty --max-time=20`, отдельно от очередей Horizon. Используются только тестовая база, тестовые аккаунты, log broadcast и FakePushTransport.
+Ожидается: до внешнего commit очередь пуста, rollback не добавляет задачу; после commit слушатель и задачи каналов выполняются, центр и broadcast получают запись даже при выключенной категории, пуш отправляется только для включённой категории через локальный fake. Production и реальные устройства этим шагом не проверяются.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add . && git commit -m "feat(notifications): announcement notifications to church or ministry"
