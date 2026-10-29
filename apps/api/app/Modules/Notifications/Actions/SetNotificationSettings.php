@@ -15,8 +15,14 @@ final class SetNotificationSettings
     {
         DB::transaction(function () use ($user, $settings): void {
             foreach ($settings as $category => $enabled) {
+                $identity = ['user_id' => $user->id, 'category' => $category];
+
+                if ($enabled && ! NotificationSetting::query()->where($identity)->exists()) {
+                    continue;
+                }
+
                 NotificationSetting::query()->updateOrCreate(
-                    ['user_id' => $user->id, 'category' => $category],
+                    $identity,
                     ['enabled' => $enabled],
                 );
             }

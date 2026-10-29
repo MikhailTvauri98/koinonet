@@ -49,6 +49,17 @@ it('disables a category and leaves the others alone', function () {
     $this->assertDatabaseCount('notification_settings', 2);
 });
 
+it('does not store a redundant default when first enabling a category', function () {
+    $user = actingAsUser();
+
+    $this->putJson('/api/v1/notification-settings', ['settings' => ['chat' => true]])
+        ->assertOk()
+        ->assertJsonFragment(['category' => 'chat', 'label' => 'Чаты', 'enabled' => true]);
+
+    expect(app(NotificationPreferences::class)->isEnabled($user, NotificationCategory::Chat))->toBeTrue();
+    $this->assertDatabaseCount('notification_settings', 0);
+});
+
 it('re-enables a category without changing another account or category', function () {
     $user = actingAsUser();
     $other = User::factory()->create();

@@ -489,12 +489,12 @@ final class NotificationPreferences
 }
 ```
 
-`SetNotificationSettings::handle(User $user, array<string, bool> $settings): void` — `updateOrCreate` по паре. `UpdateNotificationSettingsRequest`: `settings` — `required|array`, `settings.*` — `boolean`, плюс проверка ключей по `NotificationCategory::tryFrom` в `withValidator` (ошибка на `settings.{key}`). Маршруты под `auth:sanctum`.
+`SetNotificationSettings::handle(User $user, array<string, bool> $settings): void` — `updateOrCreate` по паре для необходимых сохранений: при `enabled=true` отсутствующая строка не создаётся, существующая строка обновляется. Регрессионный тест первого `PUT` с `chat=true` проверяет состояние «включено» и отсутствие строк. `UpdateNotificationSettingsRequest`: `settings` — `required|array`, `settings.*` — `boolean`, плюс проверка ключей по `NotificationCategory::tryFrom` в `withValidator` (ошибка на `settings.{key}`). Маршруты под `auth:sanctum`.
 
 - [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications/NotificationSettingsTest.php`
-Ожидается: PASS, 6 тестов.
+Ожидается: PASS, 22 теста с проверками первого явного включения, изоляции аккаунтов, схемы хранения и OpenAPI.
 
 - [x] **Шаг 6: Коммит**
 
