@@ -1493,17 +1493,17 @@ composer openapi && git add . && git commit -m "feat(announcements): tables, pub
 ### Задача 6: Список, видимость, просмотры, закрепление, архивация
 
 **Файлы:**
-- Создать: `app/Modules/Announcements/AnnouncementVisibility.php`; `Http/Queries/AnnouncementIndexQuery.php`; `Actions/PinAnnouncement.php`, `Actions/UnpinAnnouncement.php`, `Actions/ArchiveAnnouncement.php`, `Actions/RecordAnnouncementView.php`
+- Создать: `app/Modules/Announcements/AnnouncementVisibility.php`; `Http/Queries/AnnouncementIndexQuery.php`; `Http/Requests/IndexAnnouncementRequest.php`; `Actions/PinAnnouncement.php`, `Actions/UnpinAnnouncement.php`, `Actions/ArchiveAnnouncement.php`, `Actions/RecordAnnouncementView.php`
 - Изменить: `AnnouncementController` (`index`, `show`, `pin`, `unpin`, `archive`), `AnnouncementPolicy` (`view`), `AnnouncementResource` (`views_count`), `routes.php`
 - Тест: `tests/Feature/Announcements/AnnouncementIndexTest.php`, `tests/Feature/Announcements/AnnouncementVisibilityTest.php`
 
 **Интерфейсы:**
 - Отдаёт наружу: `GET /announcements?scope=church|ministry&ministry={id}&page&per_page` — постраничная, закреплённые первыми, затем по `published_at` убыв.; скрыты архивные и с прошедшей `hide_after`.
 - Отдаёт наружу: `GET /announcements/{id}` — фиксирует просмотр; `POST /announcements/{id}/pin`, `POST /announcements/{id}/unpin`, `POST /announcements/{id}/archive`.
-- Отдаёт наружу: `AnnouncementVisibility::canSee(User $viewer, Announcement $announcement): bool` — `church` видят все; `ministry` — участники и `ministries.view_all`; архивное — только те, кто может править. Используется политикой и резолвером владельца медиафайла (задача 7).
+- Отдаёт наружу: `AnnouncementVisibility::canSee(User $viewer, Announcement $announcement): bool` — `church` видят все; `ministry` — участники, `ministries.view_all`, автор и носители права публикации (в том числе `ministries.manage_all` через резолвер); архивное — только те, кто может править. Используется политикой и резолвером владельца медиафайла (задача 7).
 - Отдаёт наружу: `AnnouncementResource` условно добавляет `views_count` для тех, кто может править.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Announcements/AnnouncementIndexTest.php`:
 
@@ -1540,7 +1540,7 @@ it('hides announcements past hide_after', function () {
     Announcement::factory()->hiddenAfter(now()->subDay()->toDateString())->create();
     $visible = Announcement::factory()->hiddenAfter(now()->addDay()->toDateString())->create();
 
-    $ids = collect($this->getJson('/api/v1/announcements')->json('data'))->pluck('id');
+    $ids = collect($this->getJson('/api/v1/announcements')->json('data'))->pluck('id')->all();
 
     expect($ids)->toEqual([$visible->id]);
 });
@@ -1569,7 +1569,7 @@ it('filters by scope and ministry', function () {
     $mine = Announcement::factory()->ministry($ministry)->create();
     Announcement::factory()->ministry($other)->create();
 
-    $ids = collect($this->getJson("/api/v1/announcements?scope=ministry&ministry={$ministry->id}")->json('data'))->pluck('id');
+    $ids = collect($this->getJson("/api/v1/announcements?scope=ministry&ministry={$ministry->id}")->json('data'))->pluck('id')->all();
 
     expect($ids)->toEqual([$mine->id]);
 });
@@ -1654,7 +1654,7 @@ it('shows views_count to a publisher and hides it from a reader', function () {
     $this->getJson("/api/v1/announcements/{$announcement->id}")->assertJsonMissingPath('data.views_count');
 
     actingAsUserWith([Permission::AnnouncementsChurchPublish]);
-    $this->getJson("/api/v1/announcements/{$announcement->id}")->assertJsonPath('data.views_count', 1);
+    $this->getJson("/api/v1/announcements/{$announcement->id}")->assertJsonPath('data.views_count', 2);
 });
 
 it('pins and unpins with the publish permission only', function () {
@@ -1678,12 +1678,12 @@ it('archives and writes to the journal', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Announcements`
 Ожидается: FAIL, маршрутов `index`, `show`, `pin` нет.
 
-- [ ] **Шаг 3: Видимость и список**
+- [x] **Шаг 3: Видимость и список**
 
 ```php
 final class AnnouncementVisibility
@@ -1727,8 +1727,8 @@ $query = Announcement::query()
     ->whereNull('archived_at')
     ->where(fn ($q) => $q->whereNull('hide_after')->orWhere('hide_after', '>=', $today))
     ->where(function ($q) use ($viewer) {
-        $q->where('scope', 'church');
-        $visibleMinistries = $this->visibleMinistryIds($viewer);   // все служения при view_all, иначе свои
+        $q->where('scope', 'church')->orWhere('author_user_id', $viewer->id);
+        $visibleMinistries = $this->visibleMinistryIds($viewer);   // все при view_all/manage_all/администраторе, иначе свои
         if ($visibleMinistries !== null) {
             $q->orWhereIn('ministry_id', $visibleMinistries);
         } else {
@@ -1742,23 +1742,29 @@ $query = Announcement::query()
     ->orderByDesc('published_at');
 ```
 
-`show`: политика `view` → `canSee`; архивное и невидимое читателю → `404` (в `AnnouncementPolicy::view` для архивного возвращать `false` и в контроллере `abort_if($announcement->archived_at !== null && ! canManage, 404)`, для активного невидимого — `403`). Затем `RecordAnnouncementView::handle($announcement, $viewer)` — `insertOrIgnore`.
+`show`: политика `view` → `canSee`; архивное и невидимое читателю → `404` (в `AnnouncementPolicy::view` для архивного возвращать `canManage` и в контроллере `abort_if($announcement->archived_at !== null && ! canManage, 404)`, для активного невидимого — `403`). Затем `RecordAnnouncementView::handle($announcement, $viewer)` — `insertOrIgnore`.
 
 `PinAnnouncement`/`UnpinAnnouncement` ставят и снимают `pinned_at`; `ArchiveAnnouncement` ставит `archived_at` и пишет `AuditLogger::record('announcement.archived', $announcement)`. Все три под политикой `update`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Announcements`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(announcements): list, visibility, views, pinning, archiving"
 ```
 
+**Уточнения реализации:**
+
+- R1: видимость активных объявлений одинакова в списке и по прямой ссылке; автор сохраняет доступ без участия. Архивные исключены из каждого списка, по прямой ссылке доступны управляющим; `404` читателю проверяется до общего запрета политики.
+- Два разных аккаунта, открывшие карточку, дают счётчик 2. `views_count` условен во всех ответах ресурса; прежняя проверка PATCH из задачи 5 обновляется на 0 для управляющего.
+- Параметры списка валидируются: scope enum, ministry ULID, page >= 1, per_page 1–100 (по умолчанию 20); несуществующее или невидимое служение даёт пустой список. Архивация и запись журнала атомарны, повторная архивация не дублирует журнал. Ссылки страниц сохраняют фильтры и размер страницы.
+
 **Критерии готовности:**
-- Правила видимости раздела 6.4 закрыты тестами: церковные видят все, служебные — участники и `ministries.view_all`.
+- Правила видимости раздела 6.4 закрыты тестами: церковные видят все, объявления служения — участники, `ministries.view_all`, автор и носители права публикации; список и прямая ссылка используют одно правило.
 - `hide_after` считается по календарю церкви — тест с Оклендом ловит вычисление по UTC.
 - Закреплённые идут первыми, затем новые; просмотр фиксируется один раз на аккаунт.
 - Архивация — единственная операция с объявлением, которая попадает в журнал (раздел 6.5).

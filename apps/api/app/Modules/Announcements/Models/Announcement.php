@@ -28,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property bool $notify_on_publish
  * @property Carbon $published_at
  * @property Carbon|null $archived_at
+ * @property int|null $views_count
  */
 final class Announcement extends Model
 {

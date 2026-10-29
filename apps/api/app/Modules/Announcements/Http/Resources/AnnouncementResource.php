@@ -8,6 +8,8 @@ use App\Modules\Announcements\AnnouncementScope;
 use App\Modules\Announcements\Models\Announcement;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\MissingValue;
+use Illuminate\Support\Facades\Gate;
 
 /** @mixin Announcement */
 final class AnnouncementResource extends JsonResource
@@ -17,7 +19,7 @@ final class AnnouncementResource extends JsonResource
      *   id: string, scope: AnnouncementScope, ministry: array{id: string, name: string}|null,
      *   author: array{id: string, full_name: string}|null, title: string, body: string,
      *   pinned: bool, hide_after: string|null, notify_on_publish: bool, published_at: string,
-     *   archived: bool, attachments: list<never>
+     *   archived: bool, attachments: list<never>, views_count: int|MissingValue
      * }
      */
     public function toArray(Request $request): array
@@ -41,6 +43,10 @@ final class AnnouncementResource extends JsonResource
             /** @format date-time */
             'published_at' => (string) $announcement->published_at->toISOString(),
             'archived' => $announcement->archived_at !== null,
+            'views_count' => $this->when(
+                Gate::allows('update', $announcement),
+                fn (): int => $announcement->views_count ?? $announcement->views()->count(),
+            ),
             'attachments' => [],
         ];
     }

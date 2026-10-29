@@ -207,7 +207,7 @@ it('updates editable fields without moving scope or authorship', function () {
         'pinned' => false, 'hide_after' => null, 'notify_on_publish' => false,
     ])->assertOk()->assertJsonPath('data.body', 'Текст [x]()')->assertJsonPath('data.pinned', false)
         ->assertJsonPath('data.hide_after', null)->assertJsonPath('data.notify_on_publish', false)
-        ->assertJsonPath('data.attachments', [])->assertJsonMissingPath('data.views_count');
+        ->assertJsonPath('data.attachments', [])->assertJsonPath('data.views_count', 0);
     $this->patchJson("/api/v1/announcements/{$announcement->id}", ['scope' => 'ministry'])
         ->assertUnprocessable()->assertJsonValidationErrors('scope');
     expect($announcement->fresh()->author_user_id)->toBe($announcement->author_user_id)
