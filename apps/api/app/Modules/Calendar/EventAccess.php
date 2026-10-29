@@ -8,6 +8,7 @@ use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionResolver;
 use App\Modules\Calendar\Models\Event;
 use App\Modules\Calendar\Models\EventSlot;
+use App\Modules\Calendar\Models\EventTemplate;
 use App\Modules\Directory\Models\User;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,6 +55,23 @@ final readonly class EventAccess
         return $event->archived_at !== null
             ? $this->canManage($user, $event)
             : $this->constrainVisibleQuery(Event::query()->whereKey($event->id), $user)->exists();
+    }
+
+    public function canViewTemplate(User $user, EventTemplate $template): bool
+    {
+        if ($user->isDisabled()) {
+            return false;
+        }
+        if ($this->canManageOwner($user, $template->owner_type, $template->ministry_id)) {
+            return true;
+        }
+        if ($template->archived_at !== null) {
+            return false;
+        }
+
+        return $template->owner_type === EventOwnerType::Church
+            ? $template->visibility === EventVisibility::Church
+            : in_array($template->ministry_id, $this->visibleMinistryIds($user), true);
     }
 
     /** @return list<string> */

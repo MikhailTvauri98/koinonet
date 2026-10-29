@@ -22,7 +22,9 @@ use App\Modules\Announcements\Http\Requests\UpdateAnnouncementRequest;
 use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Announcements\OpenApi\AnnouncementRequestSchema;
 use App\Modules\Announcements\Policies\AnnouncementPolicy;
+use App\Modules\Calendar\Access\CalendarRoleUsageSource;
 use App\Modules\Calendar\Actions\CalendarAccountEraser;
+use App\Modules\Calendar\Actions\DetachHistoricalRoleReferences;
 use App\Modules\Calendar\EventMediaOwnerResolver;
 use App\Modules\Calendar\Http\Requests\StoreEventRequest;
 use App\Modules\Calendar\Http\Requests\UpdateEventRequest;
@@ -86,6 +88,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(MinistryPermissionSource::class, DatabaseMinistryPermissionSource::class);
         $this->app->bind(SharedMinistryFinder::class, DatabaseSharedMinistryFinder::class);
         $this->app->bind(RoleCarrierDetacher::class, DetachRoleFromMembers::class);
+        $this->app->tag([CalendarRoleUsageSource::class], 'access.role_usage_sources');
+        $this->app->tag([DetachHistoricalRoleReferences::class], 'access.role_reference_detachers');
         $this->app->bind(PushTransport::class, MinishlinkPushTransport::class);
         $this->app->tag(
             [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class, AnnouncementsAccountEraser::class, CalendarAccountEraser::class],

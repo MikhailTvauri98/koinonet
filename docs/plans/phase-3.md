@@ -1710,7 +1710,7 @@ composer openapi && git add . && git commit -m "feat(calendar): event cancellati
 - Отдаёт наружу: типы блокировок `event_slot` (`id` — событие, `title` — «{название}, {дата по церкви}») и `template_slot` (`id` — шаблон, `title` — название шаблона).
 - Потребляет: `RoleUsageCollector::for(Role): array{carriers, blockers}` и `DeleteRole` фазы 1 (неизвестный тип блокировки → `role.in_use`).
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1779,12 +1779,12 @@ it('ignores inactive and archived templates', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/RoleUsageTest.php`
 Ожидается: FAIL, блокировок нет и роль удаляется.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 В `RoleUsageCollector::for` после собственных блокировок:
 
@@ -1829,12 +1829,12 @@ final class CalendarRoleUsageSource implements RoleUsageSource
 }
 ```
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/RoleUsageTest.php tests/Feature/Ministries/MinistryRoleTest.php tests/Feature/Access/GlobalRoleTest.php`
 Ожидается: PASS, тесты ролей фазы 1 не сломаны.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add . && git commit -m "feat(calendar): role usage source blocks deletion by slots of events and templates"

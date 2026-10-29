@@ -3714,18 +3714,11 @@ export interface operations {
                     "application/json": {
                         data: {
                             carriers: number;
-                            blockers: ({
-                                /** @constant */
-                                type: "default_role";
-                                id: string | null;
-                                /** @constant */
-                                title: "Роль по умолчанию";
-                            } | {
-                                /** @constant */
-                                type: "last_role_of_member";
+                            blockers: {
+                                type: string;
                                 id: string;
                                 title: string;
-                            })[];
+                            }[];
                         };
                     };
                 };

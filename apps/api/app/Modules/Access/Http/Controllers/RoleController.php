@@ -92,6 +92,7 @@ final class RoleController
         return response()->noContent();
     }
 
+    /** @response array{data: array{carriers: int, blockers: list<array{type: string, id: string, title: string}>}} */
     public function usage(Role $role, RoleUsageCollector $usage): JsonResponse
     {
         Gate::authorize('viewUsage', $role);

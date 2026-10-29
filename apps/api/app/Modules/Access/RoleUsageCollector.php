@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Access;
 
+use App\Modules\Access\Contracts\RoleUsageSource;
 use App\Modules\Access\Models\PersonRole;
 use App\Modules\Access\Models\Role;
 use App\Modules\Ministries\Models\Ministry;
@@ -44,6 +45,13 @@ final class RoleUsageCollector
         $carriers = $role->scope === RoleScope::Global
             ? PersonRole::query()->where('role_id', $role->id)->count()
             : MinistryMemberRole::query()->where('role_id', $role->id)->count();
+
+        /** @var RoleUsageSource $source */
+        foreach (app()->tagged('access.role_usage_sources') as $source) {
+            foreach ($source->blockersFor($role) as $blocker) {
+                $blockers[] = $blocker;
+            }
+        }
 
         return [
             'carriers' => $carriers,
