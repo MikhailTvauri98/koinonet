@@ -48,11 +48,11 @@ it('queues notifications and delivers non chat categories to the center and live
     $notification = sampleNotification($category);
 
     expect($notification)->toBeInstanceOf(ShouldQueue::class)
-        ->and($notification->via(new User))->toEqualCanonicalizing(['database', 'broadcast']);
+        ->and($notification->via(new stdClass))->toEqualCanonicalizing(['database', 'broadcast']);
 })->with([NotificationCategory::Announcements, NotificationCategory::Assignments, NotificationCategory::Reminders]);
 
-it('delivers chat only to the live channel', function () {
-    expect(sampleNotification(NotificationCategory::Chat)->via(new User))->toBe(['broadcast']);
+it('delivers chat to the live channel without a center entry', function () {
+    expect(sampleNotification(NotificationCategory::Chat)->via(new stdClass))->toBe(['broadcast']);
 });
 
 it('serializes the category and destination with a bounded unicode preview', function () {

@@ -23,11 +23,13 @@ it('shows the public settings to any account', function () {
         ->assertJsonMissingPath('data.phone_region');
 });
 
-it('exposes only the public reverb key in settings', function () {
+it('exposes only public delivery keys in settings', function () {
     actingAsUser();
     config([
         'broadcasting.connections.reverb.key' => 'local-key',
         'broadcasting.connections.reverb.secret' => 'private-secret',
+        'webpush.vapid.public_key' => 'public-vapid-key',
+        'webpush.vapid.private_key' => 'private-vapid-key',
     ]);
 
     $this->getJson('/api/v1/settings')
@@ -36,6 +38,7 @@ it('exposes only the public reverb key in settings', function () {
             'church_name' => app(ChurchSettings::class)->name(),
             'timezone' => app(ChurchSettings::class)->timezone(),
             'reverb_key' => 'local-key',
+            'vapid_public_key' => 'public-vapid-key',
         ]]);
 });
 

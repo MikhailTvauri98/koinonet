@@ -2792,6 +2792,72 @@
                 }
             }
         },
+        "/push-subscriptions": {
+            "post": {
+                "operationId": "pushSubscription.store",
+                "tags": [
+                    "PushSubscription"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StorePushSubscriptionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "pushSubscription.destroy",
+                "tags": [
+                    "PushSubscription"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "endpoint": {
+                                        "type": "string",
+                                        "format": "uri",
+                                        "maxLength": 2048
+                                    }
+                                },
+                                "required": [
+                                    "endpoint"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/roles": {
             "get": {
                 "operationId": "role.index",
@@ -4082,6 +4148,9 @@
                     "reverb_key": {
                         "type": "string"
                     },
+                    "vapid_public_key": {
+                        "type": "string"
+                    },
                     "phone_region": {
                         "type": "string"
                     }
@@ -4089,7 +4158,8 @@
                 "required": [
                     "church_name",
                     "timezone",
-                    "reverb_key"
+                    "reverb_key",
+                    "vapid_public_key"
                 ],
                 "title": "SettingsResource"
             },
@@ -4168,6 +4238,45 @@
                     "status"
                 ],
                 "title": "StorePersonRequest"
+            },
+            "StorePushSubscriptionRequest": {
+                "type": "object",
+                "properties": {
+                    "endpoint": {
+                        "type": "string",
+                        "format": "uri",
+                        "maxLength": 2048
+                    },
+                    "keys": {
+                        "type": "object",
+                        "properties": {
+                            "p256dh": {
+                                "type": "string",
+                                "maxLength": 255
+                            },
+                            "auth": {
+                                "type": "string",
+                                "maxLength": 255
+                            }
+                        },
+                        "required": [
+                            "p256dh",
+                            "auth"
+                        ]
+                    },
+                    "content_encoding": {
+                        "type": "string",
+                        "enum": [
+                            "aesgcm",
+                            "aes128gcm"
+                        ]
+                    }
+                },
+                "required": [
+                    "endpoint",
+                    "keys"
+                ],
+                "title": "StorePushSubscriptionRequest"
             },
             "UpdateLoginRequest": {
                 "type": "object",

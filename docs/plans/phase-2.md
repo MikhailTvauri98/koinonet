@@ -792,9 +792,16 @@ composer openapi && git add . && git commit -m "feat(notifications): base notifi
 ### Задача 4: Web Push — подписки, канал, ключи VAPID, обработка ошибок
 
 **Файлы:**
-- Создать: `app/Modules/Notifications/Channels/WebPushChannel.php`; `Push/PushTransport.php`, `Push/PushResult.php`, `Push/MinishlinkPushTransport.php`, `Push/WebPushSender.php`; `PushGate.php`; `Actions/SavePushSubscription.php`, `Actions/DeletePushSubscription.php`; `Http/Controllers/PushSubscriptionController.php`, `Http/Requests/StorePushSubscriptionRequest.php`, `Http/Requests/DeletePushSubscriptionRequest.php`; `Listeners/RemovePushSubscriptionsOnDisable.php`; `NotificationsAccountEraser.php`; `Console/GenerateVapidKeysCommand.php`; `config/webpush.php`; `tests/Support/FakePushTransport.php`
-- Изменить: `AppNotification::via()` (канал `webpush`), `app/Modules/Notifications/routes.php`, `app/Modules/Settings/Http/Controllers/SettingsController.php` (`vapid_public_key`), `AppServiceProvider` (`NotificationsAccountEraser` в тег `directory.account_erasers`, привязка `PushTransport`), `.env.example`, `composer.json`
+- Создать: `app/Modules/Notifications/Channels/WebPushChannel.php`; `Push/PushTransport.php`, `Push/PushResult.php`, `Push/MinishlinkPushTransport.php`, `Push/WebPushSender.php`; `PushGate.php`; `Actions/SavePushSubscription.php`, `Actions/DeletePushSubscription.php`, `Actions/RecordPushDelivery.php`, `Actions/RemoveAccountPushSubscriptions.php`; `Http/Controllers/PushSubscriptionController.php`, `Http/Requests/StorePushSubscriptionRequest.php`, `Http/Requests/DeletePushSubscriptionRequest.php`; `Listeners/RemovePushSubscriptionsOnDisable.php`; `Actions/NotificationsAccountEraser.php`; `Console/GenerateVapidKeysCommand.php`; `config/webpush.php`; `tests/Support/FakePushTransport.php`
+- Изменить: `AppNotification::via()` (канал `webpush`), `app/Modules/Notifications/routes.php`, `app/Modules/Settings/Http/Resources/SettingsResource.php` (`vapid_public_key`), `AppServiceProvider` (`NotificationsAccountEraser` в тег `directory.account_erasers`, привязка `PushTransport`), `.env.example`, `composer.json`
 - Тест: `tests/Feature/Notifications/PushSubscriptionTest.php`, `tests/Feature/Notifications/WebPushChannelTest.php`
+
+**Уточнения реализации (R5/Payload):**
+
+- Сохранён внешний контракт Sender; счётчики и удаление по результатам доставки выполняет `Actions/RecordPushDelivery`, очистку при отключении — `Actions/RemoveAccountPushSubscriptions`, реализация `AccountEraser` живёт в `Actions`. Sender делегирует записи Action.
+- Ключ VAPID добавляется в `SettingsResource`, общий для GET/PUT, и в сгенерированные OpenAPI/типы.
+- Не-final пример `PushSample` вынесен в `Tests\Support` (его расширяет тест длинного тела), чтобы не создавать предупреждение PSR-4.
+- Wire JSON содержит верхнеуровневый `url`; SW переносит его в `data.url`. `body` ≤140 символов Unicode, закодированный JSON ≤3072 байт. `LengthException` отклоняет всё ещё слишком большую нагрузку до транспорта без изменения подписок; URL и tag не обрезаются.
 
 **Интерфейсы:**
 - Отдаёт наружу: `POST /push-subscriptions` с телом `{ endpoint, keys: {p256dh, auth}, content_encoding? }` → `201`; `DELETE /push-subscriptions` с телом `{ endpoint }` → `204`.
@@ -806,7 +813,7 @@ composer openapi && git add . && git commit -m "feat(notifications): base notifi
 - Отдаёт наружу: `php artisan webpush:vapid` печатает пару ключей для `.env`.
 - Коды ошибок: `push.subscription_not_found`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Notifications/PushSubscriptionTest.php`:
 
@@ -928,7 +935,7 @@ use App\Modules\Notifications\Push\PushResult;
 use App\Modules\Notifications\Push\PushTransport;
 use Tests\Support\FakePushTransport;
 
-final class PushSample extends AppNotification
+class PushSample extends AppNotification
 {
     public function category(): NotificationCategory { return NotificationCategory::Announcements; }
     public function title(): string { return 'Собрание'; }
@@ -1046,12 +1053,12 @@ final class FakePushTransport implements PushTransport
 }
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications/PushSubscriptionTest.php tests/Feature/Notifications/WebPushChannelTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Транспорт и отправитель**
+- [x] **Шаг 3: Транспорт и отправитель**
 
 ```bash
 cd apps/api && composer require minishlink/web-push
@@ -1109,30 +1116,36 @@ final class MinishlinkPushTransport implements PushTransport
 `WebPushSender`:
 
 ```php
-final class WebPushSender
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Notifications\Push;
+
+use App\Modules\Directory\Models\User;
+use App\Modules\Notifications\Actions\RecordPushDelivery;
+use App\Modules\Notifications\Models\PushSubscription;
+use LengthException;
+
+final readonly class WebPushSender
 {
-    public function __construct(private readonly PushTransport $transport) {}
+    public function __construct(private PushTransport $transport, private RecordPushDelivery $recordDelivery) {}
 
     /** @param array<string, mixed> $payload */
     public function send(User $user, array $payload): void
     {
+        if (isset($payload['body']) && is_string($payload['body']) && mb_strlen($payload['body']) > 140) {
+            $payload['body'] = mb_substr($payload['body'], 0, 139).'…';
+        }
+
         $json = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
+        if (strlen($json) > 3072) {
+            throw new LengthException('Web Push payload exceeds 3 KiB.');
+        }
+
         foreach (PushSubscription::query()->where('user_id', $user->id)->get() as $subscription) {
-            $result = $this->transport->push($subscription, $json);
-
-            if ($result->success) {
-                $subscription->forceFill(['failures' => 0, 'last_success_at' => now()])->save();
-                continue;
-            }
-
-            if (in_array($result->status, [404, 410], true)
-                || $subscription->failures + 1 >= (int) config('webpush.max_failures')) {
-                $subscription->delete();
-                continue;
-            }
-
-            $subscription->increment('failures');
+            $this->recordDelivery->handle($subscription, $this->transport->push($subscription, $json));
         }
     }
 }
@@ -1146,7 +1159,7 @@ if ($notifiable instanceof User && app(PushGate::class)->allows($notifiable, $th
 }
 ```
 
-- [ ] **Шаг 4: Подписки, слушатель, стирание, ключи**
+- [x] **Шаг 4: Подписки, слушатель, стирание, ключи**
 
 `SavePushSubscription::handle(User $user, string $endpoint, string $p256dh, string $auth, string $encoding, ?string $userAgent): PushSubscription` — `updateOrCreate(['endpoint' => ...], [...])`: чужая подписка с тем же `endpoint` переходит к текущему аккаунту, счётчик ошибок обнуляется. `DeletePushSubscription::handle(User $user, string $endpoint): void` — `push.subscription_not_found`, если строки нет или она не этого аккаунта.
 
@@ -1156,12 +1169,12 @@ if ($notifiable instanceof User && app(PushGate::class)->allows($notifiable, $th
 
 `GenerateVapidKeysCommand` (`webpush:vapid`) печатает результат `Minishlink\WebPush\VAPID::createVapidKeys()` в виде строк `VAPID_PUBLIC_KEY=…` и `VAPID_PRIVATE_KEY=…`. В `.env.example` — три пустые переменные `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` с комментарием про команду.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications tests/Feature/Directory/ErasePersonTest.php`
 Ожидается: PASS, включая тесты стирания фазы 1.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(notifications): web push subscriptions, channel, vapid keys and failure handling"

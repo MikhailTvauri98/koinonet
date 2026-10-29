@@ -622,6 +622,22 @@ export interface paths {
         patch: operations["profile.updatePassword"];
         trace?: never;
     };
+    "/push-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pushSubscription.store"];
+        delete: operations["pushSubscription.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roles": {
         parameters: {
             query?: never;
@@ -951,6 +967,7 @@ export interface components {
             church_name: string;
             timezone: string;
             reverb_key: string;
+            vapid_public_key: string;
             phone_region?: string;
         };
         /** StoreMediaRequest */
@@ -978,6 +995,17 @@ export interface components {
             birth_date?: string | null;
             status: components["schemas"]["PersonStatus"];
             note?: string | null;
+        };
+        /** StorePushSubscriptionRequest */
+        StorePushSubscriptionRequest: {
+            /** Format: uri */
+            endpoint: string;
+            keys: {
+                p256dh: string;
+                auth: string;
+            };
+            /** @enum {string} */
+            content_encoding?: "aesgcm" | "aes128gcm";
         };
         /** UpdateLoginRequest */
         UpdateLoginRequest: {
@@ -2478,6 +2506,56 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MeResource"];
                 };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "pushSubscription.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorePushSubscriptionRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "pushSubscription.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    endpoint: string;
+                };
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["AuthenticationException"];
             422: components["responses"]["ValidationException"];

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications;
 
+use App\Modules\Directory\Models\User;
+use App\Modules\Notifications\Channels\WebPushChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
@@ -26,7 +28,13 @@ abstract class AppNotification extends Notification implements ShouldQueue
     /** @return list<string> */
     public function via(object $notifiable): array
     {
-        return $this->category() === NotificationCategory::Chat ? ['broadcast'] : ['broadcast', 'database'];
+        $channels = $this->category() === NotificationCategory::Chat ? ['broadcast'] : ['broadcast', 'database'];
+
+        if ($notifiable instanceof User && app(PushGate::class)->allows($notifiable, $this)) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
     }
 
     /** @return array{category: string, title: string, body: string, url: string, tag: string} */

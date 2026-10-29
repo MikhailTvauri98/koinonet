@@ -19,13 +19,13 @@ final class SettingsResource extends JsonResource
     }
 
     /**
-     * The public part - name, timezone and Reverb key - for every account (architecture
+     * The public part - name, timezone and public delivery keys - for every account (architecture
      * 8). `phone_region` is added for whoever may change it through
      * `PUT /settings` (`settings.manage`, the same SettingsPolicy::update
      * gate as the write side), so the settings screen can show the current
      * value before it is changed.
      *
-     * @return array{church_name: string, timezone: string, reverb_key: string, phone_region?: string}
+     * @return array{church_name: string, timezone: string, reverb_key: string, vapid_public_key: string, phone_region?: string}
      */
     public function toArray(Request $request): array
     {
@@ -33,6 +33,7 @@ final class SettingsResource extends JsonResource
             'church_name' => $this->settings->name(),
             'timezone' => $this->settings->timezone(),
             'reverb_key' => (string) config('broadcasting.connections.reverb.key'),
+            'vapid_public_key' => (string) config('webpush.vapid.public_key'),
             'phone_region' => $this->when(
                 Gate::forUser($request->user())->allows('update', Setting::class),
                 fn (): string => $this->settings->phoneRegion(),

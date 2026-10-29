@@ -35,12 +35,18 @@ use App\Modules\Ministries\Events\MinistryArchived;
 use App\Modules\Ministries\Listeners\BumpMembershipPermissionCache;
 use App\Modules\Ministries\Models\Ministry;
 use App\Modules\Ministries\Policies\MinistryPolicy;
+use App\Modules\Notifications\Actions\NotificationsAccountEraser;
+use App\Modules\Notifications\Console\GenerateVapidKeysCommand;
 use App\Modules\Notifications\Http\Requests\MarkNotificationsReadRequest;
+use App\Modules\Notifications\Listeners\RemovePushSubscriptionsOnDisable;
 use App\Modules\Notifications\OpenApi\MarkNotificationsReadSchema;
+use App\Modules\Notifications\Push\MinishlinkPushTransport;
+use App\Modules\Notifications\Push\PushTransport;
 use App\Modules\Settings\Models\Setting;
 use App\Modules\Settings\Policies\SettingsPolicy;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\RequestBodyObject;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -56,8 +62,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(MinistryPermissionSource::class, DatabaseMinistryPermissionSource::class);
         $this->app->bind(SharedMinistryFinder::class, DatabaseSharedMinistryFinder::class);
         $this->app->bind(RoleCarrierDetacher::class, DetachRoleFromMembers::class);
+        $this->app->bind(PushTransport::class, MinishlinkPushTransport::class);
         $this->app->tag(
-            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class],
+            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class],
             'directory.account_erasers',
         );
         $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
@@ -77,10 +84,20 @@ class AppServiceProvider extends ServiceProvider
                 if (trim($path->path, '/') === 'notifications/read') {
                     $path->operations['post']->requestBodyObject?->required();
                 }
+
+                // Scramble defaults DELETE form validation to query parameters,
+                // while this endpoint accepts the browser subscription as JSON.
+                if (trim($path->path, '/') === 'push-subscriptions' && isset($path->operations['delete'])) {
+                    $delete = $path->operations['delete'];
+                    $delete->addRequestBodyObject(RequestBodyObject::make()
+                        ->setContent('application/json', Schema::createFromParameters($delete->parameters))
+                        ->required());
+                    $delete->parameters = [];
+                }
             }
         });
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
-        $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class]);
+        $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class, GenerateVapidKeysCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Ministry::class, MinistryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
@@ -89,6 +106,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(PersonRolesChanged::class, BumpPermissionCache::class);
         Event::listen(RoleDeleted::class, BumpPermissionCache::class);
         Event::listen(UserDisabled::class, BumpPermissionCache::class);
+        Event::listen(UserDisabled::class, RemovePushSubscriptionsOnDisable::class);
         Event::listen(UserEnabled::class, BumpPermissionCache::class);
         Event::listen(MemberAdded::class, BumpMembershipPermissionCache::class);
         Event::listen(MemberRemoved::class, BumpMembershipPermissionCache::class);
