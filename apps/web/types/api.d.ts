@@ -241,7 +241,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["event.index"];
         put?: never;
         post: operations["event.store"];
         delete?: never;
@@ -1085,15 +1085,15 @@ export interface components {
          * Permission
          * @enum {string}
          */
-        Permission: "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "announcements.church.publish" | "calendar.church.manage" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit" | "announcements.publish" | "events.manage";
+        Permission: "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "announcements.church.publish" | "calendar.church.manage" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit" | "announcements.publish" | "events.manage" | "slots.assign";
         /** PermissionResource */
         PermissionResource: {
             key: string;
             scope: string;
             /** @enum {string} */
-            label: "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Публиковать объявления церкви" | "Объявления служения" | "Управлять церковным календарём" | "Управлять событиями служения" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
+            label: "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Публиковать объявления церкви" | "Объявления служения" | "Управлять церковным календарём" | "Управлять событиями служения" | "Заполнять слоты своих ролей" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
             /** @enum {string} */
-            description: "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий." | "События и шаблоны служения, все их слоты, отмена, чат события." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
+            description: "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий." | "События и шаблоны служения, все их слоты, отмена, чат события." | "Назначать людей в слоты с ролями этого служения в любых событиях." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
         };
         /** PersonResource */
         PersonResource: {
@@ -1899,6 +1899,61 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "event.index": {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                scope?: string;
+                page?: number;
+                per_page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated set of `EventResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventResource"][];
+                        links: {
+                            first: string | null;
+                            last: string | null;
+                            prev: string | null;
+                            next: string | null;
+                        };
+                        meta: {
+                            current_page: number;
+                            from: number | null;
+                            last_page: number;
+                            /** @description Generated paginator links. */
+                            links: {
+                                url: string | null;
+                                label: string;
+                                active: boolean;
+                            }[];
+                            /** @description Base path for paginator generated URLs. */
+                            path: string | null;
+                            /** @description Number of items shown per page. */
+                            per_page: number;
+                            /** @description Number of the last item in the slice. */
+                            to: number | null;
+                            /** @description Total number of items being paginated. */
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "event.store": {

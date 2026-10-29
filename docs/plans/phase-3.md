@@ -708,7 +708,7 @@ composer openapi && git add . && git commit -m "feat(calendar): event creation, 
 - Отдаёт наружу: `GET /events?from=YYYY-MM-DD&to=YYYY-MM-DD&scope=church|ministry:{id}|mine&page&per_page` — отсортировано по `starts_at`, отменённые включены со статусом.
 - Отдаёт наружу: `EventIndexQuery::for(User $viewer, CarbonImmutable $from, CarbonImmutable $to, string $scope): Builder` — переиспользуется лентой iCal (задача 14) и главной.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Calendar/EventVisibilityTest.php`:
 
@@ -900,12 +900,12 @@ it('paginates with a cap of 200', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/EventVisibilityTest.php tests/Feature/Calendar/EventIndexTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: `canView`**
+- [x] **Шаг 3: `canView`**
 
 ```php
 public function canView(User $user, Event $event): bool
@@ -942,7 +942,7 @@ public function canView(User $user, Event $event): bool
 }
 ```
 
-- [ ] **Шаг 4: Список**
+- [x] **Шаг 4: Список**
 
 `EventIndexQuery::for($viewer, $from, $to, $scope)`: границы — `$from->startOfDay()` и `$to->endOfDay()` в поясе церкви, переведённые в UTC; условие `starts_at < $toUtc AND ends_at > $fromUtc`; `whereNull('archived_at')`. Видимость в SQL одним `where`:
 
@@ -952,12 +952,12 @@ public function canView(User $user, Event $event): bool
 
 Наборы идентификаторов служений берутся из `PermissionResolver::for($viewer)->ministries` (ключи — служения участия, значения — права). `scope=mine` — `whereHas('slots.assignments', person_id)`, `scope=ministry:{id}` — `where('ministry_id')`. Валидация запроса: `from`, `to` — `date_format:Y-m-d`, `to` не раньше `from` и не позже `from + 93 дня`; `per_page` — `integer|max:200`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): event visibility rules and range listing"

@@ -26,6 +26,7 @@ it('contains the implemented permission keys', function () {
         'ministry.edit',
         'announcements.publish',
         'events.manage',
+        'slots.assign',
     ]);
 });
 

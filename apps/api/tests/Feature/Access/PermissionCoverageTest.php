@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
+use App\Modules\Calendar\EventVisibility;
+use App\Modules\Calendar\Models\Event;
+use App\Modules\Calendar\Models\EventSlot;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,6 +51,13 @@ function actingAsMemberWithKey(Permission $key, bool $granted, array $globalBase
 function permissionCases(): array
 {
     return [
+        Permission::SlotsAssign->value => function (bool $granted): void {
+            $ministry = actingAsMemberWithKey(Permission::SlotsAssign, $granted);
+            $event = Event::factory()->visibility(EventVisibility::Assigned)->create();
+            EventSlot::factory()->for($event)
+                ->withRole($ministry->roles()->findOrFail($ministry->default_role_id))->create();
+            test()->getJson("/api/v1/events/{$event->id}")->assertStatus($granted ? 200 : 403);
+        },
         Permission::CalendarChurchManage->value => function (bool $granted): void {
             actingWithGlobalKey(Permission::CalendarChurchManage, $granted);
             test()->postJson('/api/v1/events', ['owner_type' => 'church', 'title' => 'Событие', 'starts_at' => '2026-11-08T07:00:00Z', 'ends_at' => '2026-11-08T09:00:00Z', 'visibility' => 'church'])->assertStatus($granted ? 201 : 403);

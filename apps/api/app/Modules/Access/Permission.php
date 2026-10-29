@@ -26,12 +26,13 @@ enum Permission: string
     case MinistryEdit = 'ministry.edit';
     case AnnouncementsPublish = 'announcements.publish';
     case EventsManage = 'events.manage';
+    case SlotsAssign = 'slots.assign';
 
     public function scope(): PermissionScope
     {
         return match ($this) {
             self::MembersManage, self::MembersViewContacts,
-            self::RolesManage, self::MinistryEdit, self::AnnouncementsPublish, self::EventsManage => PermissionScope::Ministry,
+            self::RolesManage, self::MinistryEdit, self::AnnouncementsPublish, self::EventsManage, self::SlotsAssign => PermissionScope::Ministry,
             default => PermissionScope::Global,
         };
     }
@@ -54,6 +55,7 @@ enum Permission: string
             self::AnnouncementsPublish => 'Объявления служения',
             self::CalendarChurchManage => 'Управлять церковным календарём',
             self::EventsManage => 'Управлять событиями служения',
+            self::SlotsAssign => 'Заполнять слоты своих ролей',
             self::MembersManage => 'Управлять составом',
             self::MembersViewContacts => 'Контакты участников',
             self::RolesManage => 'Управлять ролями служения',
@@ -79,6 +81,7 @@ enum Permission: string
             self::AnnouncementsPublish => 'Публикация, правка, закрепление и архивация объявлений служения.',
             self::CalendarChurchManage => 'События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий.',
             self::EventsManage => 'События и шаблоны служения, все их слоты, отмена, чат события.',
+            self::SlotsAssign => 'Назначать людей в слоты с ролями этого служения в любых событиях.',
             self::MembersManage => 'Добавлять и исключать участников, выдавать и снимать роли служения.',
             self::MembersViewContacts => 'Телефон, почта и дата рождения участников этого служения.',
             self::RolesManage => 'Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию.',
