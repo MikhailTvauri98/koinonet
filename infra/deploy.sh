@@ -31,7 +31,7 @@ compose run --rm -T app php artisan migrate --force
 compose stop worker
 
 # Пересоздаёт контейнеры с новым тегом (заодно это сброс кешей: каждый
-# контейнер PHP собирает их при старте) и ждёт, пока web и app станут здоровы,
+# контейнер PHP собирает их при старте) и ждёт здоровья web, app и reverb,
 # а остальные — запущены. Иначе контейнеры в цикле перезапуска дали бы зелёный
 # деплой и 502 в проде.
 if ! compose up -d --remove-orphans --wait --wait-timeout 180; then

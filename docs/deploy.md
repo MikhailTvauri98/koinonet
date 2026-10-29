@@ -30,13 +30,15 @@
    - `docker compose pull`;
    - `php artisan migrate --force` разовым контейнером нового образа, до переключения;
    - `docker compose stop worker` — Horizon доделывает текущие задачи, пока старый `app` ещё отвечает;
-   - `docker compose up -d --remove-orphans --wait` — пересоздаёт контейнеры с новым тегом и ждёт до трёх минут, пока `web` и `app` станут здоровы, а остальные — запущены. Если не дождался, печатает состояние и журналы контейнеров и завершается с ошибкой: workflow красный, в `.env` остаётся тег работавшей версии;
+   - `docker compose up -d --remove-orphans --wait` — пересоздаёт контейнеры с новым тегом и ждёт до трёх минут, пока `web`, `app` и `reverb` станут здоровы, а остальные — запущены. Если не дождался, печатает состояние и журналы `web`, `app`, `worker`, `scheduler`, `reverb` и завершается с ошибкой: workflow красный, в `.env` остаётся тег работавшей версии;
    - записывает `TAG=<коммит>` в `.env`, чтобы ручные команды `docker compose` брали выложенную версию;
    - удаляет с сервера образы `app` и `web`, кроме выложенного и предыдущего.
 
 Запуски идут по одному в порядке пушей. Ожидающий запуск заменяется более новым, так что старый коммит не выкатывается поверх нового.
 
-Здоровье `web` — ответ `/api/v1/health` через nginx: это вся цепочка web → app → Postgres и Redis. Здоровье `app` — php-fpm принимает соединения.
+Здоровье `web` — ответ `/api/v1/health` через nginx: это вся цепочка web → app → Postgres и Redis. Здоровье `app` — php-fpm принимает соединения; здоровье `reverb` — его порт `8080` принимает соединения. Публикацию событий, авторизацию и WSS проверяют отдельно по чек-листу ниже.
+
+Reverb пересоздаётся вместе с остальными PHP-сервисами при смене тега; отдельная команда перезапуска не нужна. nginx заново разрешает имя `reverb` через DNS Docker, клиенты переподключаются и обновляют центр уведомлений. Образ `web` не зависит от домена: браузер берёт адрес сокета из источника страницы, публичные ключи Reverb и VAPID — из `GET /api/v1/settings`. Переменные `NUXT_PUBLIC_REVERB_*` и аргументы сборки для этого не нужны.
 
 Пересоздание контейнеров заменяет и сброс кешей, и `horizon:terminate`: контейнеры PHP новые и собирают кеши при старте. Horizon останавливается сигналом SIGTERM, тем же, что посылает `horizon:terminate`. Задача Horizon длится не дольше 60 секунд (таймаут по умолчанию), и `worker` получает 90 секунд на остановку, после чего Docker убивает процесс. Worker останавливается до переключения, поэтому это ожидание не удлиняет простой. Задачи, поставленные в эти секунды, копятся в Redis и достаются новому воркеру.
 
@@ -139,6 +141,11 @@ REVERB_APP_SECRET=
 REVERB_HOST=reverb
 REVERB_PORT=8080
 REVERB_SCHEME=http
+
+# Создать пару ключей на сервере по разделу «Фаза 2» ниже.
+VAPID_SUBJECT=mailto:admin@church.example.org
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
 MAIL_MAILER=log
 ```
 
@@ -203,7 +210,7 @@ docker compose -f compose.prod.yml run --rm --entrypoint certbot certbot \
 
 ### 7. Первый деплой
 
-Пуш или слияние в `main`. Workflow `deploy` проходит зелёным: шаг `up --wait` дождался здоровых `web` и `app`.
+Пуш или слияние в `main`. Workflow `deploy` проходит зелёным: шаг `up --wait` дождался здоровых `web`, `app` и `reverb`.
 
 ```bash
 cd /srv/church
@@ -218,6 +225,8 @@ docker compose -f compose.prod.yml exec app php artisan app:install
 
 Команда спрашивает название церкви, часовой пояс, регион телефонов, ФИО и логин первого администратора, пароль (`docs/architecture.md`, раздел 7.1). Остальных людей, роли и служения администратор создаёт через интерфейс.
 
+Перед проверкой пушей выполните настройку VAPID из раздела «Фаза 2» ниже.
+
 ### 9. Чек-лист проверки
 
 Выполняется после первой установки и после каждого изменения в `infra/` или `deploy.yml`. `<домен>` — значение `APP_DOMAIN`.
@@ -229,11 +238,47 @@ docker compose -f compose.prod.yml exec app php artisan app:install
 5. `curl -sI https://<домен>/sanctum/csrf-cookie` → `204`, `Set-Cookie: XSRF-TOKEN=…; secure`.
 6. `curl -sI https://<домен>/_protected/x` и `curl -sI https://<домен>/index.php` → `404`.
 7. `curl -sI https://<домен>/` и `curl -sI https://<домен>/api/v1/health` → в обоих ответах по одному разу `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`, `Referrer-Policy: strict-origin-when-cross-origin`.
-8. `docker compose -f compose.prod.yml ps` → `web`, `app`, `worker`, `scheduler`, `postgres`, `redis`, `certbot` запущены; `web`, `app`, `postgres` и `redis` в состоянии `healthy`.
+8. `docker compose -f compose.prod.yml ps` → `web`, `app`, `worker`, `scheduler`, `reverb`, `postgres`, `redis`, `certbot` запущены; `web`, `app`, `reverb`, `postgres` и `redis` в состоянии `healthy`.
 9. `docker compose -f compose.prod.yml exec worker php artisan horizon:status` → `Horizon is running`; `docker compose -f compose.prod.yml exec scheduler php artisan schedule:list` показывает `media:prune`. После деплоя `docker compose -f compose.prod.yml ps worker` показывает, что контейнер запущен секунды назад: Horizon перезапущен на новом образе.
 10. Проверка продления сертификата из шага 5 проходит.
 11. С телефона: администратор входит, ставит PWA на домашний экран, загружает своё фото в профиле, и фото показывается. Фото отдаёт nginx по `X-Accel-Redirect`, так что это проверка тома медиафайлов и подписанных ссылок, а заодно и `Referrer-Policy` из пункта 7: запрос `<img>` Sanctum узнаёт по `Referer`, без него фото ответило бы `401`.
 12. Следующий пуш в `main`: в запуске `deploy` сначала проходят `ci / api`, `ci / web`, `ci / e2e`, затем выкладка. `health` отвечает, `grep ^TAG= /srv/church/.env` показывает новый коммит, `docker image ls "$(sed -n 's/^IMAGE_PREFIX=//p' .env)/app"` — два образа: новый и предыдущий.
+13. Рукопожатие WSS из раздела «Фаза 2» → `101 Switching Protocols`; соединение идёт к тому же домену, что страница.
+14. В двух вошедших аккаунтах открыть установленную PWA. Одним опубликовать объявление уровня церкви с включённой галочкой уведомления; у другого без перезагрузки обновляются бейдж и центр уведомлений. После переподключения список и счётчик обновляются.
+15. В установленной PWA на iPhone и Android включить пуши, закрыть приложение и опубликовать новое объявление другим аккаунтом. Пуш приходит; нажатие открывает объявление. Успех WSS или локального браузерного теста не заменяет эту проверку на устройствах.
+
+## Фаза 2: Reverb и VAPID
+
+При обновлении с фазы 1 до выкладки добавьте в серверный `/srv/church/.env` `BROADCAST_CONNECTION=reverb`, `REVERB_APP_ID`, случайные `REVERB_APP_KEY` и `REVERB_APP_SECRET`, `REVERB_HOST=reverb`, `REVERB_PORT=8080`, `REVERB_SCHEME=http` из примера выше. Этот адрес нужен Laravel для публикации внутри сети Docker; TLS заканчивается на nginx. Порт `8080` наружу не публикуется.
+
+После выкладки образа фазы 2 с командой `webpush:vapid`, на сервере из `/srv/church` один раз создать пару VAPID:
+
+```bash
+docker compose -f compose.prod.yml exec app php artisan webpush:vapid
+```
+
+Команда печатает строки `VAPID_PUBLIC_KEY=…` и `VAPID_PRIVATE_KEY=…`. Вписать их в серверный `.env`, а в `VAPID_SUBJECT=mailto:…` указать действующий адрес администратора. Закрытый ключ хранится только в `.env` сервера (режим `600`), не в репозитории, образах или журналах CI. Пару не генерируют заново при обычном деплое: существующие подписки связаны с публичным ключом. API отдаёт клиенту только публичный ключ.
+
+После изменения `.env` пересоздать сервисы с новым окружением:
+
+```bash
+docker compose -f compose.prod.yml up -d --wait
+docker compose -f compose.prod.yml ps
+```
+
+Обычного `restart` недостаточно: он сохраняет старое окружение и кеш конфигурации. `up` пересоздаёт изменившиеся контейнеры, каждый PHP-контейнер собирает кеш при старте. Затем пройти чек-лист выше.
+
+Проверка рукопожатия через nginx: `<домен>` — `APP_DOMAIN`, `{key}` — `REVERB_APP_KEY` из серверного `.env`:
+
+```bash
+curl --http1.1 -si -N --max-time 5 \
+  -H "Connection: Upgrade" -H "Upgrade: websocket" \
+  -H "Sec-WebSocket-Version: 13" \
+  -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+  "https://<домен>/app/{key}" | head -1
+```
+
+Ожидается `HTTP/1.1 101 Switching Protocols`. Ограничение в пять секунд завершает оставшееся открытым соединение; это не ошибка рукопожатия. Если ответ другой, проверить журналы `docker compose -f compose.prod.yml logs --tail 40 web app worker scheduler reverb`, затем ключ и внутренний адрес Reverb в `.env`. В локации `/app/` настроены Upgrade, исходная схема HTTPS и таймауты чтения/отправки по 60 секунд; заголовки безопасности наследуются с уровня `server`.
 
 ## Откат
 
@@ -279,6 +324,6 @@ docker compose -f compose.prod.yml up -d --wait
 
 Все команды — из `/srv/church`.
 
-- Журналы: `docker compose -f compose.prod.yml logs -f app worker`. Приложение пишет в stderr, Docker ротирует журналы (10 МБ, пять файлов на сервис).
+- Журналы: `docker compose -f compose.prod.yml logs -f app worker scheduler reverb`. Приложение пишет в stderr, Docker ротирует журналы (10 МБ, пять файлов на сервис).
 - Команды artisan: `docker compose -f compose.prod.yml exec app php artisan <команда>`, например `people:erase`.
 - Изменение `.env`: `docker compose -f compose.prod.yml up -d --wait` пересоздаёт контейнеры с новым окружением.

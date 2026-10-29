@@ -2849,7 +2849,7 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
 - Отдаёт наружу: `wss://домен/app/{key}` через nginx; сервис `reverb` в проде под тем же образом `app`.
 - Отдаёт наружу: переменные `.env` сервера: `BROADCAST_CONNECTION`, `REVERB_*`, `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`.
 
-- [ ] **Шаг 1: Сервис в `compose.prod.yml`**
+- [x] **Шаг 1: Сервис в `compose.prod.yml`**
 
 Как `worker` и `scheduler` — через якорь `x-php` (образ `${IMAGE_PREFIX}/app:${TAG}`, `.env`, зависимости от здоровых `postgres` и `redis`, перезапуск, журналы):
 
@@ -2859,11 +2859,12 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
     command: ['php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080']
 ```
 
-- [ ] **Шаг 2: Локация в `prod.conf`**
+- [x] **Шаг 2: Локация в `prod.conf`**
 
 ```nginx
     location /app/ {
-        proxy_pass http://reverb:8080;
+        set $reverb_upstream reverb:8080;
+        proxy_pass http://$reverb_upstream;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -2878,11 +2879,11 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
 
 В `.env` сервера `REVERB_HOST=reverb`, `REVERB_PORT=8080`, `REVERB_SCHEME=http` — адрес, по которому Laravel публикует события в Reverb внутри сети; TLS терминирует nginx. Клиенту эти значения не нужны: он подключается к своему источнику (решение 15).
 
-- [ ] **Шаг 3: Выкладка и журналы**
+- [x] **Шаг 3: Выкладка и журналы**
 
 В `infra/deploy.sh` при неудачном `up --wait` журналы печатаются и для `reverb`: `compose logs --no-color --tail 40 web app worker scheduler reverb`. Отдельного перезапуска Reverb выкладка не требует: `up -d` пересоздаёт его с новым тегом, клиенты переподключаются (раздел 9). `horizon:terminate` не выполняется (раздел 11 архитектуры): воркер перезапускается пересозданием контейнера и получает новых слушателей на новом образе.
 
-- [ ] **Шаг 4: Документация**
+- [x] **Шаг 4: Документация**
 
 В `docs/deploy.md` добавить раздел «Фаза 2»: `docker compose -f compose.prod.yml exec app php artisan webpush:vapid`, вписать ключи и `VAPID_SUBJECT=mailto:…` в `.env`, добавить `BROADCAST_CONNECTION=reverb` и `REVERB_*`, затем `docker compose -f compose.prod.yml up -d --wait` — пересоздаёт контейнеры с новым окружением. В список сервисов, в пункт чек-листа про `compose ps` и в «Повседневные действия» (`logs`) добавить `reverb`. Проверка: `curl -si -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" https://домен/app/{key} | head -1` даёт `101`, где `{key}` — `REVERB_APP_KEY` из `.env`.
 
@@ -2891,13 +2892,17 @@ git add apps/web && git commit -m "feat(web): announcements list, card, editor, 
 Выполнить: пуш в `main`, затем чек-лист из `docs/deploy.md`.
 Ожидается: рукопожатие `101`; в установленной PWA бейдж обновляется живым; пуш доходит с закрытым приложением.
 
-- [ ] **Шаг 6: Коммит**
+Локальная реализация и проверка конфигурации выполнены 2026-10-29. Шаг 5 остаётся открытым по указанию заказчика «Пока только локальные проверки»: пуш в `main`, выкладка, создание серверных VAPID-ключей, продовое WSS и пуши на физических устройствах не выполнялись. Инструкция и чек-лист находятся в `docs/deploy.md`; локальная проверка не заменяет серверную приёмку.
+
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add infra docs/deploy.md && git commit -m "chore: reverb and vapid in production, deploy notes for phase 2"
 ```
 
-**Критерии готовности:**
+Локальные проверки: Compose успешно разобрал конфигурацию с изолированным фиктивным `.env`; проверены образ/команда Reverb, зависимости, healthcheck и отсутствие публикации порта/секретного ключа в web. `nginx -t` с временным самоподписанным сертификатом и `sh -n infra/deploy.sh` завершились с кодом 0. Сервис Reverb, его healthcheck, динамический DNS и журналы неудачной выкладки сохранены из задачи 1; добавлены `X-Forwarded-Proto https` и документация фазы 2. Образы web и workflow не менялись.
+
+**Критерии готовности (серверные пункты ожидают приёмки):**
 - Reverb работает за nginx по `wss` с таймаутами не меньше 60 секунд (раздел 11, риск 7).
 - Ключи VAPID созданы на сервере и не покидают его `.env`.
 - Образ `web` не зависит от домена: адрес сокета — источник страницы, ключ Reverb — из `GET /settings`; deploy остаётся одной командой.
