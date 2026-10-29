@@ -32,6 +32,7 @@ use App\Modules\Calendar\Http\Requests\TemplateRequest;
 use App\Modules\Calendar\Http\Requests\UpdateEventRequest;
 use App\Modules\Calendar\Http\Requests\UpdateTemplateRequest;
 use App\Modules\Calendar\Http\Resources\EventTemplateResource;
+use App\Modules\Calendar\Listeners\OnMinistryArchived;
 use App\Modules\Calendar\Models\Event as CalendarEvent;
 use App\Modules\Calendar\Models\EventAssignment;
 use App\Modules\Calendar\Models\EventSlot;
@@ -181,5 +182,6 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MemberRemoved::class, BumpMembershipPermissionCache::class);
         Event::listen(MemberRolesChanged::class, BumpMembershipPermissionCache::class);
         Event::listen(MinistryArchived::class, BumpMembershipPermissionCache::class);
+        Event::listen(MinistryArchived::class, OnMinistryArchived::class);
     }
 }

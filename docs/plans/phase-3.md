@@ -2543,7 +2543,7 @@ git add . && git commit -m "feat(calendar): recurrence occurrences and daily mat
 - Потребляет: `MinistryArchived(string $ministryId)` из фазы 1, `CancelEvent` (задача 6).
 - Отдаёт наружу: реакция календаря на архивацию служения по разделу 7.3: шаблоны служения → `active = false`; будущие события служения `scheduled` → отменены с причиной «Служение архивировано».
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2590,12 +2590,12 @@ it('writes the cancellation to the journal without an actor when run from the qu
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/MinistryArchiveCalendarTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class OnMinistryArchived implements ShouldQueue
@@ -2613,12 +2613,12 @@ final class OnMinistryArchived implements ShouldQueue
 }
 ```
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar tests/Feature/Ministries`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add . && git commit -m "feat(calendar): react to ministry archiving by cancelling future events and deactivating templates"
