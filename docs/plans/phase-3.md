@@ -2644,7 +2644,7 @@ git add . && git commit -m "feat(calendar): react to ministry archiving by cance
 - Отдаёт наружу: пять уведомлений категории `assignments`, все с `url = /events/{id}` и `tag = event-{id}`; тексты: «Вас назначили: {название}, {дата и время по церкви}», «Назначение снято: …», «Событие изменено: …» (с перечнем: время, место), «Событие отменено: …» (с причиной), «Новое событие: …».
 - Потребляет: `AssignmentCreated`, `AssignmentRemoved`, `EventChanged`, `EventCancelled`, `EventCreated` из задач 2, 5, 6; `Recipients::allActive`, `ministryMembers` из фазы 2; `useChurchDate` не нужен — дата форматируется на сервере в поясе церкви.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Notifications/AssignmentNotificationTest.php`:
 
@@ -2823,12 +2823,12 @@ it('announces a new ministry event to its members', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications/AssignmentNotificationTest.php tests/Feature/Notifications/EventNotificationTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Общий помощник форматирования в Notifications: `EventText::when(Event $event): string` → `{d MMM}, {HH:mm}` в поясе церкви через `Carbon::isoFormat('D MMM, HH:mm')` с локалью `ru`.
 
@@ -2849,12 +2849,12 @@ final class AssignmentCreatedNotification extends AppNotification
 
 `Recipients::assignedToEvent`: `User` через `event_assignments → event_slots` с `distinct`, `whereNull('disabled_at')`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Notifications tests/Feature/Calendar`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add . && git commit -m "feat(notifications): assignment, event change, cancellation and new event notifications"

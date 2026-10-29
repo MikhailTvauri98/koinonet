@@ -26,6 +26,20 @@ final class Recipients
             ->lazy();
     }
 
+    /** @return LazyCollection<int, User> */
+    public function assignedToEvent(string $eventId): LazyCollection
+    {
+        return $this->activeAccounts()
+            ->join('event_assignments', 'event_assignments.person_id', '=', 'users.person_id')
+            ->join('event_slots', 'event_slots.id', '=', 'event_assignments.slot_id')
+            ->join('events', 'events.id', '=', 'event_slots.event_id')
+            ->where('events.id', $eventId)
+            ->whereNull('events.archived_at')
+            ->whereNull('event_slots.archived_at')
+            ->whereNull('event_assignments.archived_at')
+            ->select('users.*')->distinct()->lazy();
+    }
+
     /** @return Builder<User> */
     private function activeAccounts(): Builder
     {
