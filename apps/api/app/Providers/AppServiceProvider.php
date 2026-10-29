@@ -22,8 +22,13 @@ use App\Modules\Announcements\Http\Requests\UpdateAnnouncementRequest;
 use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Announcements\OpenApi\AnnouncementRequestSchema;
 use App\Modules\Announcements\Policies\AnnouncementPolicy;
+use App\Modules\Calendar\Actions\CalendarAccountEraser;
+use App\Modules\Calendar\Http\Requests\StoreEventRequest;
+use App\Modules\Calendar\Http\Requests\UpdateEventRequest;
 use App\Modules\Calendar\Models\Event as CalendarEvent;
 use App\Modules\Calendar\Models\EventTemplate;
+use App\Modules\Calendar\OpenApi\EventRequestSchema;
+use App\Modules\Calendar\Policies\EventPolicy;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
@@ -78,7 +83,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(RoleCarrierDetacher::class, DetachRoleFromMembers::class);
         $this->app->bind(PushTransport::class, MinishlinkPushTransport::class);
         $this->app->tag(
-            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class, AnnouncementsAccountEraser::class],
+            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class, AnnouncementsAccountEraser::class, CalendarAccountEraser::class],
             'directory.account_erasers',
         );
         $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
@@ -96,6 +101,12 @@ class AppServiceProvider extends ServiceProvider
             'event_template' => EventTemplate::class,
         ]);
         Scramble::configure()->withDocumentTransformers(function (OpenApi $document): void {
+            foreach ([StoreEventRequest::class => true, UpdateEventRequest::class => false] as $request => $creating) {
+                if ($document->components->hasSchema($request)) {
+                    $inferred = $document->components->getSchema($request)->type;
+                    $document->components->addSchema($request, Schema::fromType(new EventRequestSchema($inferred, $creating)));
+                }
+            }
             foreach ([StoreAnnouncementRequest::class => true, UpdateAnnouncementRequest::class => false] as $request => $creating) {
                 if ($document->components->hasSchema($request)) {
                     $inferred = $document->components->getSchema($request)->type;
@@ -130,6 +141,7 @@ class AppServiceProvider extends ServiceProvider
         $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class, GenerateVapidKeysCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Announcement::class, AnnouncementPolicy::class);
+        Gate::policy(CalendarEvent::class, EventPolicy::class);
         Gate::policy(Ministry::class, MinistryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);

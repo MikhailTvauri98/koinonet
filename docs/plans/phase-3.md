@@ -404,6 +404,8 @@ git add apps/api && git commit -m "feat(calendar): tables, models, enums and fac
 ---
 ### Задача 2: Событие — создание, карточка, правка, права управления
 
+**Прогресс и уточнения среза:** карточка события защищена `EventAccess::canView`: управляющий либо активное событие с видимостью `church`. Временный `view = true` из примера ниже не применяется; полные правила `ministry`/`assigned` добавляет задача 3. Имена и фото назначенных ограничивает `PersonPolicy::view`; контакты и заметки не возвращаются. Связи моделей сохраняют историю, ресурсы исключают архивные слоты и назначения. Медиа остаются в задаче 6: непустой `media_ids` сейчас отклоняется, `attachments` отсутствует; `can_fill` добавляет задача 5. `CalendarAccountEraser` размещён в `Calendar/Actions`, как реализации других модулей. Частичная правка дат учитывает сохранённую вторую границу, архивное служение не принимается как владелец или источник роли слота. Схема OpenAPI описывает условные `notify`/владельца и запрещённые поля правки, клиентские типы генерируются из неё.
+
 **Файлы:**
 - Создать: `app/Modules/Calendar/Actions/CreateEvent.php`, `UpdateEvent.php`; `EventAccess.php`; `Policies/EventPolicy.php`; `Http/Controllers/EventController.php`, `Http/Requests/StoreEventRequest.php`, `UpdateEventRequest.php`, `Http/Resources/EventResource.php`, `EventSlotResource.php`, `EventAssignmentResource.php`; `Events/EventCreated.php`, `EventChanged.php`; `CalendarAccountEraser.php`; `app/Modules/Calendar/routes.php`
 - Изменить: `app/Modules/Access/Permission.php` (ключи `calendar.church.manage`, `events.manage`), `AppServiceProvider` (тег `directory.account_erasers`)
@@ -417,7 +419,7 @@ git add apps/api && git commit -m "feat(calendar): tables, models, enums and fac
 - Отдаёт наружу: `POST /events`, `GET /events/{id}`, `PATCH /events/{id}`. `EventResource`: `id`, `owner_type`, `ministry: {id, name}|null`, `template_id`, `occurrence_date`, `title`, `description`, `location`, `starts_at`, `ends_at`, `visibility`, `status`, `cancelled_at`, `cancel_reason`, `can_manage`, `slots: list<EventSlotResource>`, `attachments` (задача 6). `EventSlotResource`: `id`, `label`, `resource_type`, `role: {id, name, ministry_id}|null`, `required_count`, `filled_count`, `sort_order`, `can_fill` (задача 5), `assignments: list<{id, person: {id, full_name, photo_thumb_url}, created_at}>`.
 - Коды ошибок: `event.cancelled` (правка времени отменённого), `slot.label_required`, `slot.role_not_ministry`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Calendar/EventCrudTest.php`:
 
@@ -597,12 +599,12 @@ it('shows can_manage false to a plain viewer', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/EventCrudTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Ключи прав и `EventAccess`**
+- [x] **Шаг 3: Ключи прав и `EventAccess`**
 
 В `Permission`: `CalendarChurchManage = 'calendar.church.manage'` (глобальное; «Управлять церковным календарём»; «События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий.») и `EventsManage = 'events.manage'` (служения; «Управлять событиями служения»; «События и шаблоны служения, все их слоты, отмена, чат события.»).
 
@@ -627,7 +629,7 @@ final class EventAccess
 
 `EventPolicy::create(User $user, EventOwnerType $owner, ?string $ministryId)` → `canManageOwner`; `update` → `canManage`; `view` — временно `true` для любого аккаунта, задача 3 заменяет на `canView`.
 
-- [ ] **Шаг 4: Actions и валидация**
+- [x] **Шаг 4: Actions и валидация**
 
 `StoreEventRequest`: `owner_type` — `required|in:church,ministry`; `ministry_id` — `required_if:owner_type,ministry|prohibited_if:owner_type,church|ulid|exists:ministries,id`; `title` — `required|string|max:200`; `description` — `nullable|string|max:5000`; `location` — `nullable|string|max:200`; `starts_at`, `ends_at` — `required|date`, `ends_at` — `after:starts_at`; `visibility` — `required|in:church,ministry,assigned` плюс правило «не `ministry` при `owner_type = church`»; `slots` — `array|max:30`, `slots.*.label` — `nullable|string|max:100`, `slots.*.role_id` — `nullable|ulid|exists:roles,id`, `slots.*.required_count` — `required|integer|min:1|max:50`; `notify` — `in:none,ministry,all` с правилом «`ministry` только при владельце-служении, `all` только при церкви»; `media_ids` — `array`, `media_ids.*` — `ulid`.
 
@@ -673,12 +675,12 @@ final class CreateEvent
 
 `CalendarAccountEraser::eraseAccount` обнуляет `created_by_user_id` в `events` и `event_templates` и `assigned_by_user_id` в `event_assignments`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): event creation, editing, management permissions and EventAccess"

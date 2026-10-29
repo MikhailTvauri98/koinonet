@@ -48,6 +48,14 @@ function actingAsMemberWithKey(Permission $key, bool $granted, array $globalBase
 function permissionCases(): array
 {
     return [
+        Permission::CalendarChurchManage->value => function (bool $granted): void {
+            actingWithGlobalKey(Permission::CalendarChurchManage, $granted);
+            test()->postJson('/api/v1/events', ['owner_type' => 'church', 'title' => 'Событие', 'starts_at' => '2026-11-08T07:00:00Z', 'ends_at' => '2026-11-08T09:00:00Z', 'visibility' => 'church'])->assertStatus($granted ? 201 : 403);
+        },
+        Permission::EventsManage->value => function (bool $granted): void {
+            $ministry = actingAsMemberWithKey(Permission::EventsManage, $granted);
+            test()->postJson('/api/v1/events', ['owner_type' => 'ministry', 'ministry_id' => $ministry->id, 'title' => 'Событие', 'starts_at' => '2026-11-08T07:00:00Z', 'ends_at' => '2026-11-08T09:00:00Z', 'visibility' => 'ministry'])->assertStatus($granted ? 201 : 403);
+        },
         Permission::PeopleView->value => function (bool $granted): void {
             actingWithGlobalKey(Permission::PeopleView, $granted);
 

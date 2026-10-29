@@ -1133,6 +1133,202 @@
                 }
             }
         },
+        "/events": {
+            "post": {
+                "operationId": "event.store",
+                "tags": [
+                    "Event"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreEventRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`EventResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "\u041d\u0435\u0434\u043e\u043f\u0443\u0441\u0442\u0438\u043c\u044b\u0439 \u0441\u043b\u043e\u0442.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "slot.label_required",
+                                                "slot.role_not_ministry"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{event}": {
+            "get": {
+                "operationId": "event.show",
+                "tags": [
+                    "Event"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "description": "The event ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`EventResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "event.update",
+                "tags": [
+                    "Event"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "description": "The event ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateEventRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`EventResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "\u0412\u0440\u0435\u043c\u044f \u043e\u0442\u043c\u0435\u043d\u0451\u043d\u043d\u043e\u0433\u043e \u0441\u043e\u0431\u044b\u0442\u0438\u044f \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u043d\u0435\u043b\u044c\u0437\u044f.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "event.cancelled"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/people/{person}/invite": {
             "post": {
                 "operationId": "invitation.invite",
@@ -4056,6 +4252,255 @@
                 ],
                 "title": "CreatedAccessLinkResource"
             },
+            "EventAssignmentResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "person": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "full_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "photo_thumb_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "full_name",
+                            "photo_thumb_url"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "person",
+                    "created_at"
+                ],
+                "title": "EventAssignmentResource"
+            },
+            "EventOwnerType": {
+                "type": "string",
+                "enum": [
+                    "church",
+                    "ministry"
+                ],
+                "title": "EventOwnerType"
+            },
+            "EventResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "owner_type": {
+                        "$ref": "#/components/schemas/EventOwnerType"
+                    },
+                    "ministry": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "template_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "occurrence_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "starts_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "ends_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/EventVisibility"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/EventStatus"
+                    },
+                    "cancelled_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "cancel_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "can_manage": {
+                        "type": "boolean"
+                    },
+                    "slots": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EventSlotResource"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "owner_type",
+                    "ministry",
+                    "template_id",
+                    "occurrence_date",
+                    "title",
+                    "description",
+                    "location",
+                    "starts_at",
+                    "ends_at",
+                    "visibility",
+                    "status",
+                    "cancelled_at",
+                    "cancel_reason",
+                    "can_manage",
+                    "slots"
+                ],
+                "title": "EventResource"
+            },
+            "EventSlotResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "resource_type": {
+                        "$ref": "#/components/schemas/ResourceType"
+                    },
+                    "role": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "ministry_id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "ministry_id"
+                        ]
+                    },
+                    "required_count": {
+                        "type": "integer"
+                    },
+                    "filled_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    },
+                    "assignments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EventAssignmentResource"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "resource_type",
+                    "role",
+                    "required_count",
+                    "filled_count",
+                    "sort_order",
+                    "assignments"
+                ],
+                "title": "EventSlotResource"
+            },
+            "EventStatus": {
+                "type": "string",
+                "enum": [
+                    "scheduled",
+                    "cancelled"
+                ],
+                "title": "EventStatus"
+            },
+            "EventVisibility": {
+                "type": "string",
+                "enum": [
+                    "church",
+                    "ministry",
+                    "assigned"
+                ],
+                "title": "EventVisibility"
+            },
             "LoginRequest": {
                 "type": "object",
                 "properties": {
@@ -4433,11 +4878,13 @@
                     "settings.manage",
                     "audit.view",
                     "announcements.church.publish",
+                    "calendar.church.manage",
                     "members.manage",
                     "members.view_contacts",
                     "roles.manage",
                     "ministry.edit",
-                    "announcements.publish"
+                    "announcements.publish",
+                    "events.manage"
                 ],
                 "title": "Permission"
             },
@@ -4466,6 +4913,8 @@
                             "\u0416\u0443\u0440\u043d\u0430\u043b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439",
                             "\u041f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c \u043e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u044f \u0446\u0435\u0440\u043a\u0432\u0438",
                             "\u041e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u044f \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f",
+                            "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0446\u0435\u0440\u043a\u043e\u0432\u043d\u044b\u043c \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u0451\u043c",
+                            "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0441\u043e\u0431\u044b\u0442\u0438\u044f\u043c\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f",
                             "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0441\u043e\u0441\u0442\u0430\u0432\u043e\u043c",
                             "\u041a\u043e\u043d\u0442\u0430\u043a\u0442\u044b \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u043e\u0432",
                             "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0440\u043e\u043b\u044f\u043c\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f",
@@ -4488,6 +4937,8 @@
                             "\u0425\u0440\u043e\u043d\u043e\u043b\u043e\u0433\u0438\u044f \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u0438\u0432\u043d\u044b\u0445 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.",
                             "\u041f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044f, \u043f\u0440\u0430\u0432\u043a\u0430, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u0438\u0435 \u0438 \u0430\u0440\u0445\u0438\u0432\u0430\u0446\u0438\u044f \u0446\u0435\u0440\u043a\u043e\u0432\u043d\u044b\u0445 \u043e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u0439.",
                             "\u041f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044f, \u043f\u0440\u0430\u0432\u043a\u0430, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u0438\u0435 \u0438 \u0430\u0440\u0445\u0438\u0432\u0430\u0446\u0438\u044f \u043e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u0439 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
+                            "\u0421\u043e\u0431\u044b\u0442\u0438\u044f \u0438 \u0448\u0430\u0431\u043b\u043e\u043d\u044b \u0443\u0440\u043e\u0432\u043d\u044f \u0446\u0435\u0440\u043a\u0432\u0438, \u0432\u0441\u0435 \u0438\u0445 \u0441\u043b\u043e\u0442\u044b, \u043e\u0442\u043c\u0435\u043d\u0430, \u0447\u0430\u0442\u044b \u044d\u0442\u0438\u0445 \u0441\u043e\u0431\u044b\u0442\u0438\u0439.",
+                            "\u0421\u043e\u0431\u044b\u0442\u0438\u044f \u0438 \u0448\u0430\u0431\u043b\u043e\u043d\u044b \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f, \u0432\u0441\u0435 \u0438\u0445 \u0441\u043b\u043e\u0442\u044b, \u043e\u0442\u043c\u0435\u043d\u0430, \u0447\u0430\u0442 \u0441\u043e\u0431\u044b\u0442\u0438\u044f.",
                             "\u0414\u043e\u0431\u0430\u0432\u043b\u044f\u0442\u044c \u0438 \u0438\u0441\u043a\u043b\u044e\u0447\u0430\u0442\u044c \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u043e\u0432, \u0432\u044b\u0434\u0430\u0432\u0430\u0442\u044c \u0438 \u0441\u043d\u0438\u043c\u0430\u0442\u044c \u0440\u043e\u043b\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
                             "\u0422\u0435\u043b\u0435\u0444\u043e\u043d, \u043f\u043e\u0447\u0442\u0430 \u0438 \u0434\u0430\u0442\u0430 \u0440\u043e\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u043e\u0432 \u044d\u0442\u043e\u0433\u043e \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
                             "\u0421\u043e\u0437\u0434\u0430\u0432\u0430\u0442\u044c, \u0440\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0438 \u0443\u0434\u0430\u043b\u044f\u0442\u044c \u0440\u043e\u043b\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f, \u0432\u044b\u0431\u0438\u0440\u0430\u0442\u044c \u0440\u043e\u043b\u044c \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e.",
@@ -4640,6 +5091,13 @@
                     "guest"
                 ],
                 "title": "PersonStatus"
+            },
+            "ResourceType": {
+                "type": "string",
+                "enum": [
+                    "person"
+                ],
+                "title": "ResourceType"
             },
             "RoleRequest": {
                 "type": "object",
@@ -4880,6 +5338,134 @@
                 ],
                 "title": "StoreAnnouncementRequest"
             },
+            "StoreEventRequest": {
+                "type": "object",
+                "properties": {
+                    "owner_type": {
+                        "$ref": "#/components/schemas/EventOwnerType"
+                    },
+                    "ministry_id": {
+                        "type": "string",
+                        "format": "ulid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 5000
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    },
+                    "starts_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "ends_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/EventVisibility"
+                    },
+                    "slots": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 100
+                                },
+                                "role_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "ulid"
+                                },
+                                "required_count": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 50
+                                }
+                            },
+                            "required": [
+                                "required_count"
+                            ]
+                        },
+                        "maxItems": 30
+                    },
+                    "notify": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "ministry",
+                            "all"
+                        ],
+                        "default": "none"
+                    },
+                    "media_ids": false
+                },
+                "required": [
+                    "owner_type",
+                    "title",
+                    "starts_at",
+                    "ends_at",
+                    "visibility"
+                ],
+                "oneOf": [
+                    {
+                        "properties": {
+                            "owner_type": {
+                                "const": "church"
+                            },
+                            "ministry_id": false,
+                            "visibility": {
+                                "enum": [
+                                    "church",
+                                    "assigned"
+                                ]
+                            },
+                            "notify": {
+                                "enum": [
+                                    "none",
+                                    "all"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "required": [
+                            "ministry_id"
+                        ],
+                        "properties": {
+                            "owner_type": {
+                                "const": "ministry"
+                            },
+                            "notify": {
+                                "enum": [
+                                    "none",
+                                    "ministry"
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "title": "StoreEventRequest"
+            },
             "StoreMediaRequest": {
                 "type": "object",
                 "properties": {
@@ -5031,6 +5617,46 @@
                     }
                 },
                 "title": "UpdateAnnouncementRequest"
+            },
+            "UpdateEventRequest": {
+                "type": "object",
+                "properties": {
+                    "owner_type": false,
+                    "ministry_id": false,
+                    "slots": false,
+                    "notify": false,
+                    "media_ids": false,
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 5000
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    },
+                    "starts_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "ends_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/EventVisibility"
+                    }
+                },
+                "title": "UpdateEventRequest"
             },
             "UpdateLoginRequest": {
                 "type": "object",

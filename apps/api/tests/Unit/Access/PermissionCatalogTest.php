@@ -19,11 +19,13 @@ it('contains the implemented permission keys', function () {
         'settings.manage',
         'audit.view',
         'announcements.church.publish',
+        'calendar.church.manage',
         'members.manage',
         'members.view_contacts',
         'roles.manage',
         'ministry.edit',
         'announcements.publish',
+        'events.manage',
     ]);
 });
 

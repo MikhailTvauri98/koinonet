@@ -18,18 +18,20 @@ enum Permission: string
     case SettingsManage = 'settings.manage';
     case AuditView = 'audit.view';
     case AnnouncementsChurchPublish = 'announcements.church.publish';
+    case CalendarChurchManage = 'calendar.church.manage';
 
     case MembersManage = 'members.manage';
     case MembersViewContacts = 'members.view_contacts';
     case RolesManage = 'roles.manage';
     case MinistryEdit = 'ministry.edit';
     case AnnouncementsPublish = 'announcements.publish';
+    case EventsManage = 'events.manage';
 
     public function scope(): PermissionScope
     {
         return match ($this) {
             self::MembersManage, self::MembersViewContacts,
-            self::RolesManage, self::MinistryEdit, self::AnnouncementsPublish => PermissionScope::Ministry,
+            self::RolesManage, self::MinistryEdit, self::AnnouncementsPublish, self::EventsManage => PermissionScope::Ministry,
             default => PermissionScope::Global,
         };
     }
@@ -50,6 +52,8 @@ enum Permission: string
             self::AuditView => 'Журнал действий',
             self::AnnouncementsChurchPublish => 'Публиковать объявления церкви',
             self::AnnouncementsPublish => 'Объявления служения',
+            self::CalendarChurchManage => 'Управлять церковным календарём',
+            self::EventsManage => 'Управлять событиями служения',
             self::MembersManage => 'Управлять составом',
             self::MembersViewContacts => 'Контакты участников',
             self::RolesManage => 'Управлять ролями служения',
@@ -73,6 +77,8 @@ enum Permission: string
             self::AuditView => 'Хронология административных действий.',
             self::AnnouncementsChurchPublish => 'Публикация, правка, закрепление и архивация церковных объявлений.',
             self::AnnouncementsPublish => 'Публикация, правка, закрепление и архивация объявлений служения.',
+            self::CalendarChurchManage => 'События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий.',
+            self::EventsManage => 'События и шаблоны служения, все их слоты, отмена, чат события.',
             self::MembersManage => 'Добавлять и исключать участников, выдавать и снимать роли служения.',
             self::MembersViewContacts => 'Телефон, почта и дата рождения участников этого служения.',
             self::RolesManage => 'Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию.',

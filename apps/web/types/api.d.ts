@@ -234,6 +234,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["event.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events/{event}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["event.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["event.update"];
+        trace?: never;
+    };
     "/people/{person}/invite": {
         parameters: {
             query?: never;
@@ -886,6 +918,73 @@ export interface components {
             url: string;
             expires_at: string | null;
         };
+        /** EventAssignmentResource */
+        EventAssignmentResource: {
+            id: string;
+            person: {
+                id: string;
+                full_name: string | null;
+                photo_thumb_url: string | null;
+            };
+            /** Format: date-time */
+            created_at: string | null;
+        };
+        /**
+         * EventOwnerType
+         * @enum {string}
+         */
+        EventOwnerType: "church" | "ministry";
+        /** EventResource */
+        EventResource: {
+            id: string;
+            owner_type: components["schemas"]["EventOwnerType"];
+            ministry: {
+                id: string;
+                name: string;
+            } | null;
+            template_id: string | null;
+            /** Format: date */
+            occurrence_date: string | null;
+            title: string;
+            description: string | null;
+            location: string | null;
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            ends_at: string;
+            visibility: components["schemas"]["EventVisibility"];
+            status: components["schemas"]["EventStatus"];
+            /** Format: date-time */
+            cancelled_at: string | null;
+            cancel_reason: string | null;
+            can_manage: boolean;
+            slots: components["schemas"]["EventSlotResource"][];
+        };
+        /** EventSlotResource */
+        EventSlotResource: {
+            id: string;
+            label: string;
+            resource_type: components["schemas"]["ResourceType"];
+            role: {
+                id: string;
+                name: string;
+                ministry_id: string | null;
+            } | null;
+            required_count: number;
+            filled_count: number;
+            sort_order: number;
+            assignments: components["schemas"]["EventAssignmentResource"][];
+        };
+        /**
+         * EventStatus
+         * @enum {string}
+         */
+        EventStatus: "scheduled" | "cancelled";
+        /**
+         * EventVisibility
+         * @enum {string}
+         */
+        EventVisibility: "church" | "ministry" | "assigned";
         /** LoginRequest */
         LoginRequest: {
             login: string;
@@ -986,15 +1085,15 @@ export interface components {
          * Permission
          * @enum {string}
          */
-        Permission: "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "announcements.church.publish" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit" | "announcements.publish";
+        Permission: "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "announcements.church.publish" | "calendar.church.manage" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit" | "announcements.publish" | "events.manage";
         /** PermissionResource */
         PermissionResource: {
             key: string;
             scope: string;
             /** @enum {string} */
-            label: "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Публиковать объявления церкви" | "Объявления служения" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
+            label: "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Публиковать объявления церкви" | "Объявления служения" | "Управлять церковным календарём" | "Управлять событиями служения" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
             /** @enum {string} */
-            description: "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
+            description: "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий." | "События и шаблоны служения, все их слоты, отмена, чат события." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
         };
         /** PersonResource */
         PersonResource: {
@@ -1036,6 +1135,11 @@ export interface components {
          * @enum {string}
          */
         PersonStatus: "member" | "attendee" | "guest";
+        /**
+         * ResourceType
+         * @enum {string}
+         */
+        ResourceType: "person";
         /** RoleRequest */
         RoleRequest: {
             /** @enum {string} */
@@ -1099,6 +1203,45 @@ export interface components {
             scope?: "ministry";
             ministry_id: string;
         });
+        /** StoreEventRequest */
+        StoreEventRequest: {
+            owner_type: components["schemas"]["EventOwnerType"];
+            /** Format: ulid */
+            ministry_id?: string;
+            title: string;
+            description?: string | null;
+            location?: string | null;
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            ends_at: string;
+            visibility: components["schemas"]["EventVisibility"];
+            slots?: {
+                label?: string | null;
+                /** Format: ulid */
+                role_id?: string | null;
+                required_count: number;
+            }[];
+            /**
+             * @default none
+             * @enum {string}
+             */
+            notify: "none" | "ministry" | "all";
+            media_ids?: never;
+        } & ({
+            /** @constant */
+            owner_type?: "church";
+            ministry_id?: never;
+            /** @enum {unknown} */
+            visibility?: "church" | "assigned";
+            /** @enum {unknown} */
+            notify?: "none" | "all";
+        } | {
+            /** @constant */
+            owner_type?: "ministry";
+            /** @enum {unknown} */
+            notify?: "none" | "ministry";
+        });
         /** StoreMediaRequest */
         StoreMediaRequest: {
             /** Format: binary */
@@ -1147,6 +1290,22 @@ export interface components {
             hide_after?: string | null;
             notify_on_publish?: boolean;
             media_ids?: string[];
+        };
+        /** UpdateEventRequest */
+        UpdateEventRequest: {
+            owner_type?: never;
+            ministry_id?: never;
+            slots?: never;
+            notify?: never;
+            media_ids?: never;
+            title?: string;
+            description?: string | null;
+            location?: string | null;
+            /** Format: date-time */
+            starts_at?: string;
+            /** Format: date-time */
+            ends_at?: string;
+            visibility?: components["schemas"]["EventVisibility"];
         };
         /** UpdateLoginRequest */
         UpdateLoginRequest: {
@@ -1740,6 +1899,120 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "event.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreEventRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            /** @description Недопустимый слот. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @enum {string} */
+                        code: "slot.label_required" | "slot.role_not_ministry";
+                    };
+                };
+            };
+        };
+    };
+    "event.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event ID */
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `EventResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "event.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event ID */
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateEventRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Время отменённого события изменить нельзя. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @constant */
+                        code: "event.cancelled";
+                    };
+                };
+            };
         };
     };
     "invitation.invite": {
