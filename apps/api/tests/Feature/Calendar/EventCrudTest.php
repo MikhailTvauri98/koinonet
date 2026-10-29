@@ -205,7 +205,7 @@ it('refuses archived ministry owners and slot roles from archived ministries', f
     $ministry->update(['archived_at' => now()]);
     actingAsUserWith([Permission::CalendarChurchManage, Permission::MinistriesManageAll]);
     $this->postJson('/api/v1/events', churchEvent(['owner_type' => 'ministry', 'ministry_id' => $ministry->id]))->assertUnprocessable()->assertJsonValidationErrors('ministry_id');
-    $this->postJson('/api/v1/events', churchEvent(['slots' => [['role_id' => $ministry->default_role_id, 'required_count' => 1]]]))->assertUnprocessable()->assertJsonPath('code', 'slot.role_not_ministry');
+    $this->postJson('/api/v1/events', churchEvent(['slots' => [['role_id' => $ministry->default_role_id, 'required_count' => 1]]]))->assertUnprocessable()->assertJsonPath('code', 'slot.role_archived_ministry');
 });
 
 it('shows only active slots and assignments while preserving history', function () {

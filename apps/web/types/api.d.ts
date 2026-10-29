@@ -862,6 +862,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events/{event}/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["slot.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/slots/{slot}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["slot.destroy"];
+        options?: never;
+        head?: never;
+        patch: operations["slot.update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1183,6 +1215,12 @@ export interface components {
             vapid_public_key: string;
             phone_region?: string;
         };
+        /** SlotRequest */
+        SlotRequest: {
+            label?: string | null;
+            role_id?: string | null;
+            required_count: number;
+        };
         /** StoreAnnouncementRequest */
         StoreAnnouncementRequest: {
             scope: components["schemas"]["AnnouncementScope"];
@@ -1360,6 +1398,12 @@ export interface components {
             church_name?: string;
             timezone?: string;
             phone_region?: string;
+        };
+        /** UpdateSlotRequest */
+        UpdateSlotRequest: {
+            label?: string | null;
+            role_id?: string | null;
+            required_count?: number;
         };
         /** UserPermissionsResource */
         UserPermissionsResource: {
@@ -1991,7 +2035,7 @@ export interface operations {
                     "application/json": {
                         message: string;
                         /** @enum {string} */
-                        code: "slot.label_required" | "slot.role_not_ministry";
+                        code: "slot.label_required" | "slot.role_not_ministry" | "slot.role_archived_ministry";
                     };
                 };
             };
@@ -3553,6 +3597,133 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "slot.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event ID */
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlotRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventSlotResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventSlotResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Недопустимый слот или отменённое событие. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @enum {string} */
+                        code: "event.cancelled" | "slot.label_required" | "slot.role_not_ministry" | "slot.role_archived_ministry";
+                    };
+                };
+            };
+        };
+    };
+    "slot.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The slot ID */
+                slot: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Слоты отменённого события заморожены. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @constant */
+                        code: "event.cancelled";
+                    };
+                };
+            };
+        };
+    };
+    "slot.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The slot ID */
+                slot: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateSlotRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventSlotResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventSlotResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Недопустимый слот или отменённое событие. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @enum {string} */
+                        code: "event.cancelled" | "slot.label_required" | "slot.role_not_ministry" | "slot.role_archived_ministry";
+                    };
+                };
+            };
         };
     };
 }

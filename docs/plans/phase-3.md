@@ -972,6 +972,8 @@ composer openapi && git add . && git commit -m "feat(calendar): event visibility
 ---
 ### Задача 4: Слоты события
 
+> Выполнено: удаление в примере ниже заменено архивацией слота и активных назначений (`archived_at`), по общему правилу репозитория. `PATCH` частичный, `required_count` обязателен только при создании. Публикация `AssignmentRemoved` происходит после внешнего коммита; Actions сериализуются с отменой по блокировке события. Подробности — архитектура 7.4.
+
 **Файлы:**
 - Создать: `app/Modules/Calendar/Actions/UpdateSlot.php`, `RemoveSlot.php`; `Policies/EventSlotPolicy.php`; `Http/Controllers/SlotController.php`, `Http/Requests/SlotRequest.php`
 - Изменить: `Actions/AddSlot.php` (проверка отменённого события, эндпоинт), `routes.php`
@@ -982,7 +984,7 @@ composer openapi && git add . && git commit -m "feat(calendar): event visibility
 - Отдаёт наружу: `AddSlot::handle(Event $event, array $slot): EventSlot`, `UpdateSlot::handle(EventSlot $slot, array $attributes): EventSlot`, `RemoveSlot::handle(EventSlot $slot): void` — последний снимает назначения и публикует `AssignmentRemoved` (класс события создаёт задача 5; в этой задаче объявляется минимально с сигнатурой `AssignmentRemoved(string $eventId, string $slotId, string $personId, ?string $userId, ?string $actorUserId)`).
 - Коды ошибок: `event.cancelled`, `slot.label_required`, `slot.role_not_ministry`, `slot.role_archived_ministry`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1087,12 +1089,12 @@ it('caps the capacity at fifty', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/SlotTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class AddSlot
@@ -1133,12 +1135,12 @@ final class AddSlot
 
 `RemoveSlot` в транзакции удаляет назначения и слот, после коммита публикует `AssignmentRemoved` на каждое снятое назначение (`userId` — аккаунт человека, если есть). `EventSlotPolicy::manage(User, EventSlot)` → `EventAccess::canManage($user, $slot->event)`. `SlotRequest`: `label` — `nullable|string|max:100`, `role_id` — `nullable|ulid|exists:roles,id`, `required_count` — `required|integer|min:1|max:50`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): slot management with role and label rules"
