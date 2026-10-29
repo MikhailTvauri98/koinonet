@@ -1,11 +1,12 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { createWriteStream, mkdirSync, type WriteStream } from 'node:fs'
 import { join } from 'node:path'
+import { connect } from 'node:net'
 import { apiRuntime, church, credentials, e2e, type LongRunningRole, type SpawnSpec } from './environment'
 
 // Подготовка API сквозных тестов перед прогоном: чистая база `church_e2e`,
-// установка системы, HTTP-сервер API и воркер очереди. Сервер предпросмотра
-// Nuxt поднимает сам Playwright (webServer в playwright.config.ts).
+// установка системы, HTTP-сервер API, воркер очереди и Reverb. Прокси перед
+// Nuxt preview поднимает сам Playwright (webServer в playwright.config.ts).
 //
 // Порядок важен: сначала проверка, что процессы API действительно смотрят
 // в базу и базы Redis сквозных тестов, и только потом разрушающие шаги.
@@ -34,10 +35,15 @@ const GUARD_SCRIPT = [
   '$connection = config(\'database.default\');',
   'echo \'E2E_CONFIG=\'.json_encode([',
   '\'connection\' => $connection,',
-  '\'database\' => config("database.connections.$connection.database"),',
+  '\'database\' => Illuminate\\Support\\Facades\\DB::connection()->getConfig(\'database\'),',
   '\'hasUrl\' => filled(config("database.connections.$connection.url")),',
-  '\'redis\' => (string) config(\'database.redis.default.database\'),',
-  '\'redisCache\' => (string) config(\'database.redis.cache.database\'),',
+  '\'redis\' => (string) Illuminate\\Support\\Facades\\Redis::connection(\'default\')->client()->getDBNum(),',
+  '\'redisCache\' => (string) Illuminate\\Support\\Facades\\Redis::connection(\'cache\')->client()->getDBNum(),',
+  '\'queue\' => config(\'queue.default\'),',
+  '\'queueRedis\' => config(\'queue.connections.redis.connection\'),',
+  '\'cache\' => config(\'cache.default\'),',
+  '\'cacheRedis\' => config(\'cache.stores.redis.connection\'),',
+  '\'broadcast\' => config(\'broadcasting.default\'),',
   '\'configCached\' => app()->configurationIsCached(),',
   ']), PHP_EOL;',
 ].join(' ')
@@ -84,6 +90,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       `--password=${credentials.admin.password}`,
     ]), 'app:install', prepareLog)
 
+    const reverb = startLongRunning('reverb')
+    started.push(reverb)
+    await waitForReverb(reverb)
     const api = startLongRunning('api')
     started.push(api)
     const worker = startLongRunning('worker')
@@ -93,7 +102,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     if (worker.child.exitCode !== null) {
       throw new Error(`Воркер очереди завершился при старте, см. ${logPath('worker')}`)
     }
-    console.log(`[e2e] API готов: ${e2e.apiOrigin}`)
+    console.log(`[e2e] API готов: ${e2e.apiOrigin}; Reverb: 127.0.0.1:${e2e.reverbPort}; очередь: Redis ${e2e.redisDatabase}`)
   } catch (error) {
     // Сбой уборки не должен заслонить исходную причину падения подготовки.
     await stopAll().catch((cleanupError: unknown) => {
@@ -121,6 +130,11 @@ async function guardConfiguration(log: WriteStream): Promise<void> {
     redis: string
     redisCache: string
     configCached: boolean
+    queue: string
+    queueRedis: string
+    cache: string
+    cacheRedis: string
+    broadcast: string
   }
   const problems = [
     actual.connection !== 'pgsql' && `соединение ${actual.connection}, ожидалось pgsql`,
@@ -128,6 +142,11 @@ async function guardConfiguration(log: WriteStream): Promise<void> {
     actual.hasUrl && 'задан DB_URL, он сильнее DB_DATABASE',
     actual.redis !== e2e.redisDatabase && `очередь в базе Redis ${actual.redis}, ожидалась ${e2e.redisDatabase}`,
     actual.redisCache !== e2e.redisCacheDatabase && `кеш в базе Redis ${actual.redisCache}, ожидалась ${e2e.redisCacheDatabase}`,
+    actual.queue !== 'redis' && 'очередь должна использовать redis',
+    actual.queueRedis !== 'default' && 'очередь должна использовать изолированное соединение default',
+    actual.cache !== 'redis' && 'кеш должен использовать redis',
+    actual.cacheRedis !== 'cache' && 'кеш должен использовать изолированное соединение cache',
+    actual.broadcast !== 'reverb' && 'broadcast должен использовать reverb',
     actual.configCached && 'конфиг Laravel закеширован (bootstrap/cache/config.php), переменные окружения не действуют',
   ].filter(Boolean)
 
@@ -230,6 +249,26 @@ function startLongRunning(role: LongRunningRole): LongRunning {
     })
   })
   return { role, spec, child, log, exited }
+}
+
+async function waitForReverb(reverb: LongRunning): Promise<void> {
+  const deadline = Date.now() + API_READY_TIMEOUT_MS
+  let exited = false
+  void reverb.exited.then(() => { exited = true })
+  while (Date.now() < deadline) {
+    if (exited) throw new Error(`Reverb завершился до готовности, см. ${logPath('reverb')}`)
+    const ready = await new Promise<boolean>((resolve) => {
+      const socket = connect({ host: '127.0.0.1', port: e2e.reverbPort })
+      socket.setTimeout(1_000)
+      const finish = (value: boolean) => { socket.destroy(); resolve(value) }
+      socket.once('connect', () => finish(true))
+      socket.once('error', () => finish(false))
+      socket.once('timeout', () => finish(false))
+    })
+    if (ready) return
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+  throw new Error(`Reverb не принял соединение за ${API_READY_TIMEOUT_MS / 1000} с, см. ${logPath('reverb')}`)
 }
 
 async function waitForApi(api: LongRunning): Promise<void> {

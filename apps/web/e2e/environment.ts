@@ -32,6 +32,8 @@ function selectedRuntime(): ApiRuntimeName {
 
 const apiPort = 8010
 const webPort = 3010
+const previewPort = 3011
+const reverbPort = 8011
 const fromHere = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
 export const e2e = {
@@ -42,9 +44,11 @@ export const e2e = {
   redisCacheDatabase: '15',
   apiPort,
   webPort,
+  previewPort,
+  reverbPort,
   apiOrigin: `http://127.0.0.1:${apiPort}`,
-  // Клиент открывается с этого источника; сервер предпросмотра Nuxt
-  // проксирует /api и /sanctum на apiOrigin (routeRules в nuxt.config.ts).
+  // Публичный прокси перед Nuxt preview; /app идёт в Reverb,
+  // остальное в preview на отдельном внутреннем порту.
   webOrigin: `http://127.0.0.1:${webPort}`,
   webDir: fromHere('../'),
   apiDir: fromHere('../../api/'),
@@ -72,6 +76,17 @@ export const apiEnvironment: Readonly<Record<string, string>> = {
   // apps/api/.env: клиент показывает текст сервера у 422, и сценарии видят
   // ровно то, что увидит человек.
   APP_LOCALE: 'ru',
+  QUEUE_CONNECTION: 'redis',
+  REDIS_QUEUE_CONNECTION: 'default',
+  CACHE_STORE: 'redis',
+  BROADCAST_CONNECTION: 'reverb',
+  REVERB_APP_ID: 'church-e2e',
+  REVERB_APP_KEY: 'church-e2e-key',
+  REVERB_APP_SECRET: 'church-e2e-secret',
+  REVERB_HOST: e2e.runtime === 'docker' ? 'church-e2e-reverb' : '127.0.0.1',
+  REVERB_PORT: String(e2e.runtime === 'docker' ? 8080 : reverbPort),
+  REVERB_SCHEME: 'http',
+  REVERB_SCALING_ENABLED: 'false',
 }
 
 // Установка: `app:install` с фиксированными опциями.
@@ -109,7 +124,7 @@ export interface ApiRuntime {
   name: ApiRuntimeName
   // Разовая команда artisan, завершающаяся сама.
   artisan(args: string[]): SpawnSpec
-  // Долгоживущий процесс: HTTP-сервер API или воркер очереди.
+  // Долгоживущие HTTP-сервер API, воркер очереди и Reverb.
   longRunning(role: LongRunningRole): SpawnSpec
   // Печатает идентификаторы всех контейнеров сквозных тестов, по одному в
   // строке; null — у способа запуска контейнеров нет.
@@ -117,7 +132,7 @@ export interface ApiRuntime {
   removeContainers(ids: string[]): SpawnSpec
 }
 
-export type LongRunningRole = 'api' | 'worker'
+export type LongRunningRole = 'api' | 'worker' | 'reverb'
 
 // Метка всех контейнеров сквозных тестов — и разовых, и долгоживущих.
 // Ключ привязан к этому репозиторию: очистка по нему не заденет контейнеры
@@ -128,6 +143,7 @@ export const containerLabel = { key: 'curchcowork.e2e', value: 'true' } as const
 const containerNames: Record<LongRunningRole, string> = {
   api: 'church-e2e-api',
   worker: 'church-e2e-worker',
+  reverb: 'church-e2e-reverb',
 }
 
 function dockerRuntime(): ApiRuntime {
@@ -145,6 +161,10 @@ function dockerRuntime(): ApiRuntime {
     },
     longRunning: (role) => {
       const name = containerNames[role]
+      if (role === 'reverb') {
+        return spec([...compose(name), '-p', `127.0.0.1:${e2e.reverbPort}:8080`, ...environmentFlags,
+          'app', 'php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080'], name)
+      }
       return role === 'api'
         // Внутри контейнера сервер слушает все интерфейсы своего сетевого
         // пространства, наружу порт опубликован только на 127.0.0.1 хоста.
@@ -168,9 +188,11 @@ function nativeRuntime(): ApiRuntime {
   return {
     name: 'native',
     artisan: spec,
-    longRunning: role => role === 'api'
-      ? spec(['serve', '--no-reload', '--host=127.0.0.1', `--port=${e2e.apiPort}`])
-      : spec(['queue:work']),
+    longRunning: role => role === 'reverb'
+      ? spec(['reverb:start', '--host=127.0.0.1', `--port=${e2e.reverbPort}`])
+      : role === 'api'
+        ? spec(['serve', '--no-reload', '--host=127.0.0.1', `--port=${e2e.apiPort}`])
+        : spec(['queue:work']),
     listContainers: () => null,
     removeContainers: () => {
       throw new Error('У способа native нет контейнеров.')

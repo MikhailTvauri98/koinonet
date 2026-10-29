@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "e2e": "playwright test",
+    "e2e": "npm run test:e2e-runtime && playwright test",
+    "test:e2e-runtime": "node --test e2e/proxy.test.mjs",
     "gen:api": "openapi-typescript ../api/openapi.json -o types/api.d.ts",
     "verify-sw": "node scripts/verify-sw.mjs"
   },

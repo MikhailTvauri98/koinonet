@@ -1,7 +1,7 @@
 import { credentials } from './environment'
 import {
-  acceptInvite, createGlobalRole, createPerson, expect, expectPhoneTabBar, grantGlobalRole, login, loginAsAdmin,
-  mainNav, openPersonCard, openSection, takeInviteLink, test,
+  acceptInvite, createGlobalRole, createPerson, expect, expectApiResponse, expectPhoneTabBar, grantGlobalRole, login, loginAsAdmin,
+  mainNav, openPersonCard, openSection, reloadAuthenticated, takeInviteLink, test, visitAuthenticated,
 } from './fixtures'
 
 // Сценарий фазы 1 (docs/architecture.md, раздел 13): администратор после
@@ -12,6 +12,8 @@ import {
 const petrov = { lastName: 'Петров', firstName: 'Пётр', login: 'petrov@e2e.test' }
 
 test('an administrator installs, creates a role, a person and invites them', async ({ page, openPhone }) => {
+  // Three independent sessions perform the complete notification initialization.
+  test.setTimeout(240_000)
   await loginAsAdmin(page)
 
   await createGlobalRole(page, 'Служитель', ['Видеть справочник'])
@@ -41,11 +43,11 @@ test('an administrator installs, creates a role, a person and invites them', asy
   await openSection(phone, 'Люди', 'Люди')
   await expect(phone.getByRole('list', { name: 'Список людей' }).getByRole('link', { name: 'Петров Пётр' })).toBeVisible()
   // Администрирование закрыто и по прямому адресу.
-  await phone.goto('/admin/roles')
+  await visitAuthenticated(phone, '/admin/roles')
   await expect(phone.getByRole('alert')).toHaveText('Нет права на управление глобальными ролями.')
 
   // Карточка у администратора: аккаунт создан, второе приглашение невозможно.
-  await page.reload()
+  await reloadAuthenticated(page)
   await expect(page.getByText('Аккаунт включён.')).toBeVisible()
   await expect(invite).toBeDisabled()
   await expect(page.getByText('У человека уже есть аккаунт.')).toBeVisible()
@@ -55,10 +57,17 @@ test('an administrator installs, creates a role, a person and invites them', asy
   const anotherPhone = await openPhone()
   await login(anotherPhone, petrov.login, credentials.invitedPassword)
   await openSection(anotherPhone, 'Профиль', 'Профиль')
-  await anotherPhone.getByRole('navigation', { name: 'Разделы настроек' }).getByRole('link', { name: 'Устройства' }).click()
+  await Promise.all([
+    expectApiResponse(anotherPhone, 'GET', '/auth/sessions', 200),
+    anotherPhone.getByRole('navigation', { name: 'Разделы настроек' }).getByRole('link', { name: 'Устройства' }).click(),
+  ])
   await expect(anotherPhone.getByRole('heading', { level: 1, name: 'Устройства' })).toBeVisible()
   await expect(anotherPhone.getByRole('button', { name: 'Завершить', exact: true })).toHaveCount(2)
-  await anotherPhone.getByRole('button', { name: 'Завершить остальные устройства' }).click()
+  await Promise.all([
+    expectApiResponse(anotherPhone, 'POST', '/auth/sessions/logout-others', 204),
+    expectApiResponse(anotherPhone, 'GET', '/auth/sessions', 200),
+    anotherPhone.getByRole('button', { name: 'Завершить остальные устройства' }).click(),
+  ])
   await expect(anotherPhone.getByRole('button', { name: 'Завершить', exact: true })).toHaveCount(1)
   await expect(anotherPhone.getByText('(текущее устройство)')).toBeVisible()
 
@@ -70,9 +79,9 @@ test('an administrator installs, creates a role, a person and invites them', asy
   // Выход со второго телефона завершает его сессию на сервере, а не только
   // на экране: после перезагрузки приложение остаётся на входе.
   await openSection(anotherPhone, 'Профиль', 'Профиль')
-  await anotherPhone.getByRole('button', { name: 'Выйти' }).click()
+  await Promise.all([expectApiResponse(anotherPhone, 'POST', '/auth/logout', 204), anotherPhone.getByRole('button', { name: 'Выйти' }).click()])
   await expect(anotherPhone).toHaveURL('/login')
-  await anotherPhone.reload()
+  await Promise.all([expectApiResponse(anotherPhone, 'GET', '/auth/me', 401), anotherPhone.reload()])
   await expect(anotherPhone.getByRole('heading', { level: 1, name: 'Вход' })).toBeVisible()
   await expect(anotherPhone).toHaveURL('/login')
 })

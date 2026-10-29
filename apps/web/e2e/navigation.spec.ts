@@ -1,5 +1,5 @@
 import { credentials } from './environment'
-import { expect, expectNoHorizontalScroll, expectPhoneTabBar, loginAsAdmin, openSection, test } from './fixtures'
+import { expect, expectApiResponse, expectNoHorizontalScroll, expectPhoneTabBar, loginAsAdmin, openSection, test } from './fixtures'
 
 // Фаза 1 готова, когда администратор управляет системой с телефона
 // (docs/architecture.md, раздел 13): все его разделы, включая
@@ -30,7 +30,7 @@ test('the administrator reaches every section from the phone tab bar', async ({ 
 
   // Редактор глобальной роли на узком экране встаёт под список ролей.
   await openSection(phone, 'Роли', 'Глобальные роли')
-  await phone.getByTestId('create-role').click()
+  await Promise.all([expectApiResponse(phone, 'GET', '/permissions', 200), phone.getByTestId('create-role').click()])
   await expect(phone.getByLabel('Название')).toBeVisible()
   await expectNoHorizontalScroll(phone, 'редактор глобальной роли')
 })

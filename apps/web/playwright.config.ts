@@ -6,6 +6,7 @@ import { e2e } from './e2e/environment'
 // e2e/global-setup.ts.
 export default defineConfig({
   testDir: './e2e',
+  testMatch: '**/*.spec.ts',
   globalSetup: './e2e/global-setup.ts',
   // Сценарии идут по очереди против одного API на встроенном сервере PHP.
   workers: 1,
@@ -24,6 +25,8 @@ export default defineConfig({
   outputDir: './test-results',
   use: {
     ...devices['Desktop Chrome'],
+    // Optional local browser already installed on the workstation; CI keeps Chromium.
+    ...(process.env.E2E_BROWSER_CHANNEL ? { channel: process.env.E2E_BROWSER_CHANNEL } : {}),
     baseURL: e2e.webOrigin,
     testIdAttribute: 'data-test',
     // Без предела действие ждало бы до таймаута всего теста: недоступный
@@ -37,11 +40,11 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium' }],
-  // Клиент как в проде ходит на свой же источник; /api и /sanctum
-  // проксирует сервер предпросмотра Nuxt (routeRules в nuxt.config.ts). Адрес
-  // прокси вшивается при сборке, поэтому сборка — часть запуска.
+  // Один источник: /app проксируется в Reverb, HTTP в отдельный preview.
+  // Его routeRules передают /api, /sanctum и /broadcasting в API; цель
+  // вшивается при сборке, поэтому сборка — часть запуска.
   webServer: {
-    command: `npm run build && npm run preview -- --port=${e2e.webPort}`,
+    command: `npm run build && node e2e/web-server.mjs ${e2e.webPort} ${e2e.previewPort} ${e2e.reverbPort}`,
     cwd: e2e.webDir,
     url: e2e.webOrigin,
     env: {

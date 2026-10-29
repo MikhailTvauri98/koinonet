@@ -2365,10 +2365,9 @@ Store: `subscribe(userId)` — `echo.private(\`user.${userId}\`).notification(n 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Проверить вручную**
+- [x] **Шаг 6: Проверить живой бейдж у второго аккаунта локальным сквозным тестом**
 
-Выполнить: `make up`, `npm run dev`, войти в двух вкладках разными аккаунтами, опубликовать объявление из первой.
-Ожидается: во второй вкладке бейдж увеличивается без перезагрузки, в центре появляется запись.
+Автоматизированная проверка вместо ручного dev-прогона: задача 13, `apps/web/e2e/announcements.spec.ts`, сценарий `a published announcement reaches the notification center live`. Администратор и приглашённый аккаунт входят в отдельных браузерных контекстах; до публикации подтверждается личная подписка Reverb. Наблюдаются настоящий Laravel notification frame, бейдж `1` без перезагрузки и HTTP-перечитывания уведомлений, центр, отметка прочитанным и переход к Markdown объявления. Локальный прогон с Docker API, настоящим Redis-воркером/Reverb и явным `E2E_BROWSER_CHANNEL=msedge` прошёл; ручной `make up`/`npm run dev` не заявляется.
 
 - [x] **Шаг 7: Коммит**
 
@@ -2920,7 +2919,7 @@ git add infra docs/deploy.md && git commit -m "chore: reverb and vapid in produc
 **Интерфейсы:**
 - Потребляет обвязку фазы 1: `test` с фикстурой `openPhone`, `loginAsAdmin(page)`, `createGlobalRole(page, name, permissions)`, `createMinistry(page, name)`, `createInvitedAccount(adminPage, openPhone, person)` с `InvitedPerson` (`lastName`, `firstName`, `login`, `globalRole`), `openSection(page, section, heading)` из `e2e/fixtures.ts`; учётные данные и адреса — только из `e2e/environment.ts`; способ запуска PHP — `E2E_API_RUNTIME` и `ApiRuntime.longRunning`.
 
-- [ ] **Шаг 1: Написать сценарий**
+- [x] **Шаг 1: Написать сценарий**
 
 Разделы открываются через основную навигацию, как в сценариях фазы 1; имена данных — свои у этого файла, поэтому сценарии не зависят друг от друга и от порядка запуска (база сквозных тестов одна на прогон).
 
@@ -2934,7 +2933,7 @@ test('a published announcement reaches the notification center live', async ({ p
   await loginAsAdmin(page)
   await createGlobalRole(page, reader.globalRole, ['Видеть справочник'])
   const readerPhone = await createInvitedAccount(page, openPhone, reader)
-  await expect(readerPhone.getByTestId('nav-notifications-badge')).toHaveCount(0)
+  await expect(readerPhone.getByTestId('notification-badge')).toHaveCount(0)
 
   await openSection(page, 'Объявления', 'Объявления')
   await page.getByTestId('publish').click()
@@ -2944,7 +2943,7 @@ test('a published announcement reaches the notification center live', async ({ p
   await expect(page.getByText('Общее собрание')).toBeVisible()
 
   // Без перезагрузки: бейдж обновляет канал user.{id} через Reverb.
-  await expect(readerPhone.getByTestId('nav-notifications-badge')).toHaveText('1', { timeout: 10_000 })
+  await expect(readerPhone.getByTestId('notification-badge')).toHaveText('1', { timeout: 10_000 })
 
   await openSection(readerPhone, 'Уведомления', 'Уведомления')
   await readerPhone.getByText('Общее собрание').click()
@@ -2967,20 +2966,24 @@ test('a ministry announcement is not shown to a non-member', async ({ page, open
 
   await openSection(strangerPhone, 'Объявления', 'Объявления')
   await expect(strangerPhone.getByText('Репетиция')).toHaveCount(0)
-  await expect(strangerPhone.getByTestId('nav-notifications-badge')).toHaveCount(0)
+  await expect(strangerPhone.getByTestId('notification-badge')).toHaveCount(0)
 })
 ```
 
-- [ ] **Шаг 2: Поднять Reverb в обвязке e2e**
+- [x] **Шаг 2: Поднять Reverb в обвязке e2e**
 
 Reverb — третий долгоживущий процесс рядом с API и воркером: `LongRunningRole = 'api' | 'worker' | 'reverb'`. Способ `docker` — одноразовый контейнер сервиса `app` с меткой сквозных тестов (`php artisan reverb:start --host=0.0.0.0 --port=8080`), способ `native` — `php artisan reverb:start` на раннере; порт — в `e2e`, рядом с `apiPort` и `webPort`. Процессам API в `apiEnvironment` добавляются `BROADCAST_CONNECTION=reverb` и ключи приложения Reverb сквозных тестов; адрес, по которому API публикует события (`REVERB_HOST`, `REVERB_PORT`), различается по способу запуска: имя контейнера Reverb в сети Compose или `127.0.0.1`. Подготовка ждёт, пока Reverb примет соединение, и останавливает его вместе с остальными процессами. Очередь остаётся настоящей — воркер фазы 1, не `QUEUE_CONNECTION=sync`: broadcast и уведомления уходят в очередь, как в проде.
 
+Реализация в `apps/web/e2e/announcements.spec.ts` усиливает приведённый эскиз: ждёт подтверждение личной подписки перед публикацией, сохраняет настоящий notification frame в артефакте, проверяет отсутствие перезагрузки и HTTP-перечитывания центра до появления бейджа. Для служения отдельный участник подтверждает доставку воркером до отрицательных проверок постороннего (список, центр, бейдж, кадры и прямой `403`). Прокси перед preview слушает 3010, preview — 3011, Reverb — 8011; `npm run test:e2e-runtime` проверяет HTTP, upgrade, байты, keepalive и закрытие соединений и входит в `npm run e2e`. Очистка по прежней метке сохранена; guard проверяет фактические выбранные Redis 14/15 и разрешённые соединения до сброса.
+
 Клиент подключается к сокету на своём источнике (решение 15), поэтому `/app` должен проксироваться туда же, где браузер открывает предпросмотр, как это делает nginx в проде. Прокси `routeRules` сервера предпросмотра Nuxt запросы upgrade не пропускает; как пропустить WebSocket `/app` к Reverb сквозных тестов (например, небольшим прокси обвязки перед предпросмотром, который отдаёт `/app` в Reverb, а остальное — в предпросмотр), решает эта задача. Критерий — бейдж в первом сценарии обновляется без перезагрузки.
 
-- [ ] **Шаг 3: Запустить сценарии**
+- [x] **Шаг 3: Запустить сценарии**
 
 Выполнить: `npm run e2e`
 Ожидается: оба сценария проходят; бейдж появляется без перезагрузки страницы.
+
+Локально выполнено: `E2E_BROWSER_CHANNEL=msedge npm run e2e` (в PowerShell переменная задаётся через `$env:`), настоящий Docker API/Redis-воркер/Reverb, 2 проверки прокси и все 5 сквозных сценариев прошли. Подписка и кадр доставки подтверждены; проверены прочитанное, Markdown, положительная доставка участнику и отсутствие у постороннего с прямым `403`. Полный набор клиента: 334 теста прошли; `typecheck`, `lint` и сборка — без ошибок. После прогона нет e2e-контейнеров и слушателей портов 3010/3011/8010/8011. Журналы и JSON-свидетельства — `apps/web/test-results/server/`. CI использует прежний Chromium и способ `native`; локально его конфигурация и обнаружение тестов проверены статически, полный native/CI-прогон здесь не заявляется.
 
 - [ ] **Шаг 4: Приёмка на устройствах**
 
@@ -2989,10 +2992,10 @@ Reverb — третий долгоживущий процесс рядом с AP
 1. iPhone, Safari, приложение установлено на экран «Домой», уведомления включены кнопкой. Приложение закрыто. Опубликовано церковное объявление. Пуш пришёл, нажатие открыло объявление.
 2. Android, Chrome, приложение установлено. То же.
 3. iPhone, Safari без установки: кнопки «Включить уведомления» нет, есть инструкция по установке.
-4. Категория «Объявления» выключена на одном устройстве: пуш не пришёл, запись в центре появилась.
+4. Категория «Объявления» выключена для одного аккаунта (настройка общая для его устройств): пуш не пришёл, запись в центре появилась.
 5. Выход из приложения на устройстве: следующий пуш на это устройство не приходит.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "test(web): end-to-end announcement and live notification scenarios"
