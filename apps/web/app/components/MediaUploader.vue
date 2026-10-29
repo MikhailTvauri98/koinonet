@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="P extends DirectLinkPurpose">
+<script setup lang="ts" generic="P extends DirectLinkPurpose | 'announcement'">
 import type { DirectLinkPurpose, DirectLinkResources, MediaLike } from '~/utils/media'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -17,7 +17,9 @@ const POLL_TIMEOUT_MS = 15_000
 const props = defineProps<{
   purpose: P
   // Эндпоинт привязки, принимающий `{ media_id }`.
-  target: string
+  target?: string
+  multiple?: boolean
+  mediaIds?: string[]
   // Подпись кнопки выбора файла: «Выбрать фото», «Изменить обложку».
   label: string
   disabled?: boolean
@@ -25,7 +27,10 @@ const props = defineProps<{
   disabledReason?: string
 }>()
 const emit = defineEmits<{
-  attached: [resource: DirectLinkResources[P]]
+  attached: [resource: DirectLinkResources[P & DirectLinkPurpose]]
+  'update:mediaIds': [ids: string[]]
+  busy: [value: boolean]
+  error: [message: string]
 }>()
 
 type Phase = 'idle' | 'uploading' | 'processing' | 'attaching' | 'failed'
@@ -40,6 +45,8 @@ const errorMessage = ref('')
 let run = 0
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 let deadlineTimer: ReturnType<typeof setTimeout> | null = null
+let queue: File[] = []
+let readyIds: string[] = []
 
 function stopTimers() {
   if (pollTimer !== null) clearTimeout(pollTimer)
@@ -53,14 +60,25 @@ function fail(token: number, message: string) {
   run++
   stopTimers()
   phase.value = 'failed'
+  queue = []
   errorMessage.value = message
+  emit('error', message)
 }
 
 async function attach(token: number, mediaId: string) {
   stopTimers()
+  if (props.purpose === 'announcement') {
+    readyIds = [...readyIds, mediaId]
+    emit('update:mediaIds', [...readyIds])
+    const next = queue.shift()
+    if (next) return upload(next, true)
+    phase.value = 'idle'
+    return
+  }
+  if (!props.target) return fail(token, 'Не указано назначение файла.')
   phase.value = 'attaching'
   try {
-    const response = await api.put<{ data: DirectLinkResources[P] }>(props.target, { media_id: mediaId })
+    const response = await api.put<{ data: DirectLinkResources[P & DirectLinkPurpose] }>(props.target, { media_id: mediaId })
     if (token !== run) return
     phase.value = 'idle'
     errorMessage.value = ''
@@ -91,10 +109,12 @@ async function poll(token: number, mediaId: string) {
   await follow(token, media)
 }
 
-async function upload(file: File) {
+async function upload(file: File, continuing = false) {
+  if (!continuing) readyIds = [...(props.mediaIds ?? [])]
   const token = ++run
   stopTimers()
   errorMessage.value = ''
+  emit('error', '')
   phase.value = 'uploading'
 
   const body = new FormData()
@@ -123,12 +143,15 @@ async function upload(file: File) {
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0] ?? null
+  const files = Array.from(input.files ?? [])
+  const file = files.shift()
   input.value = ''
+  queue = props.multiple && props.purpose === 'announcement' ? files : []
   if (file) void upload(file)
 }
 
 const busy = computed(() => phase.value === 'uploading' || phase.value === 'processing' || phase.value === 'attaching')
+watch(busy, value => emit('busy', value), { flush: 'sync' })
 const statusLabel = computed(() => {
   if (phase.value === 'processing') return 'Обрабатывается…'
   if (phase.value === 'uploading' || phase.value === 'attaching') return 'Загружается…'
@@ -151,7 +174,7 @@ defineExpose({ upload })
       class="media-uploader__button" :class="{ 'media-uploader__button--disabled': busy || disabled }"
       :title="disabled ? disabledReason : undefined"
     >
-      <input type="file" accept="image/*" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
+      <input type="file" :accept="purpose === 'announcement' ? undefined : 'image/*'" :multiple="multiple && purpose === 'announcement'" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
       <span>{{ statusLabel }}</span>
     </label>
     <p v-if="errorMessage" role="alert" data-test="media-error">{{ errorMessage }}</p>

@@ -2609,6 +2609,8 @@ git add apps/web && git commit -m "feat(web): push subscription flow and service
 
 ### Задача 11: Объявления на клиенте — список, карточка, редактор, вкладка служения, главная
 
+Реализация использует общий AnnouncementList и MinistryTabs (вкладка появляется также на обзоре служения); ~ уже указывает на app/. Тесты безопасности Markdown выполняются в jsdom: текущий happy-dom несовместим с обходом DOMPurify. Отчёт: .superpowers/sdd/phase-2/task-11-report.md. Проверки устройств и двух вкладок остаются в задаче 13.
+
 **Файлы:**
 - Создать: `apps/web/app/pages/announcements/index.vue`, `announcements/[id].vue`, `ministries/[id]/announcements.vue`; `app/components/announcements/AnnouncementCard.vue`, `AnnouncementEditor.vue`, `MarkdownBody.vue`, `PinnedAnnouncements.vue`, `AttachmentList.vue`
 - Изменить: `app/pages/index.vue` (блок закреплённых церковных объявлений), `app/components/AppNav.vue` (пункт «Объявления»), `app/pages/ministries/[id]/index.vue` (вкладка), `MediaUploader.vue` (режим «несколько файлов без немедленной привязки»: возвращает `media_id` списком), `package.json` (`marked`, `dompurify`)
@@ -2620,7 +2622,7 @@ git add apps/web && git commit -m "feat(web): push subscription flow and service
 - Отдаёт наружу: `MediaUploader` в режиме `multiple` с `v-model:mediaIds`.
 - Потребляет: все эндпоинты `Announcements` из задач 5–7, `POST /media` с `purpose = announcement`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/unit/markdown.spec.ts`:
 
@@ -2779,12 +2781,12 @@ describe('ministry announcements tab', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```bash
 cd apps/web && npm i marked dompurify && npm i -D @types/dompurify
@@ -2796,7 +2798,7 @@ cd apps/web && npm i marked dompurify && npm i -D @types/dompurify
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 
-marked.use({ gfm: true, breaks: true })
+marked.use({ gfm: true, breaks: true, renderer: { html: () => '' } })
 
 export function renderMarkdown(markdown: string): string {
   const raw = marked.parse(markdown, { async: false }) as string
@@ -2816,12 +2818,12 @@ export function renderMarkdown(markdown: string): string {
 
 Список: карточки с заголовком, датой (`useChurchDate`), пометкой закрепления, служением; фильтр «церковь / мои служения»; постраничная подгрузка. Карточка: тело через `MarkdownBody`, вложения (`AttachmentList` с миниатюрами картинок и ссылками на файлы, ссылки берутся из `MediaResource`), кнопки «Изменить», «Закрепить/Открепить», «Архивировать» (с подтверждением) для автора и носителей права. Редактор: заголовок, тело (`textarea` с подсказкой по Markdown), вложения через `MediaUploader multiple`, «закрепить», «скрыть после» (дата), «уведомить» (только при создании). Главная: `PinnedAnnouncements` — до трёх закреплённых церковных. Вкладка служения: тот же список с фильтром и кнопкой по `canIn(ministryId, 'announcements.publish')`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): announcements list, card, editor, ministry tab and home block"

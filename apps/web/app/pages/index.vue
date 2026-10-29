@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PinnedAnnouncements from '~/components/announcements/PinnedAnnouncements.vue'
 const auth = useAuthStore()
 const { can } = useCan()
 // Правило и обоснование — в useCan.ts (hasVisibleMinistries), общее с AppNav.vue.
@@ -8,6 +9,7 @@ const hasMinistries = useHasVisibleMinistries()
 <template>
   <div class="home-page">
     <h1>Здравствуйте, {{ auth.person?.first_name }}!</h1>
+    <PinnedAnnouncements />
 
     <ul class="home-page__links">
       <li v-if="can('people.view')">

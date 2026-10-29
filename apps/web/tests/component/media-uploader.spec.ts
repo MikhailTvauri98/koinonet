@@ -36,6 +36,40 @@ function deferred<T>() {
 const file = () => new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' })
 
 describe('media uploader polling', () => {
+  it('uploads a multi-file selection in order, emitting only ready IDs', async () => {
+    post.mockResolvedValueOnce({ data: { id: 'first', status: 'ready' } }).mockResolvedValueOnce({ data: { id: 'second', status: 'ready' } })
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'announcement', multiple: true, mediaIds: ['old'], label: 'Добавить вложения' } })
+    const input = uploader.get('input')
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [file(), file()] })
+    await input.trigger('change')
+    await new Promise(resolve => setTimeout(resolve))
+    expect(post).toHaveBeenCalledTimes(2)
+    expect(uploader.emitted('update:mediaIds')).toEqual([[['old', 'first']], [['old', 'first', 'second']]])
+    expect(put).not.toHaveBeenCalled()
+  })
+  it('returns ready announcement IDs without a direct attachment endpoint', async () => {
+    post.mockResolvedValue({ data: { id: 'new', status: 'processing' } })
+    get.mockResolvedValue({ data: { id: 'new', status: 'ready' } })
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'announcement', multiple: true, mediaIds: ['old'], label: 'Добавить вложения' } })
+    vi.useFakeTimers()
+    await uploader.vm.upload(file())
+    expect(uploader.emitted('update:mediaIds')).toBeUndefined()
+    expect(uploader.emitted('busy')?.[0]).toEqual([true])
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(uploader.emitted('update:mediaIds')).toEqual([[['old', 'new']]])
+    expect(put).not.toHaveBeenCalled()
+    expect((post.mock.calls[0]![1] as FormData).get('purpose')).toBe('announcement')
+    expect(uploader.emitted('busy')?.at(-1)).toEqual([false])
+  })
+
+  it('reports announcement processing failures without emitting unready IDs', async () => {
+    post.mockResolvedValue({ data: { id: 'new', status: 'failed' } })
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'announcement', multiple: true, label: 'Добавить вложения' } })
+    await uploader.vm.upload(file())
+    expect(uploader.emitted('update:mediaIds')).toBeUndefined()
+    expect(uploader.emitted('error')?.at(-1)?.[0]).toContain('обработать')
+    expect(put).not.toHaveBeenCalled()
+  })
   it('asks for the status again only after the previous answer arrived', async () => {
     post.mockResolvedValue({ data: { id: 'md1', status: 'processing' } })
     get.mockReturnValue(deferred().promise)
