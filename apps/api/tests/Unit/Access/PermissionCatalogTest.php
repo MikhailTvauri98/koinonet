@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionScope;
 
-it('contains the phase one permission keys', function () {
+it('contains the implemented permission keys', function () {
     expect(array_column(Permission::cases(), 'value'))->toBe([
         'people.view',
         'people.view_contacts',
@@ -18,10 +18,12 @@ it('contains the phase one permission keys', function () {
         'roles.manage_global',
         'settings.manage',
         'audit.view',
+        'announcements.church.publish',
         'members.manage',
         'members.view_contacts',
         'roles.manage',
         'ministry.edit',
+        'announcements.publish',
     ]);
 });
 

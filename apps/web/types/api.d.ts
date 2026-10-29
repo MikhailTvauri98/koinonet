@@ -90,6 +90,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["announcement.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/announcements/{announcement}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["announcement.update"];
+        trace?: never;
+    };
     "/audit": {
         parameters: {
             query?: never;
@@ -772,6 +804,34 @@ export interface components {
                 email: string | null;
             };
         };
+        /** AnnouncementResource */
+        AnnouncementResource: {
+            id: string;
+            scope: components["schemas"]["AnnouncementScope"];
+            ministry: {
+                id: string;
+                name: string;
+            } | null;
+            author: {
+                id: string;
+                full_name: string;
+            } | null;
+            title: string;
+            body: string;
+            pinned: boolean;
+            /** Format: date */
+            hide_after: string | null;
+            notify_on_publish: boolean;
+            /** Format: date-time */
+            published_at: string;
+            archived: boolean;
+            attachments: string[];
+        };
+        /**
+         * AnnouncementScope
+         * @enum {string}
+         */
+        AnnouncementScope: "church" | "ministry";
         /** CreatedAccessLinkResource */
         CreatedAccessLinkResource: {
             url: string;
@@ -877,15 +937,15 @@ export interface components {
          * Permission
          * @enum {string}
          */
-        Permission: "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit";
+        Permission: "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "announcements.church.publish" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit" | "announcements.publish";
         /** PermissionResource */
         PermissionResource: {
             key: string;
             scope: string;
             /** @enum {string} */
-            label: "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
+            label: "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Публиковать объявления церкви" | "Объявления служения" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
             /** @enum {string} */
-            description: "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
+            description: "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
         };
         /** PersonResource */
         PersonResource: {
@@ -970,6 +1030,26 @@ export interface components {
             vapid_public_key: string;
             phone_region?: string;
         };
+        /** StoreAnnouncementRequest */
+        StoreAnnouncementRequest: {
+            scope: components["schemas"]["AnnouncementScope"];
+            ministry_id?: string;
+            title: string;
+            body: string;
+            pinned?: boolean;
+            /** Format: date */
+            hide_after?: string | null;
+            notify_on_publish?: boolean;
+            media_ids?: string[];
+        } & ({
+            /** @constant */
+            scope?: "church";
+            ministry_id?: never;
+        } | {
+            /** @constant */
+            scope?: "ministry";
+            ministry_id: string;
+        });
         /** StoreMediaRequest */
         StoreMediaRequest: {
             /** Format: binary */
@@ -1006,6 +1086,18 @@ export interface components {
             };
             /** @enum {string} */
             content_encoding?: "aesgcm" | "aes128gcm";
+        };
+        /** UpdateAnnouncementRequest */
+        UpdateAnnouncementRequest: {
+            scope?: never;
+            ministry_id?: never;
+            title?: string;
+            body?: string;
+            pinned?: boolean;
+            /** Format: date */
+            hide_after?: string | null;
+            notify_on_publish?: boolean;
+            media_ids?: string[];
         };
         /** UpdateLoginRequest */
         UpdateLoginRequest: {
@@ -1191,6 +1283,68 @@ export interface operations {
                     "application/json": components["schemas"]["MeResource"];
                 };
             };
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "announcement.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreAnnouncementRequest"];
+            };
+        };
+        responses: {
+            /** @description `AnnouncementResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AnnouncementResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "announcement.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The announcement ID */
+                announcement: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateAnnouncementRequest"];
+            };
+        };
+        responses: {
+            /** @description `AnnouncementResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AnnouncementResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
         };
     };

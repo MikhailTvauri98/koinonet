@@ -17,17 +17,19 @@ enum Permission: string
     case RolesManageGlobal = 'roles.manage_global';
     case SettingsManage = 'settings.manage';
     case AuditView = 'audit.view';
+    case AnnouncementsChurchPublish = 'announcements.church.publish';
 
     case MembersManage = 'members.manage';
     case MembersViewContacts = 'members.view_contacts';
     case RolesManage = 'roles.manage';
     case MinistryEdit = 'ministry.edit';
+    case AnnouncementsPublish = 'announcements.publish';
 
     public function scope(): PermissionScope
     {
         return match ($this) {
             self::MembersManage, self::MembersViewContacts,
-            self::RolesManage, self::MinistryEdit => PermissionScope::Ministry,
+            self::RolesManage, self::MinistryEdit, self::AnnouncementsPublish => PermissionScope::Ministry,
             default => PermissionScope::Global,
         };
     }
@@ -46,6 +48,8 @@ enum Permission: string
             self::RolesManageGlobal => 'Управлять глобальными ролями',
             self::SettingsManage => 'Настройки церкви',
             self::AuditView => 'Журнал действий',
+            self::AnnouncementsChurchPublish => 'Публиковать объявления церкви',
+            self::AnnouncementsPublish => 'Объявления служения',
             self::MembersManage => 'Управлять составом',
             self::MembersViewContacts => 'Контакты участников',
             self::RolesManage => 'Управлять ролями служения',
@@ -67,6 +71,8 @@ enum Permission: string
             self::RolesManageGlobal => 'Редактор глобальных ролей и выдача их людям.',
             self::SettingsManage => 'Название церкви, часовой пояс, регион телефонов.',
             self::AuditView => 'Хронология административных действий.',
+            self::AnnouncementsChurchPublish => 'Публикация, правка, закрепление и архивация церковных объявлений.',
+            self::AnnouncementsPublish => 'Публикация, правка, закрепление и архивация объявлений служения.',
             self::MembersManage => 'Добавлять и исключать участников, выдавать и снимать роли служения.',
             self::MembersViewContacts => 'Телефон, почта и дата рождения участников этого служения.',
             self::RolesManage => 'Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию.',

@@ -135,6 +135,19 @@ function permissionCases(): array
             test()->getJson('/api/v1/audit')->assertStatus($granted ? 200 : 403);
         },
 
+        Permission::AnnouncementsChurchPublish->value => function (bool $granted): void {
+            actingWithGlobalKey(Permission::AnnouncementsChurchPublish, $granted);
+            test()->postJson('/api/v1/announcements', ['scope' => 'church', 'title' => 'Собрание', 'body' => 'Текст'])
+                ->assertStatus($granted ? 201 : 403);
+        },
+
+        Permission::AnnouncementsPublish->value => function (bool $granted): void {
+            $ministry = actingAsMemberWithKey(Permission::AnnouncementsPublish, $granted);
+            test()->postJson('/api/v1/announcements', [
+                'scope' => 'ministry', 'ministry_id' => $ministry->id, 'title' => 'Собрание', 'body' => 'Текст',
+            ])->assertStatus($granted ? 201 : 403);
+        },
+
         Permission::MembersManage->value => function (bool $granted): void {
             $ministry = actingAsMemberWithKey(Permission::MembersManage, $granted);
 

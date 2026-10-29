@@ -1194,9 +1194,9 @@ composer openapi && git add . && git commit -m "feat(notifications): web push su
 ### Задача 5: Объявления — таблицы, публикация, правка, очистка Markdown, права
 
 **Файлы:**
-- Создать: `app/Modules/Announcements/Database/Migrations/2026_10_01_000700_create_announcements_tables.php`; `Models/Announcement.php`, `Models/AnnouncementView.php`; `AnnouncementScope.php`; `MarkdownCleaner.php`; `Actions/PublishAnnouncement.php`, `Actions/UpdateAnnouncement.php`; `Events/AnnouncementPublished.php`; `Policies/AnnouncementPolicy.php`; `Http/Controllers/AnnouncementController.php`, `Http/Requests/StoreAnnouncementRequest.php`, `Http/Requests/UpdateAnnouncementRequest.php`, `Http/Resources/AnnouncementResource.php`; `app/Modules/Announcements/routes.php`; `database/factories/AnnouncementFactory.php`
-- Изменить: `app/Modules/Access/Permission.php` (два ключа)
-- Тест: `tests/Feature/Announcements/AnnouncementPublishTest.php`, `tests/Unit/Announcements/MarkdownCleanerTest.php`
+- Создать: `app/Modules/Announcements/Database/Migrations/2026_10_01_000700_create_announcements_tables.php`; `Models/Announcement.php`, `Models/AnnouncementView.php`; `AnnouncementScope.php`; `MarkdownCleaner.php`; `Actions/PublishAnnouncement.php`, `Actions/UpdateAnnouncement.php`, `Actions/AnnouncementsAccountEraser.php`; `Events/AnnouncementPublished.php`; `Policies/AnnouncementPolicy.php`; `Http/Controllers/AnnouncementController.php`, `Http/Requests/StoreAnnouncementRequest.php`, `Http/Requests/UpdateAnnouncementRequest.php`, `Http/Resources/AnnouncementResource.php`; `OpenApi/AnnouncementRequestSchema.php`; `app/Modules/Announcements/routes.php`; `database/factories/AnnouncementFactory.php`
+- Изменить: `app/Modules/Access/Permission.php` (два ключа), `app/Providers/AppServiceProvider.php` (политика и eraser), `tests/Feature/Access/PermissionCoverageTest.php`, `tests/Unit/Access/PermissionCatalogTest.php`
+- Тест: `tests/Feature/Announcements/AnnouncementPublishTest.php`, `tests/Feature/Announcements/AnnouncementCommitTest.php`, `tests/Unit/Announcements/MarkdownCleanerTest.php`
 
 **Интерфейсы:**
 - Отдаёт наружу: `Permission::AnnouncementsChurchPublish = 'announcements.church.publish'` (глобальное, «Публиковать объявления церкви») и `Permission::AnnouncementsPublish = 'announcements.publish'` (служения, «Объявления служения»).
@@ -1208,7 +1208,7 @@ composer openapi && git add . && git commit -m "feat(notifications): web push su
 - Отдаёт наружу: `Announcement::factory()` — церковное объявление; состояния `ministry(Ministry $ministry)`, `pinned()`, `archived()`, `hiddenAfter(string $date)`.
 - Коды ошибок: `announcement.archived`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Unit/Announcements/MarkdownCleanerTest.php`:
 
@@ -1377,12 +1377,12 @@ it('publishes the domain event once and not on edit', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Announcements tests/Feature/Announcements/AnnouncementPublishTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Ключи прав**
+- [x] **Шаг 3: Ключи прав**
 
 В `Permission` добавить два случая с областью, названием и описанием из раздела 6.1:
 
@@ -1391,9 +1391,9 @@ case AnnouncementsChurchPublish = 'announcements.church.publish';
 case AnnouncementsPublish = 'announcements.publish';
 ```
 
-`scope()`: `AnnouncementsPublish` → `PermissionScope::Ministry`. `label()`: «Публиковать объявления церкви», «Объявления служения». `description()`: «Публикация, правка, закрепление и архивация церковных объявлений.», «Публикация, правка, закрепление и архивация объявлений служения.». `PermissionCoverageTest` фазы 1 требует упоминания обоих ключей в тестах — тесты этой задачи их упоминают.
+`scope()`: `AnnouncementsPublish` → `PermissionScope::Ministry`. `label()`: «Публиковать объявления церкви», «Объявления служения». `description()`: «Публикация, правка, закрепление и архивация церковных объявлений.», «Публикация, правка, закрепление и архивация объявлений служения.». `PermissionCoverageTest` перебирает каталог: для каждого нового ключа добавить отдельный сценарий запросов с правом и без права в соответствующей области. Обновить точный снимок каталога в `PermissionCatalogTest`. Существующим ролям новые права автоматически не выдаются.
 
-- [ ] **Шаг 4: Миграция**
+- [x] **Шаг 4: Миграция**
 
 ```php
 Schema::create('announcements', function (Blueprint $table) {
@@ -1430,27 +1430,13 @@ Schema::create('announcement_views', function (Blueprint $table) {
 
 Стирание автора: `AnnouncementsAccountEraser` (регистрируется тегом `directory.account_erasers`) ставит `author_user_id = null` и удаляет строки `announcement_views` аккаунта.
 
-- [ ] **Шаг 5: Очистка Markdown**
+- [x] **Шаг 5: Очистка Markdown**
 
-```php
-final class MarkdownCleaner
-{
-    public function clean(string $markdown): string
-    {
-        $text = strip_tags($markdown);
-        $text = preg_replace('/!\[([^\]]*)\]\([^)]*\)/u', '$1', $text) ?? $text;
-        $text = preg_replace_callback('/\]\(\s*([^)\s]*)([^)]*)\)/u', function (array $m): string {
-            $safe = preg_match('#^(https?://|mailto:|tel:|/|\#)#i', $m[1]) === 1;
+`MarkdownCleaner` сохраняет разрешённые Markdown-конструкции, удаляет HTML и изображения (оставляя alt-текст), очищает ссылки с учётом вложенных скобок и reference-ссылок. Допускаются `http`, `https`, `mailto`, `tel` и относительные пути, включая `../`; прочие схемы нейтрализуются. Простой шаблон до первой закрывающей скобки для этого недостаточен.
 
-            return $safe ? "]({$m[1]}{$m[2]})" : ']()';
-        }, $text) ?? $text;
+- [x] **Шаг 6: Actions, политика, эндпоинты**
 
-        return trim($text);
-    }
-}
-```
-
-- [ ] **Шаг 6: Actions, политика, эндпоинты**
+`AnnouncementPublished` реализует Laravel `ShouldDispatchAfterCommit`: событие доставляется после commit внешней транзакции, при rollback не доставляется. Отдельный тест с `DatabaseMigrations` и реальным слушателем проверяет внешний commit/rollback без обёртки `RefreshDatabase`.
 
 `PublishAnnouncement`:
 
@@ -1481,14 +1467,16 @@ final class PublishAnnouncement
 }
 ```
 
-`UpdateAnnouncement` бросает `announcement.archived`, чистит `body`, переводит `pinned` в `pinned_at`, событий не публикует. `AnnouncementPolicy::create(User $user, AnnouncementScope $scope, ?string $ministryId)`: `church` → `can(AnnouncementsChurchPublish)`, `ministry` → `canInMinistry(AnnouncementsPublish, $ministryId)`. `update`: та же проверка по области объявления или `author_user_id === $user->id`. `StoreAnnouncementRequest`: `scope` — `required|in:church,ministry`, `ministry_id` — `required_if:scope,ministry|prohibited_if:scope,church|ulid|exists:ministries,id`, `title` — `required|string|max:200`, `body` — `required|string|max:20000`, `pinned` — `boolean`, `hide_after` — `nullable|date_format:Y-m-d`, `notify_on_publish` — `boolean`, `media_ids` — `array` (обрабатывает задача 7).
+`UpdateAnnouncement` бросает `announcement.archived`, чистит `body`, переводит `pinned` в `pinned_at`, событий не публикует. `AnnouncementPolicy::create(User $user, AnnouncementScope $scope, ?string $ministryId)`: `church` → `can(AnnouncementsChurchPublish)`, `ministry` → `canInMinistry(AnnouncementsPublish, $ministryId)`. `update`: та же проверка по области объявления или `author_user_id === $user->id`. `OpenApi/AnnouncementRequestSchema` уточняет выведенную Scramble схему: условную обязательность `ministry_id` при публикации и запрет изменения области при правке; схема ресурса сохраняет enum области и форматы UTC/date. Регенерировать `openapi.json` и `apps/web/types/api.d.ts`.
 
-- [ ] **Шаг 7: Запустить тесты, убедиться что проходят**
+`StoreAnnouncementRequest`: `scope` — `required|in:church,ministry`, `ministry_id` — `required_if:scope,ministry|prohibited_if:scope,church|ulid|exists:ministries,id`, `title` — `required|string|max:200`, `body` — `required|string|max:20000`, `pinned` — `boolean`, `hide_after` — `nullable|date_format:Y-m-d`, `notify_on_publish` — `boolean`, `media_ids` — `array` (обрабатывает задача 7).
+
+- [x] **Шаг 7: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Announcements tests/Feature/Announcements tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: PASS, покрытие ключей не нарушено.
 
-- [ ] **Шаг 8: Коммит**
+- [x] **Шаг 8: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(announcements): tables, publishing, editing, markdown cleaning and permissions"
@@ -1498,7 +1486,7 @@ composer openapi && git add . && git commit -m "feat(announcements): tables, pub
 - Оба новых ключа права закрыты тестами «без права запрещено, с правом разрешено» в своей области; право служения не даёт публиковать церковные объявления.
 - Автор правит своё объявление, даже потеряв право публикации (раздел 6.4).
 - Тело очищается при сохранении: скрипты и опасные схемы не доживают до базы (раздел 7.5).
-- `AnnouncementPublished` уходит один раз при публикации и никогда при правке — на это опирается задача 8.
+- `AnnouncementPublished` уходит один раз после внешнего commit при публикации, не уходит при rollback и никогда при правке — на это опираются задачи 7–8.
 - Стирание автора не ломает объявления: `author_user_id` становится `null`.
 
 ---

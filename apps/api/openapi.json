@@ -177,6 +177,113 @@
                 }
             }
         },
+        "/announcements": {
+            "post": {
+                "operationId": "announcement.store",
+                "tags": [
+                    "Announcement"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreAnnouncementRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`AnnouncementResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AnnouncementResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/announcements/{announcement}": {
+            "patch": {
+                "operationId": "announcement.update",
+                "tags": [
+                    "Announcement"
+                ],
+                "parameters": [
+                    {
+                        "name": "announcement",
+                        "in": "path",
+                        "required": true,
+                        "description": "The announcement ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateAnnouncementRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`AnnouncementResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AnnouncementResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/audit": {
             "get": {
                 "operationId": "access.audit",
@@ -3395,6 +3502,110 @@
                 ],
                 "title": "AccessLinkResource"
             },
+            "AnnouncementResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/AnnouncementScope"
+                    },
+                    "ministry": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "author": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "full_name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "full_name"
+                        ]
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "pinned": {
+                        "type": "boolean"
+                    },
+                    "hide_after": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "notify_on_publish": {
+                        "type": "boolean"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "attachments": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0
+                    }
+                },
+                "required": [
+                    "id",
+                    "scope",
+                    "ministry",
+                    "author",
+                    "title",
+                    "body",
+                    "pinned",
+                    "hide_after",
+                    "notify_on_publish",
+                    "published_at",
+                    "archived",
+                    "attachments"
+                ],
+                "title": "AnnouncementResource"
+            },
+            "AnnouncementScope": {
+                "type": "string",
+                "enum": [
+                    "church",
+                    "ministry"
+                ],
+                "title": "AnnouncementScope"
+            },
             "CreatedAccessLinkResource": {
                 "type": "object",
                 "properties": {
@@ -3790,10 +4001,12 @@
                     "roles.manage_global",
                     "settings.manage",
                     "audit.view",
+                    "announcements.church.publish",
                     "members.manage",
                     "members.view_contacts",
                     "roles.manage",
-                    "ministry.edit"
+                    "ministry.edit",
+                    "announcements.publish"
                 ],
                 "title": "Permission"
             },
@@ -3820,6 +4033,8 @@
                             "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0433\u043b\u043e\u0431\u0430\u043b\u044c\u043d\u044b\u043c\u0438 \u0440\u043e\u043b\u044f\u043c\u0438",
                             "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0446\u0435\u0440\u043a\u0432\u0438",
                             "\u0416\u0443\u0440\u043d\u0430\u043b \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439",
+                            "\u041f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c \u043e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u044f \u0446\u0435\u0440\u043a\u0432\u0438",
+                            "\u041e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u044f \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f",
                             "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0441\u043e\u0441\u0442\u0430\u0432\u043e\u043c",
                             "\u041a\u043e\u043d\u0442\u0430\u043a\u0442\u044b \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u043e\u0432",
                             "\u0423\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0440\u043e\u043b\u044f\u043c\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f",
@@ -3840,6 +4055,8 @@
                             "\u0420\u0435\u0434\u0430\u043a\u0442\u043e\u0440 \u0433\u043b\u043e\u0431\u0430\u043b\u044c\u043d\u044b\u0445 \u0440\u043e\u043b\u0435\u0439 \u0438 \u0432\u044b\u0434\u0430\u0447\u0430 \u0438\u0445 \u043b\u044e\u0434\u044f\u043c.",
                             "\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u0446\u0435\u0440\u043a\u0432\u0438, \u0447\u0430\u0441\u043e\u0432\u043e\u0439 \u043f\u043e\u044f\u0441, \u0440\u0435\u0433\u0438\u043e\u043d \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u043e\u0432.",
                             "\u0425\u0440\u043e\u043d\u043e\u043b\u043e\u0433\u0438\u044f \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u0438\u0432\u043d\u044b\u0445 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439.",
+                            "\u041f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044f, \u043f\u0440\u0430\u0432\u043a\u0430, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u0438\u0435 \u0438 \u0430\u0440\u0445\u0438\u0432\u0430\u0446\u0438\u044f \u0446\u0435\u0440\u043a\u043e\u0432\u043d\u044b\u0445 \u043e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u0439.",
+                            "\u041f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044f, \u043f\u0440\u0430\u0432\u043a\u0430, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u0438\u0435 \u0438 \u0430\u0440\u0445\u0438\u0432\u0430\u0446\u0438\u044f \u043e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u0439 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
                             "\u0414\u043e\u0431\u0430\u0432\u043b\u044f\u0442\u044c \u0438 \u0438\u0441\u043a\u043b\u044e\u0447\u0430\u0442\u044c \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u043e\u0432, \u0432\u044b\u0434\u0430\u0432\u0430\u0442\u044c \u0438 \u0441\u043d\u0438\u043c\u0430\u0442\u044c \u0440\u043e\u043b\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
                             "\u0422\u0435\u043b\u0435\u0444\u043e\u043d, \u043f\u043e\u0447\u0442\u0430 \u0438 \u0434\u0430\u0442\u0430 \u0440\u043e\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u043e\u0432 \u044d\u0442\u043e\u0433\u043e \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
                             "\u0421\u043e\u0437\u0434\u0430\u0432\u0430\u0442\u044c, \u0440\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0438 \u0443\u0434\u0430\u043b\u044f\u0442\u044c \u0440\u043e\u043b\u0438 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f, \u0432\u044b\u0431\u0438\u0440\u0430\u0442\u044c \u0440\u043e\u043b\u044c \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e.",
@@ -4163,6 +4380,73 @@
                 ],
                 "title": "SettingsResource"
             },
+            "StoreAnnouncementRequest": {
+                "type": "object",
+                "properties": {
+                    "scope": {
+                        "$ref": "#/components/schemas/AnnouncementScope"
+                    },
+                    "ministry_id": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "body": {
+                        "type": "string",
+                        "maxLength": 20000
+                    },
+                    "pinned": {
+                        "type": "boolean"
+                    },
+                    "hide_after": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "notify_on_publish": {
+                        "type": "boolean"
+                    },
+                    "media_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "scope",
+                    "title",
+                    "body"
+                ],
+                "oneOf": [
+                    {
+                        "properties": {
+                            "scope": {
+                                "const": "church"
+                            },
+                            "ministry_id": false
+                        }
+                    },
+                    {
+                        "required": [
+                            "ministry_id"
+                        ],
+                        "properties": {
+                            "scope": {
+                                "const": "ministry"
+                            },
+                            "ministry_id": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "title": "StoreAnnouncementRequest"
+            },
             "StoreMediaRequest": {
                 "type": "object",
                 "properties": {
@@ -4277,6 +4561,41 @@
                     "keys"
                 ],
                 "title": "StorePushSubscriptionRequest"
+            },
+            "UpdateAnnouncementRequest": {
+                "type": "object",
+                "properties": {
+                    "scope": false,
+                    "ministry_id": false,
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "body": {
+                        "type": "string",
+                        "maxLength": 20000
+                    },
+                    "pinned": {
+                        "type": "boolean"
+                    },
+                    "hide_after": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "notify_on_publish": {
+                        "type": "boolean"
+                    },
+                    "media_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "title": "UpdateAnnouncementRequest"
             },
             "UpdateLoginRequest": {
                 "type": "object",

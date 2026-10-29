@@ -14,6 +14,12 @@ use App\Modules\Access\Models\AuditEntry;
 use App\Modules\Access\Models\Role;
 use App\Modules\Access\Policies\AuditPolicy;
 use App\Modules\Access\Policies\RolePolicy;
+use App\Modules\Announcements\Actions\AnnouncementsAccountEraser;
+use App\Modules\Announcements\Http\Requests\StoreAnnouncementRequest;
+use App\Modules\Announcements\Http\Requests\UpdateAnnouncementRequest;
+use App\Modules\Announcements\Models\Announcement;
+use App\Modules\Announcements\OpenApi\AnnouncementRequestSchema;
+use App\Modules\Announcements\Policies\AnnouncementPolicy;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
@@ -64,7 +70,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(RoleCarrierDetacher::class, DetachRoleFromMembers::class);
         $this->app->bind(PushTransport::class, MinishlinkPushTransport::class);
         $this->app->tag(
-            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class],
+            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class, AnnouncementsAccountEraser::class],
             'directory.account_erasers',
         );
         $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
@@ -76,6 +82,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Scramble::configure()->withDocumentTransformers(function (OpenApi $document): void {
+            foreach ([StoreAnnouncementRequest::class => true, UpdateAnnouncementRequest::class => false] as $request => $creating) {
+                if ($document->components->hasSchema($request)) {
+                    $inferred = $document->components->getSchema($request)->type;
+                    $document->components->addSchema($request, Schema::fromType(new AnnouncementRequestSchema($inferred, $creating)));
+                }
+            }
             if ($document->components->hasSchema(MarkNotificationsReadRequest::class)) {
                 $document->components->addSchema(MarkNotificationsReadRequest::class, Schema::fromType(new MarkNotificationsReadSchema));
             }
@@ -99,6 +111,7 @@ class AppServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
         $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class, GenerateVapidKeysCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
+        Gate::policy(Announcement::class, AnnouncementPolicy::class);
         Gate::policy(Ministry::class, MinistryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
