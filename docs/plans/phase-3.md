@@ -1864,7 +1864,7 @@ git add . && git commit -m "feat(calendar): role usage source blocks deletion by
 - Отдаёт наружу: `EventTemplateResource`: `id`, `owner_type`, `ministry`, `title`, `description`, `location`, `visibility`, `start_time`, `duration_minutes`, `recurrence`, `active`, `generated_until`, `archived`, `can_manage`, `slots: list<{id, label, role, required_count, sort_order}>`.
 - Коды ошибок: `template.archived`, `slot.label_required`, `slot.role_not_ministry`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Unit/Calendar/RecurrenceRuleTest.php`:
 
@@ -2005,12 +2005,12 @@ it('lists templates the viewer may manage or see', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Calendar/RecurrenceRuleTest.php tests/Feature/Calendar/TemplateCrudTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: `RecurrenceRule`**
+- [x] **Шаг 3: `RecurrenceRule`**
 
 ```php
 final class RecurrenceRule
@@ -2065,16 +2065,16 @@ final class RecurrenceRule
 }
 ```
 
-- [ ] **Шаг 4: Actions, политика, эндпоинты**
+- [x] **Шаг 4: Actions, политика, эндпоинты**
 
 `TemplateRequest` повторяет правила `StoreEventRequest` для владельца, видимости и слотов; `start_time` — `date_format:H:i`; `duration_minutes` — `integer|min:15|max:1440`; `recurrence` — `nullable|array` с проверкой через `RecurrenceRule::fromArray` в `withValidator` (исключение → ошибка поля `recurrence`); `active` — `boolean`. Слоты шаблона создаются той же проверкой, что `AddSlot` (вынести общую проверку роли и подписи в `SlotRules::normalize(array $slot): array{label, role_id, required_count}` и использовать в обоих местах). `EventTemplatePolicy` делегирует `EventAccess::canManageTemplate`; `view` — управляющие, участники служения-владельца, `ministries.view_all`, и все для церковных шаблонов с видимостью `church`. Список фильтрует по тем же правилам и по умолчанию скрывает архивные.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Calendar tests/Feature/Calendar`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): event templates with slots and recurrence rules"

@@ -27,15 +27,20 @@ use App\Modules\Calendar\Actions\CalendarAccountEraser;
 use App\Modules\Calendar\Actions\DetachHistoricalRoleReferences;
 use App\Modules\Calendar\EventMediaOwnerResolver;
 use App\Modules\Calendar\Http\Requests\StoreEventRequest;
+use App\Modules\Calendar\Http\Requests\TemplateRequest;
 use App\Modules\Calendar\Http\Requests\UpdateEventRequest;
+use App\Modules\Calendar\Http\Requests\UpdateTemplateRequest;
+use App\Modules\Calendar\Http\Resources\EventTemplateResource;
 use App\Modules\Calendar\Models\Event as CalendarEvent;
 use App\Modules\Calendar\Models\EventAssignment;
 use App\Modules\Calendar\Models\EventSlot;
 use App\Modules\Calendar\Models\EventTemplate;
 use App\Modules\Calendar\OpenApi\EventRequestSchema;
+use App\Modules\Calendar\OpenApi\TemplateSchema;
 use App\Modules\Calendar\Policies\EventAssignmentPolicy;
 use App\Modules\Calendar\Policies\EventPolicy;
 use App\Modules\Calendar\Policies\EventSlotPolicy;
+use App\Modules\Calendar\Policies\EventTemplatePolicy;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
@@ -110,6 +115,13 @@ class AppServiceProvider extends ServiceProvider
             'event_template' => EventTemplate::class,
         ]);
         Scramble::configure()->withDocumentTransformers(function (OpenApi $document): void {
+            // Resource schemas use their short variant name; request schemas use the class name.
+            foreach ([TemplateRequest::class => true, UpdateTemplateRequest::class => false, class_basename(EventTemplateResource::class) => null] as $class => $creating) {
+                if ($document->components->hasSchema($class)) {
+                    $inferred = $document->components->getSchema($class)->type;
+                    $document->components->addSchema($class, Schema::fromType(new TemplateSchema($inferred, $creating)));
+                }
+            }
             foreach ([StoreEventRequest::class => true, UpdateEventRequest::class => false] as $request => $creating) {
                 if ($document->components->hasSchema($request)) {
                     $inferred = $document->components->getSchema($request)->type;
@@ -153,6 +165,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CalendarEvent::class, EventPolicy::class);
         Gate::policy(EventSlot::class, EventSlotPolicy::class);
         Gate::policy(EventAssignment::class, EventAssignmentPolicy::class);
+        Gate::policy(EventTemplate::class, EventTemplatePolicy::class);
         Gate::policy(Ministry::class, MinistryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);

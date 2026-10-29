@@ -6,9 +6,15 @@ use App\Modules\Calendar\Http\Controllers\AssignmentController;
 use App\Modules\Calendar\Http\Controllers\CandidateController;
 use App\Modules\Calendar\Http\Controllers\EventController;
 use App\Modules\Calendar\Http\Controllers\SlotController;
+use App\Modules\Calendar\Http\Controllers\TemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('templates', [TemplateController::class, 'index']);
+    Route::post('templates', [TemplateController::class, 'store']);
+    Route::get('templates/{template}', [TemplateController::class, 'show']);
+    Route::patch('templates/{template}', [TemplateController::class, 'update']);
+    Route::post('templates/{template}/archive', [TemplateController::class, 'archive']);
     Route::get('events', [EventController::class, 'index']);
     Route::post('events', [EventController::class, 'store']);
     Route::get('events/{event}', [EventController::class, 'show']);

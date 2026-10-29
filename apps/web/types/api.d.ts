@@ -958,6 +958,54 @@ export interface paths {
         patch: operations["slot.update"];
         trace?: never;
     };
+    "/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["template.index"];
+        put?: never;
+        post: operations["template.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/templates/{template}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["template.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["template.update"];
+        trace?: never;
+    };
+    "/templates/{template}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["template.archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1101,6 +1149,57 @@ export interface components {
          * @enum {string}
          */
         EventStatus: "scheduled" | "cancelled";
+        /** EventTemplateResource */
+        EventTemplateResource: {
+            id: string;
+            owner_type: components["schemas"]["EventOwnerType"];
+            ministry: {
+                id: string;
+                name: string;
+            } | null;
+            title: string;
+            description: string | null;
+            location: string | null;
+            visibility: components["schemas"]["EventVisibility"];
+            /** @example 10:00 */
+            start_time: string;
+            duration_minutes: number;
+            recurrence: ({
+                /** @constant */
+                type: "weekly";
+                weekday: number;
+            } | {
+                /** @constant */
+                type: "biweekly";
+                weekday: number;
+                /** Format: date */
+                anchor_date: string;
+            } | {
+                /** @constant */
+                type: "monthly_nth_weekday";
+                weekday: number;
+                /** @enum {integer} */
+                nth: -1 | 1 | 2 | 3 | 4 | 5;
+            }) | null;
+            active: boolean;
+            /** Format: date */
+            generated_until: string | null;
+            archived: boolean;
+            can_manage: boolean;
+            slots: components["schemas"]["EventTemplateSlotResource"][];
+        };
+        /** EventTemplateSlotResource */
+        EventTemplateSlotResource: {
+            id: string;
+            label: string;
+            role: {
+                id: string;
+                name: string;
+                ministry_id: string | null;
+            } | null;
+            required_count: number;
+            sort_order: number;
+        };
         /**
          * EventVisibility
          * @enum {string}
@@ -1406,6 +1505,52 @@ export interface components {
             /** @enum {string} */
             content_encoding?: "aesgcm" | "aes128gcm";
         };
+        /** TemplateRequest */
+        TemplateRequest: {
+            owner_type: components["schemas"]["EventOwnerType"];
+            /** Format: ulid */
+            ministry_id?: string;
+            title: string;
+            description?: string | null;
+            location?: string | null;
+            visibility: components["schemas"]["EventVisibility"];
+            /** @example 10:00 */
+            start_time: string;
+            duration_minutes: number;
+            recurrence?: ({
+                /** @constant */
+                type: "weekly";
+                weekday: number;
+            } | {
+                /** @constant */
+                type: "biweekly";
+                weekday: number;
+                /** Format: date */
+                anchor_date: string;
+            } | {
+                /** @constant */
+                type: "monthly_nth_weekday";
+                weekday: number;
+                /** @enum {integer} */
+                nth: -1 | 1 | 2 | 3 | 4 | 5;
+            }) | null;
+            active?: boolean;
+            slots?: {
+                label?: string | null;
+                /** Format: ulid */
+                role_id?: string | null;
+                required_count: number;
+            }[];
+        } & ({
+            /** @constant */
+            owner_type?: "church";
+            ministry_id?: never;
+            /** @enum {unknown} */
+            visibility?: "church" | "assigned";
+        } | {
+            /** @constant */
+            owner_type?: "ministry";
+        });
         /** UpdateAnnouncementRequest */
         UpdateAnnouncementRequest: {
             scope?: never;
@@ -1493,6 +1638,42 @@ export interface components {
             label?: string | null;
             role_id?: string | null;
             required_count?: number;
+        };
+        /** UpdateTemplateRequest */
+        UpdateTemplateRequest: {
+            owner_type?: never;
+            ministry_id?: never;
+            title?: string;
+            description?: string | null;
+            location?: string | null;
+            visibility?: components["schemas"]["EventVisibility"];
+            /** @example 10:00 */
+            start_time?: string;
+            duration_minutes?: number;
+            recurrence?: ({
+                /** @constant */
+                type: "weekly";
+                weekday: number;
+            } | {
+                /** @constant */
+                type: "biweekly";
+                weekday: number;
+                /** Format: date */
+                anchor_date: string;
+            } | {
+                /** @constant */
+                type: "monthly_nth_weekday";
+                weekday: number;
+                /** @enum {integer} */
+                nth: -1 | 1 | 2 | 3 | 4 | 5;
+            }) | null;
+            active?: boolean;
+            slots?: {
+                label?: string | null;
+                /** Format: ulid */
+                role_id?: string | null;
+                required_count: number;
+            }[];
         };
         /** UserPermissionsResource */
         UserPermissionsResource: {
@@ -3969,6 +4150,175 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "template.index": {
+        parameters: {
+            query?: {
+                scope?: string;
+                archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `EventTemplateResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventTemplateResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "template.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventTemplateResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventTemplateResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            /** @description Недопустимый слот. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @enum {string} */
+                        code: "slot.label_required" | "slot.role_not_ministry" | "slot.role_archived_ministry";
+                    };
+                };
+            };
+        };
+    };
+    "template.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The template ID */
+                template: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `EventTemplateResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventTemplateResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "template.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The template ID */
+                template: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventTemplateResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventTemplateResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Архивный шаблон или недопустимый слот. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @enum {string} */
+                        code: "template.archived" | "slot.label_required" | "slot.role_not_ministry" | "slot.role_archived_ministry";
+                    };
+                };
+            };
+        };
+    };
+    "template.archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The template ID */
+                template: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `EventTemplateResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventTemplateResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
 }

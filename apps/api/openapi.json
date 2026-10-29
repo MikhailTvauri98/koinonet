@@ -4750,6 +4750,308 @@
                     }
                 }
             }
+        },
+        "/templates": {
+            "get": {
+                "operationId": "template.index",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "scope",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^(?:church|ministry:[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25})$"
+                        }
+                    },
+                    {
+                        "name": "archived",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `EventTemplateResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/EventTemplateResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "template.store",
+                "tags": [
+                    "Template"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TemplateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`EventTemplateResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventTemplateResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "\u041d\u0435\u0434\u043e\u043f\u0443\u0441\u0442\u0438\u043c\u044b\u0439 \u0441\u043b\u043e\u0442.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "slot.label_required",
+                                                "slot.role_not_ministry",
+                                                "slot.role_archived_ministry"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/templates/{template}": {
+            "get": {
+                "operationId": "template.show",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "template",
+                        "in": "path",
+                        "required": true,
+                        "description": "The template ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`EventTemplateResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventTemplateResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "template.update",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "template",
+                        "in": "path",
+                        "required": true,
+                        "description": "The template ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateTemplateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`EventTemplateResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventTemplateResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "\u0410\u0440\u0445\u0438\u0432\u043d\u044b\u0439 \u0448\u0430\u0431\u043b\u043e\u043d \u0438\u043b\u0438 \u043d\u0435\u0434\u043e\u043f\u0443\u0441\u0442\u0438\u043c\u044b\u0439 \u0441\u043b\u043e\u0442.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "template.archived",
+                                                "slot.label_required",
+                                                "slot.role_not_ministry",
+                                                "slot.role_archived_ministry"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/templates/{template}/archive": {
+            "post": {
+                "operationId": "template.archive",
+                "tags": [
+                    "Template"
+                ],
+                "parameters": [
+                    {
+                        "name": "template",
+                        "in": "path",
+                        "required": true,
+                        "description": "The template ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`EventTemplateResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventTemplateResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -5309,6 +5611,236 @@
                     "cancelled"
                 ],
                 "title": "EventStatus"
+            },
+            "EventTemplateResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "owner_type": {
+                        "$ref": "#/components/schemas/EventOwnerType"
+                    },
+                    "ministry": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/EventVisibility"
+                    },
+                    "start_time": {
+                        "type": "string",
+                        "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                        "example": "10:00"
+                    },
+                    "duration_minutes": {
+                        "type": "integer"
+                    },
+                    "recurrence": {
+                        "anyOf": [
+                            {
+                                "oneOf": [
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "weekly"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday",
+                                            "anchor_date"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "biweekly"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "anchor_date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday",
+                                            "nth"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "monthly_nth_weekday"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "nth": {
+                                                "type": "integer",
+                                                "enum": [
+                                                    -1,
+                                                    1,
+                                                    2,
+                                                    3,
+                                                    4,
+                                                    5
+                                                ]
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "generated_until": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date"
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "can_manage": {
+                        "type": "boolean"
+                    },
+                    "slots": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EventTemplateSlotResource"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "owner_type",
+                    "ministry",
+                    "title",
+                    "description",
+                    "location",
+                    "visibility",
+                    "start_time",
+                    "duration_minutes",
+                    "recurrence",
+                    "active",
+                    "generated_until",
+                    "archived",
+                    "can_manage",
+                    "slots"
+                ],
+                "title": "EventTemplateResource"
+            },
+            "EventTemplateSlotResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "ministry_id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "ministry_id"
+                        ]
+                    },
+                    "required_count": {
+                        "type": "integer"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "role",
+                    "required_count",
+                    "sort_order"
+                ],
+                "title": "EventTemplateSlotResource"
             },
             "EventVisibility": {
                 "type": "string",
@@ -6436,6 +6968,202 @@
                 ],
                 "title": "StorePushSubscriptionRequest"
             },
+            "TemplateRequest": {
+                "type": "object",
+                "properties": {
+                    "owner_type": {
+                        "$ref": "#/components/schemas/EventOwnerType"
+                    },
+                    "ministry_id": {
+                        "type": "string",
+                        "format": "ulid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 5000
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/EventVisibility"
+                    },
+                    "start_time": {
+                        "type": "string",
+                        "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                        "example": "10:00"
+                    },
+                    "duration_minutes": {
+                        "type": "integer",
+                        "minimum": 15,
+                        "maximum": 1440
+                    },
+                    "recurrence": {
+                        "anyOf": [
+                            {
+                                "oneOf": [
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "weekly"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday",
+                                            "anchor_date"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "biweekly"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "anchor_date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday",
+                                            "nth"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "monthly_nth_weekday"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "nth": {
+                                                "type": "integer",
+                                                "enum": [
+                                                    -1,
+                                                    1,
+                                                    2,
+                                                    3,
+                                                    4,
+                                                    5
+                                                ]
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "slots": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 100
+                                },
+                                "role_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "ulid"
+                                },
+                                "required_count": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 50
+                                }
+                            },
+                            "required": [
+                                "required_count"
+                            ]
+                        },
+                        "maxItems": 30
+                    }
+                },
+                "required": [
+                    "owner_type",
+                    "title",
+                    "visibility",
+                    "start_time",
+                    "duration_minutes"
+                ],
+                "oneOf": [
+                    {
+                        "properties": {
+                            "owner_type": {
+                                "const": "church"
+                            },
+                            "ministry_id": false,
+                            "visibility": {
+                                "enum": [
+                                    "church",
+                                    "assigned"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "required": [
+                            "ministry_id"
+                        ],
+                        "properties": {
+                            "owner_type": {
+                                "const": "ministry"
+                            }
+                        }
+                    }
+                ],
+                "title": "TemplateRequest"
+            },
             "UpdateAnnouncementRequest": {
                 "type": "object",
                 "properties": {
@@ -6729,6 +7457,164 @@
                     }
                 },
                 "title": "UpdateSlotRequest"
+            },
+            "UpdateTemplateRequest": {
+                "type": "object",
+                "properties": {
+                    "owner_type": false,
+                    "ministry_id": false,
+                    "title": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 5000
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 200
+                    },
+                    "visibility": {
+                        "$ref": "#/components/schemas/EventVisibility"
+                    },
+                    "start_time": {
+                        "type": "string",
+                        "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                        "example": "10:00"
+                    },
+                    "duration_minutes": {
+                        "type": "integer",
+                        "minimum": 15,
+                        "maximum": 1440
+                    },
+                    "recurrence": {
+                        "anyOf": [
+                            {
+                                "oneOf": [
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "weekly"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday",
+                                            "anchor_date"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "biweekly"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "anchor_date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "type": "object",
+                                        "required": [
+                                            "type",
+                                            "weekday",
+                                            "nth"
+                                        ],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "const": "monthly_nth_weekday"
+                                            },
+                                            "weekday": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "nth": {
+                                                "type": "integer",
+                                                "enum": [
+                                                    -1,
+                                                    1,
+                                                    2,
+                                                    3,
+                                                    4,
+                                                    5
+                                                ]
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "slots": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 100
+                                },
+                                "role_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "ulid"
+                                },
+                                "required_count": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 50
+                                }
+                            },
+                            "required": [
+                                "required_count"
+                            ]
+                        },
+                        "maxItems": 30
+                    }
+                },
+                "title": "UpdateTemplateRequest"
             },
             "UserPermissionsResource": {
                 "type": "object",

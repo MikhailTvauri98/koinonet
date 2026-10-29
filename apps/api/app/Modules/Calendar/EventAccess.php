@@ -59,19 +59,50 @@ final readonly class EventAccess
 
     public function canViewTemplate(User $user, EventTemplate $template): bool
     {
-        if ($user->isDisabled()) {
-            return false;
-        }
-        if ($this->canManageOwner($user, $template->owner_type, $template->ministry_id)) {
-            return true;
-        }
-        if ($template->archived_at !== null) {
-            return false;
-        }
+        return $this->constrainVisibleTemplatesQuery(EventTemplate::query()->whereKey($template->id), $user)->exists();
+    }
 
-        return $template->owner_type === EventOwnerType::Church
-            ? $template->visibility === EventVisibility::Church
-            : in_array($template->ministry_id, $this->visibleMinistryIds($user), true);
+    public function canManageTemplate(User $user, EventTemplate $template): bool
+    {
+        return $this->canManageOwner($user, $template->owner_type, $template->ministry_id);
+    }
+
+    /**
+     * Includes archived history only for managers. Lists may further exclude archives.
+     *
+     * @param  Builder<EventTemplate>  $query
+     * @return Builder<EventTemplate>
+     */
+    public function constrainVisibleTemplatesQuery(Builder $query, User $user): Builder
+    {
+        if ($user->isDisabled()) {
+            return $query->whereRaw('1 = 0');
+        }
+        $resolved = $this->permissions->for($user);
+        if ($resolved->administrator) {
+            return $query;
+        }
+        $manageChurch = $this->permissions->can($user, Permission::CalendarChurchManage);
+        $manageAll = $this->permissions->can($user, Permission::MinistriesManageAll);
+        $managed = array_keys(array_filter($resolved->ministries,
+            fn (array $keys): bool => in_array(Permission::EventsManage->value, $keys, true)));
+        $visible = $this->visibleMinistryIds($user);
+
+        return $query->where(function (Builder $allowed) use ($manageChurch, $manageAll, $managed, $visible): void {
+            $allowed->where(function (Builder $live) use ($visible): void {
+                $live->whereNull('archived_at')->where(function (Builder $public) use ($visible): void {
+                    $public->where(fn (Builder $church): Builder => $church->where('owner_type', EventOwnerType::Church)->where('visibility', EventVisibility::Church))
+                        ->orWhere(fn (Builder $ministry): Builder => $ministry->where('owner_type', EventOwnerType::Ministry)->whereIn('ministry_id', $visible));
+                });
+            });
+            if ($manageChurch) {
+                $allowed->orWhere('owner_type', EventOwnerType::Church);
+            }
+            $allowed->orWhere(function (Builder $ministry) use ($manageAll, $managed): void {
+                $ministry->where('owner_type', EventOwnerType::Ministry)
+                    ->when(! $manageAll, fn (Builder $owned): Builder => $owned->whereIn('ministry_id', $managed));
+            });
+        });
     }
 
     /** @return list<string> */
