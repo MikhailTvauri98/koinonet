@@ -1681,6 +1681,154 @@
                 }
             }
         },
+        "/notifications": {
+            "get": {
+                "operationId": "notificationCenter.index",
+                "tags": [
+                    "NotificationCenter"
+                ],
+                "parameters": [
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "category": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "body": {
+                                                        "type": "string"
+                                                    },
+                                                    "url": {
+                                                        "type": "string"
+                                                    },
+                                                    "read_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "created_at": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "category",
+                                                    "title",
+                                                    "body",
+                                                    "url",
+                                                    "read_at",
+                                                    "created_at"
+                                                ]
+                                            }
+                                        },
+                                        "next_cursor": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "unread_count": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "unread_count"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "next_cursor",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/notifications/read": {
+            "post": {
+                "operationId": "notificationCenter.read",
+                "tags": [
+                    "NotificationCenter"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MarkNotificationsReadRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "unread_count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "unread_count"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/notification-settings": {
             "get": {
                 "operationId": "notificationSettings.index",
@@ -3218,6 +3366,41 @@
                     "password"
                 ],
                 "title": "LoginRequest"
+            },
+            "MarkNotificationsReadRequest": {
+                "oneOf": [
+                    {
+                        "type": "object",
+                        "required": [
+                            "ids"
+                        ],
+                        "properties": {
+                            "ids": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                }
+                            },
+                            "all": false
+                        }
+                    },
+                    {
+                        "type": "object",
+                        "required": [
+                            "all"
+                        ],
+                        "properties": {
+                            "all": {
+                                "type": "boolean",
+                                "const": true
+                            },
+                            "ids": false
+                        }
+                    }
+                ],
+                "title": "MarkNotificationsReadRequest"
             },
             "MeResource": {
                 "type": "object",

@@ -309,6 +309,8 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 `notifications`: стандартная таблица Laravel (`id uuid`, `type`, `notifiable_type`, `notifiable_id char(26)`, `data jsonb`, `read_at`, `created_at`, `updated_at`). UUID записи совместим с каналом `database`, а `notifiable_id` хранит ULID аккаунта. Индексы: `(notifiable_type, notifiable_id, created_at)` и частичный по `notifiable_id WHERE read_at IS NULL`. Это центр уведомлений. Сообщения чатов сюда не пишутся: сам список чатов и есть их «входящие».
 
+Центр доступен своему аккаунту без отдельного права. `GET /notifications?cursor` возвращает `data` с полями `id`, `category`, `title`, `body`, `url`, `read_at`, `created_at`, следующий `next_cursor` и `meta.unread_count` по всему центру аккаунта. Порядок — `created_at DESC, id DESC`, по 30 записей. `POST /notifications/read` принимает либо непустой список UUID `ids`, либо строго `all: true`; наличие обоих полей, `all: false` и пустой выбор дают `422`. Action меняет только непрочитанные записи своего аккаунта, сохраняет прежний `read_at` прочитанных и возвращает `unread_count`. Чужие и неизвестные UUID молча игнорируются.
+
 `notification_settings`: `user_id`, `category` enum `announcements`, `chat`, `assignments`, `reminders`, `enabled bool`. Первичный ключ — пара `(user_id, category)`, отдельного `id` нет. Отсутствие строки означает «включено»; чтение и явное включение категории без сохранённой строки не создают строки. Выключение сохраняется, а повторное включение обновляет существующую строку. `GET /notification-settings` возвращает все четыре категории с русской подписью и состоянием; `PUT` принимает объект `settings` с перечисленными категориями и меняет только их. Неизвестная категория даёт `422` с ошибкой `settings.{category}`. Аккаунт управляет только своими настройками, без отдельного права.
 
 `push_subscriptions`: `id`, `user_id`, `endpoint text UNIQUE`, `public_key`, `auth_token`, `content_encoding`, `user_agent`, `created_at`, `last_success_at`, `failures smallint`. Удаляется при ответе push-сервиса 404 или 410 и при выходе с устройства.
@@ -507,7 +509,7 @@ Markdown очищается на сервере при сохранении (б�
 | `assignments` | галочка «уведомить участников служения» или «уведомить всех» при создании события, по умолчанию выключена | участники служения или все аккаунты | database, webpush, broadcast | `event-{eventId}` |
 | `reminders` | за 24 часа и за 2 часа до начала | аккаунты назначенных | database, webpush, broadcast | `event-{eventId}-reminder` |
 
-Реализация: классы `Notification` Laravel с каналами `database` (центр уведомлений), `webpush` (если категория включена и есть подписки) и `broadcast` (канал `user.{id}`, для живого бейджа). Категория `chat` канал `database` не использует. Все уведомления ставятся в очередь.
+Реализация: общий `Notifications\AppNotification` наследует Laravel `Notification` и реализует `ShouldQueue`. Наследник задаёт `category`, `title`, `body`, `url`, `tag`; базовый класс сериализует их и ограничивает текст предпросмотра шириной 140 символов с многоточием. Каналы: `database` (центр уведомлений), `webpush` (если категория включена и есть подписки) и `broadcast` (канал `user.{id}`, для живого бейджа). Категория `chat` канал `database` не использует. Все уведомления ставятся в очередь. На этапе задачи 3 реализованы `database` и `broadcast`; `webpush` добавляется задачей 4.
 
 Web Push: сервер хранит VAPID-ключи в окружении. Полезная нагрузка содержит заголовок, текст, иконку, `tag` и `data.url` для перехода. Service worker показывает уведомление и по клику открывает или фокусирует нужный маршрут. Ответы 404 и 410 удаляют подписку, прочие ошибки увеличивают `failures`; подписка с десятью подряд ошибками удаляется.
 
@@ -571,7 +573,7 @@ Laravel Reverb за nginx по пути `/app`, клиент Laravel Echo с д�
 
 Каналы:
 
-- `private-user.{userId}`: `notification.created`, `chat.updated` (последнее сообщение и счётчик непрочитанного), `unread.total`.
+- `private-user.{userId}`: уведомления со значением `type: notification.created`, `chat.updated` (последнее сообщение и счётчик непрочитанного), `unread.total`. Для уведомлений Laravel передаёт стандартное имя события `Illuminate\Notifications\Events\BroadcastNotificationCreated`, которое слушает Echo `.notification()`; `AppNotification::broadcastType()` задаёт поле `type` полезной нагрузки, а не имя события. `User::receivesBroadcastNotificationsOn()` возвращает `user.{id}`, префикс `private-` добавляет Laravel. Полезная нагрузка уведомления содержит `id`, `category`, `title`, `body`, `url`, `tag`, `read_at: null`, `created_at` в UTC.
 - `private-chat.{chatId}`: `message.sent`, `message.edited`, `message.deleted`, `chat.pinned`, `chat.members_changed`. Подписка разрешена участникам и читателям с `ministries.view_all`.
 
 Presence-каналы и индикатор набора не используются. Все события broadcast ставятся в очередь. При переподключении клиент запрашивает сообщения открытого чата после последнего известного и заново тянет список чатов.

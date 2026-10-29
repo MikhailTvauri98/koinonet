@@ -512,8 +512,8 @@ composer openapi && git add . && git commit -m "feat(notifications): tables, cat
 ### Задача 3: Базовый класс уведомления и центр уведомлений
 
 **Файлы:**
-- Создать: `app/Modules/Notifications/AppNotification.php`; `Actions/MarkNotificationsRead.php`; `Http/Controllers/NotificationCenterController.php`, `Http/Requests/MarkNotificationsReadRequest.php`, `Http/Resources/NotificationResource.php`
-- Изменить: `app/Modules/Notifications/routes.php`; `app/Modules/Directory/Models/User.php` (`receivesBroadcastNotificationsOn()`)
+- Создать: `app/Modules/Notifications/AppNotification.php`; `Actions/MarkNotificationsRead.php`; `Http/Controllers/NotificationCenterController.php`, `Http/Requests/MarkNotificationsReadRequest.php`, `Http/Resources/NotificationResource.php`, `OpenApi/MarkNotificationsReadSchema.php`
+- Изменить: `app/Modules/Notifications/routes.php`; `app/Modules/Directory/Models/User.php` (`receivesBroadcastNotificationsOn()`), `app/Providers/AppServiceProvider.php` (уточнение OpenAPI), `lang/ru/validation.php`, `openapi.json`, `apps/web/types/api.d.ts`, `docs/architecture.md`
 - Тест: `tests/Feature/Notifications/NotificationCenterTest.php`, `tests/Unit/Notifications/AppNotificationTest.php`
 
 **Интерфейсы:**
@@ -522,7 +522,7 @@ composer openapi && git add . && git commit -m "feat(notifications): tables, cat
 - Отдаёт наружу: `GET /notifications?cursor` → `{ data: [{id, category, title, body, url, read_at, created_at}], next_cursor, meta: {unread_count} }`; `POST /notifications/read` с `{ ids: [...] }` или `{ all: true }` → `{ unread_count }`.
 - Канал `webpush` в `via()` добавляет задача 4; в этой задаче `via()` отдаёт `broadcast` и, кроме категории `chat`, `database`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Unit/Notifications/AppNotificationTest.php`:
 
@@ -547,20 +547,20 @@ final class SampleNotification extends AppNotification
 }
 
 it('goes to the center and the live channel by default', function () {
-    $user = User::factory()->create();
+    $user = new User;
 
     expect((new SampleNotification(NotificationCategory::Announcements))->via($user))
         ->toEqualCanonicalizing(['database', 'broadcast']);
 });
 
 it('skips the center for the chat category', function () {
-    $user = User::factory()->create();
+    $user = new User;
 
     expect((new SampleNotification(NotificationCategory::Chat))->via($user))->toEqual(['broadcast']);
 });
 
 it('serialises category, title, body, url and tag', function () {
-    $user = User::factory()->create();
+    $user = new User;
 
     expect((new SampleNotification(NotificationCategory::Reminders))->toArray($user))->toMatchArray([
         'category' => 'reminders',
@@ -572,7 +572,7 @@ it('serialises category, title, body, url and tag', function () {
 });
 
 it('broadcasts on the private user channel under a stable event name', function () {
-    $user = User::factory()->create();
+    $user = new User;
     $notification = new SampleNotification(NotificationCategory::Assignments);
 
     expect($user->receivesBroadcastNotificationsOn())->toBe("user.{$user->id}")
@@ -680,12 +680,12 @@ it('requires either ids or all', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Notifications tests/Feature/Notifications/NotificationCenterTest.php`
 Ожидается: FAIL, класса `AppNotification` и маршрутов нет.
 
-- [ ] **Шаг 3: Базовый класс**
+- [x] **Шаг 3: Базовый класс**
 
 ```php
 <?php
@@ -763,18 +763,18 @@ public function receivesBroadcastNotificationsOn(): string
 }
 ```
 
-- [ ] **Шаг 4: Центр уведомлений**
+- [x] **Шаг 4: Центр уведомлений**
 
-Контроллер `index`: `$request->user()->notifications()->latest('created_at')->latest('id')->cursorPaginate(30)`; `meta.unread_count` — `unreadNotifications()->count()`. `MarkNotificationsReadRequest`: `ids` — `array|required_without:all`, `ids.*` — `uuid`; `all` — `boolean|required_without:ids`. `MarkNotificationsRead::handle(User $user, ?array $ids, bool $all): int` обновляет только строки этого аккаунта и возвращает свежий `unread_count`.
+Контроллер `index`: `$request->user()->notifications()->reorder()->latest('created_at')->latest('id')->cursorPaginate(30)`; `meta.unread_count` — `unreadNotifications()->count()`. `MarkNotificationsReadRequest`: либо непустой последовательный список UUID `ids`, либо строго `all: true`. Оба поля вместе (включая `all: false`), пустой выбор, неверные UUID и не boolean `all` дают `422`. OpenAPI через `OpenApi/MarkNotificationsReadSchema.php` описывает взаимоисключающие варианты `oneOf`; схема и клиентские типы генерируются заново. `MarkNotificationsRead::handle(User $user, ?array $ids, bool $all): int` обновляет только непрочитанные строки этого аккаунта и возвращает свежий `unread_count`; прежняя дата прочтения сохраняется.
 
 `NotificationResource`: `id`, `category`, `title`, `body`, `url` из `data`, `read_at`, `created_at`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Notifications tests/Feature/Notifications`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(notifications): base notification class and notification center"
@@ -785,7 +785,7 @@ composer openapi && git add . && git commit -m "feat(notifications): base notifi
 - Категория `chat` не пишется в центр (раздел 5.7: «сообщения чатов сюда не пишутся»).
 - Центр показывает только свои уведомления, курсорная пагинация по 30, счётчик непрочитанного в `meta`.
 - Отметка чужого уведомления прочитанным молча не срабатывает — ни ошибки, ни изменения.
-- Событие broadcast называется `notification.created` и уходит в `private-user.{id}` (раздел 9).
+- Уведомление содержит `type: notification.created` и уходит в `private-user.{id}`; стандартное имя события Laravel `Illuminate\Notifications\Events\BroadcastNotificationCreated` сохраняется для Echo `.notification()` (раздел 9).
 
 ---
 

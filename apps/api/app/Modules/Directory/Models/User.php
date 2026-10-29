@@ -73,4 +73,9 @@ final class User extends Authenticatable
     {
         return $this->getAttribute('disabled_at') !== null;
     }
+
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return "user.{$this->id}";
+    }
 }

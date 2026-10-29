@@ -35,8 +35,13 @@ use App\Modules\Ministries\Events\MinistryArchived;
 use App\Modules\Ministries\Listeners\BumpMembershipPermissionCache;
 use App\Modules\Ministries\Models\Ministry;
 use App\Modules\Ministries\Policies\MinistryPolicy;
+use App\Modules\Notifications\Http\Requests\MarkNotificationsReadRequest;
+use App\Modules\Notifications\OpenApi\MarkNotificationsReadSchema;
 use App\Modules\Settings\Models\Setting;
 use App\Modules\Settings\Policies\SettingsPolicy;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\Schema;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -63,6 +68,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Scramble::configure()->withDocumentTransformers(function (OpenApi $document): void {
+            if ($document->components->hasSchema(MarkNotificationsReadRequest::class)) {
+                $document->components->addSchema(MarkNotificationsReadRequest::class, Schema::fromType(new MarkNotificationsReadSchema));
+            }
+
+            foreach ($document->paths as $path) {
+                if (trim($path->path, '/') === 'notifications/read') {
+                    $path->operations['post']->requestBodyObject?->required();
+                }
+            }
+        });
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
         $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
