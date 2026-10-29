@@ -34,7 +34,7 @@
 1. **Выключенная категория останавливает только пуши.** Раздел 7.7 перечисляет каналы буквально: `database` и `broadcast` идут всегда, `webpush` — «если категория включена и есть подписки». Категория `chat` канал `database` не использует (фаза 4). Поэтому центр уведомлений показывает всё, что касается аккаунта, а переключатель категории управляет тем, что приходит на телефон.
 2. **Собственный канал `webpush` поверх `minishlink/web-push`, без `laravel-notification-channels/webpush`.** Таблица пакета (`subscribable_type/id`, без `failures`, `last_success_at`, `user_agent`) не совпадает с разделом 5.7, а его обработка ошибок не считает десять неудач подряд. Канал занимает один класс; в том же изменении правится строка «Пуши» в таблице раздела 2 архитектуры.
 3. **Контракт владельца медиафайла фиксируется здесь.** Фаза 1 (задача 22) объявила `Media\Contracts\MediaOwnerResolver` как точку расширения, не зафиксировав сигнатуру. С этой фазы контракт такой: `public function canView(User $viewer, Media $media): ?bool` — `null`, если медиафайл не принадлежит объекту этого модуля; реализации регистрируются тегом контейнера `media.owner_resolvers`, `MediaAccess::canView` опрашивает их после прямых ссылок (фото человека, обложка служения) и до правила «свой непривязанный файл». Если задача 22 реализовала контракт иначе, задача 7 этой фазы приводит его к этому виду; сигнатура `MediaAccess::canView(User, Media): bool` не меняется.
-4. **Привязка вложений — один Action модуля Media.** `SyncAttachments::handle(Model $attachable, list<string> $mediaIds, User $uploader): void` привязывает новые файлы и отвязывает с физическим удалением те, что исчезли из списка. Его же используют события (фаза 3) и сообщения (фаза 4). Правила те же, что у `AttachDirectMedia` фазы 1: файл загрузил тот же аккаунт, файл обработан (`media.not_ready` иначе), файл ещё никуда не привязан.
+4. **Привязка вложений — один Action модуля Media.** `SyncAttachments::handle(Model $attachable, list<string> $mediaIds, User $uploader): void` привязывает новые файлы и отвязывает с физическим удалением те, что исчезли из списка. Его же используют события (фаза 3) и сообщения (фаза 4). Для новых ID правила те же, что у `AttachDirectMedia` фазы 1: файл загрузил тот же аккаунт, файл обработан (`media.not_ready` иначе), файл ещё никуда не привязан. Сохранённые ID доступны любому уполномоченному редактору. Все ID блокируются до изменения связей, удаление байтов происходит только после внешнего коммита (уточнения R2–R4 задачи 7).
 5. **Стирание аккаунта расширяется контрактом.** `people:erase` фазы 1 удаляет строку `users`, но подписки и настройки уведомлений лежат в таблицах Notifications, куда Directory писать не может, а внешний ключ `RESTRICT` не даст удалить аккаунт. Контракт `Directory\Contracts\AccountEraser { public function eraseAccount(string $userId): void; }` и тег `directory.account_erasers` уже есть с фазы 1: команда вызывает все помеченные реализации в той же транзакции до удаления аккаунта, реализации Access, Ministries и Media там уже зарегистрированы. Notifications добавляет свою в задаче 4, Announcements — в задаче 5, Chat — в фазе 4. Колонка `announcements.author_user_id` по той же причине допускает `null`: автор стёрт, объявление осталось.
 6. **Новое право служения не выдаётся существующим ролям «Лидер».** Роль «Лидер» получила все права служения в момент создания служения. `announcements.publish` появляется в каталоге позже; администратор или носитель `roles.manage` выдаёт его в редакторе роли. Автоматическая раздача противоречила бы ADR-0003 (никаких неявных выдач).
 7. **`hide_after` — дата в часовом поясе церкви.** Список показывает объявление, пока `hide_after >= сегодня` по календарю церкви; по прямой ссылке скрытое по дате объявление открывается. Архивное объявление из списка исчезает для всех, по прямой ссылке открывается только тем, кто может его править; остальным — `404`.
@@ -1777,15 +1777,15 @@ composer openapi && git add . && git commit -m "feat(announcements): list, visib
 **Файлы:**
 - Создать: `app/Modules/Media/Actions/SyncAttachments.php`; `app/Modules/Announcements/AnnouncementMediaOwnerResolver.php`
 - Изменить: `app/Modules/Media/Contracts/MediaOwnerResolver.php` (контракт из решения 3), `app/Modules/Media/MediaAccess.php` (опрос тегированных резолверов), `PublishAnnouncement`, `UpdateAnnouncement` (вызов `SyncAttachments`), `AnnouncementResource` (`attachments`), `Announcement` (`attachments(): MorphMany` через `media_attachments`), `AppServiceProvider` (тег `media.owner_resolvers`)
-- Тест: `tests/Feature/Announcements/AnnouncementAttachmentTest.php`
+- Тесты: `tests/Feature/Announcements/AnnouncementAttachmentTest.php`, `AnnouncementAttachmentCommitTest.php`
 
 **Интерфейсы:**
 - Отдаёт наружу: `interface MediaOwnerResolver { public function canView(User $viewer, Media $media): ?bool; }` — `null`, если медиафайл не принадлежит объектам модуля.
-- Отдаёт наружу: `SyncAttachments::handle(Model $attachable, list<string> $mediaIds, User $uploader): void` — привязывает новые (в порядке списка, `sort_order`), отвязывает и физически удаляет пропавшие. Коды: `media.not_owned`, `media.already_attached`.
+- Отдаёт наружу: `SyncAttachments::handle(Model $attachable, list<string> $mediaIds, User $uploader): void` — привязывает новые (в порядке списка, `sort_order`), отвязывает и физически удаляет пропавшие. Коды: `media.not_owned`, `media.not_ready`, `media.already_attached`; проверка различности списка. Физическое удаление после внешнего коммита.
 - Отдаёт наружу: `POST /announcements` и `PATCH /announcements/{id}` принимают `media_ids: list<ulid>`; `AnnouncementResource.attachments: list<MediaResource>`.
 - Потребляет: `Media::factory()`, `MediaResource`, `MediaAccess::canView`, маршрут `media.show` из фазы 1.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Announcements/AnnouncementAttachmentTest.php`:
 
@@ -1876,104 +1876,34 @@ it('hides an attachment of a ministry announcement from a non-member', function 
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Announcements/AnnouncementAttachmentTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Контракт владельца и `SyncAttachments`**
+- [x] **Шаг 3: Контракт владельца и `SyncAttachments`**
 
-```php
-<?php
+Существующий `MediaOwnerResolver::canView(User $user, Media $media): ?bool` и внедрение тега `media.owner_resolvers` сохраняются. `AnnouncementMediaOwnerResolver` возвращает `null`, если нет вложения типа `announcement`, иначе проверяет `AnnouncementVisibility::canSee`; отсутствующий владелец означает отказ. `MediaAccess` допускает возврат к загрузившему только при отсутствии вложений.
 
-declare(strict_types=1);
+`SyncAttachments::handle(Model $attachable, list<string> $mediaIds, User $uploader): void` — единственный Action записи вложений. Порядок:
 
-namespace App\Modules\Media\Contracts;
+1. Транзакция и блокировка объекта-владельца, чтение текущих вложений.
+2. Общий `Media::lockedFind` для объединения текущих и желаемых ID в стабильном порядке. Весь желаемый список проверяется до изменения связей; повторения запрещены. Новые файлы должны принадлежать загрузившему, иметь `ready` и не использоваться (`MediaUsage` учитывает прямые ссылки). Ошибки `media.not_owned`, `media.not_ready`, `media.already_attached`; сохранённые вложения может оставить и переставить другой уполномоченный редактор.
+3. Исчезнувшие связи и строки медиафайлов удаляются внутри транзакции, оригиналы и варианты по `storedPaths()` удаляются через `DB::afterCommit` только после внешнего коммита. Откат не меняет байты.
+4. Новые связи создаются, сохранённым обновляется `sort_order` по порядку списка. Конкурирующие прямые привязки/удаления используют ту же блокировку строки медиафайла.
 
-use App\Modules\Directory\Models\User;
-use App\Modules\Media\Models\Media;
+`Announcement::attachments(): MorphMany` возвращает вложения в порядке `sort_order`; ресурс отдаёт `MediaResource` каждого медиафайла, запрос списка загружает `attachments.media`. Морф-имя регистрируется через **необязательную** `Relation::morphMap(['announcement' => Announcement::class])`; глобальный `enforceMorphMap` запрещён: существующие уведомления сохраняют `User` FQCN.
 
-interface MediaOwnerResolver
-{
-    /** null — медиафайл не принадлежит объектам этого модуля */
-    public function canView(User $viewer, Media $media): ?bool;
-}
-```
+`PublishAnnouncement` и `UpdateAnnouncement` оборачивают сохранение объявления и синхронизацию в одну внешнюю транзакцию. На PATCH отсутствие `media_ids` сохраняет вложения, переданный список полностью заменяет их, пустой удаляет все. FormRequest проверяет `array|list`, а элементы — `ulid|distinct|exists:media,id`. `AnnouncementPublished` сохраняет `ShouldDispatchAfterCommit`: ошибка вложений не вызывает событие, успешная публикация доставляет его только после внешнего коммита.
 
-В `MediaAccess::canView` после проверок фото человека и обложки служения:
+Тесты дополняют исходные примеры: неготовые/занятые файлы, прямые ссылки, недопустимые списки, сохранение другим редактором, откат названия/связей/байтов, общая блокировка всех ID до записи, видимость скрытых по дате/архивных вложений без обхода для загрузившего. `AnnouncementAttachmentCommitTest` использует `DatabaseMigrations`, а не оборачивающий всё в транзакцию `RefreshDatabase`: доказывает отложенное удаление оригиналов/вариантов при коммите, сохранение при откате и отсутствие события при провале синхронизации.
 
-```php
-foreach (app()->tagged('media.owner_resolvers') as $resolver) {
-    $verdict = $resolver->canView($viewer, $media);
-    if ($verdict !== null) {
-        return $verdict;
-    }
-}
-
-return $media->attachment === null && $media->uploader_user_id === $viewer->id;
-```
-
-```php
-final class SyncAttachments
-{
-    /** @param list<string> $mediaIds */
-    public function handle(Model $attachable, array $mediaIds, User $uploader): void
-    {
-        DB::transaction(function () use ($attachable, $mediaIds, $uploader) {
-            $current = MediaAttachment::query()
-                ->where('attachable_type', $attachable->getMorphClass())
-                ->where('attachable_id', $attachable->getKey())
-                ->get()
-                ->keyBy('media_id');
-
-            foreach ($current as $mediaId => $attachment) {
-                if (! in_array($mediaId, $mediaIds, true)) {
-                    $attachment->delete();
-                    app(DeleteMediaFile::class)->handle($attachment->media);
-                }
-            }
-
-            foreach (array_values($mediaIds) as $position => $mediaId) {
-                if ($current->has($mediaId)) {
-                    $current[$mediaId]->update(['sort_order' => $position]);
-                    continue;
-                }
-
-                $media = Media::query()->findOrFail($mediaId);
-
-                if ($media->uploader_user_id !== $uploader->id) {
-                    throw DomainRuleException::because('media.not_owned', 'Файл загружен другим аккаунтом.');
-                }
-
-                if ($media->attachment()->exists() || $media->isDirectlyReferenced()) {
-                    throw DomainRuleException::because('media.already_attached', 'Файл уже используется.');
-                }
-
-                MediaAttachment::query()->create([
-                    'media_id' => $media->id,
-                    'attachable_type' => $attachable->getMorphClass(),
-                    'attachable_id' => $attachable->getKey(),
-                    'sort_order' => $position,
-                    'created_at' => now(),
-                ]);
-            }
-        });
-    }
-}
-```
-
-`DeleteMediaFile::handle(Media $media): void` — выделяется из `DELETE /media/{id}` фазы 1 (удаление файла, вариантов и записи), если там это было инлайном; `Media::isDirectlyReferenced(): bool` проверяет `people.photo_media_id` и `ministries.cover_media_id`. Морф-имена: `Relation::enforceMorphMap(['announcement' => Announcement::class, ...])` в `AppServiceProvider` — короткие имена в `attachable_type`, а не FQCN.
-
-`AnnouncementMediaOwnerResolver::canView`: находит `media_attachments` с `attachable_type = 'announcement'`; нет — `null`; есть — `AnnouncementVisibility::canSee($viewer, $announcement)`. Регистрация: `$this->app->tag([AnnouncementMediaOwnerResolver::class], 'media.owner_resolvers')`.
-
-`PublishAnnouncement` и `UpdateAnnouncement` вызывают `SyncAttachments` внутри транзакции создания/правки: при `media.not_owned` объявление не создаётся.
-
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Announcements tests/Feature/Media`
 Ожидается: PASS, тесты Media фазы 1 не сломаны.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(media,announcements): attachments sync and announcement media owner"

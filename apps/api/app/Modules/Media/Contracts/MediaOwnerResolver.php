@@ -10,10 +10,9 @@ use App\Modules\Media\Models\Media;
 
 /**
  * One additional kind of media owner (section 6.4): a chat avatar, or an
- * attachment on a message, announcement or event. Phase 1 has no such
- * owners yet - person photo and ministry cover are checked directly by
- * {@see MediaAccess} - so nothing implements this interface today. A later
- * phase that introduces one of those owners binds its resolver under the
+ * attachment on a message, announcement or event. Person photos and ministry
+ * covers are checked directly by {@see MediaAccess}. A module introducing
+ * one of the other owners binds its resolver under the
  * `media.owner_resolvers` container tag instead of changing MediaAccess
  * itself.
  */

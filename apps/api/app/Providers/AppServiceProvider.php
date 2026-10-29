@@ -15,6 +15,7 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Access\Policies\AuditPolicy;
 use App\Modules\Access\Policies\RolePolicy;
 use App\Modules\Announcements\Actions\AnnouncementsAccountEraser;
+use App\Modules\Announcements\AnnouncementMediaOwnerResolver;
 use App\Modules\Announcements\Http\Requests\StoreAnnouncementRequest;
 use App\Modules\Announcements\Http\Requests\UpdateAnnouncementRequest;
 use App\Modules\Announcements\Models\Announcement;
@@ -54,6 +55,7 @@ use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\RequestBodyObject;
 use Dedoc\Scramble\Support\Generator\Schema;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -74,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
             'directory.account_erasers',
         );
         $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
+        $this->app->tag([AnnouncementMediaOwnerResolver::class], 'media.owner_resolvers');
     }
 
     /**
@@ -81,6 +84,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Relation::morphMap(['announcement' => Announcement::class]);
         Scramble::configure()->withDocumentTransformers(function (OpenApi $document): void {
             foreach ([StoreAnnouncementRequest::class => true, UpdateAnnouncementRequest::class => false] as $request => $creating) {
                 if ($document->components->hasSchema($request)) {

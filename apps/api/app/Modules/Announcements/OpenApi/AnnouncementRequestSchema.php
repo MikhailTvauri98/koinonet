@@ -20,6 +20,7 @@ final class AnnouncementRequestSchema extends Type
     {
         /** @var array{properties: array<string, mixed>} $schema */
         $schema = $this->inferred->toArray();
+        $schema['properties']['media_ids']['items']['format'] = 'ulid';
         if (! $this->creating) {
             $schema['properties']['scope'] = false;
             $schema['properties']['ministry_id'] = false;

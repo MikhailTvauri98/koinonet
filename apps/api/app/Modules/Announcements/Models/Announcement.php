@@ -6,6 +6,7 @@ namespace App\Modules\Announcements\Models;
 
 use App\Modules\Announcements\AnnouncementScope;
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Models\MediaAttachment;
 use App\Modules\Ministries\Models\Ministry;
 use App\Support\DomainRuleException;
 use Database\Factories\AnnouncementFactory;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -80,5 +82,11 @@ final class Announcement extends Model
     public function views(): HasMany
     {
         return $this->hasMany(AnnouncementView::class);
+    }
+
+    /** @return MorphMany<MediaAttachment, $this> */
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(MediaAttachment::class, 'attachable')->orderBy('sort_order')->orderBy('id');
     }
 }

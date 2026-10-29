@@ -224,7 +224,7 @@ it('documents publication fields and immutable scope accurately', function () {
         ->and($resource['published_at']['format'])->toBe('date-time')
         ->and($resource['hide_after']['format'])->toBe('date')
         ->and($resource['author']['type'])->toContain('null')
-        ->and($resource['attachments']['maxItems'])->toBe(0);
+        ->and($resource['attachments']['items'])->toBe(['$ref' => '#/components/schemas/MediaResource']);
     $update = $schema['components']['schemas']['UpdateAnnouncementRequest'];
     expect($update['properties']['scope'])->toBeFalse()
         ->and($update['properties']['ministry_id'])->toBeFalse();

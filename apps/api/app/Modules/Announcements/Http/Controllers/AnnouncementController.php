@@ -44,7 +44,7 @@ final class AnnouncementController
         assert($viewer instanceof User);
         $recordView->handle($announcement, $viewer);
 
-        return new AnnouncementResource($announcement->load(['ministry', 'author.person'])->loadCount('views'));
+        return new AnnouncementResource($announcement->load(['ministry', 'author.person', 'attachments.media'])->loadCount('views'));
     }
 
     public function pin(Announcement $announcement, PinAnnouncement $pin): AnnouncementResource
@@ -70,7 +70,7 @@ final class AnnouncementController
 
     public function store(StoreAnnouncementRequest $request, PublishAnnouncement $publish): JsonResponse
     {
-        /** @var array{scope: string, ministry_id?: string|null, title: string, body: string, pinned?: bool, hide_after?: string|null, notify_on_publish?: bool} $attributes */
+        /** @var array{scope: string, ministry_id?: string|null, title: string, body: string, pinned?: bool, hide_after?: string|null, notify_on_publish?: bool, media_ids?: list<string>} $attributes */
         $attributes = $request->validated();
         $attributes['scope'] = AnnouncementScope::from($attributes['scope']);
         Gate::authorize('create', [Announcement::class, $attributes['scope'], $attributes['ministry_id'] ?? null]);
@@ -84,9 +84,11 @@ final class AnnouncementController
     public function update(UpdateAnnouncementRequest $request, Announcement $announcement, UpdateAnnouncement $update): AnnouncementResource
     {
         Gate::authorize('update', $announcement);
-        /** @var array{title?: string, body?: string, pinned?: bool, hide_after?: string|null, notify_on_publish?: bool} $attributes */
+        /** @var array{title?: string, body?: string, pinned?: bool, hide_after?: string|null, notify_on_publish?: bool, media_ids?: list<string>} $attributes */
         $attributes = $request->validated();
+        $editor = $request->user();
+        assert($editor instanceof User);
 
-        return new AnnouncementResource($update->handle($announcement, $attributes));
+        return new AnnouncementResource($update->handle($announcement, $attributes, $editor));
     }
 }

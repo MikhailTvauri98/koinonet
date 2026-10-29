@@ -8,6 +8,7 @@ use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Modules\Media\Contracts\MediaOwnerResolver;
 use App\Modules\Media\Models\Media;
+use App\Modules\Media\Models\MediaAttachment;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Support\Facades\Gate;
 
@@ -53,6 +54,7 @@ final readonly class MediaAccess
         }
 
         // Not attached to any owner yet: only the account that uploaded it can see it.
-        return $media->isUploadedBy($user->id);
+        return ! MediaAttachment::query()->where('media_id', $media->id)->exists()
+            && $media->isUploadedBy($user->id);
     }
 }

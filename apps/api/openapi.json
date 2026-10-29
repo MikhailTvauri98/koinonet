@@ -3963,10 +3963,8 @@
                     "attachments": {
                         "type": "array",
                         "items": {
-                            "type": "string"
-                        },
-                        "minItems": 0,
-                        "maxItems": 0
+                            "$ref": "#/components/schemas/MediaResource"
+                        }
                     }
                 },
                 "required": [
@@ -4800,8 +4798,10 @@
                     "media_ids": {
                         "type": "array",
                         "items": {
-                            "type": "string"
-                        }
+                            "type": "string",
+                            "format": "ulid"
+                        },
+                        "uniqueItems": true
                     }
                 },
                 "required": [
@@ -4978,8 +4978,10 @@
                     "media_ids": {
                         "type": "array",
                         "items": {
-                            "type": "string"
-                        }
+                            "type": "string",
+                            "format": "ulid"
+                        },
+                        "uniqueItems": true
                     }
                 },
                 "title": "UpdateAnnouncementRequest"

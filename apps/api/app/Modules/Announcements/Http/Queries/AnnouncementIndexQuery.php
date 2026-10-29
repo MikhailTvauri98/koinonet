@@ -25,7 +25,7 @@ final readonly class AnnouncementIndexQuery
         return $this->visibility->constrainActiveQuery($query, $viewer)
             ->when($scope !== null, fn (Builder $filtered): Builder => $filtered->where('scope', $scope))
             ->when($ministryId !== null, fn (Builder $filtered): Builder => $filtered->where('ministry_id', $ministryId))
-            ->with(['ministry', 'author.person'])
+            ->with(['ministry', 'author.person', 'attachments.media'])
             ->withCount('views')
             ->orderByRaw('pinned_at IS NULL')
             ->orderByDesc('pinned_at')

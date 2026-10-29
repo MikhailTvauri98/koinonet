@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $attachable_id
  * @property int $sort_order
  * @property Carbon $created_at
+ * @property-read Media $media
  */
 final class MediaAttachment extends Model
 {

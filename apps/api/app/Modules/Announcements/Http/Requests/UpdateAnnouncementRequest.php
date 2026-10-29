@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Announcements\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class UpdateAnnouncementRequest extends FormRequest
 {
@@ -24,7 +25,8 @@ final class UpdateAnnouncementRequest extends FormRequest
             'pinned' => ['sometimes', 'boolean'],
             'hide_after' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'notify_on_publish' => ['sometimes', 'boolean'],
-            'media_ids' => ['sometimes', 'array'],
+            'media_ids' => ['sometimes', 'array', 'list'],
+            'media_ids.*' => ['required', 'ulid', 'distinct', Rule::exists('media', 'id')],
         ];
     }
 }

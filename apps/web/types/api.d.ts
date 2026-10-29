@@ -874,7 +874,7 @@ export interface components {
             published_at: string;
             archived: boolean;
             views_count?: number;
-            attachments: string[];
+            attachments: components["schemas"]["MediaResource"][];
         };
         /**
          * AnnouncementScope

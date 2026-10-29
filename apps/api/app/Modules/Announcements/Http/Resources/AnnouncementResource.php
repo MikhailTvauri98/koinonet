@@ -6,7 +6,11 @@ namespace App\Modules\Announcements\Http\Resources;
 
 use App\Modules\Announcements\AnnouncementScope;
 use App\Modules\Announcements\Models\Announcement;
+use App\Modules\Media\Http\Resources\MediaResource;
+use App\Modules\Media\Models\Media;
+use App\Modules\Media\Models\MediaAttachment;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Support\Facades\Gate;
@@ -19,7 +23,7 @@ final class AnnouncementResource extends JsonResource
      *   id: string, scope: AnnouncementScope, ministry: array{id: string, name: string}|null,
      *   author: array{id: string, full_name: string}|null, title: string, body: string,
      *   pinned: bool, hide_after: string|null, notify_on_publish: bool, published_at: string,
-     *   archived: bool, attachments: list<never>, views_count: int|MissingValue
+     *   archived: bool, attachments: AnonymousResourceCollection, views_count: int|MissingValue
      * }
      */
     public function toArray(Request $request): array
@@ -47,7 +51,9 @@ final class AnnouncementResource extends JsonResource
                 Gate::allows('update', $announcement),
                 fn (): int => $announcement->views_count ?? $announcement->views()->count(),
             ),
-            'attachments' => [],
+            'attachments' => MediaResource::collection($announcement->attachments->map(
+                fn (MediaAttachment $attachment): Media => $attachment->media,
+            )),
         ];
     }
 }
