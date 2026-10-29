@@ -567,7 +567,7 @@ nginx: `client_max_body_size 100m`. PHP: `upload_max_filesize = 100M`, `post_max
 
 ## 9. Realtime
 
-Laravel Reverb за nginx по пути `/app`, клиент Laravel Echo с драйвером `reverb`. Авторизация каналов через `/broadcasting/auth` по cookie-сессии. Адрес сокета клиент берёт из своего же источника (`window.location`: хост, порт и схема страницы, путь `/app`), а публичный ключ приложения Reverb — из `GET /settings`, как и публичный ключ VAPID: в собранном клиенте нет ни домена, ни ключа, и образ `web` не зависит от домена (раздел 11).
+Laravel Reverb за nginx по пути `/app`, клиент Laravel Echo с драйвером `reverb`. Авторизация каналов через `/broadcasting/auth` по cookie-сессии: гость получает `401` JSON, чужой канал и отключённый аккаунт — `403`. В dev Nuxt проксирует `/broadcasting` и WebSocket `/app` на `NUXT_API_PROXY_TARGET`, как `/api`. Адрес сокета клиент берёт из своего же источника (`window.location`: хост, порт и схема страницы, путь `/app`), а публичный ключ приложения Reverb — из `GET /settings`, как и публичный ключ VAPID: в собранном клиенте нет ни домена, ни ключа, и образ `web` не зависит от домена (раздел 11).
 
 Каналы:
 

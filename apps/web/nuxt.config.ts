@@ -23,6 +23,14 @@ export default defineNuxtConfig({
   routeRules: {
     '/api/**': { proxy: `${apiProxyTarget}/api/**` },
     '/sanctum/**': { proxy: `${apiProxyTarget}/sanctum/**` },
+    '/broadcasting/**': { proxy: `${apiProxyTarget}/broadcasting/**` },
+  },
+  nitro: {
+    // Нужен Nitro >= 2.13.5 (закреплён в lockfile): 2.13.4 игнорирует ws.
+    // devProxy снимает префикс /app, поэтому восстанавливаем его в target.
+    devProxy: {
+      '/app': { target: `${apiProxyTarget}/app`, ws: true, changeOrigin: true },
+    },
   },
   app: {
     head: {

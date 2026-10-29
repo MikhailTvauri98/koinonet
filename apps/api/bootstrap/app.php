@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        ['middleware' => ['web', 'auth']],
+    )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         // Экран входа живёт в SPA, у API его нет, поэтому гостя некуда
@@ -26,11 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // RouteNotFoundException — обработчик отдаёт её как 500 («Route [login]
         // not defined.»), до 401 дело не доходит. Без адреса перенаправления
         // AuthenticationException доходит до обработчика, и тот отвечает на
-        // api/* — а других защищённых маршрутов нет — 401 в JSON.
+        // api/* и broadcasting/* — 401 в JSON.
         $middleware->redirectGuestsTo(fn (): ?string => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $rendersJson = fn (Request $request): bool => $request->is('api/*') || $request->expectsJson();
+        $rendersJson = fn (Request $request): bool => $request->is('api/*', 'broadcasting/*') || $request->expectsJson();
 
         $exceptions->shouldRenderJsonWhen($rendersJson);
         $exceptions->render(

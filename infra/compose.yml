@@ -35,6 +35,13 @@ services:
     environment: *app-environment
     volumes: ['../apps/api:/app', 'media:/media']
     depends_on: [app]
+  reverb:
+    build: { context: ./php }
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    user: www-data
+    environment: *app-environment
+    volumes: ['../apps/api:/app']
+    depends_on: [app]
   web:
     image: nginx:alpine
     volumes:
@@ -50,5 +57,5 @@ services:
         read_only: true
         volume: { nocopy: true }
     ports: ['8080:80']
-    depends_on: [app]
+    depends_on: [app, reverb]
 volumes: { pgdata: {}, redisdata: {}, media: {} }

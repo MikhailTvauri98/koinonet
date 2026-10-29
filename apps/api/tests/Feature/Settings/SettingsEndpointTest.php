@@ -23,6 +23,22 @@ it('shows the public settings to any account', function () {
         ->assertJsonMissingPath('data.phone_region');
 });
 
+it('exposes only the public reverb key in settings', function () {
+    actingAsUser();
+    config([
+        'broadcasting.connections.reverb.key' => 'local-key',
+        'broadcasting.connections.reverb.secret' => 'private-secret',
+    ]);
+
+    $this->getJson('/api/v1/settings')
+        ->assertOk()
+        ->assertExactJson(['data' => [
+            'church_name' => app(ChurchSettings::class)->name(),
+            'timezone' => app(ChurchSettings::class)->timezone(),
+            'reverb_key' => 'local-key',
+        ]]);
+});
+
 it('shows the phone region to a settings.manage holder', function () {
     actingAsUserWith([Permission::SettingsManage]);
 

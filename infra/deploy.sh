@@ -37,7 +37,7 @@ compose stop worker
 if ! compose up -d --remove-orphans --wait --wait-timeout 180; then
     echo "Новая версия ${TAG} не поднялась. В .env остался тег работавшей версии (${running:-нет}); откат — docs/deploy.md, «Откат»." >&2
     compose ps -a >&2
-    compose logs --no-color --tail 40 web app worker scheduler >&2
+    compose logs --no-color --tail 40 web app worker scheduler reverb >&2
     exit 1
 fi
 
@@ -51,7 +51,7 @@ fi
 # Очистка: из образов app и web на сервере остаются выложенный и предыдущий —
 # на него откатываются без GHCR. Предыдущий — работавшая до деплоя версия; при
 # повторной выкладке того же тега — самый новый из остальных. Неудачное
-# удаление деплой не роняет: версия уже выложена. Образ app записан у трёх
+# удаление деплой не роняет: версия уже выложена. Образ app записан у четырёх
 # сервисов, `sort -u` оставляет каждый репозиторий один раз.
 for repo in $(compose config --images | sed -n "s|:${TAG}\$||p" | sort -u); do
     previous=$running

@@ -11,12 +11,12 @@
 
 Образы собирает GitHub Actions и публикует в GHCR с тегом, равным коммиту:
 
-- `app` (`infra/php/Dockerfile`, цель `prod`) — PHP с кодом и зависимостями внутри. Один образ для трёх сервисов: `app` (php-fpm), `worker` (Horizon), `scheduler` (планировщик). При старте каждый контейнер собирает кеши конфигурации, маршрутов и событий из своего окружения.
+- `app` (`infra/php/Dockerfile`, цель `prod`) — PHP с кодом и зависимостями внутри. Один образ для четырёх сервисов: `app` (php-fpm), `worker` (Horizon), `scheduler` (планировщик), `reverb` (WebSocket). При старте каждый контейнер собирает кеши конфигурации, маршрутов и событий из своего окружения.
 - `web` (`infra/web/Dockerfile`) — nginx со статикой `nuxt generate` и конфигурацией `infra/nginx/prod.conf`. Сборка падает, если собранный service worker не исполняется (`npm run verify-sw`).
 
 Образы собираются под linux/amd64, поэтому сервер нужен x86_64.
 
-Сервисы `compose.prod.yml`: `web` (порты 80 и 443), `app`, `worker`, `scheduler`, `postgres`, `redis`, `certbot`. Данные живут в именованных томах проекта `church` (имя каталога): `church_pgdata`, `church_redisdata`, `church_media`, `church_letsencrypt`, `church_certbot-www`. Команда `docker compose down -v` удаляет эти тома вместе с базой и медиафайлами; на сервере её не выполнять.
+Сервисы `compose.prod.yml`: `web` (порты 80 и 443), `app`, `worker`, `scheduler`, `reverb`, `postgres`, `redis`, `certbot`. Данные живут в именованных томах проекта `church` (имя каталога): `church_pgdata`, `church_redisdata`, `church_media`, `church_letsencrypt`, `church_certbot-www`. Команда `docker compose down -v` удаляет эти тома вместе с базой и медиафайлами; на сервере её не выполнять.
 
 ### Что делает пуш в `main`
 
@@ -89,7 +89,7 @@ touch .env
 chmod 600 .env
 ```
 
-Сгенерировать ключ приложения и пароль базы:
+Сгенерировать ключ приложения и пароль базы (для `REVERB_APP_KEY` и `REVERB_APP_SECRET` отдельно выполнить `openssl rand -hex 32`; примеры `local-key`/`local-secret` предназначены только для dev):
 
 ```bash
 echo "base64:$(openssl rand -base64 32)"
@@ -132,9 +132,17 @@ REDIS_CLIENT=phpredis
 REDIS_HOST=redis
 REDIS_PORT=6379
 
-BROADCAST_CONNECTION=log
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=church
+REVERB_APP_KEY=
+REVERB_APP_SECRET=
+REVERB_HOST=reverb
+REVERB_PORT=8080
+REVERB_SCHEME=http
 MAIL_MAILER=log
 ```
+
+При обновлении с фазы 1 до выкладки добавьте `REVERB_*` в существующий `.env` и замените `BROADCAST_CONNECTION=log` на `reverb`. `REVERB_HOST=reverb`, порт `8080` и схема `http` задают внутренний адрес сервиса; браузер подключается по HTTPS/WSS через nginx к домену приложения.
 
 `.env` служит двум целям: Compose берёт из него подстановки (`IMAGE_PREFIX`, `TAG`, `APP_DOMAIN`, `DB_*` для `postgres`), а контейнеры PHP получают его целиком как переменные окружения. `web` получает только `APP_DOMAIN`, `postgres` — только имя базы, пользователя и пароль. Часовой пояс и остальные настройки церкви живут в таблице `settings` и задаются при установке (шаг 8), не здесь.
 

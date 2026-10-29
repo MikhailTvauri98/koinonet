@@ -3797,13 +3797,17 @@
                     "timezone": {
                         "type": "string"
                     },
+                    "reverb_key": {
+                        "type": "string"
+                    },
                     "phone_region": {
                         "type": "string"
                     }
                 },
                 "required": [
                     "church_name",
-                    "timezone"
+                    "timezone",
+                    "reverb_key"
                 ],
                 "title": "SettingsResource"
             },

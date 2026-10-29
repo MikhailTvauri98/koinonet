@@ -887,6 +887,7 @@ export interface components {
         SettingsResource: {
             church_name: string;
             timezone: string;
+            reverb_key: string;
             phone_region?: string;
         };
         /** StoreMediaRequest */

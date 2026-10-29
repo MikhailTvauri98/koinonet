@@ -26,7 +26,7 @@ composer openapi
 
 ## Dev-окружение
 
-`make up` поднимает `infra/compose.yml`: `postgres`, `redis`, `app` (php-fpm), `worker` (Horizon) и `web` (nginx на порту 8080). Код API смонтирован в контейнеры томом, команды контроля качества выполняются в `app`: `docker compose -f infra/compose.yml exec -T app composer test`. Клиент запускается на хосте из `apps/web` (`npm run dev`); его dev-сервер проксирует `/api` и `/sanctum` на `NUXT_API_PROXY_TARGET` (по умолчанию `http://localhost:8080`). Сквозные сценарии — `npm run e2e` из `apps/web`, окружение описано в `apps/web/e2e/environment.ts`.
+`make up` поднимает `infra/compose.yml`: `postgres`, `redis`, `app` (php-fpm), `worker` (Horizon), `reverb` (WebSocket) и `web` (nginx на порту 8080). Код API смонтирован в контейнеры томом, команды контроля качества выполняются в `app`: `docker compose -f infra/compose.yml exec -T app composer test`. Клиент запускается на хосте из `apps/web` (`npm run dev`); его dev-сервер проксирует `/api`, `/sanctum`, `/broadcasting` и WebSocket `/app` на `NUXT_API_PROXY_TARGET` (по умолчанию `http://localhost:8080`). Сквозные сценарии — `npm run e2e` из `apps/web`, окружение описано в `apps/web/e2e/environment.ts`.
 
 Процессы PHP, которые пишут файлы, работают от `www-data`: рабочие процессы php-fpm в `app` и воркер `worker`, как в production. Новый том медиафайлов получает владельца `www-data` из образа `app` сам: `web` монтирует его с `nocopy`, иначе образ nginx скопировал бы в пустой том свои каталоги и отдал его корень `root`. Два случая исправляются вручную, один раз:
 

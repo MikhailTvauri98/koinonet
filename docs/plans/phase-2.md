@@ -128,6 +128,7 @@ infra/
 ### Задача 1: Reverb, авторизация каналов, канал `user.{id}`
 
 **Файлы:**
+- Дополнительно по решениям 11 и 15: `infra/compose.prod.yml`, `infra/nginx/prod.conf`, `infra/deploy.sh`, `README.md`, `docs/deploy.md`, `apps/web/package-lock.json`, OpenAPI и типы клиента.
 - Создать: `apps/api/routes/channels.php`, `apps/api/config/broadcasting.php`, `apps/api/config/reverb.php` (публикуются установкой)
 - Изменить: `apps/api/bootstrap/app.php` (`withBroadcasting`), `apps/api/.env.example`, `apps/api/phpunit.xml`, `apps/api/composer.json`, `apps/api/app/Modules/Settings/Http/Resources/SettingsResource.php` (`reverb_key`), `infra/compose.yml` (сервис `reverb`), `infra/nginx/dev.conf` (локация `/app/`), `apps/web/nuxt.config.ts` (прокси `/app` dev-сервера с WebSocket)
 - Тест: `apps/api/tests/Feature/Realtime/ChannelAuthTest.php`, `apps/api/tests/Feature/Settings/SettingsEndpointTest.php` (`reverb_key`)
@@ -139,7 +140,7 @@ infra/
 - Отдаёт наружу: переменные окружения `BROADCAST_CONNECTION=reverb`, `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `REVERB_HOST`, `REVERB_PORT`, `REVERB_SCHEME`; в тестах `BROADCAST_CONNECTION=log`.
 - Потребляет: `User::isDisabled()` и `actingAsUser()` из фазы 1.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `apps/api/tests/Feature/Realtime/ChannelAuthTest.php`:
 
@@ -190,12 +191,12 @@ it('refuses a disabled account even on its own channel', function () {
 
 В `apps/api/tests/Feature/Settings/SettingsEndpointTest.php` — тест того же вида, что `exposes the vapid public key in settings` задачи 4: `config(['broadcasting.connections.reverb.key' => 'local-key'])`, затем `GET /api/v1/settings` отдаёт `data.reverb_key = 'local-key'`.
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Realtime/ChannelAuthTest.php tests/Feature/Settings/SettingsEndpointTest.php`
 Ожидается: FAIL, маршрут `/broadcasting/auth` не определён (404), в настройках нет `reverb_key`.
 
-- [ ] **Шаг 3: Установить Reverb и подключить каналы**
+- [x] **Шаг 3: Установить Reverb и подключить каналы**
 
 ```bash
 cd apps/api && composer require laravel/reverb && php artisan install:broadcasting --reverb --without-node
@@ -241,7 +242,7 @@ REVERB_SCHEME=http
 
 `SettingsResource` отдаёт `reverb_key` из `config('broadcasting.connections.reverb.key')` — публичную часть, как `vapid_public_key`; адреса сокета в ответе нет (решение 15). После правки — `composer openapi` и `npm run gen:api`.
 
-- [ ] **Шаг 4: Сервис в Compose, локация nginx и прокси dev-сервера Nuxt**
+- [x] **Шаг 4: Сервис в Compose, локация nginx и прокси dev-сервера Nuxt**
 
 В `infra/compose.yml` рядом с `worker`:
 
@@ -270,17 +271,17 @@ REVERB_SCHEME=http
 
 В `apps/web/nuxt.config.ts` — прокси `/app` dev-сервера Nuxt на тот же адрес, что и `/api` (`apiProxyTarget`), с поддержкой WebSocket: `routeRules`-прокси запросы upgrade не пропускает, поэтому нужен прокси dev-сервера с `ws: true` (например, `nitro.devProxy`). Клиент в dev ходит в сокет так же, как в проде, — на свой источник (решение 15).
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Realtime/ChannelAuthTest.php tests/Feature/Settings/SettingsEndpointTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Проверить рукопожатие вручную**
+- [x] **Шаг 6: Проверить рукопожатие вручную**
 
 Выполнить: `make up`, `npm run dev` в `apps/web`, затем `curl -si -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" http://localhost:3000/app/local-key | head -1` — через прокси dev-сервера Nuxt, как ходит клиент: в адресе проверки порт dev-сервера, а куда прокси ведёт дальше, задаёт `NUXT_API_PROXY_TARGET`, как для `/api`.
 Ожидается: `HTTP/1.1 101 Switching Protocols`.
 
-- [ ] **Шаг 7: Коммит**
+- [x] **Шаг 7: Коммит**
 
 ```bash
 git add apps/api apps/web infra && git commit -m "feat(realtime): reverb, channel authorization, user channel"
@@ -292,6 +293,16 @@ git add apps/api apps/web infra && git commit -m "feat(realtime): reverb, channe
 - WebSocket-рукопожатие проходит через nginx, а не только напрямую в Reverb; `proxy_read_timeout` не меньше 60 секунд (риск 7).
 - Рукопожатие проходит и через прокси dev-сервера Nuxt на его собственном порту; `GET /settings` отдаёт `reverb_key`.
 - Тесты не зависят от запущенного Reverb: драйвер по умолчанию `log`.
+
+**Результат исполнения (29.10.2026):**
+- Reverb 1.12, авторизация cookie-сессией, собственный канал и отказ отключённому аккаунту; публичный ключ в настройках. Дополнительные тесты: вход с cookie, неизвестный канал, JSON без Accept, точная подпись и отсутствие секретов в настройках.
+- В тесте после переключения с log на reverb повторно загружается файл каналов: Laravel регистрирует callbacks на драйвере при старте приложения, до beforeEach. Конфигурации опубликованы из пакетов без генерации ненужного Echo-клиента внутри API.
+- В dev проксируются и /broadcasting, и /app. Nitro обновлён с 2.13.4 до 2.13.5: старая версия игнорирует ws в devProxy (nitrojs/nitro#4269). Production также получил сервис и nginx-прокси; инструкции окружения обновлены.
+- API: 422 passed (1097 assertions); Pint: PASS, 236 files; PHPStan: No errors. Клиент: 25 файлов, 229 тестов, ESLint и typecheck без ошибок (тесты с --maxWorkers=2 из-за нагрузки Windows).
+- Рукопожатие через nginx :18080 и Nuxt :3000: HTTP 101, pusher:connection_established; POST /broadcasting/auth через Nuxt без сессии: 401 JSON. Порт 18080 использовался только в локальном override, поскольку 8080 занят другим проектом.
+- Сборки `npm run build`, `npm run generate` и `npm run verify-sw` прошли; Compose production и конфигурация nginx проверены.
+- Саморевью по AGENTS.md: границы модулей соблюдены, условий по именам ролей нет, термины словаря сохранены, архитектура и документы обновлены. Новые термины и ADR не требуются.
+- OpenAPI и типы обновлены; генератор сохраняет прежнее предупреждение JR001 для SessionResource (не относится к этой задаче).
 
 ---
 
