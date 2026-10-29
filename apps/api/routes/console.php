@@ -14,3 +14,5 @@ Artisan::command('inspire', function () {
 Schedule::command('media:prune')->daily();
 
 Schedule::command('calendar:materialize')->dailyAt('03:00');
+
+Schedule::command('calendar:send-reminders')->everyFiveMinutes()->withoutOverlapping();

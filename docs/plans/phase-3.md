@@ -2878,7 +2878,7 @@ git add . && git commit -m "feat(notifications): assignment, event change, cance
 - Отдаёт наружу: `php artisan calendar:send-reminders` — для каждого `ReminderKind` из `calendar.reminder_offsets` выбирает `scheduled`-события с `starts_at` в `[now + offset, now + offset + 5 мин)` без строки в `event_reminders`, пишет строку, публикует `EventReminderDue(string $eventId, ReminderKind $kind)`; `everyFiveMinutes()->withoutOverlapping()`.
 - Отдаёт наружу: `EventReminderNotification(Event $event, ReminderKind $kind)` — категория `reminders`, `tag = event-{id}-reminder`, `title` «Напоминание: {за сутки|за два часа}», `body` «{название}, {дата и время по церкви}, {место}».
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Calendar/ReminderCommandTest.php`:
 
@@ -2991,12 +2991,12 @@ it('does nothing for an event that got cancelled between the command and the que
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/ReminderCommandTest.php tests/Feature/Notifications/ReminderNotificationTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class SendRemindersCommand extends Command
@@ -3028,12 +3028,12 @@ final class SendRemindersCommand extends Command
 
 `RecordReminder::handle(Event $event, ReminderKind $kind): void` — `insertOrIgnore` в `event_reminders` и, если строка вставлена, `EventReminderDue::dispatch($event->id, $kind)`. `NotifyAboutReminder` (`ShouldQueue`): событие не найдено или отменено → выход; иначе `Notification::send(Recipients::assignedToEvent(...), new EventReminderNotification($event, $kind))`. Расписание: `Schedule::command('calendar:send-reminders')->everyFiveMinutes()->withoutOverlapping();`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar tests/Feature/Notifications`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add . && git commit -m "feat(calendar,notifications): reminders 24h and 2h before events"
