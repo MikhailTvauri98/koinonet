@@ -19,18 +19,7 @@ final class MarkdownCleaner
         }, $markdown) ?? $markdown;
         $text = strtr(strip_tags($text), $urls);
 
-        // Balanced groups consume the entire destination, including nested parentheses.
-        $pattern = '~(?(DEFINE)(?<label>\[(?:[^\[\]\\\\]|\\\\.|(?&label))*\])(?<target>\((?:[^()\\\\]|\\\\.|(?&target))*\)))(?<image>!?)(?<text>(?&label))(?<url>(?&target))~u';
-        $text = preg_replace_callback($pattern, function (array $match): string {
-            $label = substr($match['text'], 1, -1);
-            if ($match['image'] === '!') {
-                return $label;
-            }
-
-            $destination = substr($match['url'], 1, -1);
-
-            return $this->safeDestination($destination) ? $match[0] : $match['text'].'()';
-        }, $text) ?? $text;
+        $text = $this->cleanLinks($text);
 
         // Images using reference or shortcut syntax still become their alt text.
         $text = preg_replace('~!\[([^\]\n]*)\](?:\[[^\]\n]*\])?~u', '$1', $text) ?? $text;
@@ -39,6 +28,24 @@ final class MarkdownCleaner
         }, $text) ?? $text;
 
         return trim($text);
+    }
+
+    private function cleanLinks(string $markdown): string
+    {
+        // Balanced groups consume the entire destination and label, so clean
+        // nested label links before preserving the outer link or exposing alt text.
+        $pattern = '~(?(DEFINE)(?<label>\[(?:[^\[\]\\\\]|\\\\.|(?&label))*\])(?<target>\((?:[^()\\\\]|\\\\.|(?&target))*\)))(?<image>!?)(?<text>(?&label))(?<url>(?&target))~u';
+
+        return preg_replace_callback($pattern, function (array $match): string {
+            $label = $this->cleanLinks(substr($match['text'], 1, -1));
+            if ($match['image'] === '!') {
+                return $label;
+            }
+
+            $destination = substr($match['url'], 1, -1);
+
+            return '['.$label.']'.($this->safeDestination($destination) ? $match['url'] : '()');
+        }, $markdown) ?? $markdown;
     }
 
     private function safeDestination(string $destination): bool

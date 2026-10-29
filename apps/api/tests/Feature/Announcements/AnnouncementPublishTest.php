@@ -75,13 +75,29 @@ it('requires a ministry for the ministry scope', function () {
         ->assertStatus(422)->assertJsonValidationErrors('ministry_id');
 });
 
-it('cleans the body on save', function () {
+it('cleans the body on save', function (string $body, string $expected) {
     actingAsUserWith([Permission::AnnouncementsChurchPublish]);
 
-    $this->postJson('/api/v1/announcements', churchAnnouncement(['body' => 'Привет <img src=x onerror=alert(1)> [x](javascript:1)']))
+    $this->postJson('/api/v1/announcements', churchAnnouncement(['body' => $body]))
         ->assertCreated()
-        ->assertJsonPath('data.body', 'Привет  [x]()');
-});
+        ->assertJsonPath('data.body', $expected);
+    expect(Announcement::query()->sole()->body)->toBe($expected);
+})->with([
+    ['Привет <img src=x onerror=alert(1)> [x](javascript:1)', 'Привет  [x]()'],
+    ['[outer [bad](javascript:alert(1))](https://example.com)', '[outer [bad]()](https://example.com)'],
+    ['![outer [bad](javascript:alert(1))](https://example.com/image.png)', 'outer [bad]()'],
+]);
+
+it('cleans nested Markdown before persisting edits', function (string $body, string $expected) {
+    actingAsUserWith([Permission::AnnouncementsChurchPublish]);
+    $announcement = Announcement::factory()->create(['body' => 'До правки']);
+    $this->patchJson("/api/v1/announcements/{$announcement->id}", ['body' => $body])
+        ->assertOk()->assertJsonPath('data.body', $expected);
+    expect($announcement->fresh()->body)->toBe($expected);
+})->with([
+    ['[outer [bad](javascript:alert(1))](https://example.com)', '[outer [bad]()](https://example.com)'],
+    ['![outer [bad](javascript:alert(1))](https://example.com/image.png)', 'outer [bad]()'],
+]);
 
 it('stores pinned and hide_after', function () {
     actingAsUserWith([Permission::AnnouncementsChurchPublish]);

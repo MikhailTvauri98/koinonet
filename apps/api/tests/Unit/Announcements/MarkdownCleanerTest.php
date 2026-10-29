@@ -59,3 +59,13 @@ it('neutralises unsafe autolinks and keeps allowed autolinks', function () {
     expect((new MarkdownCleaner)->clean('<javascript:alert(1)>'))->toBe('javascript:alert(1)')
         ->and((new MarkdownCleaner)->clean('<https://example.com>'))->toBe('<https://example.com>');
 });
+
+it('cleans nested label links before preserving links or exposing image alt text', function (string $markdown, string $expected) {
+    expect((new MarkdownCleaner)->clean($markdown))->toBe($expected);
+})->with([
+    ['[outer [bad](javascript:alert(1))](https://example.com)', '[outer [bad]()](https://example.com)'],
+    ['![outer [bad](javascript:alert(1))](https://example.com/image.png)', 'outer [bad]()'],
+    ['[outer [safe](../one)](./two)', '[outer [safe](../one)](./two)'],
+    ['![outer [safe](../one)](./image.png)', 'outer [safe](../one)'],
+    ['[ outer [safe](../one) ](./two)', '[ outer [safe](../one) ](./two)'],
+]);
