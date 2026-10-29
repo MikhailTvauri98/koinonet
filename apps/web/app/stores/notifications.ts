@@ -19,18 +19,29 @@ export const useNotificationsStore = defineStore('notifications', () => {
   let generation = 0
   let requestVersion = 0
   let liveVersion = 0
+  let readVersion = 0
+  let readSettled: Promise<void> | undefined
+  let settlePendingRead: (() => void) | undefined
   let subscribing: Promise<void> | undefined
 
   async function fetch(reset = false) {
     const version = ++requestVersion
     const session = generation
     const live = liveVersion
+    const read = readVersion
     loading.value = true
     error.value = ''
     try {
       const api = useApi()
       const response = await api.get<NotificationPage>('/notifications', !reset && nextCursor.value ? { cursor: nextCursor.value } : undefined)
       if (session !== generation || version !== requestVersion) return
+      // A snapshot made before/during a read is not authoritative. Keep the
+      // optimistic state, then retry this same page after success or rollback.
+      if (read !== readVersion || marking.value) {
+        await readSettled
+        if (session !== generation || version !== requestVersion) return
+        return await fetch(reset)
+      }
       // Broadcasts that arrive while the server snapshot is in flight must
       // not disappear or leave a stale count. Fetch a fresh snapshot once.
       if (live !== liveVersion) return await fetch(true)
@@ -60,11 +71,30 @@ export const useNotificationsStore = defineStore('notifications', () => {
     items.value = items.value.map(n => changed.has(n.id) ? { ...n, read_at: now } : n)
     unreadCount.value = 'all' in body ? 0 : Math.max(0, unreadCount.value - changed.size)
     marking.value = true
+    readVersion++
+    let release!: () => void
+    readSettled = new Promise<void>((resolve) => { release = resolve })
+    settlePendingRead = release
+    let finished = false
+    function finishRead() {
+      if (finished) return
+      finished = true
+      if (session === generation) {
+        readVersion++
+        marking.value = false
+        readSettled = undefined
+        settlePendingRead = undefined
+      }
+      release()
+    }
     try {
       const api = useApi()
       const response = await api.post<ReadResponse>('/notifications/read', body)
       if (session !== generation) return
       unreadCount.value = response.unread_count
+      // Release snapshot waiters before a broadcast-triggered refresh; that
+      // refresh must not wait on the mutation that is itself awaiting it.
+      finishRead()
       if (live !== liveVersion) await fetch(true)
     } catch (failure) {
       if (session === generation) {
@@ -73,7 +103,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       }
       throw failure
     } finally {
-      if (session === generation) marking.value = false
+      finishRead()
     }
   }
 
@@ -96,6 +126,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
     loaded.value = false
     loading.value = false
     marking.value = false
+    settlePendingRead?.()
+    settlePendingRead = undefined
+    readSettled = undefined
     error.value = ''
     liveVersion = 0
   }
