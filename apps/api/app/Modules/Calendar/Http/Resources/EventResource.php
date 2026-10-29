@@ -8,6 +8,9 @@ use App\Modules\Calendar\EventOwnerType;
 use App\Modules\Calendar\EventStatus;
 use App\Modules\Calendar\EventVisibility;
 use App\Modules\Calendar\Models\Event;
+use App\Modules\Media\Http\Resources\MediaResource;
+use App\Modules\Media\Models\Media;
+use App\Modules\Media\Models\MediaAttachment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -21,7 +24,8 @@ final class EventResource extends JsonResource
      * id: string, owner_type: EventOwnerType, ministry: array{id: string, name: string}|null,
      * template_id: string|null, occurrence_date: string|null, title: string, description: string|null,
      * location: string|null, starts_at: string, ends_at: string, visibility: EventVisibility, status: EventStatus,
-     * cancelled_at: string|null, cancel_reason: string|null, can_manage: bool, slots: AnonymousResourceCollection
+     * cancelled_at: string|null, cancel_reason: string|null, can_manage: bool, slots: AnonymousResourceCollection,
+     * attachments: AnonymousResourceCollection
      * }
      */
     public function toArray(Request $request): array
@@ -30,6 +34,7 @@ final class EventResource extends JsonResource
         assert($event instanceof Event);
         $event->loadMissing([
             'ministry',
+            'attachments.media',
             'slots' => fn ($query) => $query->whereNull('archived_at'),
             'slots.role',
             'slots.assignments' => fn ($query) => $query->whereNull('archived_at')->orderBy('created_at')->orderBy('id'),
@@ -61,6 +66,9 @@ final class EventResource extends JsonResource
             'cancel_reason' => $event->cancel_reason,
             'can_manage' => Gate::allows('update', $event),
             'slots' => EventSlotResource::collection($event->slots->whereNull('archived_at')->values()),
+            'attachments' => MediaResource::collection($event->attachments->map(
+                fn (MediaAttachment $attachment): Media => $attachment->media,
+            )),
         ];
     }
 }

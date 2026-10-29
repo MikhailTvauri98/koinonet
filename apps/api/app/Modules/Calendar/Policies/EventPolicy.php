@@ -27,4 +27,9 @@ final readonly class EventPolicy
     {
         return $this->access->canManage($user, $event);
     }
+
+    public function cancel(User $user, Event $event): bool
+    {
+        return $this->access->canManage($user, $event);
+    }
 }

@@ -231,9 +231,9 @@ it('protects assignment identities with the person card policy', function (bool 
         ->assertJsonMissingPath('data.slots.0.assignments.0.person.note');
 })->with([false, true]);
 
-it('rejects attachments until calendar media integration is implemented', function () {
+it('rejects nonexistent event attachments', function () {
     actingAsUserWith([Permission::CalendarChurchManage]);
-    $this->postJson('/api/v1/events', churchEvent(['media_ids' => ['01JQZ0000000000000000000ZZ']]))->assertUnprocessable()->assertJsonValidationErrors('media_ids');
+    $this->postJson('/api/v1/events', churchEvent(['media_ids' => ['01JQZ0000000000000000000ZZ']]))->assertUnprocessable()->assertJsonValidationErrors('media_ids.0');
 });
 
 it('unlinks erased accounts from calendar history', function () {
@@ -275,16 +275,22 @@ it('documents conditional notification choices and prohibited update fields', fu
     $schema = app(Generator::class)();
     $store = $schema['components']['schemas']['StoreEventRequest'];
     expect($store['properties']['notify']['enum'])->toBe(['none', 'ministry', 'all'])
-        ->and($store['properties']['media_ids'])->toBeFalse()
+        ->and($store['properties']['media_ids']['type'])->toBe('array')
         ->and($store['oneOf'][0]['properties']['notify']['enum'])->toBe(['none', 'all'])
         ->and($store['oneOf'][1]['properties']['notify']['enum'])->toBe(['none', 'ministry'])
         ->and($store['oneOf'][1]['required'])->toContain('ministry_id');
     $update = $schema['components']['schemas']['UpdateEventRequest'];
-    foreach (['owner_type', 'ministry_id', 'slots', 'notify', 'media_ids'] as $field) {
+    foreach (['owner_type', 'ministry_id', 'slots', 'notify'] as $field) {
         expect($update['properties'][$field])->toBeFalse();
     }
     $resource = $schema['components']['schemas']['EventResource']['properties'];
     expect($resource['starts_at']['type'])->toBe('string')
         ->and($resource['ends_at']['type'])->toBe('string')
-        ->and($resource)->not->toHaveKeys(['attachments']);
+        ->and($resource['attachments']['type'])->toBe('array')
+        ->and($resource['attachments']['items'])->toBe(['$ref' => '#/components/schemas/MediaResource'])
+        ->and($update['properties']['media_ids']['type'])->toBe('array');
+    foreach ([$store, $update] as $request) {
+        expect($request['properties']['media_ids']['uniqueItems'])->toBeTrue()
+            ->and($request['properties']['media_ids']['items']['format'])->toBe('ulid');
+    }
 });

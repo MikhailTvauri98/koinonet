@@ -1762,6 +1762,86 @@
                 }
             }
         },
+        "/events/{event}/cancel": {
+            "post": {
+                "operationId": "event.cancel",
+                "tags": [
+                    "Event"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "description": "The event ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CancelEventRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`EventResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/EventResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "description": "\u0421\u043e\u0431\u044b\u0442\u0438\u0435 \u0443\u0436\u0435 \u043e\u0442\u043c\u0435\u043d\u0435\u043d\u043e.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "event.already_cancelled"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/people/{person}/invite": {
             "post": {
                 "operationId": "invitation.invite",
@@ -4903,6 +4983,19 @@
                 ],
                 "title": "AssignRequest"
             },
+            "CancelEventRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    }
+                },
+                "title": "CancelEventRequest"
+            },
             "CandidateResource": {
                 "type": "object",
                 "properties": {
@@ -5140,6 +5233,12 @@
                         "items": {
                             "$ref": "#/components/schemas/EventSlotResource"
                         }
+                    },
+                    "attachments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MediaResource"
+                        }
                     }
                 },
                 "required": [
@@ -5158,7 +5257,8 @@
                     "cancelled_at",
                     "cancel_reason",
                     "can_manage",
-                    "slots"
+                    "slots",
+                    "attachments"
                 ],
                 "title": "EventResource"
             },
@@ -6195,7 +6295,14 @@
                         ],
                         "default": "none"
                     },
-                    "media_ids": false
+                    "media_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "ulid"
+                        },
+                        "uniqueItems": true
+                    }
                 },
                 "required": [
                     "owner_type",
@@ -6403,7 +6510,14 @@
                     "ministry_id": false,
                     "slots": false,
                     "notify": false,
-                    "media_ids": false,
+                    "media_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "ulid"
+                        },
+                        "uniqueItems": true
+                    },
                     "title": {
                         "type": "string",
                         "maxLength": 200

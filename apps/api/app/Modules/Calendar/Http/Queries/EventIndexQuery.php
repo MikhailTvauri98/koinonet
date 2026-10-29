@@ -37,6 +37,7 @@ final readonly class EventIndexQuery
 
         return $query->with([
             'ministry',
+            'attachments.media',
             'slots' => fn ($slots) => $slots->whereNull('archived_at'),
             'slots.role',
             'slots.assignments' => fn ($assignments) => $assignments->whereNull('archived_at')->orderBy('created_at')->orderBy('id'),

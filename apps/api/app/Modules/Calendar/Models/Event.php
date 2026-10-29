@@ -8,6 +8,7 @@ use App\Modules\Calendar\EventOwnerType;
 use App\Modules\Calendar\EventStatus;
 use App\Modules\Calendar\EventVisibility;
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Models\MediaAttachment;
 use App\Modules\Ministries\Models\Ministry;
 use Carbon\CarbonImmutable;
 use Database\Factories\EventFactory;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * @property string $id
@@ -78,6 +80,12 @@ final class Event extends Model
     public function slots(): HasMany
     {
         return $this->hasMany(EventSlot::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** @return MorphMany<MediaAttachment, $this> */
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(MediaAttachment::class, 'attachable')->orderBy('sort_order')->orderBy('id');
     }
 
     /** @return BelongsTo<Ministry, $this> */

@@ -8,14 +8,15 @@ use App\Modules\Calendar\Events\EventCreated;
 use App\Modules\Calendar\EventStatus;
 use App\Modules\Calendar\Models\Event;
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Actions\SyncAttachments;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 final readonly class CreateEvent
 {
-    public function __construct(private AddSlot $addSlot) {}
+    public function __construct(private AddSlot $addSlot, private SyncAttachments $attachments) {}
 
-    /** @param array{owner_type: string, ministry_id?: string|null, title: string, description?: string|null, location?: string|null, starts_at: string, ends_at: string, visibility: string, slots?: list<array{label?: string|null, role_id?: string|null, required_count: int}>, notify?: string} $attributes */
+    /** @param array{owner_type: string, ministry_id?: string|null, title: string, description?: string|null, location?: string|null, starts_at: string, ends_at: string, visibility: string, slots?: list<array{label?: string|null, role_id?: string|null, required_count: int}>, notify?: string, media_ids?: list<string>} $attributes */
     public function handle(User $creator, array $attributes): Event
     {
         return DB::transaction(function () use ($creator, $attributes): Event {
@@ -34,6 +35,7 @@ final readonly class CreateEvent
             foreach ($attributes['slots'] ?? [] as $position => $slot) {
                 $this->addSlot->handle($event, $slot + ['sort_order' => $position]);
             }
+            $this->attachments->handle($event, $attributes['media_ids'] ?? [], $creator);
             EventCreated::dispatch($event->id, $attributes['notify'] ?? 'none');
 
             return $event;

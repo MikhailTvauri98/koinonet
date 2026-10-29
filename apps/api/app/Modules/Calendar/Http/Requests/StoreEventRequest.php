@@ -33,8 +33,8 @@ final class StoreEventRequest extends FormRequest
             'slots.*.role_id' => ['nullable', 'ulid', Rule::exists('roles', 'id')],
             'slots.*.required_count' => ['required', 'integer', 'min:1', 'max:50'],
             'notify' => ['sometimes', Rule::in($this->input('owner_type') === 'church' ? ['none', 'all'] : ['none', 'ministry'])],
-            // Event attachments arrive in task 6; refuse unsupported input.
-            'media_ids' => ['prohibited'],
+            'media_ids' => ['sometimes', 'array', 'list'],
+            'media_ids.*' => ['required', 'ulid', 'distinct', Rule::exists('media', 'id')],
         ];
     }
 }

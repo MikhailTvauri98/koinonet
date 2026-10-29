@@ -23,6 +23,7 @@ use App\Modules\Announcements\Models\Announcement;
 use App\Modules\Announcements\OpenApi\AnnouncementRequestSchema;
 use App\Modules\Announcements\Policies\AnnouncementPolicy;
 use App\Modules\Calendar\Actions\CalendarAccountEraser;
+use App\Modules\Calendar\EventMediaOwnerResolver;
 use App\Modules\Calendar\Http\Requests\StoreEventRequest;
 use App\Modules\Calendar\Http\Requests\UpdateEventRequest;
 use App\Modules\Calendar\Models\Event as CalendarEvent;
@@ -91,7 +92,7 @@ class AppServiceProvider extends ServiceProvider
             'directory.account_erasers',
         );
         $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
-        $this->app->tag([AnnouncementMediaOwnerResolver::class], 'media.owner_resolvers');
+        $this->app->tag([AnnouncementMediaOwnerResolver::class, EventMediaOwnerResolver::class], 'media.owner_resolvers');
     }
 
     /**

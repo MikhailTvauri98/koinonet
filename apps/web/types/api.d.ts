@@ -314,6 +314,22 @@ export interface paths {
         patch: operations["event.update"];
         trace?: never;
     };
+    "/events/{event}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["event.cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{person}/invite": {
         parameters: {
             query?: never;
@@ -997,6 +1013,10 @@ export interface components {
         AssignRequest: {
             person_id: string;
         };
+        /** CancelEventRequest */
+        CancelEventRequest: {
+            reason?: string | null;
+        };
         /** CandidateResource */
         CandidateResource: {
             person: {
@@ -1058,6 +1078,7 @@ export interface components {
             cancel_reason: string | null;
             can_manage: boolean;
             slots: components["schemas"]["EventSlotResource"][];
+            attachments: components["schemas"]["MediaResource"][];
         };
         /** EventSlotResource */
         EventSlotResource: {
@@ -1333,7 +1354,7 @@ export interface components {
              * @enum {string}
              */
             notify: "none" | "ministry" | "all";
-            media_ids?: never;
+            media_ids?: string[];
         } & ({
             /** @constant */
             owner_type?: "church";
@@ -1403,7 +1424,7 @@ export interface components {
             ministry_id?: never;
             slots?: never;
             notify?: never;
-            media_ids?: never;
+            media_ids?: string[];
             title?: string;
             description?: string | null;
             location?: string | null;
@@ -2295,6 +2316,51 @@ export interface operations {
                         message: string;
                         /** @constant */
                         code: "event.cancelled";
+                    };
+                };
+            };
+        };
+    };
+    "event.cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event ID */
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CancelEventRequest"];
+            };
+        };
+        responses: {
+            /** @description `EventResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["EventResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            /** @description Событие уже отменено. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        /** @constant */
+                        code: "event.already_cancelled";
                     };
                 };
             };

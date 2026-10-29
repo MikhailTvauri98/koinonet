@@ -404,7 +404,7 @@ git add apps/api && git commit -m "feat(calendar): tables, models, enums and fac
 ---
 ### Задача 2: Событие — создание, карточка, правка, права управления
 
-**Прогресс и уточнения среза:** карточка события защищена `EventAccess::canView`: управляющий либо активное событие с видимостью `church`. Временный `view = true` из примера ниже не применяется; полные правила `ministry`/`assigned` добавляет задача 3. Имена и фото назначенных ограничивает `PersonPolicy::view`; контакты и заметки не возвращаются. Связи моделей сохраняют историю, ресурсы исключают архивные слоты и назначения. Медиа остаются в задаче 6: непустой `media_ids` сейчас отклоняется, `attachments` отсутствует; `can_fill` добавляет задача 5. `CalendarAccountEraser` размещён в `Calendar/Actions`, как реализации других модулей. Частичная правка дат учитывает сохранённую вторую границу, архивное служение не принимается как владелец или источник роли слота. Схема OpenAPI описывает условные `notify`/владельца и запрещённые поля правки, клиентские типы генерируются из неё.
+**Прогресс и уточнения среза:** карточка события защищена `EventAccess::canView`: управляющий либо активное событие с видимостью `church`. Временный `view = true` из примера ниже не применяется; полные правила `ministry`/`assigned` добавляет задача 3. Имена и фото назначенных ограничивает `PersonPolicy::view`; контакты и заметки не возвращаются. Связи моделей сохраняют историю, ресурсы исключают архивные слоты и назначения. В срезе задачи 2 медиа были отложены; задача 6 заменила временный запрет `media_ids` полноценными вложениями и полем `attachments`. `can_fill` добавлен задачей 5. `CalendarAccountEraser` размещён в `Calendar/Actions`, как реализации других модулей. Частичная правка дат учитывает сохранённую вторую границу, архивное служение не принимается как владелец или источник роли слота. Схема OpenAPI описывает условные `notify`/владельца и запрещённые поля правки, клиентские типы генерируются из неё.
 
 **Файлы:**
 - Создать: `app/Modules/Calendar/Actions/CreateEvent.php`, `UpdateEvent.php`; `EventAccess.php`; `Policies/EventPolicy.php`; `Http/Controllers/EventController.php`, `Http/Requests/StoreEventRequest.php`, `UpdateEventRequest.php`, `Http/Resources/EventResource.php`, `EventSlotResource.php`, `EventAssignmentResource.php`; `Events/EventCreated.php`, `EventChanged.php`; `CalendarAccountEraser.php`; `app/Modules/Calendar/routes.php`
@@ -413,7 +413,7 @@ git add apps/api && git commit -m "feat(calendar): tables, models, enums and fac
 
 **Интерфейсы:**
 - Отдаёт наружу: `Permission::CalendarChurchManage = 'calendar.church.manage'` (глобальное, «Управлять церковным календарём»), `Permission::EventsManage = 'events.manage'` (служения, «Управлять событиями служения»).
-- Отдаёт наружу: `CreateEvent::handle(User $creator, array $attributes): Event` — `attributes`: `owner_type`, `ministry_id`, `title`, `description`, `location`, `starts_at`, `ends_at` (ISO 8601), `visibility`, `slots: list<array{label?: string, role_id?: string, required_count: int}>`, `notify: 'none'|'ministry'|'all'`, `media_ids: list<string>` (задача 6). `UpdateEvent::handle(Event $event, array $attributes): Event` — те же поля без `owner_type`, `ministry_id`, `slots`, `notify`.
+- Отдаёт наружу: `CreateEvent::handle(User $creator, array $attributes): Event` — `attributes`: `owner_type`, `ministry_id`, `title`, `description`, `location`, `starts_at`, `ends_at` (ISO 8601), `visibility`, `slots: list<array{label?: string, role_id?: string, required_count: int}>`, `notify: 'none'|'ministry'|'all'`, `media_ids: list<string>` (задача 6). `UpdateEvent::handle(Event $event, array $attributes, User $editor): Event` (уточнение задачи 6: явный редактор для вложений) — те же поля без `owner_type`, `ministry_id`, `slots`, `notify`.
 - Отдаёт наружу: `EventAccess::canManage(User $user, Event $event): bool` — владелец `church` → `calendar.church.manage`; `ministry` → `events.manage` в служении. `canView` наполняет задача 3, `canFillSlot` — задача 5, `canManageTemplate` — задача 8.
 - Отдаёт наружу: `EventCreated(string $eventId, string $notify)`, `EventChanged(string $eventId, list<string> $changed)` — `changed` содержит только `starts_at`, `ends_at`, `location`; изменение одного описания событие не публикует.
 - Отдаёт наружу: `POST /events`, `GET /events/{id}`, `PATCH /events/{id}`. `EventResource`: `id`, `owner_type`, `ministry: {id, name}|null`, `template_id`, `occurrence_date`, `title`, `description`, `location`, `starts_at`, `ends_at`, `visibility`, `status`, `cancelled_at`, `cancel_reason`, `can_manage`, `slots: list<EventSlotResource>`, `attachments` (задача 6). `EventSlotResource`: `id`, `label`, `resource_type`, `role: {id, name, ministry_id}|null`, `required_count`, `filled_count`, `sort_order`, `can_fill` (задача 5), `assignments: list<{id, person: {id, full_name, photo_thumb_url}, created_at}>`.
@@ -1523,6 +1523,8 @@ composer openapi && git add . && git commit -m "feat(calendar): assignments with
 ---
 ### Задача 6: Отмена события и вложения
 
+**Уточнения реализации:** отмена в транзакции блокирует и перечитывает родительское событие, сохраняет слоты и назначения, пишет журнал с явным nullable-автором через `Access\AuditLogger::recordForActor` и отправляет `EventCancelled` только после внешнего коммита. `CreateEvent` и `UpdateEvent` переиспользуют `SyncAttachments`; `UpdateEvent` принимает обязательный третий аргумент `User $editor`. Список `media_ids` заменяет временный запрет задачи 2; `EventResource.attachments` содержит реальные `MediaResource`, резолвер видимости использует общий `EventAccess`.
+
 **Файлы:**
 - Создать: `app/Modules/Calendar/Actions/CancelEvent.php`; `Events/EventCancelled.php`; `EventMediaOwnerResolver.php`; `Http/Requests/CancelEventRequest.php`
 - Изменить: `EventController` (`cancel`), `UpdateEvent` (`media_ids` через `SyncAttachments`), `EventResource` (`attachments`), `EventPolicy` (`cancel`), `AppServiceProvider` (тег `media.owner_resolvers`), `routes.php`
@@ -1534,7 +1536,7 @@ composer openapi && git add . && git commit -m "feat(calendar): assignments with
 - Отдаёт наружу: вложения события через `media_ids` при создании и правке; видимость вложения повторяет `EventAccess::canView`.
 - Коды ошибок: `event.already_cancelled`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Calendar/EventCancelTest.php`:
 
@@ -1646,12 +1648,12 @@ it('serves an event attachment by event visibility', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/EventCancelTest.php tests/Feature/Calendar/EventAttachmentTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class CancelEvent
@@ -1678,12 +1680,12 @@ final class CancelEvent
 
 `CancelEventRequest`: `reason` — `nullable|string|max:500`. `EventMediaOwnerResolver::canView` — по `media_attachments` с `attachable_type = 'event'` → `EventAccess::canView($viewer, $event)`; нет вложения → `null`. `UpdateEvent` вызывает `SyncAttachments`, если в `attributes` есть `media_ids`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar tests/Feature/Media`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): event cancellation with journal and event attachments"

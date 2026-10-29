@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Calendar\Http\Controllers;
 
+use App\Modules\Calendar\Actions\CancelEvent;
 use App\Modules\Calendar\Actions\CreateEvent;
 use App\Modules\Calendar\Actions\UpdateEvent;
 use App\Modules\Calendar\EventOwnerType;
 use App\Modules\Calendar\Http\Queries\EventIndexQuery;
+use App\Modules\Calendar\Http\Requests\CancelEventRequest;
 use App\Modules\Calendar\Http\Requests\IndexEventRequest;
 use App\Modules\Calendar\Http\Requests\StoreEventRequest;
 use App\Modules\Calendar\Http\Requests\UpdateEventRequest;
@@ -50,7 +52,7 @@ final class EventController
     #[OpenApiResponse(status: 422, description: 'Недопустимый слот.', type: "array{message: string, code: 'slot.label_required'|'slot.role_not_ministry'|'slot.role_archived_ministry'}")]
     public function store(StoreEventRequest $request, CreateEvent $create): JsonResponse
     {
-        /** @var array{owner_type: string, ministry_id?: string|null, title: string, description?: string|null, location?: string|null, starts_at: string, ends_at: string, visibility: string, slots?: list<array{label?: string|null, role_id?: string|null, required_count: int}>, notify?: string} $attributes */
+        /** @var array{owner_type: string, ministry_id?: string|null, title: string, description?: string|null, location?: string|null, starts_at: string, ends_at: string, visibility: string, slots?: list<array{label?: string|null, role_id?: string|null, required_count: int}>, notify?: string, media_ids?: list<string>} $attributes */
         $attributes = $request->validated();
         Gate::authorize('create', [Event::class, EventOwnerType::from($attributes['owner_type']), $attributes['ministry_id'] ?? null]);
         $user = $request->user();
@@ -63,9 +65,24 @@ final class EventController
     public function update(UpdateEventRequest $request, Event $event, UpdateEvent $update): EventResource
     {
         Gate::authorize('update', $event);
-        /** @var array{title?: string, description?: string|null, location?: string|null, starts_at?: string, ends_at?: string, visibility?: string} $attributes */
+        /** @var array{title?: string, description?: string|null, location?: string|null, starts_at?: string, ends_at?: string, visibility?: string, media_ids?: list<string>} $attributes */
         $attributes = $request->validated();
 
-        return new EventResource($update->handle($event, $attributes));
+        $user = $request->user();
+        assert($user instanceof User);
+
+        return new EventResource($update->handle($event, $attributes, $user));
+    }
+
+    #[OpenApiResponse(status: 422, description: 'Событие уже отменено.', type: "array{message: string, code: 'event.already_cancelled'}")]
+    public function cancel(CancelEventRequest $request, Event $event, CancelEvent $cancel): EventResource
+    {
+        Gate::authorize('cancel', $event);
+        $user = $request->user();
+        assert($user instanceof User);
+        /** @var array{reason?: string|null} $attributes */
+        $attributes = $request->validated();
+
+        return new EventResource($cancel->handle($event, $attributes['reason'] ?? null, $user));
     }
 }
