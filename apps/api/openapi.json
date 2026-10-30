@@ -1462,6 +1462,71 @@
                 }
             }
         },
+        "/chats/{chat}/read": {
+            "post": {
+                "operationId": "chat.chatRead",
+                "tags": [
+                    "ChatRead"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MarkReadRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "unread_count": {
+                                            "type": "integer"
+                                        },
+                                        "unread_total": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "required": [
+                                        "unread_count",
+                                        "unread_total"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
         "/events": {
             "get": {
                 "operationId": "event.index",
@@ -6743,6 +6808,18 @@
                     }
                 ],
                 "title": "MarkNotificationsReadRequest"
+            },
+            "MarkReadRequest": {
+                "type": "object",
+                "properties": {
+                    "message_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "message_id"
+                ],
+                "title": "MarkReadRequest"
             },
             "MeResource": {
                 "type": "object",

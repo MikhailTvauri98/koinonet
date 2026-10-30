@@ -314,6 +314,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chats/{chat}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["chat.chatRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events": {
         parameters: {
             query?: never;
@@ -1416,6 +1432,10 @@ export interface components {
             /** @constant */
             all: true;
             ids?: never;
+        };
+        /** MarkReadRequest */
+        MarkReadRequest: {
+            message_id: string;
         };
         /** MeResource */
         MeResource: {
@@ -2626,6 +2646,39 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "chat.chatRead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkReadRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        unread_count: number;
+                        unread_total: number;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "event.index": {

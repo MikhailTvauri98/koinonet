@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Chat\Http\Controllers\ChatController;
+use App\Modules\Chat\Http\Controllers\ChatReadController;
 use App\Modules\Chat\Http\Controllers\MessageController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('messages/{message}', [MessageController::class, 'destroy']);
     Route::get('chats', [ChatController::class, 'index']);
     Route::get('chats/{chat}', [ChatController::class, 'show']);
+    Route::post('chats/{chat}/read', ChatReadController::class);
     Route::get('chats/{chat}/messages', [MessageController::class, 'index']);
     Route::post('chats/{chat}/messages', [MessageController::class, 'store']);
 });

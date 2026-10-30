@@ -1250,7 +1250,7 @@ composer openapi && git add . && git commit -m "feat(chat): message editing, del
 - Отдаёт наружу: `MarkChatRead::handle(User $user, Chat $chat, string $messageId): void` — публикует `ChatRead(string $chatId, string $userId)` для пересчёта бейджей (задача 8).
 - Коды ошибок: `message.not_in_chat`, `chat.read_only`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1335,21 +1335,21 @@ it('sums unread across chats', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/ReadStateTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `MarkChatRead`: участие обязательно (`chat.read_only` для читателя); сообщение должно принадлежать чату (`message.not_in_chat`); если у участника уже есть указатель и он не старше нового по `(created_at, id)`, ничего не менять; иначе обновить и опубликовать `ChatRead`. Контроллер отдаёт `UnreadCounter::forChat` и `total`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): read pointer and unread counters"
