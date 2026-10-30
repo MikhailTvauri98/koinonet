@@ -15,7 +15,7 @@ const newcomer = { lastName: 'Кузнецова', firstName: 'Анна' }
 // служений в навигации → служение → вкладка «Участники».
 async function openMembersFromNav(page: Page, ministry: string): Promise<void> {
   await openSection(page, 'Служения', 'Служения')
-  const link = page.getByRole('link', { name: ministry })
+  const link = page.getByRole('link', { name: ministry, exact: true })
   const path = (await link.getAttribute('href'))!
   await Promise.all([expectApiResponse(page, 'GET', path, 200), link.click()])
   await expect(page.getByRole('heading', { level: 1, name: ministry })).toBeVisible()
@@ -45,7 +45,7 @@ test('a leader manages members of their own ministry only', async ({ page, openP
 
   // Адрес чужого служения, который лидер мог бы получить ссылкой.
   await openSection(page, 'Служения', 'Служения')
-  const youthHref = await page.getByRole('link', { name: 'Молодёжное' }).getAttribute('href')
+  const youthHref = await page.getByRole('link', { name: 'Молодёжное', exact: true }).getAttribute('href')
   expect(youthHref, 'ссылка на служение «Молодёжное»').toMatch(/^\/ministries\/[^/]+$/)
 
   // Администратор добавляет человека в «Прославление» и делает лидером.
@@ -74,8 +74,8 @@ test('a leader manages members of their own ministry only', async ({ page, openP
 
   // В своём списке служений у лидера только его служение.
   await openSection(leaderPhone, 'Служения', 'Служения')
-  await expect(leaderPhone.getByRole('link', { name: 'Прославление' })).toBeVisible()
-  await expect(leaderPhone.getByRole('link', { name: 'Молодёжное' })).toHaveCount(0)
+  await expect(leaderPhone.getByRole('link', { name: 'Прославление', exact: true })).toBeVisible()
+  await expect(leaderPhone.getByRole('link', { name: 'Молодёжное', exact: true })).toHaveCount(0)
 
   await openMembersFromNav(leaderPhone, 'Прославление')
   const addButton = leaderPhone.getByRole('button', { name: 'Добавить участника' })

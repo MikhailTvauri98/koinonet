@@ -1,5 +1,6 @@
 import { test as base, devices, expect, type BrowserContext, type Locator, type Page } from '@playwright/test'
-import { credentials, e2e } from './environment'
+import { execFileSync } from 'node:child_process'
+import { apiRuntime, credentials, e2e } from './environment'
 
 // Общие шаги сценариев. Всё — через интерфейс, как это делает человек:
 // без запросов к API в обход экранов и без обращения к базе.
@@ -37,6 +38,39 @@ export const test = base.extend<{ openPhone: () => Promise<Page> }>({
 })
 
 export { expect }
+
+// Commands share exactly the guarded API runtime used by global-setup: the
+// disposable church_e2e database and Redis 14/15, locally in Docker or in CI.
+// Arguments are separate values, never a shell command or an implicit host PHP.
+export function runArtisan(args: string[]): string {
+  const spec = apiRuntime.artisan(args)
+  try {
+    return execFileSync(spec.command, spec.args, {
+      cwd: spec.cwd,
+      env: spec.env,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      timeout: 180_000,
+    })
+  } catch (error) {
+    // Killing the Docker client on timeout does not stop its container. Remove
+    // only this command's own container; preserve the original command error.
+    if (spec.container) {
+      const cleanup = apiRuntime.removeContainers([spec.container])
+      try {
+        execFileSync(cleanup.command, cleanup.args, {
+          cwd: cleanup.cwd,
+          env: cleanup.env,
+          stdio: 'ignore',
+          windowsHide: true,
+          timeout: 60_000,
+        })
+      } catch { /* Global teardown also cleans up labelled E2E containers. */ }
+    }
+    throw error
+  }
+}
 
 // Основная навигация (AppNav): боковая панель на десктопе, нижняя панель
 // вкладок на телефоне. Разделы открываются через неё, как это делает
@@ -179,7 +213,7 @@ export async function createMinistry(page: Page, name: string): Promise<void> {
     successfulGet(page, '/ministries'),
     page.getByRole('button', { name: 'Создать', exact: true }).click(),
   ])
-  await expect(page.getByRole('link', { name })).toBeVisible()
+  await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
 }
 
 export async function createPerson(page: Page, person: NewPerson): Promise<void> {
