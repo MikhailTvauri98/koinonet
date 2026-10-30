@@ -3489,16 +3489,16 @@ git add apps/web && git commit -m "feat(web): event editor with slots, notify fl
 ### Задача 17: Назначения — диалог кандидатов, пересечения, предупреждения
 
 **Файлы:**
-- Создать: `apps/web/app/components/calendar/AssignDialog.vue`, `WarningList.vue`
-- Изменить: `app/pages/events/[id].vue`, `SlotList.vue` (кнопка «Назначить», снятие назначения)
+- Создать: `apps/web/app/components/calendar/AssignDialog.vue`, `CandidateList.vue`, `WarningList.vue`, `app/utils/assignments.ts`
+- Изменить: `app/pages/events/[id].vue`, `EventCard.vue`, `SlotList.vue` (кнопка «Назначить», снятие назначения)
 - Тест: `tests/component/assign-dialog.spec.ts`
 
 **Интерфейсы:**
-- Отдаёт наружу: `AssignDialog` с props `slot: SlotItem`; событие `assigned(assignment, warnings)`.
+- Отдаёт наружу: `AssignDialog` с props `slot: EventSlot`, необязательный `eventId`; события `assigned(assignment, warnings)`, `close`.
 - Отдаёт наружу: `WarningList` — тексты по кодам `role_mismatch` («У человека нет роли «{label}»»), `time_conflict` («Пересекается с: {названия}»), `over_capacity` («Слот заполнен сверх нормы»).
 - Потребляет: `GET /slots/{id}/candidates`, `POST /slots/{id}/assignments`, `DELETE /assignments/{id}`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```ts
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
@@ -3575,21 +3575,21 @@ describe('assign dialog', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/assign-dialog.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Диалог: для слота с ролью список кандидатов загружается сразу, с фильтром по имени на клиенте; для свободного — поиск с задержкой 300 мс от двух символов. Кандидат с пересечением показывает названия и время пересекающихся событий. Клик назначает; ответные `warnings` показываются в диалоге, список слотов в карточке обновляется через событие `assigned`. Снятие назначения — с подтверждением, из строки назначенного.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): assignment dialog with candidates, conflicts and warnings"

@@ -3,7 +3,7 @@ import type { EventItem, EventSlot } from '~/composables/useEvents'
 import AttachmentList from '~/components/announcements/AttachmentList.vue'
 import SlotList from './SlotList.vue'
 const props = defineProps<{ event: EventItem, detail?: boolean }>()
-defineEmits<{ edit: [event: EventItem], cancel: [event: EventItem], assign: [slot: EventSlot] }>()
+defineEmits<{ edit: [event: EventItem], cancel: [event: EventItem], assign: [slot: EventSlot], assignmentsChanged: [] }>()
 const { formatDateTime } = useChurchDate()
 const auth = useAuthStore(), { can } = useCan()
 const ministryVisible = computed(() => !!props.event.ministry && (can('ministries.view_all') || can('ministries.manage_all') || Object.hasOwn(auth.permissions.ministries, props.event.ministry.id)))
@@ -28,7 +28,7 @@ const ministryVisible = computed(() => !!props.event.ministry && (can('ministrie
         <button type="button" data-test="edit-event" @click="$emit('edit', event)">Изменить</button>
         <button v-if="event.status !== 'cancelled'" type="button" data-test="cancel-event" @click="$emit('cancel', event)">Отменить</button>
       </div>
-      <SlotList :slots="event.slots" @assign="$emit('assign', $event)" />
+      <SlotList :slots="event.slots" @assign="$emit('assign', $event)" @changed="$emit('assignmentsChanged')" />
     </template>
   </article>
 </template>
