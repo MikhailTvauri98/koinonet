@@ -8,5 +8,6 @@ export type MediaPurpose = components['schemas']['MediaPurpose']
 export interface DirectLinkResources {
   person_photo: components['schemas']['PersonResource']
   ministry_cover: components['schemas']['MinistryResource']
+  chat_avatar: components['schemas']['ChatResource']
 }
 export type DirectLinkPurpose = keyof DirectLinkResources & MediaPurpose

@@ -17,7 +17,7 @@ const ministryId = '01J00000000000000000000001'
 const person = (over: Partial<Person> = {}): Person => ({
   id: '01J00000000000000000000002', last_name: 'Прокопенко', first_name: 'Мария',
   patronymic: null, full_name: 'Прокопенко Мария', status: 'member', archived: false,
-  has_account: false, has_global_roles: false, account_disabled: false, photo_url: null, ...over,
+  has_account: false, user_id: null, has_global_roles: false, account_disabled: false, photo_url: null, ...over,
 })
 function result(data = [person()], page = 1, last = 1): PeopleResponse {
   return {

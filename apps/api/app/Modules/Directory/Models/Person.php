@@ -76,13 +76,13 @@ final class Person extends Model
 
     public function loadCardFlags(): self
     {
-        return $this->loadExists(self::cardFlags());
+        return $this->loadExists(self::cardFlags())->load('user:id,person_id');
     }
 
     /** @param Builder<self> $query */
     public function scopeWithCardFlags(Builder $query): void
     {
-        $query->withExists(self::cardFlags());
+        $query->withExists(self::cardFlags())->with('user:id,person_id');
     }
 
     /** @return HasOne<User, $this> */

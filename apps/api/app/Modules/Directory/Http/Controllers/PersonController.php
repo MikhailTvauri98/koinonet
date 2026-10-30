@@ -30,13 +30,14 @@ final class PersonController
     {
         Gate::authorize('viewAny', Person::class);
 
-        /** @var array{search?: string, status?: string, ministry?: string, archived?: bool|string|int, without_roles?: bool|string|int, per_page?: int} $validated */
+        /** @var array{search?: string, status?: string, ministry?: string, archived?: bool|string|int, without_roles?: bool|string|int, has_account?: bool|string|int, per_page?: int} $validated */
         $validated = $request->validate([
             'search' => ['sometimes', 'string', 'max:200'],
             'status' => ['sometimes', Rule::enum(PersonStatus::class)],
             'ministry' => ['sometimes', 'string', 'ulid'],
             'archived' => ['sometimes', 'boolean'],
             'without_roles' => ['sometimes', 'boolean'],
+            'has_account' => ['sometimes', 'boolean'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
@@ -46,6 +47,7 @@ final class PersonController
             'archived' => $request->boolean('archived'),
             'without_roles' => $request->boolean('without_roles'),
             'per_page' => (int) ($validated['per_page'] ?? 25),
+            ...($request->has('has_account') ? ['has_account' => $request->boolean('has_account')] : []),
         ];
 
         $viewer = $request->user();

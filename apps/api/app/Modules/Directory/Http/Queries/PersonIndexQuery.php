@@ -19,7 +19,7 @@ final class PersonIndexQuery
      * alike - the list is empty, so the filter reveals neither who serves in
      * a hidden ministry nor that it exists.
      *
-     * @param  array{search?: string, status?: string, ministry?: string, archived: bool, without_roles: bool, per_page: int}  $filters
+     * @param  array{search?: string, status?: string, ministry?: string, archived: bool, without_roles: bool, has_account?: bool, per_page: int}  $filters
      * @return LengthAwarePaginator<int, Person>
      */
     public function paginate(array $filters, User $viewer): LengthAwarePaginator
@@ -32,6 +32,8 @@ final class PersonIndexQuery
         return Person::query()
             ->withCardFlags()
             ->with('photo')
+            ->when(array_key_exists('has_account', $filters), fn (Builder $query): Builder => $filters['has_account']
+                ? $query->whereHas('user') : $query->whereDoesntHave('user'))
             ->when(
                 $search !== null,
                 // Each measure finds what the other misses. The beginning of a

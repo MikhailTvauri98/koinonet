@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { ChatListItem } from '~/stores/chats'
+import { useChatMuted } from '~/composables/useChatMuted'
 const props = defineProps<{ chat: ChatListItem }>()
 const { formatDateTime } = useChurchDate()
-const muted = computed(() => props.chat.muted_until && new Date(props.chat.muted_until).getTime() > Date.now())
+const muted = useChatMuted(() => props.chat.muted_until)
 const initials = computed(() => props.chat.title.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toLocaleUpperCase('ru'))
 const preview = computed(() => !props.chat.last_message ? 'Сообщений пока нет' : props.chat.last_message.deleted ? 'Сообщение удалено' : props.chat.last_message.body_preview || 'Вложение')
 </script>

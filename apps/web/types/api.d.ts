@@ -1739,6 +1739,7 @@ export interface components {
              */
             photo_url: string | null;
             has_account: boolean;
+            user_id: string | null;
             has_global_roles: boolean;
             account_disabled: boolean;
             global_roles?: {
@@ -4325,6 +4326,7 @@ export interface operations {
                 ministry?: string;
                 archived?: boolean;
                 without_roles?: boolean;
+                has_account?: boolean;
                 page?: number;
                 per_page?: number;
             };

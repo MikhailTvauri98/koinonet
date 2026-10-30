@@ -40,7 +40,7 @@ beforeEach(() => {
   card = {
     id: 'p1', last_name: 'Прокопенко', first_name: 'Мария', patronymic: null,
     full_name: 'Прокопенко Мария', status: 'member', archived: false,
-    has_account: false, has_global_roles: true, account_disabled: false, photo_url: null,
+    has_account: false, user_id: null, has_global_roles: true, account_disabled: false, photo_url: null,
     global_roles: [{ id: 'r1', name: 'Читатель' }], ministries: [{ id: 'm1', name: 'Хор' }],
   }
   get.mockReset().mockImplementation((path: string) => Promise.resolve(path.startsWith('/roles') ? { data: roles } : { data: { ...card } }))

@@ -40,7 +40,7 @@ await load()
 <template>
   <main class="ministry-events">
     <h1>События служения<span v-if="ministry"> «{{ ministry.name }}»</span></h1>
-    <MinistryTabs :ministry-id="id" />
+    <MinistryTabs :ministry-id="id" :chat-id="ministry?.chat_id" />
     <EventEditor v-if="creating && canCreate" :key="`${id}:${auth.sessionVersion}`" :default-owner="{ type: 'ministry', ministryId: id }" @saved="saved" @cancel="creating = false" />
     <template v-else>
       <button v-if="canCreate" type="button" data-test="create-event" @click="creating = true">Создать событие</button>

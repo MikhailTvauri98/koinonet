@@ -28,6 +28,7 @@ final class PersonResource extends JsonResource
      *     status: string,
      *     archived: bool,
      *     has_account: bool,
+     *     user_id: string|null,
      *     has_global_roles: bool,
      *     account_disabled: bool,
      *     photo_url: string|null,
@@ -44,6 +45,7 @@ final class PersonResource extends JsonResource
         $viewer = $request->user();
         assert($viewer instanceof User);
         $visibility = app(PersonVisibility::class);
+        $userId = $person->user?->id;
 
         return [
             'id' => $person->id,
@@ -60,6 +62,7 @@ final class PersonResource extends JsonResource
             // no extra check is needed here.
             'photo_url' => SignedMediaUrl::variant($person->photo, 'thumb'),
             'has_account' => (bool) $person->getAttribute('user_exists'),
+            'user_id' => $userId === null ? null : (string) $userId,
             'has_global_roles' => (bool) $person->getAttribute('global_roles_exists'),
             'account_disabled' => (bool) $person->getAttribute('account_disabled'),
             'global_roles' => $this->whenLoaded('globalRoles', fn (): array => $person->globalRoles

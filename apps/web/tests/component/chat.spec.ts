@@ -30,6 +30,14 @@ beforeEach(() => {
   mocks.post.mockResolvedValue({ data: msg('sent') })
 })
 afterEach(() => { mounted.splice(0).forEach(w => w.unmount()); vi.useRealTimers(); vi.unstubAllGlobals() })
+it('refreshes pinned preview from hydrated edits for a read-only nonmember', async () => {
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [msg()], next_before: null, next_after: null } : { data: url.startsWith('/messages/') ? msg('a', { body: 'Правка закрепления' }) : card({ type: 'ministry', members: [], can_write: false, pinned_messages: [msg()] }) }))
+  const screen = await mount()
+  const handlers = Object.fromEntries(mocks.listen.mock.calls) as Record<string, (p: unknown) => void>
+  handlers['.message.edited']!({ message_id: 'a' }); await flushPromises()
+  expect(screen.get('[data-test="pinned-bar"]').text()).toContain('Правка закрепления')
+  expect(screen.find('[data-test="composer"]').exists()).toBe(false)
+})
 it('renders hidden and erased senders distinctly and hydrates ID-only live signals', async () => {
   const screen = await mount()
   expect(screen.text()).toContain('Участник')

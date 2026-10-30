@@ -105,7 +105,7 @@ await load()
       {{ errorMessage }} <button type="button" data-test="retry-ministry" @click="load">Повторить</button>
     </p>
     <template v-if="ministry">
-      <MinistryTabs :ministry-id="ministryId" />
+      <MinistryTabs :ministry-id="ministryId" :chat-id="ministry.chat_id" />
       <header>
         <img v-if="ministry.cover_url" :src="ministry.cover_url" :alt="`Обложка: ${ministry.name}`" data-test="ministry-cover">
         <h1>{{ ministry.name }}</h1>

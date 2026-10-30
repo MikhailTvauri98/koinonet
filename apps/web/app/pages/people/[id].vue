@@ -76,6 +76,18 @@ async function archive(restore = false) {
   }
 }
 
+async function write() {
+  const target = person.value, session = auth.sessionVersion
+  if (busy.value || !can('chats.dm') || !target?.user_id || !target.has_account || target.account_disabled || target.archived || target.user_id === auth.user?.id) return
+  busy.value = true; actionError.value = ''
+  try {
+    const result = await api.post<{ data: { id: string } }>('/chats', { type: 'direct', user_id: target.user_id })
+    if (active && session === auth.sessionVersion && personId.value === target.id) await router.push(`/chats/${result.data.id}`)
+  } catch (failure) {
+    if (active && session === auth.sessionVersion && personId.value === target.id) actionError.value = apiErrorMessage(failure, 'Не удалось открыть личный чат. Попробуйте ещё раз.')
+  } finally { if (active) busy.value = false }
+}
+
 // Изменения прав требуют перечитать серверную видимость контактов и заметки.
 // Сравнение содержимого избегает повторных загрузок при неизменном /auth/me.
 watch([personId, () => JSON.stringify(auth.permissions)], () => { notice.value = ''; void load() })
@@ -96,6 +108,8 @@ await load()
         <div><h1>{{ person.full_name }}</h1><p>{{ personStatuses[person.status as PersonStatus] ?? person.status }}</p></div>
       </header>
       <p v-if="person.archived" class="notice">В архиве</p>
+      <button v-if="can('chats.dm') && person.has_account && person.user_id && !person.account_disabled && !person.archived && person.user_id !== auth.user?.id" type="button" data-test="write" :disabled="busy" @click="write">Написать</button>
+      <p v-if="actionError && !can('people.manage')" role="alert">{{ actionError }}</p>
       <p v-if="notice" role="status">{{ notice }}</p>
       <PersonForm v-if="editing && can('people.manage')" :person="person" @updated="changed" @cancel="editing = false" />
       <template v-else>

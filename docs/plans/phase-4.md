@@ -2569,7 +2569,7 @@ git add apps/web && git commit -m "feat(web): chat screen with history, composer
 **Интерфейсы:**
 - Потребляет: `POST /chats` (обе ветки), `PATCH /chats/{id}`, `PUT /chats/{id}/avatar`, `POST /chats/{id}/members`, `DELETE /chats/{id}/members/{userId}`, `POST /chats/{id}/leave`, `POST /chats/{id}/archive`, `POST /chats/{id}/mute`, `DELETE /chats/{id}/mute`, `POST /events/{id}/chat`, `GET /people?search`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```ts
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
@@ -2675,21 +2675,21 @@ describe('entry points', () => {
 
 `PersonResource` фазы 1 дополняется полем `user_id` (идентификатор аккаунта, если есть) — одна строка в ресурсе и проверка в `PersonCrudTest`.
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/chat-groups.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `NewGroupDialog`: название, поиск по `GET /people?search` с фильтром `has_account`, выбранные чипами, создание и переход. `ChatHeader`: название и участники (`ChatMembersDialog` с добавлением и исключением для `can_manage_members`), меню: «Без звука» (на 8 часов, на неделю, навсегда / включить звук), «Выйти» (группа, не владелец), «Архивировать» (владелец или модератор всего), «Переименовать», «Сменить аватар». Вкладка «Чат» служения — тот же экран чата, встроенный по `chat_id` из карточки служения. Карточка человека — «Написать»; карточка события — «Создать чат» / «Открыть чат».
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web apps/api && git commit -m "feat(web): groups, direct chats, mute, moderation menu, ministry and event chat entry points"

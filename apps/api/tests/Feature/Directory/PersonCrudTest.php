@@ -40,6 +40,7 @@ it('creates a person with normalised contacts', function () {
         ->assertJsonPath('data.full_name', 'Иванов Иван Петрович')
         ->assertJsonPath('data.archived', false)
         ->assertJsonPath('data.has_account', false)
+        ->assertJsonPath('data.user_id', null)
         ->assertJsonPath('data.has_global_roles', false);
 
     $person = Person::query()->whereKey($response->json('data.id'))->sole();

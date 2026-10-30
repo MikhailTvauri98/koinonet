@@ -10,10 +10,11 @@ const api = useApi(), route = useRoute(), auth = useAuthStore(), settings = useS
 const item = ref<EventItem | null>(null), errorMessage = ref(''), loading = ref(false)
 const action = ref<'edit' | 'cancel' | null>(null), selectedSlot = ref<EventSlot | null>(null)
 const refreshError = ref(''), refreshing = ref(false)
+const router = useRouter(), chatBusy = ref(false), chatError = ref('')
 let generation = 0
 async function load() {
   const current = ++generation, session = auth.sessionVersion
-  item.value = null; action.value = null; selectedSlot.value = null; errorMessage.value = ''; refreshError.value = ''; refreshing.value = false; loading.value = true
+  item.value = null; action.value = null; selectedSlot.value = null; errorMessage.value = ''; refreshError.value = ''; chatError.value = ''; chatBusy.value = false; refreshing.value = false; loading.value = true
   try {
     await settings.fetch()
     if (current !== generation || session !== auth.sessionVersion) return
@@ -46,6 +47,16 @@ async function refreshAssignments() {
   } finally { if (current === generation && session === auth.sessionVersion) refreshing.value = false }
 }
 function requestAction(value: 'edit' | 'cancel') { if (item.value?.can_manage) { action.value = value; selectedSlot.value = null } }
+async function createChat() {
+  if (!item.value?.can_manage || chatBusy.value || item.value.chat_id) return
+  const token = generation, session = auth.sessionVersion, id = item.value.id
+  chatBusy.value = true; chatError.value = ''
+  try {
+    const result = await api.post<{ data: { id: string } }>(`/events/${encodeURIComponent(id)}/chat`, {})
+    if (token === generation && session === auth.sessionVersion) await router.push(`/chats/${result.data.id}`)
+  } catch (failure) { if (token === generation && session === auth.sessionVersion) chatError.value = apiErrorMessage(failure, 'Не удалось создать чат события. Попробуйте ещё раз.') }
+  finally { if (token === generation && session === auth.sessionVersion) chatBusy.value = false }
+}
 function requestAssignment(slot: EventSlot) { if (slot.can_fill) { selectedSlot.value = slot; action.value = null } }
 watch(() => route.params.id, () => { void load() })
 watch(() => auth.sessionVersion, () => { generation++; item.value = null; action.value = null; selectedSlot.value = null; loading.value = false; refreshing.value = false; refreshError.value = '' })
@@ -62,6 +73,9 @@ await load()
     <p v-if="refreshing" role="status">Обновляем состав…</p>
     <p v-if="refreshError" role="alert">{{ refreshError }} <button v-if="item" type="button" data-test="retry-assignments" @click="refreshAssignments">Повторить</button></p>
     <EventCard v-if="item" :event="item" detail @edit="requestAction('edit')" @cancel="requestAction('cancel')" @assign="requestAssignment" @assignments-changed="refreshAssignments" />
+    <NuxtLink v-if="item?.chat_id" data-test="open-chat" :to="`/chats/${item.chat_id}`">Открыть чат</NuxtLink>
+    <button v-else-if="item?.can_manage" type="button" data-test="create-chat" :disabled="chatBusy" @click="createChat">Создать чат</button>
+    <p v-if="chatError" role="alert">{{ chatError }}</p>
     <AssignDialog v-if="item && selectedSlot" :key="`${item.id}-${selectedSlot.id}`" v-bind="{ slot: selectedSlot }" :event-id="item.id" @assigned="refreshAssignments" @close="selectedSlot = null" />
     <EventEditor v-if="item && action === 'edit'" :event="item" @saved="load" @cancel="action = null" />
     <CancelEventDialog v-if="item && action === 'cancel'" :event-id="item.id" @saved="load" @cancel="action = null" />

@@ -4284,6 +4284,13 @@
                         }
                     },
                     {
+                        "name": "has_account",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "schema": {
@@ -8202,6 +8209,12 @@
                     "has_account": {
                         "type": "boolean"
                     },
+                    "user_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "has_global_roles": {
                         "type": "boolean"
                     },
@@ -8289,6 +8302,7 @@
                     "archived",
                     "photo_url",
                     "has_account",
+                    "user_id",
                     "has_global_roles",
                     "account_disabled"
                 ],

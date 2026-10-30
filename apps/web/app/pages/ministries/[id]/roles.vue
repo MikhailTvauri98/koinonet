@@ -113,7 +113,7 @@ await load()
 
 <template>
   <section class="roles-tab">
-    <MinistryTabs :ministry-id="ministryId" />
+    <MinistryTabs :ministry-id="ministryId" :chat-id="ministry?.chat_id" />
     <h1>Роли служения</h1>
     <p v-if="!canSeeRoles" role="alert">Нет права видеть роли этого служения.</p>
     <template v-else>

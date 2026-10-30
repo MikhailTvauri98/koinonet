@@ -29,7 +29,11 @@ const editing = shallowRef<ChatMessage | null>(null)
 const deleting = shallowRef<ChatMessage | null>(null)
 const composer = ref<InstanceType<typeof Composer>>()
 const deletedIds = new Set<string>()
-const pins = computed(() => chat.value?.pinned_messages.filter(m => !deletedIds.has(m.id) && !m.deleted && !messages.value.some(loaded => loaded.id === m.id && loaded.deleted)) ?? [])
+const pins = computed(() => chat.value?.pinned_messages.map(m => {
+  const loaded = messages.value.find(current => current.id === m.id)
+  // Read-only nonmembers hydrate shared edits without personal chat.updated.
+  return loaded && (loaded.deleted || (loaded.edited_at ?? '') >= (m.edited_at ?? '')) ? loaded : m
+}).filter(m => !deletedIds.has(m.id) && !m.deleted) ?? [])
 let lifetime = 0
 let metadataRequest = 0
 let detach: (() => void) | undefined
@@ -156,14 +160,6 @@ function pin(message: ChatMessage) {
     if (current(token) && chat.value) chat.value = { ...chat.value, pinned_messages: result.data }
   })
 }
-function mute() {
-  if (!member.value || !chat.value) return
-  const token = lifetime; const muted = !!chat.value.muted_until && new Date(chat.value.muted_until).getTime() > Date.now()
-  void run(async () => {
-    const result = await (muted ? api.delete : api.post)<{ data: Chat }>(`/chats/${props.chatId}/mute`)
-    if (current(token)) { metadataRequest++; chat.value = result.data; void chats.fetch() }
-  })
-}
 function visibility(id: string, visible: boolean) {
   if (visible) visibleId = id
   else if (visibleId === id) visibleId = undefined
@@ -212,7 +208,7 @@ defineExpose({ refresh })
     <p v-if="loading" role="status">Загрузка чата…</p>
     <p v-if="error" role="alert">{{ error }} <button v-if="!unavailable" type="button" :disabled="busy || loading" @click="retry">Повторить</button></p>
     <template v-if="chat">
-      <ChatHeader :chat="chat" :member="member" :busy="busy" @mute="mute"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
+      <ChatHeader :key="chat.id" :chat="chat" :member="member" :busy="busy" @changed="refresh"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
       <PinnedBar :messages="pins" :moderate="moderate" @unpin="pin" />
       <MessageList :messages="messages" :has-older="history?.hasOlder.value ?? false" :loading-older="history?.loadingOlder.value ?? false" :user-id="auth.user?.id" :writable="writable" :moderate="moderate" :pinned-ids="pins.map(m => m.id)" @older="history?.loadOlder().catch(e => fail(e, lifetime))" @visible="visibility" @reply="reply = $event; editing = null" @edit="editing = $event; reply = null" @delete="deleting = $event" @pin="pin" />
       <div v-if="deleting" role="alertdialog" aria-label="Удалить сообщение?" class="confirm">
