@@ -2190,12 +2190,12 @@ it('lets the event manager moderate the event chat', function () {
 
 `CreateEventChat`: `firstOrCreate(['event_id' => …], ['type' => ChatType::Event, 'created_by_user_id' => $creator->id])`; участники — аккаунты назначенных (`event_assignments → people → users`, активные) плюс создатель. `SyncEventChatOnAssignment`: `AssignmentCreated` с `userId` и существующим чатом события → `add`; `AssignmentRemoved` → `remove`, если `EventAssignment::whereHas('slot', event)->where('person_id')` больше не существует. `AddNewUserToChats` дополняется веткой: события `scheduled` с назначением человека и чатом → `add`. Маршрут `events/{event}/chat` объявляется в `app/Modules/Chat/routes.php`; политика — `EventAccess::canManage`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Calendar`
 Ожидается: PASS.
 
-Проверка задачи: новые сценарии чата события — 12 тестов, 100 утверждений; интеграция очереди уведомлений — 6 тестов, 36 утверждений; lint и статический анализ зелёные. Общая проверка остаётся незавершённой: последний полный прогон — 1259 passed / 1 failed, exit 2; унаследованный DirectChatConcurrencyTest превысил Process timeout 12 секунд (tests/Feature/Chat/DirectChatConcurrencyTest.php:49). Стабилизация его тестового процесса выполняется отдельно; реализация задачи 12 принята ревью.
+Проверка завершена после интеграции исправления блокировок задачи 10 (d13f1f2) и готовности конкурентного тестового процесса задачи 11 (6ff7d3e): единый полный vendor/bin/pest — 1261 passed, 5002 assertions, exit 0; composer lint — PASS, 562 files, exit 0; composer types — 432/432, No errors, exit 0. Эффективное окружение перед запуском: church_test / array. Исходники оставались неизменными весь тестовый процесс. Прежние падения и журналы сохранены; отложенная общая проверка закрыта.
 
 - [x] **Шаг 5: Коммит**
 
