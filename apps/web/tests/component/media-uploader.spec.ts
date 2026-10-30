@@ -36,6 +36,21 @@ function deferred<T>() {
 const file = () => new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' })
 
 describe('media uploader polling', () => {
+  it('previews message attachments before sending and removes ready IDs without attaching directly', async () => {
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    post.mockResolvedValue({ data: { id: 'message-file', status: 'ready' } })
+    const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'message', multiple: true, label: 'Прикрепить файл' } })
+    await uploader.vm.upload(file())
+    expect(uploader.get('img').attributes('src')).toBe('blob:preview')
+    expect(uploader.text()).toContain('photo.jpg')
+    expect(uploader.emitted('update:mediaIds')?.at(-1)).toEqual([['message-file']])
+    expect(put).not.toHaveBeenCalled()
+    await uploader.get('button').trigger('click')
+    expect(uploader.emitted('update:mediaIds')?.at(-1)).toEqual([[]])
+    expect(revoke).toHaveBeenCalledWith('blob:preview')
+    create.mockRestore(); revoke.mockRestore()
+  })
   it('uploads a multi-file selection in order, emitting only ready IDs', async () => {
     post.mockResolvedValueOnce({ data: { id: 'first', status: 'ready' } }).mockResolvedValueOnce({ data: { id: 'second', status: 'ready' } })
     const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'announcement', multiple: true, mediaIds: ['old'], label: 'Добавить вложения' } })

@@ -29,6 +29,7 @@ export const useChatsStore = defineStore('chats', () => {
   const loaded = ref(false)
   const error = ref('')
   const connectionError = ref('')
+  const lastChange = shallowRef<{ id: string, removed: boolean } | null>(null)
   let account: string | undefined
   let channel: Channel | undefined
   let generation = 0
@@ -41,10 +42,12 @@ export const useChatsStore = defineStore('chats', () => {
   function upsert(chat: ChatListItem) {
     changes.set(chat.id, { version: ++liveVersion, chat })
     chats.value = [...chats.value.filter(c => c.id !== chat.id), chat].sort(newestFirst)
+    lastChange.value = { id: chat.id, removed: false }
   }
   function remove(chatId: string) {
     changes.set(chatId, { version: ++liveVersion, chat: null })
     chats.value = chats.value.filter(c => c.id !== chatId)
+    lastChange.value = { id: chatId, removed: true }
   }
   function setUnreadTotal(total: number) {
     totalVersion++
@@ -94,6 +97,7 @@ export const useChatsStore = defineStore('chats', () => {
     error.value = ''
     changes.clear()
     connectionError.value = ''
+    lastChange.value = null
     liveVersion = 0
     totalVersion = 0
   }
@@ -140,5 +144,5 @@ export const useChatsStore = defineStore('chats', () => {
     await auth.refreshRealtime()
     if (session === auth.sessionVersion) await fetch()
   }
-  return { chats, unreadTotal, loading, loaded, error, connectionError, fetch, retry, upsert, remove, setUnreadTotal, subscribeUser, unsubscribeUser }
+  return { chats, unreadTotal, loading, loaded, error, connectionError, lastChange, fetch, retry, upsert, remove, setUnreadTotal, subscribeUser, unsubscribeUser }
 })

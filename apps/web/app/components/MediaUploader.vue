@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="P extends DirectLinkPurpose | 'announcement' | 'event'">
+<script setup lang="ts" generic="P extends DirectLinkPurpose | 'announcement' | 'event' | 'message'">
 import type { DirectLinkPurpose, DirectLinkResources, MediaLike } from '~/utils/media'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -47,6 +47,16 @@ let pollTimer: ReturnType<typeof setTimeout> | null = null
 let deadlineTimer: ReturnType<typeof setTimeout> | null = null
 let queue: File[] = []
 let readyIds: string[] = []
+const previews = ref<{ name: string, url: string | null, id?: string }[]>([])
+let currentPreview: { name: string, url: string | null, id?: string } | undefined
+function removePreview(index: number) {
+  const file = previews.value[index]
+  if (!file || busy.value) return
+  if (file.url) URL.revokeObjectURL(file.url)
+  previews.value.splice(index, 1)
+  readyIds = (props.mediaIds ?? readyIds).filter(id => id !== file.id)
+  emit('update:mediaIds', [...readyIds])
+}
 
 function stopTimers() {
   if (pollTimer !== null) clearTimeout(pollTimer)
@@ -67,7 +77,8 @@ function fail(token: number, message: string) {
 
 async function attach(token: number, mediaId: string) {
   stopTimers()
-  if ((props.purpose === 'announcement' || props.purpose === 'event')) {
+  if ((props.purpose === 'announcement' || props.purpose === 'event' || props.purpose === 'message')) {
+    if (props.purpose === 'message' && currentPreview) currentPreview.id = mediaId
     readyIds = [...readyIds, mediaId]
     emit('update:mediaIds', [...readyIds])
     const next = queue.shift()
@@ -111,6 +122,10 @@ async function poll(token: number, mediaId: string) {
 
 async function upload(file: File, continuing = false) {
   if (!continuing) readyIds = [...(props.mediaIds ?? [])]
+  if (props.purpose === 'message') {
+    previews.value.push({ name: file.name, url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null })
+    currentPreview = previews.value.at(-1)
+  }
   const token = ++run
   stopTimers()
   errorMessage.value = ''
@@ -146,7 +161,7 @@ function onFileChange(event: Event) {
   const files = Array.from(input.files ?? [])
   const file = files.shift()
   input.value = ''
-  queue = props.multiple && (props.purpose === 'announcement' || props.purpose === 'event') ? files : []
+  queue = props.multiple && (props.purpose === 'announcement' || props.purpose === 'event' || props.purpose === 'message') ? files : []
   if (file) void upload(file)
 }
 
@@ -161,6 +176,7 @@ const statusLabel = computed(() => {
 onBeforeUnmount(() => {
   run++
   stopTimers()
+  previews.value.forEach(file => { if (file.url) URL.revokeObjectURL(file.url) })
 })
 
 // Тесты компонента вызывают загрузку напрямую через `uploader.vm.upload(file)`,
@@ -174,10 +190,17 @@ defineExpose({ upload })
       class="media-uploader__button" :class="{ 'media-uploader__button--disabled': busy || disabled }"
       :title="disabled ? disabledReason : undefined"
     >
-      <input type="file" :accept="(purpose === 'announcement' || purpose === 'event') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
+      <input type="file" :accept="(purpose === 'announcement' || purpose === 'event' || purpose === 'message') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event' || purpose === 'message')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
       <span>{{ statusLabel }}</span>
     </label>
     <p v-if="errorMessage" role="alert" data-test="media-error">{{ errorMessage }}</p>
+    <ul v-if="purpose === 'message'" class="previews" aria-label="Выбранные вложения">
+      <li v-for="(file, index) in previews" :key="index">
+        <img v-if="file.url" :src="file.url" :alt="file.name" width="72" height="72">
+        <span>{{ file.name }}{{ file.id ? '' : ' (не загружено)' }}</span>
+        <button type="button" :disabled="busy || disabled" :aria-label="`Убрать ${file.name}`" @click="removePreview(index)">×</button>
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -192,4 +215,7 @@ defineExpose({ upload })
 .media-uploader__button--disabled { opacity: 0.6; cursor: default; }
 .media-uploader__button input { display: none; }
 [role='alert'] { color: #a32020; }
+.previews { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
+.previews li { display: flex; flex-direction: column; align-items: center; max-width: 140px; overflow-wrap: anywhere; }
+.previews img { object-fit: cover; }
 </style>
