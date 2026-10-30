@@ -19,9 +19,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 final class MessageController
 {
+    public function show(Message $message): MessageResource
+    {
+        Gate::authorize('view', $message->chat);
+
+        return new MessageResource($message->load(['sender.person.photo', 'replyTo.sender.person', 'attachments.media']));
+    }
+
     /** @return array{data: AnonymousResourceCollection, next_before: string|null, next_after: string|null} */
     public function index(MessageHistoryRequest $request, Chat $chat): array
     {

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('messages/{message}/pin', [PinController::class, 'store']);
     Route::delete('messages/{message}/pin', [PinController::class, 'destroy']);
+    Route::get('messages/{message}', [MessageController::class, 'show']);
     Route::patch('messages/{message}', [MessageController::class, 'update']);
     Route::delete('messages/{message}', [MessageController::class, 'destroy']);
     Route::get('chats', [ChatController::class, 'index']);

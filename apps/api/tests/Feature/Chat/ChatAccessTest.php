@@ -7,11 +7,14 @@ use App\Modules\Calendar\Models\Event;
 use App\Modules\Chat\ChatAccess;
 use App\Modules\Chat\Models\Chat;
 use App\Modules\Directory\Models\User;
+use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    Queue::fake([BroadcastEvent::class]);
     config([
         'broadcasting.default' => 'reverb',
         'broadcasting.connections.reverb.key' => 'test-key',

@@ -1472,10 +1472,12 @@ composer openapi && git add . && git commit -m "feat(chat): pinned messages"
 - Тест: `tests/Feature/Chat/BroadcastTest.php`
 
 **Интерфейсы:**
-- Отдаёт наружу: в `private-chat.{id}` — `message.sent` (`{message: MessageResource}`), `message.edited` (`{message}`), `message.deleted` (`{message_id}`), `chat.pinned` (`{pinned_messages}`), `chat.members_changed` (`{added: list<userId>, removed: list<userId>}`); в `private-user.{id}` — `chat.updated` (`{chat: ChatListItemResource}` с `unread_count` этого участника) и `unread.total` (`{total}`).
+
+Решение задачи 8: общие события — сигналы без содержимого, поскольку `MessageResource` зависит от `PersonPolicy` получателя, а сокет снятого участника может сохранить подписку. Иллюстративный код ниже заменяется этим контрактом.
+- Отдаёт наружу: в `private-chat.{id}` — `message.sent`, `message.edited`, `message.deleted` (`{message_id}`), `chat.pinned` (`{chat_id}`), `chat.members_changed` (`{added: list<userId>, removed: list<userId>}`). Содержимое загружается авторизованным `GET /messages/{id}`, состав/закрепления — `GET /chats/{id}`. В `private-user.{id}` — `chat.updated` (`{chat: ChatListItemResource}` с личным `unread_count`; при снятом участии `{chat: {id}, removed: true}`), `unread.total` (`{total}`). Ресурсы и доступ вычисляются при фактической доставке BroadcastEvent, только идентификаторы хранятся в очереди.
 - Все классы `ShouldBroadcast` с `broadcastAs()` из списка выше; слушатель `BroadcastChatChanges` — `ShouldQueue`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1548,12 +1550,12 @@ it('does not broadcast chat updates to view_all readers who are not members', fu
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/BroadcastTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class MessageSentBroadcast implements ShouldBroadcast
@@ -1576,7 +1578,7 @@ final class MessageSentBroadcast implements ShouldBroadcast
 
 `BroadcastChatChanges` обрабатывает все шесть доменных событий: для событий сообщений и закреплений отправляет соответствующий broadcast в канал чата, затем для каждого участника чата (`chat_members`, не читателей) — `ChatUpdatedBroadcast` с `ChatListItemResource` и его `unread_count`, и `UnreadTotalBroadcast` с `UnreadCounter::total`. `ChatRead` — только два последних для прочитавшего. `ChatMembersChanged` — `chat.members_changed` в канал чата плюс `chat.updated` добавленным и удалённым (удалённым — с признаком `removed: true`, чтобы клиент убрал чат из списка).
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat`
 Ожидается: PASS.
@@ -1586,7 +1588,7 @@ final class MessageSentBroadcast implements ShouldBroadcast
 Выполнить: `make up`, `npm run dev` в `apps/web`, два браузера с разными аккаунтами в одном чате (клиент задачи 14 ещё не готов — использовать `wscat -c ws://localhost:3000/app/local-key` через прокси dev-сервера Nuxt, как ходит клиент (решение 15 плана фазы 2), с подпиской на канал через `/broadcasting/auth`).
 Ожидается: событие `message.sent` приходит во второй сокет в течение секунды.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add . && git commit -m "feat(chat): broadcast message, pin, membership and unread changes"
@@ -1598,6 +1600,9 @@ git add . && git commit -m "feat(chat): broadcast message, pin, membership and u
 - Домен не знает о вещании: broadcast — отдельные классы, вызываемые слушателем в очереди.
 
 ---
+
+
+Фактическая проверка задачи 8 (30.10.2026): два отдельных аккаунта и два сокета через same-origin proxy, настоящие Reverb и worker, авторизация подписки HTTP и последующая загрузка сообщения — подтверждены. После снятия участия сохранённый сокет получил только ID, GET сообщения вернул 403. Изолированная среда church_e2e / Redis 14–15, временный worker `--sleep=0.1`; процессы убраны. Полный backend: 1186 тестов / 4578 утверждений, exit 0; lint 525, PHPStan 407, OpenAPI и клиентские типы проверены. Пункт 5 остаётся открытым именно по задержке: один прогрев и один последующий монотонный замер `performance.now()` внутри каждого браузера дали 2389.5 и 2389.4 мс, поэтому «менее секунды» не подтверждено. Проверить задержку развёрнутой системы при приёмке задачи 17, без обещания production SLO на основе этого локального smoke. Старые wall-clock замеры ненадёжны из-за расхождения системных часов. Доказательства: `.superpowers/sdd/phase-4/task-8-report.md`, `task-8-full.log`, `task-8-live.log`.
 
 ### Задача 9: Пуши о сообщениях и «без звука»
 
@@ -2357,6 +2362,8 @@ git add apps/web apps/api && git commit -m "feat(web): chats store, chat list wi
 - Создать: `apps/web/app/pages/chats/[id].vue`; `app/components/chat/MessageList.vue`, `MessageItem.vue`, `Composer.vue`, `ReplyPreview.vue`, `PinnedBar.vue`, `ChatHeader.vue`; `app/composables/useChatMessages.ts`
 - Изменить: `MediaUploader.vue` (режим композера: превью выбранных файлов до отправки), `package.json` (`@vueuse/core`)
 - Тест: `tests/unit/useChatMessages.spec.ts`, `tests/component/chat.spec.ts`
+
+Контракт задачи 8: события message.sent/message.edited/message.deleted несут только {message_id}, chat.pinned — {chat_id}, состав — {added, removed} без содержимого. После сигналов загружать текущее сообщение через GET /messages/{id}, закрепления/состав через GET /chats/{id}; массивы состава — инвалидирование, не текущее состояние. На 403 покинуть канал и очистить данные, поздний fetch не должен заменять заглушку удаления. Персональное снятие: {chat: {id}, removed: true}.
 
 **Интерфейсы:**
 - Отдаёт наружу: `useChatMessages(chatId)` → `{ messages, loadInitial(), loadOlder(), catchUp(), applySent(m), applyEdited(m), applyDeleted(id), hasOlder }` — чистая логика слияния: сообщения уникальны по `id`, порядок по `cursor`.

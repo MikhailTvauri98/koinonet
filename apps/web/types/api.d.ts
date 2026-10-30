@@ -529,7 +529,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["message.show"];
         put?: never;
         post?: never;
         delete: operations["message.destroy"];
@@ -3199,6 +3199,34 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "message.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The message ID */
+                message: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `MessageResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MessageResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "message.destroy": {
