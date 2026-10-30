@@ -282,6 +282,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["chat.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chats/{chat}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["chat.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events": {
         parameters: {
             query?: never;
@@ -1143,6 +1175,62 @@ export interface components {
                 starts_at: string | null;
                 ends_at: string | null;
             }[];
+        };
+        /** ChatListItemResource */
+        ChatListItemResource: {
+            id: string;
+            type: string;
+            title: string;
+            avatar_url: string | null;
+            ministry_id: string | null;
+            event_id: string | null;
+            archived: boolean;
+            last_message_at: string | null;
+            last_message: {
+                id: string;
+                body_preview: string;
+                /** Format: date-time */
+                created_at: string;
+                deleted: boolean;
+            } | null;
+            unread_count: number;
+            muted_until: string | null;
+            is_owner: boolean;
+        };
+        /** ChatMemberResource */
+        ChatMemberResource: {
+            user_id: string;
+            person_id: string;
+            full_name: string | null;
+            photo_url: string | null;
+            is_owner: boolean;
+            /** Format: date-time */
+            joined_at: string;
+        };
+        /** ChatResource */
+        ChatResource: {
+            id: string;
+            type: string;
+            title: string;
+            avatar_url: string | null;
+            ministry_id: string | null;
+            event_id: string | null;
+            archived: boolean;
+            last_message_at: string | null;
+            last_message: {
+                id: string;
+                body_preview: string;
+                /** Format: date-time */
+                created_at: string;
+                deleted: boolean;
+            } | null;
+            unread_count: number;
+            muted_until: string | null;
+            is_owner: boolean;
+            members: components["schemas"]["ChatMemberResource"][];
+            can_write: boolean;
+            can_moderate: boolean;
+            can_manage_members: boolean;
         };
         /** CreateEventFromTemplateRequest */
         CreateEventFromTemplateRequest: {
@@ -2417,6 +2505,58 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "chat.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `ChatListItemResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatListItemResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "chat.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "event.index": {

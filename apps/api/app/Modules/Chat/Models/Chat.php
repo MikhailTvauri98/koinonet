@@ -7,6 +7,7 @@ namespace App\Modules\Chat\Models;
 use App\Modules\Calendar\Models\Event;
 use App\Modules\Chat\ChatType;
 use App\Modules\Directory\Models\User;
+use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Models\Ministry;
 use Carbon\CarbonImmutable;
 use Database\Factories\ChatFactory;
@@ -94,5 +95,11 @@ final class Chat extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    /** @return BelongsTo<Media, $this> */
+    public function avatar(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'avatar_media_id');
     }
 }

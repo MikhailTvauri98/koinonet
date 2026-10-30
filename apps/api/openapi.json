@@ -1377,6 +1377,91 @@
                 }
             }
         },
+        "/chats": {
+            "get": {
+                "operationId": "chat.index",
+                "tags": [
+                    "Chat"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `ChatListItemResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ChatListItemResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/chats/{chat}": {
+            "get": {
+                "operationId": "chat.show",
+                "tags": [
+                    "Chat"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/events": {
             "get": {
                 "operationId": "event.index",
@@ -5568,6 +5653,254 @@
                     "conflicts"
                 ],
                 "title": "CandidateResource"
+            },
+            "ChatListItemResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "avatar_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ministry_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "event_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "last_message_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_message": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "body_preview": {
+                                "type": "string"
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "deleted": {
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "body_preview",
+                            "created_at",
+                            "deleted"
+                        ]
+                    },
+                    "unread_count": {
+                        "type": "integer"
+                    },
+                    "muted_until": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_owner": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "title",
+                    "avatar_url",
+                    "ministry_id",
+                    "event_id",
+                    "archived",
+                    "last_message_at",
+                    "last_message",
+                    "unread_count",
+                    "muted_until",
+                    "is_owner"
+                ],
+                "title": "ChatListItemResource"
+            },
+            "ChatMemberResource": {
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string"
+                    },
+                    "person_id": {
+                        "type": "string"
+                    },
+                    "full_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "photo_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_owner": {
+                        "type": "boolean"
+                    },
+                    "joined_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "user_id",
+                    "person_id",
+                    "full_name",
+                    "photo_url",
+                    "is_owner",
+                    "joined_at"
+                ],
+                "title": "ChatMemberResource"
+            },
+            "ChatResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "avatar_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ministry_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "event_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "last_message_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_message": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "body_preview": {
+                                "type": "string"
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "deleted": {
+                                "type": "boolean"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "body_preview",
+                            "created_at",
+                            "deleted"
+                        ]
+                    },
+                    "unread_count": {
+                        "type": "integer"
+                    },
+                    "muted_until": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_owner": {
+                        "type": "boolean"
+                    },
+                    "members": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ChatMemberResource"
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    },
+                    "can_moderate": {
+                        "type": "boolean"
+                    },
+                    "can_manage_members": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "title",
+                    "avatar_url",
+                    "ministry_id",
+                    "event_id",
+                    "archived",
+                    "last_message_at",
+                    "last_message",
+                    "unread_count",
+                    "muted_until",
+                    "is_owner",
+                    "members",
+                    "can_write",
+                    "can_moderate",
+                    "can_manage_members"
+                ],
+                "title": "ChatResource"
             },
             "CreateEventFromTemplateRequest": {
                 "type": "object",

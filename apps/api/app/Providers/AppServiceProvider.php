@@ -56,7 +56,9 @@ use App\Modules\Chat\Listeners\AddNewUserToChats;
 use App\Modules\Chat\Listeners\ArchiveChatOnMinistryArchived;
 use App\Modules\Chat\Listeners\CreateMinistryChatOnCreated;
 use App\Modules\Chat\Listeners\SyncMinistryChatOnMembership;
+use App\Modules\Chat\Models\Chat;
 use App\Modules\Chat\Models\Message;
+use App\Modules\Chat\Policies\ChatPolicy;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
@@ -187,6 +189,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Announcement::class, AnnouncementPolicy::class);
         Gate::policy(CalendarEvent::class, EventPolicy::class);
+        Gate::policy(Chat::class, ChatPolicy::class);
         Gate::policy(EventSlot::class, EventSlotPolicy::class);
         Gate::policy(EventAssignment::class, EventAssignmentPolicy::class);
         Gate::policy(EventTemplate::class, EventTemplatePolicy::class);

@@ -542,7 +542,7 @@ composer openapi && git add . && git commit -m "feat(chat): ministry chats creat
 - Отдаёт наружу: `ChatResource.title` — название служения / события / группы / ФИО собеседника для личного; `avatar_url` — аватар группы или фото собеседника.
 - Отдаёт наружу: канал `private-chat.{chatId}` — авторизация через `ChatAccess::canRead`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Chat/ChatAccessTest.php`:
 
@@ -673,12 +673,12 @@ it('does not list ministry chats the account only reads with view_all', function
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/ChatAccessTest.php tests/Feature/Chat/ChatIndexTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class ChatAccess
@@ -726,12 +726,12 @@ final class ChatAccess
 
 Канал: `Broadcast::channel('chat.{chatId}', fn (User $user, string $chatId) => ($chat = Chat::find($chatId)) !== null && app(ChatAccess::class)->canRead($user, $chat));`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Realtime`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): chat list, chat card, access rules and chat channel"
