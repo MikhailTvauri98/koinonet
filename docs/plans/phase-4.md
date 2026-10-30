@@ -758,7 +758,7 @@ composer openapi && git add . && git commit -m "feat(chat): chat list, chat card
 - Отдаёт наружу: `MessageResource`: `id`, `chat_id`, `sender: {id, person: {id, full_name, photo_thumb_url}}|null`, `body`, `reply_to: {id, sender_name, body_preview, deleted}|null`, `attachments: list<MediaResource>`, `edited_at`, `deleted`, `created_at`, `cursor`.
 - Коды ошибок: `message.empty`, `message.reply_other_chat`, `chat.archived`, `chat.read_only`, `media.not_owned`, `media.already_attached`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Chat/SendMessageTest.php`:
 
@@ -948,12 +948,12 @@ it('shows deleted messages as placeholders and keeps replies to them', function 
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/SendMessageTest.php tests/Feature/Chat/MessageHistoryTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class SendMessage
@@ -998,12 +998,12 @@ final class SendMessage
 
 История: `limit` 1–100 (по умолчанию 50); без курсора — последние `limit` по `(created_at desc, id desc)`, перевёрнутые; `before` — `(created_at, id) < (?, ?)`; `after` — `>`; `next_before` — курсор первого элемента страницы, если есть более старые; `next_after` — курсор последнего, если есть более новые. Политика `MessagePolicy::create` → `ChatAccess::canWrite`; читатель `view_all` получает `403` (тест «read-only reader»). `ChatMediaOwnerResolver::canView`: вложение сообщения → `canRead(chat)`; аватар чата (`chats.avatar_media_id`) → `canRead`; иначе `null`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Media`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): sending messages with attachments and replies, cursor history"

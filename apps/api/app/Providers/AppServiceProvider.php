@@ -51,6 +51,7 @@ use App\Modules\Calendar\Policies\EventPolicy;
 use App\Modules\Calendar\Policies\EventSlotPolicy;
 use App\Modules\Calendar\Policies\EventTemplatePolicy;
 use App\Modules\Chat\Actions\ChatAccountEraser;
+use App\Modules\Chat\ChatMediaOwnerResolver;
 use App\Modules\Chat\Console\BackfillChatsCommand;
 use App\Modules\Chat\Listeners\AddNewUserToChats;
 use App\Modules\Chat\Listeners\ArchiveChatOnMinistryArchived;
@@ -59,6 +60,7 @@ use App\Modules\Chat\Listeners\SyncMinistryChatOnMembership;
 use App\Modules\Chat\Models\Chat;
 use App\Modules\Chat\Models\Message;
 use App\Modules\Chat\Policies\ChatPolicy;
+use App\Modules\Chat\Policies\MessagePolicy;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
@@ -126,7 +128,7 @@ class AppServiceProvider extends ServiceProvider
             'directory.account_erasers',
         );
         $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
-        $this->app->tag([AnnouncementMediaOwnerResolver::class, EventMediaOwnerResolver::class], 'media.owner_resolvers');
+        $this->app->tag([AnnouncementMediaOwnerResolver::class, EventMediaOwnerResolver::class, ChatMediaOwnerResolver::class], 'media.owner_resolvers');
     }
 
     /**
@@ -190,6 +192,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Announcement::class, AnnouncementPolicy::class);
         Gate::policy(CalendarEvent::class, EventPolicy::class);
         Gate::policy(Chat::class, ChatPolicy::class);
+        Gate::policy(Message::class, MessagePolicy::class);
         Gate::policy(EventSlot::class, EventSlotPolicy::class);
         Gate::policy(EventAssignment::class, EventAssignmentPolicy::class);
         Gate::policy(EventTemplate::class, EventTemplatePolicy::class);

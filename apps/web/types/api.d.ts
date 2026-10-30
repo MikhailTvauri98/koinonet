@@ -506,6 +506,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chats/{chat}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["message.index"];
+        put?: never;
+        post: operations["message.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ministries": {
         parameters: {
             query?: never;
@@ -1425,6 +1441,33 @@ export interface components {
                 name: string;
             }[];
         };
+        /** MessageResource */
+        MessageResource: {
+            id: string;
+            chat_id: string;
+            sender: {
+                id: string;
+                person: {
+                    id: string;
+                    full_name: string | null;
+                    photo_thumb_url: string | null;
+                };
+            } | null;
+            body: string | null;
+            reply_to: {
+                id: string;
+                sender_name: string | null;
+                body_preview: string | null;
+                deleted: boolean;
+            } | null;
+            attachments: components["schemas"]["MediaResource"][];
+            /** Format: date-time */
+            edited_at: string | null;
+            deleted: boolean;
+            /** Format: date-time */
+            created_at: string;
+            cursor: string;
+        };
         /** MinistryRequest */
         MinistryRequest: {
             name: string;
@@ -1541,6 +1584,12 @@ export interface components {
             description: string | null;
             is_system: boolean;
             permissions: string[];
+        };
+        /** SendMessageRequest */
+        SendMessageRequest: {
+            body?: string | null;
+            media_ids?: string[];
+            reply_to_id?: string | null;
         };
         /** SessionResource */
         SessionResource: {
@@ -3060,6 +3109,73 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "message.index": {
+        parameters: {
+            query?: {
+                before?: string;
+                after?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MessageResource"][];
+                        next_before: string | null;
+                        next_after: string | null;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "message.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description `MessageResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MessageResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "ministry.index": {
