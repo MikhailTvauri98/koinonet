@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Media;
 
+use App\Modules\Chat\Models\Chat;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Media\Models\Media;
 use App\Modules\Media\Models\MediaAttachment;
@@ -24,6 +25,7 @@ final readonly class MediaUsage
     {
         return MediaAttachment::query()->where('media_id', $media->id)->exists()
             || Person::query()->where('photo_media_id', $media->id)->exists()
-            || Ministry::query()->where('cover_media_id', $media->id)->exists();
+            || Ministry::query()->where('cover_media_id', $media->id)->exists()
+            || Chat::query()->where('avatar_media_id', $media->id)->exists();
     }
 }

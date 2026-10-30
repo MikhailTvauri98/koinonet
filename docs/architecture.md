@@ -303,7 +303,7 @@ Check: `phone IS NOT NULL OR email IS NOT NULL`.
 
 `chat_members`: `chat_id`, `user_id`, `is_owner bool` (создатель группы), `muted_until timestamptz null` (null: звук включён; дата в далёком будущем: навсегда), `last_read_message_id`, `joined_at`. Первичный ключ по паре. Выход из группы удаляет строку; из чата служения и события выход невозможен, состав ведёт синхронизация.
 
-`messages`: `id` (ULID, монотонен по времени с точностью до миллисекунды, курсор пагинации это пара `created_at, id`), `chat_id`, `sender_user_id` (null после стирания отправителя, сообщение остаётся), `body text null` (до 4000 символов), `reply_to_id` (FK `messages`, null), `edited_at`, `deleted_at` (заглушка «Сообщение удалено», вложения отвязываются и удаляются), `created_at`. Индекс `(chat_id, created_at DESC, id DESC)`. Сообщение без текста обязано иметь вложение, проверяет Action.
+`messages`: `id` (ULID, монотонен по времени с точностью до миллисекунды, курсор пагинации это пара `created_at, id`), `chat_id`, `sender_user_id` (null после стирания отправителя, сообщение остаётся), `body text null` (до 4000 символов), `reply_to_id` (FK `messages`, null), `edited_at`, `deleted_at` (заглушка «Сообщение удалено», вложения отвязываются и удаляются), `created_at timestamptz(6)` (UTC с сохранением микросекунд). Курсор истории — `created_at` в формате `YYYY-MM-DDTHH:mm:ss.ffffffZ`, затем `|` и ULID; проверяются реальная дата UTC и алфавит/диапазон ULID, регистр идентификатора сохраняется (Laravel генерирует строчные ULID). Индекс `(chat_id, created_at DESC, id DESC)`. Сообщение без текста обязано иметь вложение, проверяет Action.
 
 `chat_pinned_messages`: `chat_id`, `message_id` (`UNIQUE`), `pinned_by_user_id` (null после стирания аккаунта), `pinned_at`.
 

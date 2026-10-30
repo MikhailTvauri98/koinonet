@@ -111,8 +111,8 @@ apps/web/
 ### Задача 1: Таблицы чата, модели, перечисления, фабрики, стирание
 
 **Файлы:**
-- Создать: `app/Modules/Chat/Database/Migrations/2026_12_01_000900_create_chat_tables.php`; `Models/Chat.php`, `ChatMember.php`, `Message.php`, `ChatPinnedMessage.php`; `ChatType.php`; `MessageCursor.php`; `ChatAccountEraser.php`; `database/factories/ChatFactory.php`, `MessageFactory.php`
-- Изменить: `AppServiceProvider` (морф-имя `message`, тег `directory.account_erasers`), `app/Modules/Media/Models/Media.php` (`isDirectlyReferenced()` учитывает `chats.avatar_media_id`)
+- Создать: `app/Modules/Chat/Database/Migrations/2026_12_01_000900_create_chat_tables.php`; `Models/Chat.php`, `ChatMember.php`, `Message.php`, `ChatPinnedMessage.php`; `ChatType.php`; `MessageCursor.php`; `Actions/ChatAccountEraser.php`; `database/factories/ChatFactory.php`, `MessageFactory.php`
+- Изменить: `AppServiceProvider` (морф-имя `message`, тег `directory.account_erasers`), `app/Modules/Media/MediaUsage.php` (`isUsed()` учитывает `chats.avatar_media_id`)
 - Тест: `tests/Feature/Chat/ChatSchemaTest.php`, `tests/Unit/Chat/MessageCursorTest.php`
 
 **Интерфейсы:**
@@ -122,7 +122,7 @@ apps/web/
 - Отдаёт наружу: `Chat::factory()` — группа с владельцем; состояния `ministry(Ministry $m)`, `event(Event $e)`, `direct(User $a, User $b)`, `archived()`, `withMembers(User ...$users)`. `Message::factory()->for($chat)->from($user)` — текстовое сообщение; состояния `deleted()`, `replyTo(Message $m)`, `at(CarbonImmutable $moment)`.
 - Отдаёт наружу: `Chat::directKey(string $a, string $b): string` — два ULID через `:` в отсортированном порядке.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Unit/Chat/MessageCursorTest.php`:
 
@@ -231,12 +231,12 @@ it('erases an account from chats but keeps its messages', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Chat tests/Feature/Chat/ChatSchemaTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Миграция**
+- [x] **Шаг 3: Миграция**
 
 ```php
 Schema::create('chats', function (Blueprint $table) {
@@ -313,7 +313,7 @@ Schema::create('chat_pinned_messages', function (Blueprint $table) {
 });
 ```
 
-- [ ] **Шаг 4: Модели, курсор, стирание**
+- [x] **Шаг 4: Модели, курсор, стирание**
 
 `Message`: `HasUlids`, `$timestamps = false`, `created_at` заполняется в `creating` через `now()` с микросекундами (`CarbonImmutable::now()`), casts `created_at`, `edited_at`, `deleted_at` → `immutable_datetime`; `isDeleted(): bool`. `Chat::directKey` — `implode(':', [min($a, $b), max($a, $b)])`. `ChatMember::isMuted()` — `muted_until !== null && muted_until > now()`.
 
@@ -347,12 +347,12 @@ final class MessageCursor
 
 `ChatAccountEraser::eraseAccount($userId)`: `ChatMember::where('user_id')->delete()`, `Message::where('sender_user_id')->update(['sender_user_id' => null])`, `Chat::where('created_by_user_id')->update([... => null])`, `ChatPinnedMessage::where('pinned_by_user_id')->update([... => null])`. В `Media::isDirectlyReferenced()` добавить `Chat::where('avatar_media_id', $this->id)->exists()`.
 
-- [ ] **Шаг 5: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 5: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Unit/Chat tests/Feature/Chat/ChatSchemaTest.php tests/Feature/Directory/ErasePersonTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add apps/api && git commit -m "feat(chat): tables, models, cursor and account erasure for chats"

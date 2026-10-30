@@ -50,6 +50,8 @@ use App\Modules\Calendar\Policies\EventAssignmentPolicy;
 use App\Modules\Calendar\Policies\EventPolicy;
 use App\Modules\Calendar\Policies\EventSlotPolicy;
 use App\Modules\Calendar\Policies\EventTemplatePolicy;
+use App\Modules\Chat\Actions\ChatAccountEraser;
+use App\Modules\Chat\Models\Message;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
@@ -111,7 +113,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->tag([DetachHistoricalRoleReferences::class], 'access.role_reference_detachers');
         $this->app->bind(PushTransport::class, MinishlinkPushTransport::class);
         $this->app->tag(
-            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class, AnnouncementsAccountEraser::class, CalendarAccountEraser::class],
+            [AccessAccountEraser::class, MinistriesAccountEraser::class, MediaAccountEraser::class, NotificationsAccountEraser::class, AnnouncementsAccountEraser::class, CalendarAccountEraser::class, ChatAccountEraser::class],
             'directory.account_erasers',
         );
         $this->app->when(MediaAccess::class)->needs('$resolvers')->giveTagged('media.owner_resolvers');
@@ -125,6 +127,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Relation::morphMap([
             'announcement' => Announcement::class,
+            'message' => Message::class,
             'event' => CalendarEvent::class,
             'event_template' => EventTemplate::class,
         ]);
