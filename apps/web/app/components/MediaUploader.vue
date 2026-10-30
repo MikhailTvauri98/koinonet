@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="P extends DirectLinkPurpose | 'announcement'">
+<script setup lang="ts" generic="P extends DirectLinkPurpose | 'announcement' | 'event'">
 import type { DirectLinkPurpose, DirectLinkResources, MediaLike } from '~/utils/media'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -67,7 +67,7 @@ function fail(token: number, message: string) {
 
 async function attach(token: number, mediaId: string) {
   stopTimers()
-  if (props.purpose === 'announcement') {
+  if ((props.purpose === 'announcement' || props.purpose === 'event')) {
     readyIds = [...readyIds, mediaId]
     emit('update:mediaIds', [...readyIds])
     const next = queue.shift()
@@ -146,7 +146,7 @@ function onFileChange(event: Event) {
   const files = Array.from(input.files ?? [])
   const file = files.shift()
   input.value = ''
-  queue = props.multiple && props.purpose === 'announcement' ? files : []
+  queue = props.multiple && (props.purpose === 'announcement' || props.purpose === 'event') ? files : []
   if (file) void upload(file)
 }
 
@@ -174,7 +174,7 @@ defineExpose({ upload })
       class="media-uploader__button" :class="{ 'media-uploader__button--disabled': busy || disabled }"
       :title="disabled ? disabledReason : undefined"
     >
-      <input type="file" :accept="purpose === 'announcement' ? undefined : 'image/*'" :multiple="multiple && purpose === 'announcement'" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
+      <input type="file" :accept="(purpose === 'announcement' || purpose === 'event') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
       <span>{{ statusLabel }}</span>
     </label>
     <p v-if="errorMessage" role="alert" data-test="media-error">{{ errorMessage }}</p>

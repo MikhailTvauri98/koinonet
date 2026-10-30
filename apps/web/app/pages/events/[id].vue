@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { EventItem, EventSlot } from '~/composables/useEvents'
 import { apiErrorMessage } from '~/utils/apiError'
+import EventEditor from '~/components/calendar/EventEditor.vue'
+import CancelEventDialog from '~/components/calendar/CancelEventDialog.vue'
+import EventSlotManager from '~/components/calendar/EventSlotManager.vue'
 import EventCard from '~/components/calendar/EventCard.vue'
 const api = useApi(), route = useRoute(), auth = useAuthStore(), settings = useSettingsStore()
 const item = ref<EventItem | null>(null), errorMessage = ref(''), loading = ref(false)
@@ -34,5 +37,8 @@ await load()
     <p v-if="loading" role="status">Загружаем событие…</p>
     <p v-else-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" @click="load">Повторить</button></p>
     <EventCard v-if="item" :event="item" detail @edit="requestAction('edit')" @cancel="requestAction('cancel')" @assign="requestAssignment" />
+    <EventEditor v-if="item && action === 'edit'" :event="item" @saved="load" @cancel="action = null" />
+    <CancelEventDialog v-if="item && action === 'cancel'" :event-id="item.id" @saved="load" @cancel="action = null" />
+    <EventSlotManager v-if="item" :event="item" @saved="load" />
   </main>
 </template>

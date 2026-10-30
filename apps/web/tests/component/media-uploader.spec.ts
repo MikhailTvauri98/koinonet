@@ -193,3 +193,16 @@ describe('media uploader failure paths', () => {
     vi.useRealTimers()
   })
 })
+
+it.each(['announcement', 'event'] as const)('retains old IDs for multiple %s attachments and rejects failed files', async (purpose) => {
+  post.mockResolvedValueOnce({ data: { id: 'first', status: 'ready' } }).mockResolvedValueOnce({ data: { id: 'bad', status: 'failed' } })
+  const uploader = await mountSuspended(MediaUploader, { props: { purpose, multiple: true, mediaIds: ['old'], label: 'Вложения' } })
+  const input = uploader.get('input')
+  expect(input.attributes('multiple')).toBeDefined()
+  expect(input.attributes('accept')).toBeUndefined()
+  Object.defineProperty(input.element, 'files', { configurable: true, value: [file(), file()] })
+  await input.trigger('change'); await new Promise(resolve => setTimeout(resolve))
+  expect(uploader.emitted('update:mediaIds')).toEqual([[['old', 'first']]])
+  expect(uploader.emitted('error')?.at(-1)?.[0]).toContain('обработать')
+  expect(put).not.toHaveBeenCalled()
+})

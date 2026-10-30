@@ -4833,6 +4833,66 @@
                 }
             }
         },
+        "/calendar/slot-choices": {
+            "get": {
+                "operationId": "calendar.slotChoices",
+                "tags": [
+                    "SlotChoices"
+                ],
+                "parameters": [
+                    {
+                        "name": "owner_type",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/EventOwnerType"
+                        }
+                    },
+                    {
+                        "name": "ministry_id",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `SlotChoicesResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/SlotChoicesResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/templates": {
             "get": {
                 "operationId": "template.index",
@@ -6817,6 +6877,41 @@
                     "vapid_public_key"
                 ],
                 "title": "SettingsResource"
+            },
+            "SlotChoicesResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "roles"
+                ],
+                "title": "SlotChoicesResource"
             },
             "SlotRequest": {
                 "type": "object",

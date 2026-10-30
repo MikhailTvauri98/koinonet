@@ -6,6 +6,7 @@ use App\Modules\Calendar\Http\Controllers\AssignmentController;
 use App\Modules\Calendar\Http\Controllers\CandidateController;
 use App\Modules\Calendar\Http\Controllers\EventController;
 use App\Modules\Calendar\Http\Controllers\IcalFeedController;
+use App\Modules\Calendar\Http\Controllers\SlotChoicesController;
 use App\Modules\Calendar\Http\Controllers\SlotController;
 use App\Modules\Calendar\Http\Controllers\TemplateController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('calendar/feed/{token}.ics', IcalFeedController::class)->middleware('throttle:60,1');
 
 Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('calendar/slot-choices', SlotChoicesController::class);
     Route::get('templates', [TemplateController::class, 'index']);
     Route::post('templates', [TemplateController::class, 'store']);
     Route::get('templates/{template}', [TemplateController::class, 'show']);

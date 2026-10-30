@@ -990,6 +990,22 @@ export interface paths {
         patch: operations["slot.update"];
         trace?: never;
     };
+    "/calendar/slot-choices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["calendar.slotChoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/templates": {
         parameters: {
             query?: never;
@@ -1460,6 +1476,15 @@ export interface components {
             reverb_key: string;
             vapid_public_key: string;
             phone_region?: string;
+        };
+        /** SlotChoicesResource */
+        SlotChoicesResource: {
+            id: string;
+            name: string;
+            roles: {
+                id: string;
+                name: string;
+            }[];
         };
         /** SlotRequest */
         SlotRequest: {
@@ -4256,6 +4281,34 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "calendar.slotChoices": {
+        parameters: {
+            query: {
+                owner_type: components["schemas"]["EventOwnerType"];
+                ministry_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `SlotChoicesResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["SlotChoicesResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
         };
     };
     "template.index": {

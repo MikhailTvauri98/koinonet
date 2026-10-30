@@ -5,6 +5,8 @@ import { apiErrorMessage } from '~/utils/apiError'
 import EventList from '~/components/calendar/EventList.vue'
 const settings = useSettingsStore(), auth = useAuthStore()
 const { todayInChurch } = useChurchDate(), { load: loadEvents } = useEvents()
+const { can, canIn } = useCan()
+const canCreate = computed(() => can('calendar.church.manage') || can('ministries.manage_all') || Object.keys(auth.permissions.ministries).some(id => canIn(id, 'events.manage')))
 const events = ref<EventItem[]>([]), scope = ref('church'), week = ref('')
 const loading = ref(false), errorMessage = ref('')
 let generation = 0
@@ -32,7 +34,7 @@ await load()
 
 <template>
   <main>
-    <h1>Календарь</h1>
+    <h1>Календарь</h1><NuxtLink v-if="canCreate" to="/events/new">Создать событие</NuxtLink>
     <div class="calendar-controls" role="group" aria-label="Область календаря">
       <button type="button" data-test="scope-church" :aria-pressed="scope === 'church'" @click="selectScope('church')">Все</button>
       <button type="button" data-test="scope-mine" :aria-pressed="scope === 'mine'" @click="selectScope('mine')">Мои</button>

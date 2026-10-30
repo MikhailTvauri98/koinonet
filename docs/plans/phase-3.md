@@ -3345,10 +3345,10 @@ git add apps/web && git commit -m "feat(web): calendar page, event card, persona
 
 **Интерфейсы:**
 - Отдаёт наружу: `EventEditor` с props `event?: EventItem`, `defaultOwner?: { type: 'church' | 'ministry', ministryId?: string }`; выбор владельца ограничен правами: «Церковь» при `can('calendar.church.manage')`, служения, где `canIn(id, 'events.manage')`; событие `saved`.
-- Отдаёт наружу: `SlotEditor` — список слотов с ролью из `GET /ministries/{id}/roles` любого служения, подписью и количеством; `CancelEventDialog` — причина и подтверждение.
-- Потребляет: `POST /events`, `PATCH /events/{id}`, `POST /events/{id}/cancel`, `POST /events/{id}/slots`, `PATCH /slots/{id}`, `DELETE /slots/{id}`, `GET /ministries`, `GET /ministries/{id}/roles`.
+- Отдаёт наружу: `SlotEditor` — список слотов с ролью из минимальной проекции `GET /calendar/slot-choices?owner_type&ministry_id` любого активного служения, подписью и количеством; `CancelEventDialog` — причина и подтверждение.
+- Потребляет: `POST /events`, `PATCH /events/{id}`, `POST /events/{id}/cancel`, `POST /events/{id}/slots`, `PATCH /slots/{id}`, `DELETE /slots/{id}`, `GET /ministries`, `GET /calendar/slot-choices?owner_type&ministry_id`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```ts
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
@@ -3458,21 +3458,21 @@ describe('cancel dialog', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/component/event-editor.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Редактор: владелец → видимость (без `ministry` для церкви) → название, описание, место → начало и конец (`datetime-local`, интерпретируются как время церкви и переводятся в ISO UTC через `useChurchDate().toUtcIso(local)` — добавить этот метод в composable) → слоты (`SlotEditor`: служение → роль или «свободный слот» с подписью, количество) → вложения (`MediaUploader multiple`, `purpose = event`) → «уведомить участников служения» или «уведомить всех» (только при создании, по умолчанию выключено). Правка события отправляет только изменённые поля; слоты правятся отдельными запросами со своей строки в карточке. Отмена — диалог с причиной.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): event editor with slots, notify flag and cancellation dialog"

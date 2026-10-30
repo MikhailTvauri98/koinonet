@@ -1,3 +1,4 @@
+import { churchLocalToUtc, utcToChurchLocal } from '~/utils/churchWallTime'
 export function churchDateFormatter(timeZone: string, now: () => Date = () => new Date()) {
   const date = new Intl.DateTimeFormat('ru-RU', { timeZone, day: 'numeric', month: 'short', year: 'numeric' })
   const time = new Intl.DateTimeFormat('ru-RU', { timeZone, hour: '2-digit', minute: '2-digit' })
@@ -16,6 +17,8 @@ export function useChurchDate() {
   const settings = useSettingsStore()
   const formatter = computed(() => churchDateFormatter(settings.timezone))
   return {
+    toUtcIso: (local: string) => churchLocalToUtc(local, settings.timezone),
+    toLocalInput: (iso: string) => utcToChurchLocal(iso, settings.timezone),
     formatDate: (iso: string) => formatter.value.formatDate(iso),
     formatTime: (iso: string) => formatter.value.formatTime(iso),
     formatDateTime: (iso: string) => formatter.value.formatDateTime(iso),
