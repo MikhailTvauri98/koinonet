@@ -97,6 +97,7 @@ use App\Modules\Notifications\Http\Requests\MarkNotificationsReadRequest;
 use App\Modules\Notifications\Http\Requests\UpdateNotificationSettingsRequest;
 use App\Modules\Notifications\Listeners\NotifyAboutAnnouncement;
 use App\Modules\Notifications\Listeners\NotifyAboutAssignment;
+use App\Modules\Notifications\Listeners\NotifyAboutChatMessage;
 use App\Modules\Notifications\Listeners\NotifyAboutEventCancellation;
 use App\Modules\Notifications\Listeners\NotifyAboutEventChange;
 use App\Modules\Notifications\Listeners\NotifyAboutNewEvent;
@@ -225,6 +226,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MinistryArchived::class, BumpMembershipPermissionCache::class);
         Event::listen(MinistryArchived::class, OnMinistryArchived::class);
         Event::listen(MessageSent::class, BroadcastChatChanges::class);
+        Event::listen(MessageSent::class, NotifyAboutChatMessage::class);
         Event::listen(MessageEdited::class, BroadcastChatChanges::class);
         Event::listen(MessageDeleted::class, BroadcastChatChanges::class);
         Event::listen(ChatPinsChanged::class, BroadcastChatChanges::class);

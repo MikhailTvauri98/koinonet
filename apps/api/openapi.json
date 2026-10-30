@@ -3435,6 +3435,109 @@
                 }
             }
         },
+        "/chats/{chat}/mute": {
+            "post": {
+                "operationId": "mute.store",
+                "tags": [
+                    "Mute"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MuteRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "mute.destroy",
+                "tags": [
+                    "Mute"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/notifications": {
             "get": {
                 "operationId": "notificationCenter.index",
@@ -6170,7 +6273,8 @@
                         "type": [
                             "string",
                             "null"
-                        ]
+                        ],
+                        "format": "date-time"
                     },
                     "is_owner": {
                         "type": "boolean"
@@ -6304,7 +6408,8 @@
                         "type": [
                             "string",
                             "null"
-                        ]
+                        ],
+                        "format": "date-time"
                     },
                     "is_owner": {
                         "type": "boolean"
@@ -7343,6 +7448,17 @@
                     "archived_at"
                 ],
                 "title": "MinistryResource"
+            },
+            "MuteRequest": {
+                "type": "object",
+                "properties": {
+                    "until": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$"
+                    }
+                },
+                "title": "MuteRequest"
             },
             "MyProfileResource": {
                 "type": "object",

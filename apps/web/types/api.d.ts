@@ -682,6 +682,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chats/{chat}/mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mute.store"];
+        delete: operations["mute.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications": {
         parameters: {
             query?: never;
@@ -1258,6 +1274,7 @@ export interface components {
                 deleted: boolean;
             } | null;
             unread_count: number;
+            /** Format: date-time */
             muted_until: string | null;
             is_owner: boolean;
         };
@@ -1289,6 +1306,7 @@ export interface components {
                 deleted: boolean;
             } | null;
             unread_count: number;
+            /** Format: date-time */
             muted_until: string | null;
             is_owner: boolean;
             members: components["schemas"]["ChatMemberResource"][];
@@ -1547,6 +1565,11 @@ export interface components {
             default_role_id: string | null;
             chat_id: string | null;
             archived_at: string | null;
+        };
+        /** MuteRequest */
+        MuteRequest: {
+            /** Format: date-time */
+            until?: string;
         };
         /** MyProfileResource */
         MyProfileResource: {
@@ -3717,6 +3740,66 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "mute.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MuteRequest"];
+            };
+        };
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "mute.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "notificationCenter.index": {

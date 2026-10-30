@@ -21,4 +21,9 @@ final readonly class ChatPolicy
     {
         return $this->access->canRead($user, $chat);
     }
+
+    public function mute(User $user, Chat $chat): bool
+    {
+        return $this->access->canMute($user, $chat);
+    }
 }

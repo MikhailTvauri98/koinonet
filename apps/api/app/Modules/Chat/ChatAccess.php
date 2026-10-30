@@ -26,6 +26,11 @@ final readonly class ChatAccess
         return ! $user->isDisabled() && $chat->archived_at === null && $this->isMember($user, $chat);
     }
 
+    public function canMute(User $user, Chat $chat): bool
+    {
+        return ! $user->isDisabled() && $this->isMember($user, $chat);
+    }
+
     public function canModerate(User $user, Chat $chat): bool
     {
         if ($user->isDisabled() || $chat->archived_at !== null || $chat->type === ChatType::Direct) {

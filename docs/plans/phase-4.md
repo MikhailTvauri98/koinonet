@@ -1616,7 +1616,7 @@ git add . && git commit -m "feat(chat): broadcast message, pin, membership and u
 - Отдаёт наружу: `ChatMessageNotification(Message $message, Chat $chat)` — категория `chat`, `via()` → только `WebPushChannel` при разрешении `PushGate`; `title` — название чата (для личного — имя отправителя), `body` — «{Имя}: {текст}» или «{Имя}: Вложение», `url = /chats/{id}`, `tag = chat-{id}`.
 - Отдаёт наружу: `NotifyAboutChatMessage` (`ShouldQueue`) на `MessageSent` — адресаты: участники кроме отправителя, не заглушённые, активные.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Chat/MuteTest.php`:
 
@@ -1725,12 +1725,12 @@ it('titles a direct chat push with the sender name', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/MuteTest.php tests/Feature/Notifications/ChatPushTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class ChatMessageNotification extends AppNotification
@@ -1768,12 +1768,12 @@ final class ChatMessageNotification extends AppNotification
 
 `ChatTitle::for(Chat $chat, ?User $viewer): string` выделяется из `ChatResource` задачи 3 (служение, событие, группа, собеседник). `NotifyAboutChatMessage`: `ChatMember` чата, кроме `sender_user_id`, с `muted_until IS NULL OR muted_until <= now()`, аккаунты активные; `Notification::send` чанками по 200. `MuteChat::handle(User, Chat, ?CarbonImmutable $until)` — `muted_until = $until ?? '9999-12-31 00:00:00'`; `UnmuteChat` — `null`; политика — участие.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Notifications`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat,notifications): chat message push with mute and category"

@@ -5,15 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Chat\Http\Resources;
 
 use App\Modules\Chat\ChatAccess;
+use App\Modules\Chat\ChatTitle;
 use App\Modules\Chat\ChatType;
 use App\Modules\Chat\Models\Chat;
-use App\Modules\Chat\Models\ChatMember;
-use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Modules\Media\SignedMediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Gate;
 
 /** @mixin Chat */
 class ChatListItemResource extends JsonResource
@@ -31,18 +29,13 @@ class ChatListItemResource extends JsonResource
         $viewer = $request->user();
         assert($viewer instanceof User);
         $member = app(ChatAccess::class)->member($viewer, $chat);
-        $partner = $chat->type === ChatType::Direct ? $this->visiblePartner($viewer, $chat) : null;
+        $partner = $chat->type === ChatType::Direct ? app(ChatTitle::class)->visiblePartner($viewer, $chat) : null;
         $message = $chat->lastMessage;
 
         return [
             'id' => $chat->id,
             'type' => $chat->type->value,
-            'title' => match ($chat->type) {
-                ChatType::Ministry => $chat->ministry->name ?? '',
-                ChatType::Event => $chat->event->title ?? '',
-                ChatType::Group => $chat->title ?? '',
-                ChatType::Direct => $partner?->fullName() ?? 'Личный чат',
-            },
+            'title' => app(ChatTitle::class)->for($chat, $viewer),
             'avatar_url' => $chat->type === ChatType::Direct
                 ? SignedMediaUrl::variant($partner?->photo, 'thumb')
                 : SignedMediaUrl::variant($chat->avatar, 'thumb'),
@@ -58,15 +51,9 @@ class ChatListItemResource extends JsonResource
                 'deleted' => $message->isDeleted(),
             ],
             'unread_count' => (int) $this->unreadCount,
+            /** @format date-time */
             'muted_until' => $member?->muted_until?->toISOString(),
             'is_owner' => (bool) ($member->is_owner ?? false),
         ];
-    }
-
-    private function visiblePartner(User $viewer, Chat $chat): ?Person
-    {
-        $partner = $chat->members->first(fn (ChatMember $member): bool => $member->user_id !== $viewer->id)?->user->person;
-
-        return $partner !== null && Gate::forUser($viewer)->allows('view', $partner) ? $partner : null;
     }
 }
