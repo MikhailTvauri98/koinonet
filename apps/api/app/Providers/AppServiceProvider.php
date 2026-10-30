@@ -60,6 +60,7 @@ use App\Modules\Chat\Events\ChatRead;
 use App\Modules\Chat\Events\MessageDeleted;
 use App\Modules\Chat\Events\MessageEdited;
 use App\Modules\Chat\Events\MessageSent;
+use App\Modules\Chat\Http\Requests\CreateChatRequest;
 use App\Modules\Chat\Listeners\AddNewUserToChats;
 use App\Modules\Chat\Listeners\ArchiveChatOnMinistryArchived;
 use App\Modules\Chat\Listeners\BroadcastChatChanges;
@@ -67,6 +68,7 @@ use App\Modules\Chat\Listeners\CreateMinistryChatOnCreated;
 use App\Modules\Chat\Listeners\SyncMinistryChatOnMembership;
 use App\Modules\Chat\Models\Chat;
 use App\Modules\Chat\Models\Message;
+use App\Modules\Chat\OpenApi\CreateChatSchema;
 use App\Modules\Chat\Policies\ChatPolicy;
 use App\Modules\Chat\Policies\MessagePolicy;
 use App\Modules\Directory\Console\ErasePersonCommand;
@@ -152,6 +154,9 @@ class AppServiceProvider extends ServiceProvider
             'event_template' => EventTemplate::class,
         ]);
         Scramble::configure()->withDocumentTransformers(function (OpenApi $document): void {
+            if ($document->components->hasSchema(CreateChatRequest::class)) {
+                $document->components->addSchema(CreateChatRequest::class, Schema::fromType(new CreateChatSchema));
+            }
             // Resource schemas use their short variant name; request schemas use the class name.
             foreach ([TemplateRequest::class => true, UpdateTemplateRequest::class => false, class_basename(EventTemplateResource::class) => null] as $class => $creating) {
                 if ($document->components->hasSchema($class)) {

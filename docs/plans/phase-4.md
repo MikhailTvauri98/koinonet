@@ -1952,7 +1952,7 @@ composer openapi && git add . && git commit -m "feat(chat): group chats with own
 - Отдаёт наружу: `OpenDirectChat::handle(User $me, User $other): array{chat: Chat, created: bool}`.
 - Коды ошибок: `chat.direct_self`, `chat.direct_user_disabled`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2012,12 +2012,12 @@ it('appears in both lists only after the first message', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/DirectChatTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 В `Permission`: `ChatsDm = 'chats.dm'` (глобальное; «Писать в личные чаты»; «Начинать личный чат с любым аккаунтом.»).
 
@@ -2058,12 +2058,12 @@ final class OpenDirectChat
 
 Политика создания: `chats.dm` только для того, кто открывает; отвечать в существующий личный чат может любой участник (участие даёт `canWrite`).
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): direct chats keyed by the account pair"

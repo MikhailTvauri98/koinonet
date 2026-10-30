@@ -19,6 +19,11 @@ final readonly class ChatPolicy
         return ! $user->isDisabled() && app(PermissionResolver::class)->can($user, Permission::ChatsCreateGroups);
     }
 
+    public function openDirect(User $user): bool
+    {
+        return ! $user->isDisabled() && app(PermissionResolver::class)->can($user, Permission::ChatsDm);
+    }
+
     public function update(User $user, Chat $chat): bool
     {
         return $this->access->canManageGroup($user, $chat);

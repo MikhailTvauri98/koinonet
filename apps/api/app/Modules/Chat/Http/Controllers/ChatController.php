@@ -6,6 +6,7 @@ namespace App\Modules\Chat\Http\Controllers;
 
 use App\Modules\Chat\Actions\ArchiveChat;
 use App\Modules\Chat\Actions\CreateGroupChat;
+use App\Modules\Chat\Actions\OpenDirectChat;
 use App\Modules\Chat\Actions\UpdateGroupChat;
 use App\Modules\Chat\ChatType;
 use App\Modules\Chat\Http\Requests\ChatAvatarRequest;
@@ -17,6 +18,7 @@ use App\Modules\Chat\Models\Chat;
 use App\Modules\Chat\UnreadCounter;
 use App\Modules\Directory\Models\User;
 use App\Modules\Media\Models\Media;
+use Dedoc\Scramble\Attributes\Response as OpenApiResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,10 +27,17 @@ use Illuminate\Support\Facades\Gate;
 
 final class ChatController
 {
-    public function store(CreateChatRequest $request, CreateGroupChat $action): JsonResponse
+    #[OpenApiResponse(status: 200, type: 'array{data: ChatResource}')]
+    #[OpenApiResponse(status: 201, type: 'array{data: ChatResource}')]
+    public function store(CreateChatRequest $request, CreateGroupChat $action, OpenDirectChat $direct): JsonResponse
     {
         $actor = $request->user();
         assert($actor instanceof User);
+        if ($request->validated('type') === 'direct') {
+            $result = $direct->handle($actor, User::query()->findOrFail($request->validated('user_id')));
+
+            return $this->resource($result['chat'], $actor)->response()->setStatusCode($result['created'] ? 201 : 200);
+        }
         /** @var list<string> $ids */
         $ids = $request->validated('member_ids');
         $chat = $action->handle($actor, (string) $request->validated('title'), $ids);

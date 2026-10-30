@@ -54,6 +54,10 @@ function actingAsMemberWithKey(Permission $key, bool $granted, array $globalBase
 function permissionCases(): array
 {
     return [
+        Permission::ChatsDm->value => function (bool $granted): void {
+            actingWithGlobalKey(Permission::ChatsDm, $granted);
+            test()->postJson('/api/v1/chats', ['type' => 'direct', 'user_id' => User::factory()->create()->id])->assertStatus($granted ? 201 : 403);
+        },
         Permission::ChatsCreateGroups->value => function (bool $granted): void {
             actingWithGlobalKey(Permission::ChatsCreateGroups, $granted);
             test()->postJson('/api/v1/chats', ['type' => 'group', 'title' => 'Группа', 'member_ids' => [User::factory()->create()->id]])->assertStatus($granted ? 201 : 403);

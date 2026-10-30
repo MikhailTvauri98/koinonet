@@ -6,6 +6,7 @@ namespace App\Modules\Access;
 
 enum Permission: string
 {
+    case ChatsDm = 'chats.dm';
     case ChatsCreateGroups = 'chats.create_groups';
     case ChatModerate = 'chat.moderate';
     case ChatsModerateAll = 'chats.moderate_all';
@@ -44,6 +45,7 @@ enum Permission: string
     public function label(): string
     {
         return match ($this) {
+            self::ChatsDm => 'Писать в личные чаты',
             self::ChatsCreateGroups => 'Создавать группы',
             self::ChatModerate => 'Модерировать чат служения',
             self::ChatsModerateAll => 'Модерировать любые чаты',
@@ -73,6 +75,7 @@ enum Permission: string
     public function description(): string
     {
         return match ($this) {
+            self::ChatsDm => 'Начинать личный чат с любым аккаунтом.',
             self::ChatsCreateGroups => 'Создавать групповые чаты с произвольным составом и управлять ими.',
             self::ChatModerate => 'Удалять чужие сообщения и закреплять в чате служения.',
             self::ChatsModerateAll => 'Удалять чужие сообщения, закреплять, менять состав групп, архивировать чаты.',
