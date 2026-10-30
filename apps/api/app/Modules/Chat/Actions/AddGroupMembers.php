@@ -18,7 +18,7 @@ final readonly class AddGroupMembers
     {
         return DB::transaction(function () use ($actor, $chat, $userIds): Chat {
             // Lock all accounts first in one order, before any chat membership.
-            User::query()->whereIn('id', [$actor->id, ...$userIds])->orderBy('id')->lockForUpdate()->get();
+            User::query()->whereIn('id', [$actor->id, ...$userIds])->orderBy('id')->lock('for no key update')->get();
             $chat = $this->guard->lock($actor, $chat);
             $ids = $this->guard->members($userIds);
             $added = [];

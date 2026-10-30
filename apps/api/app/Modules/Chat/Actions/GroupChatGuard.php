@@ -17,7 +17,8 @@ final class GroupChatGuard
 {
     public function lock(User $actor, Chat $chat, bool $leaving = false, string $ability = 'update'): Chat
     {
-        $actor = User::query()->lockForUpdate()->find($actor->id);
+        // Protect account state without blocking message FK KEY SHARE locks.
+        $actor = User::query()->lock('for no key update')->find($actor->id);
         $chat = Chat::query()->lockForUpdate()->findOrFail($chat->id);
         if ($actor === null || $actor->isDisabled()) {
             throw new AuthorizationException;
@@ -42,7 +43,7 @@ final class GroupChatGuard
     public function members(array $ids): array
     {
         $ids = array_values(array_unique($ids));
-        $users = User::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
+        $users = User::query()->whereIn('id', $ids)->orderBy('id')->lock('for no key update')->get();
         if ($users->count() !== count($ids)) {
             throw ValidationException::withMessages(['member_ids' => 'Аккаунт не найден.', 'user_ids' => 'Аккаунт не найден.']);
         }

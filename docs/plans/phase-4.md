@@ -1932,6 +1932,8 @@ it('lets chats.moderate_all manage and archive someone elses group', function ()
 composer openapi && git add . && git commit -m "feat(chat): group chats with owner-managed membership, avatar and archiving"
 ```
 
+**Регрессия конкурентности:** `GroupChatConcurrencyTest` запускает реальные `SendMessage` и `UpdateGroupChat` в двух процессах, подтверждает ожидание блокировки через `pg_blocking_pids` и сохранение обоих результатов. Воспроизведён `40P01` при `User FOR UPDATE`; четыре блокировки аккаунтов задачи заменены на `FOR NO KEY UPDATE`, совместимый с FK `KEY SHARE`.
+
 **Критерии готовности:**
 - Группу создаёт носитель `chats.create_groups`, управляет владелец, участники выходят сами (раздел 7.6); владелец выйти не может (решение 4).
 - Состав чатов служений и событий руками не правится — только синхронизацией.

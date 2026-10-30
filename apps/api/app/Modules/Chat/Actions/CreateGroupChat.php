@@ -22,7 +22,7 @@ final readonly class CreateGroupChat
     {
         return DB::transaction(function () use ($owner, $title, $memberIds): Chat {
             // Reciprocal group creation takes account locks in the same order.
-            User::query()->whereIn('id', [$owner->id, ...$memberIds])->orderBy('id')->lockForUpdate()->get();
+            User::query()->whereIn('id', [$owner->id, ...$memberIds])->orderBy('id')->lock('for no key update')->get();
             $owner = User::query()->find($owner->id);
             if ($owner === null) {
                 throw new AuthorizationException;
