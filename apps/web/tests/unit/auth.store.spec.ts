@@ -8,6 +8,7 @@ const get = vi.fn()
 const post = vi.fn()
 const unsubscribePush = vi.fn()
 
+mockNuxtImport('useChatsStore', () => () => ({ subscribeUser: async () => {}, unsubscribeUser: () => {} }))
 mockNuxtImport('useApi', () => () => ({ get, post }))
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
 mockNuxtImport('usePush', () => () => ({ unsubscribe: unsubscribePush, setAccount: async () => {} }))

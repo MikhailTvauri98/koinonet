@@ -32,10 +32,10 @@ it('hides empty direct chats but shows their last message preview once sent', fu
     $user = actingAsUser();
     $other = User::factory()->create();
     $chat = Chat::factory()->direct($user, $other)->create();
-    $this->getJson('/api/v1/chats')->assertOk()->assertJsonCount(0, 'data');
+    $this->getJson('/api/v1/chats')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.unread_total', 0);
     $message = Message::factory()->for($chat)->from($other)->create(['body' => 'Привет']);
     $chat->update(['last_message_id' => $message->id, 'last_message_at' => $message->created_at]);
-    $this->getJson('/api/v1/chats')->assertOk()->assertJsonPath('data.0.last_message.body_preview', 'Привет')->assertJsonPath('data.0.unread_count', 1);
+    $this->getJson('/api/v1/chats')->assertOk()->assertJsonPath('data.0.last_message.body_preview', 'Привет')->assertJsonPath('data.0.unread_count', 1)->assertJsonPath('meta.unread_total', 1);
     $message->update(['deleted_at' => now(), 'body' => null]);
     $this->getJson('/api/v1/chats')->assertJsonPath('data.0.last_message.body_preview', 'Сообщение удалено')->assertJsonPath('data.0.unread_count', 0);
 });
@@ -98,10 +98,12 @@ it('batches all unread counts in one query and counts no participation for nonme
     DB::disableQueryLog();
     expect($counts)->toBe([$first->id => 1, $second->id => 1, $readOnly->id => 0])->and($queries)->toHaveCount(1);
     expect(app(UnreadCounter::class)->forChat($user, $readOnly))->toBe(0)->and(app(UnreadCounter::class)->total($user))->toBe(2);
+    $this->getJson('/api/v1/chats')->assertOk()->assertJsonPath('meta.unread_total', 2);
 });
 
 it('documents concrete chat read schemas without unknown properties', function () {
     $schema = app(Generator::class)();
+    expect($schema['paths']['/chats']['get']['responses']['200']['content']['application/json']['schema']['properties']['meta']['properties']['unread_total']['type'])->toBe('integer');
     foreach (['ChatResource', 'ChatListItemResource', 'ChatMemberResource'] as $name) {
         expect($schema['components']['schemas'])->toHaveKey($name);
         foreach ($schema['components']['schemas'][$name]['properties'] as $property) {

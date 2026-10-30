@@ -38,6 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function setMe(me: MeResponse) {
     if (user.value?.id !== me.user.id) {
       sessionVersion.value++
+      useChatsStore().unsubscribeUser()
       useSettingsStore().reset()
     }
     user.value = me.user
@@ -45,12 +46,22 @@ export const useAuthStore = defineStore('auth', () => {
     permissions.value = me.permissions
     connectionLost.value = false
     const pushSetup = usePush().setAccount(me.user.id)
-    await Promise.all([pushSetup, useNotificationsStore().subscribe(me.user.id)])
+    await Promise.all([pushSetup, refreshRealtime()])
+  }
+
+  async function refreshRealtime() {
+    const id = user.value?.id
+    if (!id) return
+    const version = sessionVersion.value
+    await useNotificationsStore().subscribe(id)
+    if (version !== sessionVersion.value) return
+    await useChatsStore().subscribeUser(id)
   }
 
   function reset() {
     sessionVersion.value++
     void usePush().setAccount(null)
+    useChatsStore().unsubscribeUser()
     useNotificationsStore().unsubscribe()
     useSettingsStore().reset()
     user.value = null
@@ -127,5 +138,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, person, permissions, sessionVersion, initialized, connectionLost, login, logout, fetchMe, reset, setMe, forgetSession }
+  return { user, person, permissions, sessionVersion, initialized, connectionLost, login, logout, fetchMe, reset, setMe, forgetSession, refreshRealtime }
 })

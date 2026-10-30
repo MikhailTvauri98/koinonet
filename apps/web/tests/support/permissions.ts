@@ -3,6 +3,7 @@ import { useNuxtApp } from '#app'
 import { vi } from 'vitest'
 import { useAuthStore, type MePerson, type MeUser } from '~/stores/auth'
 import { useNotificationsStore } from '~/stores/notifications'
+import { useChatsStore } from '~/stores/chats'
 
 export interface PermissionGrant {
   administrator?: boolean
@@ -38,6 +39,7 @@ export function grantPermissions(grant: PermissionGrant = {}, pinia: Pinia = use
   // Permission screens do not exercise network/channel initialization; its
   // real lifecycle has dedicated notifications-auth and store tests.
   vi.spyOn(useNotificationsStore(pinia), 'subscribe').mockResolvedValue(undefined)
+  vi.spyOn(useChatsStore(pinia), 'subscribeUser').mockResolvedValue(undefined)
   const auth = useAuthStore(pinia)
   auth.setMe({
     user: auth.user ?? signedInUser,

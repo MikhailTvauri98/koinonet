@@ -2777,6 +2777,9 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ChatListItemResource"][];
+                        meta: {
+                            unread_total: number;
+                        };
                     };
                 };
             };

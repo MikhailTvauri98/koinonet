@@ -2214,6 +2214,8 @@ composer openapi && git add . && git commit -m "feat(chat): event chats created 
 
 ### Задача 13: Store чатов, список, бейдж, живые обновления
 
+**Уточнение реализации:** примеры ниже иллюстративные. Актуальный last_message не содержит имени отправителя: список показывает доступное превью. Рабочая кнопка «Новая группа» с NewGroupDialog и проверкой chats.create_groups переносится в задачу 15, где появляется сама форма. В задаче 13 нет заглушки или неработающей кнопки. Общим каналом владеет notifications, последовательностью подключения и повтора — auth; chats снимает только собственные обработчики. Сортировка сохраняет микросекунды и id DESC, а пересекающиеся HTTP-снимки не перезаписывают живые данные.
+
 **Файлы:**
 - Создать: `apps/web/app/stores/chats.ts`; `app/pages/chats/index.vue`; `app/components/chat/ChatList.vue`, `ChatListItem.vue`
 - Изменить: `app/components/AppNav.vue` (пункт «Чаты» с бейджем `unreadTotal`), `app/stores/auth.ts` (подписка на `chat.updated` и `unread.total` вместе с уведомлениями), `app/pages/index.vue` (блок «Непрочитанное»)
@@ -2223,7 +2225,7 @@ composer openapi && git add . && git commit -m "feat(chat): event chats created 
 - Отдаёт наружу: `useChatsStore()` с `chats`, `unreadTotal`, `fetch()`, `upsert(chat)`, `remove(chatId)`, `subscribeUser(userId)`, `unsubscribeUser()`, `setUnreadTotal(n)`; сортировка по `last_message_at` убыв. поддерживается при `upsert`.
 - Потребляет: `GET /chats`, события `chat.updated` (`{chat, removed?}`) и `unread.total` (`{total}`) на `private-user.{id}`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/unit/chats.store.spec.ts`:
 
@@ -2334,21 +2336,21 @@ describe('chat list page', () => {
 
 `GET /chats` в этой задаче дополняется `meta.unread_total` (правка контроллера задачи 3 на сервере — одна строка, тест `ChatIndexTest` дополняется проверкой `meta.unread_total`).
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Store подписывается на `private:user.{id}` через тот же экземпляр канала, что и уведомления (Echo кеширует канал по имени): `.listen('.chat.updated', ...)`, `.listen('.unread.total', ...)`. Список: аватар или инициалы, название, превью последнего сообщения «Имя: текст», время (`useChurchDate`), бейдж непрочитанного, значок «без звука», пометка «архив». Кнопка «Новая группа» по `can('chats.create_groups')` открывает `NewGroupDialog` (задача 15). Главная: блок «Непрочитанное» — до трёх чатов с `unread_count > 0`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web apps/api && git commit -m "feat(web): chats store, chat list with live unread updates"

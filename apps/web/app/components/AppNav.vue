@@ -4,6 +4,7 @@ const auth = useAuthStore()
 const canManageCalendar = computed(() => hasCalendarManagement(auth.permissions))
 const { can } = useCan()
 const notifications = useNotificationsStore()
+const chats = useChatsStore()
 // Правило и обоснование — в useCan.ts (hasVisibleMinistries), общее с index.vue.
 const hasMinistries = useHasVisibleMinistries()
 
@@ -48,6 +49,7 @@ const items = computed<NavItem[]>(() => {
 
   list.push({ to: '/calendar', label: 'Календарь' })
   list.push({ to: '/announcements', label: 'Объявления' })
+  list.push({ to: '/chats', label: 'Чаты' })
   list.push({ to: '/notifications', label: 'Уведомления' })
   list.push({ to: '/settings/profile', label: 'Профиль' })
 
@@ -64,6 +66,7 @@ const items = computed<NavItem[]>(() => {
         active-class="app-nav__item--active"
       >
         {{ item.label }}
+        <span v-if="item.to === '/chats' && chats.unreadTotal" class="app-nav__badge" data-test="chat-badge" :aria-label="`Непрочитанных: ${chats.unreadTotal}`">{{ chats.unreadTotal }}</span>
         <span v-if="item.to === '/notifications' && notifications.unreadCount" class="app-nav__badge" data-test="notification-badge" :aria-label="`Непрочитанных: ${notifications.unreadCount}`">{{ notifications.unreadCount }}</span>
       </NuxtLink>
       <NuxtLink v-if="item.to === '/calendar' && canManageCalendar" to="/templates" class="app-nav__item app-nav__subitem" active-class="app-nav__item--active">Шаблоны</NuxtLink>

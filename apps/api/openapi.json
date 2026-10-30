@@ -1462,10 +1462,22 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/ChatListItemResource"
                                             }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "unread_total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "unread_total"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "meta"
                                     ]
                                 }
                             }

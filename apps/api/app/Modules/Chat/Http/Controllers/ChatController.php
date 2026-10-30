@@ -70,6 +70,7 @@ final class ChatController
         return $this->resource($action->handle($chat, $actor), $actor);
     }
 
+    #[OpenApiResponse(status: 200, type: 'array{data: list<ChatListItemResource>, meta: array{unread_total: int}}')]
     public function index(Request $request, UnreadCounter $unread): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', Chat::class);
@@ -81,7 +82,8 @@ final class ChatController
             ->orderByRaw('last_message_at DESC NULLS LAST')->orderByDesc('id')->get();
         $counts = $unread->forChats($user, $chats);
 
-        return ChatListItemResource::collection($chats->map(fn (Chat $chat): ChatListItemResource => new ChatListItemResource($chat, $counts[$chat->id])));
+        return ChatListItemResource::collection($chats->map(fn (Chat $chat): ChatListItemResource => new ChatListItemResource($chat, $counts[$chat->id])))
+            ->additional(['meta' => ['unread_total' => array_sum($counts)]]);
     }
 
     public function show(Request $request, Chat $chat, UnreadCounter $unread): ChatResource

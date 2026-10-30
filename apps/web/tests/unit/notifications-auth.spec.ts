@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore, type MeResponse } from '~/stores/auth'
 
 const { get, post, subscribe, unsubscribe } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), subscribe: vi.fn(), unsubscribe: vi.fn() }))
+mockNuxtImport('useChatsStore', () => () => ({ subscribeUser: async () => {}, unsubscribeUser: () => {} }))
 mockNuxtImport('useApi', () => () => ({ get, post }))
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe, unsubscribe }))
 const me: MeResponse = {

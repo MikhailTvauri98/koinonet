@@ -6,6 +6,7 @@ import { useAuthStore, type MeResponse } from '~/stores/auth'
 import { usePush } from '~/composables/usePush'
 
 const { get, post, remove } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), remove: vi.fn() }))
+mockNuxtImport('useChatsStore', () => () => ({ subscribeUser: async () => {}, unsubscribeUser: () => {} }))
 mockNuxtImport('useApi', () => () => ({ get, post, delete: remove }))
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
 
