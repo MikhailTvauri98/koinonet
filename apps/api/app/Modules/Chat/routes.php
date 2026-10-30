@@ -5,12 +5,14 @@ declare(strict_types=1);
 use App\Modules\Chat\Http\Controllers\ChatController;
 use App\Modules\Chat\Http\Controllers\ChatMemberController;
 use App\Modules\Chat\Http\Controllers\ChatReadController;
+use App\Modules\Chat\Http\Controllers\EventChatController;
 use App\Modules\Chat\Http\Controllers\MessageController;
 use App\Modules\Chat\Http\Controllers\MuteController;
 use App\Modules\Chat\Http\Controllers\PinController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function (): void {
+    Route::post('events/{event}/chat', [EventChatController::class, 'store']);
     Route::post('messages/{message}/pin', [PinController::class, 'store']);
     Route::delete('messages/{message}/pin', [PinController::class, 'destroy']);
     Route::get('messages/{message}', [MessageController::class, 'show']);

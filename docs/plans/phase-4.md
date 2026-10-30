@@ -2090,7 +2090,7 @@ composer openapi && git add . && git commit -m "feat(chat): direct chats keyed b
 - Отдаёт наружу: `EventResource.chat_id: string|null`.
 - Потребляет: `AssignmentCreated`, `AssignmentRemoved` (фаза 3), `UserCreated` (фаза 1), `EventAccess` (фаза 3).
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -2179,12 +2179,12 @@ it('lets the event manager moderate the event chat', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/EventChatTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `CreateEventChat`: `firstOrCreate(['event_id' => …], ['type' => ChatType::Event, 'created_by_user_id' => $creator->id])`; участники — аккаунты назначенных (`event_assignments → people → users`, активные) плюс создатель. `SyncEventChatOnAssignment`: `AssignmentCreated` с `userId` и существующим чатом события → `add`; `AssignmentRemoved` → `remove`, если `EventAssignment::whereHas('slot', event)->where('person_id')` больше не существует. `AddNewUserToChats` дополняется веткой: события `scheduled` с назначением человека и чатом → `add`. Маршрут `events/{event}/chat` объявляется в `app/Modules/Chat/routes.php`; политика — `EventAccess::canManage`.
 
@@ -2193,7 +2193,9 @@ it('lets the event manager moderate the event chat', function () {
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Calendar`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+Проверка задачи: новые сценарии чата события — 12 тестов, 100 утверждений; интеграция очереди уведомлений — 6 тестов, 36 утверждений; lint и статический анализ зелёные. Общая проверка остаётся незавершённой: последний полный прогон — 1259 passed / 1 failed, exit 2; унаследованный DirectChatConcurrencyTest превысил Process timeout 12 секунд (tests/Feature/Chat/DirectChatConcurrencyTest.php:49). Стабилизация его тестового процесса выполняется отдельно; реализация задачи 12 принята ревью.
+
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): event chats created by managers and synchronised with assignments"

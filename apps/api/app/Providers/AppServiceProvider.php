@@ -65,6 +65,7 @@ use App\Modules\Chat\Listeners\AddNewUserToChats;
 use App\Modules\Chat\Listeners\ArchiveChatOnMinistryArchived;
 use App\Modules\Chat\Listeners\BroadcastChatChanges;
 use App\Modules\Chat\Listeners\CreateMinistryChatOnCreated;
+use App\Modules\Chat\Listeners\SyncEventChatOnAssignment;
 use App\Modules\Chat\Listeners\SyncMinistryChatOnMembership;
 use App\Modules\Chat\Models\Chat;
 use App\Modules\Chat\Models\Message;
@@ -243,6 +244,8 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MemberAdded::class, SyncMinistryChatOnMembership::class);
         Event::listen(MemberRemoved::class, SyncMinistryChatOnMembership::class);
         Event::listen(UserCreated::class, AddNewUserToChats::class);
+        Event::listen(AssignmentCreated::class, SyncEventChatOnAssignment::class);
+        Event::listen(AssignmentRemoved::class, SyncEventChatOnAssignment::class);
         Event::listen(MinistryArchived::class, ArchiveChatOnMinistryArchived::class);
     }
 }

@@ -20,7 +20,7 @@ const candidate = (id = 'p1', name: string | null = 'Анна'): Candidate => ({
 const roleSlot = (): EventSlot => ({ id: 's1', label: 'Вокалист', resource_type: 'person', role: { id: 'r1', name: 'Вокалист', ministry_id: 'm1' }, required_count: 2, filled_count: 0, sort_order: 0, can_fill: true, assignments: [] })
 const freeSlot = (): EventSlot => ({ ...roleSlot(), id: 's2', role: null, label: 'Встречающий' })
 const assignment = { id: 'a1', person: candidate().person, created_at: '2026-11-08T07:00:00Z' }
-const event = (slot: EventSlot): EventItem => ({ id: 'e1', owner_type: 'church', ministry: null, template_id: null, occurrence_date: null, title: 'Событие', description: null, location: null, starts_at: '2026-11-08T07:00:00Z', ends_at: '2026-11-08T09:00:00Z', visibility: 'church', status: 'scheduled', cancelled_at: null, cancel_reason: null, can_manage: false, attachments: [], slots: [slot] })
+const event = (slot: EventSlot): EventItem => ({ id: 'e1', chat_id: null, owner_type: 'church', ministry: null, template_id: null, occurrence_date: null, title: 'Событие', description: null, location: null, starts_at: '2026-11-08T07:00:00Z', ends_at: '2026-11-08T09:00:00Z', visibility: 'church', status: 'scheduled', cancelled_at: null, cancel_reason: null, can_manage: false, attachments: [], slots: [slot] })
 beforeEach(() => {
   vi.resetAllMocks(); grantPermissions()
   useSettingsStore().apply({ church_name: 'Церковь', timezone: 'Europe/Moscow' } as never)

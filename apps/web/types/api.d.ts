@@ -458,6 +458,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events/{event}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["eventChat.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/calendar/feed/{token}.ics": {
         parameters: {
             query?: never;
@@ -1451,6 +1467,7 @@ export interface components {
         /** EventResource */
         EventResource: {
             id: string;
+            chat_id: string | null;
             owner_type: components["schemas"]["EventOwnerType"];
             ministry: {
                 id: string;
@@ -3254,6 +3271,42 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "eventChat.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event ID */
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "calendar.icalFeed": {

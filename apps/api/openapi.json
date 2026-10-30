@@ -2366,6 +2366,69 @@
                 }
             }
         },
+        "/events/{event}/chat": {
+            "post": {
+                "operationId": "eventChat.store",
+                "tags": [
+                    "EventChat"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "description": "The event ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/calendar/feed/{token}.ics": {
             "get": {
                 "operationId": "calendar.icalFeed",
@@ -7014,6 +7077,12 @@
                     "id": {
                         "type": "string"
                     },
+                    "chat_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "owner_type": {
                         "$ref": "#/components/schemas/EventOwnerType"
                     },
@@ -7108,6 +7177,7 @@
                 },
                 "required": [
                     "id",
+                    "chat_id",
                     "owner_type",
                     "ministry",
                     "template_id",

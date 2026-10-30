@@ -8,6 +8,7 @@ use App\Modules\Calendar\EventOwnerType;
 use App\Modules\Calendar\EventStatus;
 use App\Modules\Calendar\EventVisibility;
 use App\Modules\Calendar\Models\Event;
+use App\Modules\Chat\Models\Chat;
 use App\Modules\Media\Http\Resources\MediaResource;
 use App\Modules\Media\Models\Media;
 use App\Modules\Media\Models\MediaAttachment;
@@ -25,7 +26,7 @@ final class EventResource extends JsonResource
      * template_id: string|null, occurrence_date: string|null, title: string, description: string|null,
      * location: string|null, starts_at: string, ends_at: string, visibility: EventVisibility, status: EventStatus,
      * cancelled_at: string|null, cancel_reason: string|null, can_manage: bool, slots: AnonymousResourceCollection,
-     * attachments: AnonymousResourceCollection
+     * attachments: AnonymousResourceCollection, chat_id: string|null
      * }
      */
     public function toArray(Request $request): array
@@ -44,9 +45,11 @@ final class EventResource extends JsonResource
             $slot->setRelation('event', $event);
         }
         $ministry = $event->ministry;
+        $chatId = Chat::query()->where('event_id', $event->id)->value('id');
 
         return [
             'id' => $event->id,
+            'chat_id' => $chatId === null ? null : (string) $chatId,
             'owner_type' => $event->owner_type,
             'ministry' => $ministry === null ? null : ['id' => $ministry->id, 'name' => $ministry->name],
             'template_id' => $event->template_id,

@@ -17,7 +17,7 @@ mockNuxtImport('useApi', () => () => ({ get }))
 mockNuxtImport('useRoute', () => () => ({ params: { id: 'e1' }, query: {} }))
 enableAutoUnmount(afterEach)
 const event = (over: Partial<EventItem> = {}): EventItem => ({
-  id: 'e1', owner_type: 'church', ministry: null, template_id: null, occurrence_date: null,
+  id: 'e1', chat_id: null, owner_type: 'church', ministry: null, template_id: null, occurrence_date: null,
   title: 'Воскресное служение', description: 'Описание события', location: 'Зал',
   starts_at: '2026-11-08T07:00:00Z', ends_at: '2026-11-08T09:00:00Z', visibility: 'church', status: 'scheduled',
   cancelled_at: null, cancel_reason: null, can_manage: false, attachments: [],

@@ -49,7 +49,7 @@ it('registers calendar listeners and delivers only after the outer commit', func
         Notification::assertNothingSent();
     });
     Queue::assertPushed(CallQueuedListener::class, fn ($job) => $job->class === $listener);
-    $jobs = Queue::pushed(CallQueuedListener::class);
+    $jobs = Queue::pushed(CallQueuedListener::class, fn ($job) => $job->class === $listener);
     expect($jobs)->toHaveCount(1);
     $job = unserialize(serialize($jobs->first()));
     $job->setJob(new SyncJob(app(), '{}', 'sync', 'default'));
