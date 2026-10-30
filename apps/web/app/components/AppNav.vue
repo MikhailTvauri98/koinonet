@@ -43,6 +43,7 @@ const items = computed<NavItem[]>(() => {
     list.push({ to: '/ministries', label: 'Служения' })
   }
 
+  list.push({ to: '/calendar', label: 'Календарь' })
   list.push({ to: '/announcements', label: 'Объявления' })
   list.push({ to: '/notifications', label: 'Уведомления' })
   list.push({ to: '/settings/profile', label: 'Профиль' })

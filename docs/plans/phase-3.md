@@ -3206,7 +3206,7 @@ composer openapi && git add . && git commit -m "feat(calendar): ical feed by acc
 - Отдаёт наружу: страница `/calendar` с переключателем недели, «Все / Мои» и списком по дням; `/events/{id}` — карточка со слотами, назначениями, `filled/required`, статусом отмены, вложениями, кнопками управления по `can_manage` и `can_fill`.
 - Потребляет: `GET /events`, `GET /events/{id}`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/unit/useEvents.spec.ts`:
 
@@ -3309,21 +3309,21 @@ describe('event page', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `groupByChurchDay(events, timeZone)` использует `Intl.DateTimeFormat('sv-SE', { timeZone, ... })` для ключа дня. Страница календаря: диапазон «текущая неделя + 3» по умолчанию, стрелки на неделю назад/вперёд (в пределах 93 дней — один запрос), переключатель `church|mine`, ссылка на служение в строке события. Карточка: заголовок, время (`useChurchDate().formatDateTime`), место, служение, описание, вложения (`AttachmentList` фазы 2), слоты с назначенными (фото + ФИО), счётчик `filled_count из required_count` с подсветкой при переполнении, кнопки «Изменить», «Отменить» по `can_manage` (задача 16), «Назначить» по `can_fill` (задача 17). `UpcomingEvents` на главной: `scope=mine`, 14 дней, до пяти карточек.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): calendar page, event card, personal scope and upcoming events"
