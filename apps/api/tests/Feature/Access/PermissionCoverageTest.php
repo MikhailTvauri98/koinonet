@@ -7,6 +7,8 @@ use App\Modules\Access\Permission;
 use App\Modules\Calendar\EventVisibility;
 use App\Modules\Calendar\Models\Event;
 use App\Modules\Calendar\Models\EventSlot;
+use App\Modules\Chat\Models\Chat;
+use App\Modules\Chat\Models\Message;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,6 +53,17 @@ function actingAsMemberWithKey(Permission $key, bool $granted, array $globalBase
 function permissionCases(): array
 {
     return [
+        Permission::ChatModerate->value => function (bool $granted): void {
+            $ministry = actingAsMemberWithKey(Permission::ChatModerate, $granted);
+            $chat = Chat::query()->where('ministry_id', $ministry->id)->sole();
+            $message = Message::factory()->for($chat)->create();
+            test()->deleteJson("/api/v1/messages/{$message->id}")->assertStatus($granted ? 204 : 403);
+        },
+        Permission::ChatsModerateAll->value => function (bool $granted): void {
+            actingWithGlobalKey(Permission::ChatsModerateAll, $granted);
+            $message = Message::factory()->create();
+            test()->deleteJson("/api/v1/messages/{$message->id}")->assertStatus($granted ? 204 : 403);
+        },
         Permission::SlotsAssign->value => function (bool $granted): void {
             $ministry = actingAsMemberWithKey(Permission::SlotsAssign, $granted);
             $event = Event::factory()->visibility(EventVisibility::Assigned)->create();

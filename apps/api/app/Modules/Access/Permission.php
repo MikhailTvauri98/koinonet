@@ -6,6 +6,9 @@ namespace App\Modules\Access;
 
 enum Permission: string
 {
+    case ChatModerate = 'chat.moderate';
+    case ChatsModerateAll = 'chats.moderate_all';
+
     case PeopleView = 'people.view';
     case PeopleViewContacts = 'people.view_contacts';
     case PeopleViewNotes = 'people.view_notes';
@@ -31,7 +34,7 @@ enum Permission: string
     public function scope(): PermissionScope
     {
         return match ($this) {
-            self::MembersManage, self::MembersViewContacts,
+            self::ChatModerate, self::MembersManage, self::MembersViewContacts,
             self::RolesManage, self::MinistryEdit, self::AnnouncementsPublish, self::EventsManage, self::SlotsAssign => PermissionScope::Ministry,
             default => PermissionScope::Global,
         };
@@ -40,6 +43,8 @@ enum Permission: string
     public function label(): string
     {
         return match ($this) {
+            self::ChatModerate => 'Модерировать чат служения',
+            self::ChatsModerateAll => 'Модерировать любые чаты',
             self::PeopleView => 'Видеть справочник',
             self::PeopleViewContacts => 'Видеть контакты',
             self::PeopleViewNotes => 'Видеть заметки',
@@ -66,6 +71,8 @@ enum Permission: string
     public function description(): string
     {
         return match ($this) {
+            self::ChatModerate => 'Удалять чужие сообщения и закреплять в чате служения.',
+            self::ChatsModerateAll => 'Удалять чужие сообщения, закреплять, менять состав групп, архивировать чаты.',
             self::PeopleView => 'Список людей и карточка: ФИО, фото, статус, служения.',
             self::PeopleViewContacts => 'Телефон, почта и дата рождения любого человека.',
             self::PeopleViewNotes => 'Заметки руководства о людях.',

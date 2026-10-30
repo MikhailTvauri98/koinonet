@@ -28,22 +28,26 @@ final readonly class ChatAccess
 
     public function canModerate(User $user, Chat $chat): bool
     {
-        if ($user->isDisabled() || $chat->archived_at !== null) {
+        if ($user->isDisabled() || $chat->archived_at !== null || $chat->type === ChatType::Direct) {
             return false;
         }
 
-        // Ministry and global moderation permissions enter the catalogue in task 5.
+        if ($this->permissions->can($user, Permission::ChatsModerateAll)) {
+            return true;
+        }
+
         return match ($chat->type) {
+            ChatType::Ministry => $chat->ministry_id !== null && $this->permissions->canInMinistry($user, Permission::ChatModerate, $chat->ministry_id),
             ChatType::Group => $this->isOwner($user, $chat),
             ChatType::Event => $chat->event !== null && $this->events->canManage($user, $chat->event),
-            default => false,
         };
     }
 
     public function canManageMembers(User $user, Chat $chat): bool
     {
         return ! $user->isDisabled() && $chat->archived_at === null
-            && $chat->type === ChatType::Group && $this->isOwner($user, $chat);
+            && $chat->type === ChatType::Group
+            && ($this->isOwner($user, $chat) || $this->permissions->can($user, Permission::ChatsModerateAll));
     }
 
     public function member(User $user, Chat $chat): ?ChatMember

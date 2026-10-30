@@ -1028,11 +1028,11 @@ composer openapi && git add . && git commit -m "feat(chat): sending messages wit
 **Интерфейсы:**
 - Отдаёт наружу: `Permission::ChatModerate = 'chat.moderate'` (служения, «Модерировать чат служения»), `Permission::ChatsModerateAll = 'chats.moderate_all'` (глобальное, «Модерировать любые чаты»).
 - Отдаёт наружу: `PATCH /messages/{id}` с `{ body }` → `200 MessageResource` (только автор, `edited_at`); `DELETE /messages/{id}` → `204` (автор или модератор).
-- Отдаёт наружу: `EditMessage::handle(Message $m, string $body): Message`, `DeleteMessage::handle(Message $m, User $actor): void` — при удалении не автором пишет журнал `message.deleted_by_moderator`; публикуют `MessageEdited(chatId, messageId)`, `MessageDeleted(chatId, messageId)`.
+- Отдаёт наружу: `EditMessage::handle(Message $m, string $body, User $actor): Message`, `DeleteMessage::handle(Message $m, User $actor): void` — при удалении не автором пишет журнал `message.deleted_by_moderator`; публикуют `MessageEdited(chatId, messageId)`, `MessageDeleted(chatId, messageId)`.
 - Отдаёт наружу: `DeleteAttachedMedia::handle(Model $attachable): void` (Media) — отвязывает и физически удаляет все вложения объекта.
 - Коды ошибок: `message.deleted`, `message.empty`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/Feature/Chat/EditDeleteMessageTest.php`:
 
@@ -1186,12 +1186,12 @@ it('reports can_moderate in the chat card', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/EditDeleteMessageTest.php tests/Feature/Chat/ModerationTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 В `Permission`: `ChatModerate = 'chat.moderate'` (служения; «Модерировать чат служения»; «Удалять чужие сообщения и закреплять в чате служения.») и `ChatsModerateAll = 'chats.moderate_all'` (глобальное; «Модерировать любые чаты»; «Удалять чужие сообщения, закреплять, менять состав групп, архивировать чаты.»). `ChatAccess::canModerate` дописывается по коду из задачи 3.
 
@@ -1218,14 +1218,14 @@ final class DeleteMessage
 }
 ```
 
-`MessagePolicy::update` — автор и не удалено; `delete` — автор или `ChatAccess::canModerate($user, $message->chat)`. `DeleteAttachedMedia` в Media: находит `media_attachments` объекта, удаляет строки и вызывает `DeleteMediaFile` для каждого медиафайла. `last_message_id` не сбрасывается: список показывает заглушку (`last_message.deleted = true`).
+`MessagePolicy::update` — автор и текущий участник неархивного чата; `delete` — тот же автор или `ChatAccess::canModerate($user, $message->chat)`. Проверка `message.deleted` выполняется в Actions после повторного чтения под блокировками чата и сообщения. `EditMessage` принимает явного актора для этой повторной проверки. `DeleteAttachedMedia` в Media использует принятые блокировки объекта и медиафайлов, удаляет строки вложений/медиафайлов и откладывает удаление байтов до внешнего commit; отдельного `DeleteMediaFile` в проекте нет. Аудит с явным актором находится внутри транзакции, события публикуются после внешнего commit. `last_message_id` не сбрасывается: список показывает заглушку (`last_message.deleted = true`).
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): message editing, deletion with file cleanup, moderation permissions"
