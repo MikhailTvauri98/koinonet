@@ -9,6 +9,7 @@
     <NuxtLink to="/settings/login" exact-active-class="settings-tabs__active">Вход</NuxtLink>
     <NuxtLink to="/settings/devices" exact-active-class="settings-tabs__active">Устройства</NuxtLink>
     <NuxtLink to="/settings/notifications" exact-active-class="settings-tabs__active">Уведомления</NuxtLink>
+    <NuxtLink to="/settings/ical" exact-active-class="settings-tabs__active">Календарь телефона</NuxtLink>
   </nav>
 </template>
 

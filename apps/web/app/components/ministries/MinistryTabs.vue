@@ -14,6 +14,7 @@ const canSeeRoles = computed(() => canIn(props.ministryId, 'roles.manage') || ca
   <nav aria-label="Разделы служения" class="ministry-tabs">
     <NuxtLink :to="base" exact-active-class="ministry-tabs__active">Обзор</NuxtLink>
     <NuxtLink :to="`${base}/members`" exact-active-class="ministry-tabs__active">Участники</NuxtLink>
+    <NuxtLink :to="`${base}/events`" exact-active-class="ministry-tabs__active">События</NuxtLink>
     <NuxtLink :to="`${base}/announcements`" exact-active-class="ministry-tabs__active">Объявления</NuxtLink>
     <NuxtLink v-if="canSeeRoles" :to="`${base}/roles`" exact-active-class="ministry-tabs__active">Роли</NuxtLink>
   </nav>

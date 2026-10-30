@@ -3605,8 +3605,8 @@ git add apps/web && git commit -m "feat(web): assignment dialog with candidates,
 ### Задача 18: Шаблоны, вкладка «События» служения, iCal в настройках
 
 **Файлы:**
-- Создать: `apps/web/app/pages/templates/index.vue`, `templates/[id].vue`, `ministries/[id]/events.vue`, `settings/ical.vue`; `app/components/calendar/TemplateEditor.vue`, `RecurrenceEditor.vue`
-- Изменить: `app/pages/ministries/[id]/index.vue` (вкладка), `app/components/AppNav.vue` (пункт «Шаблоны» в подменю календаря при праве управления), `app/pages/settings/index.vue` (ссылка «Календарь телефона»)
+- Создать: `apps/web/app/pages/templates/index.vue`, `templates/[id].vue`, `ministries/[id]/events.vue`, `settings/ical.vue`; `app/components/calendar/TemplateEditor.vue`, `RecurrenceEditor.vue`; `app/utils/recurrence.ts`, `templates.ts`
+- Изменить: `app/components/ministries/MinistryTabs.vue` (вкладка), `app/components/AppNav.vue` (пункт «Шаблоны» в подменю календаря при праве управления), `app/components/settings/SettingsTabs.vue` (ссылка «Календарь телефона»)
 - Тест: `tests/unit/recurrence.spec.ts`, `tests/component/templates.spec.ts`
 
 **Интерфейсы:**
@@ -3614,7 +3614,7 @@ git add apps/web && git commit -m "feat(web): assignment dialog with candidates,
 - Отдаёт наружу: `RecurrenceEditor` с `v-model` формы `{type, weekday, nth, anchor_date} | null`.
 - Потребляет: все эндпоинты `Templates`, `GET /events?scope=ministry:{id}`, `GET /auth/me` (`ical_url`), `POST /me/ical-token/rotate`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 `tests/unit/recurrence.spec.ts`:
 
@@ -3743,21 +3743,21 @@ describe('ical settings', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 Шаблоны: список с подписью правила (`recurrenceLabel`), пометками «неактивен» и «архив», фильтр по владельцу; карточка с слотами, «создать событие на дату», переключателем активности, архивацией; редактор с `RecurrenceEditor` (тип → день недели → для `biweekly` опорная дата, для `monthly_nth_weekday` порядковый номер с вариантом «Последний»). Вкладка «События» служения — список `EventList` со `scope=ministry:{id}` и кнопкой создания по `canIn(id, 'events.manage')`. Настройки → «Календарь телефона»: ссылка, кнопка копирования, подсказка «добавьте подпиской в календарь», перевыпуск с подтверждением.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run typecheck && npm run lint`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): templates with recurrence editor, ministry events tab, ical settings"
