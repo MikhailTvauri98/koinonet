@@ -7,6 +7,7 @@ use App\Modules\Access\PermissionScope;
 
 it('contains the implemented permission keys', function () {
     expect(array_column(Permission::cases(), 'value'))->toBe([
+        'chats.create_groups',
         'chat.moderate',
         'chats.moderate_all',
         'people.view',

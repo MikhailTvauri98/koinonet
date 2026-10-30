@@ -50,8 +50,12 @@ final readonly class ChatAccess
 
     public function canManageMembers(User $user, Chat $chat): bool
     {
-        return ! $user->isDisabled() && $chat->archived_at === null
-            && $chat->type === ChatType::Group
+        return $chat->archived_at === null && $this->canManageGroup($user, $chat);
+    }
+
+    public function canManageGroup(User $user, Chat $chat): bool
+    {
+        return ! $user->isDisabled() && $chat->type === ChatType::Group
             && ($this->isOwner($user, $chat) || $this->permissions->can($user, Permission::ChatsModerateAll));
     }
 

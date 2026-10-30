@@ -25,7 +25,7 @@ final class ChatResource extends ChatListItemResource
 
         return [...parent::toArray($request),
             'members' => ChatMemberResource::collection($chat->members),
-            'pinned_messages' => MessageResource::collection(app(PinnedMessages::class)->forChat($chat->id)),
+            'pinned_messages' => MessageResource::collection($access->canRead($user, $chat) ? app(PinnedMessages::class)->forChat($chat->id) : collect()),
             'can_write' => (bool) $access->canWrite($user, $chat),
             'can_moderate' => (bool) $access->canModerate($user, $chat),
             'can_manage_members' => (bool) $access->canManageMembers($user, $chat),

@@ -54,6 +54,7 @@ use App\Modules\Chat\Actions\ChatAccountEraser;
 use App\Modules\Chat\ChatMediaOwnerResolver;
 use App\Modules\Chat\Console\BackfillChatsCommand;
 use App\Modules\Chat\Events\ChatMembersChanged;
+use App\Modules\Chat\Events\ChatMetadataChanged;
 use App\Modules\Chat\Events\ChatPinsChanged;
 use App\Modules\Chat\Events\ChatRead;
 use App\Modules\Chat\Events\MessageDeleted;
@@ -231,6 +232,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MessageDeleted::class, BroadcastChatChanges::class);
         Event::listen(ChatPinsChanged::class, BroadcastChatChanges::class);
         Event::listen(ChatMembersChanged::class, BroadcastChatChanges::class);
+        Event::listen(ChatMetadataChanged::class, BroadcastChatChanges::class);
         Event::listen(ChatRead::class, BroadcastChatChanges::class);
         Event::listen(MinistryCreated::class, CreateMinistryChatOnCreated::class);
         Event::listen(MemberAdded::class, SyncMinistryChatOnMembership::class);

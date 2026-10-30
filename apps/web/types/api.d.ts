@@ -291,7 +291,7 @@ export interface paths {
         };
         get: operations["chat.index"];
         put?: never;
-        post?: never;
+        post: operations["chat.store"];
         delete?: never;
         options?: never;
         head?: never;
@@ -308,6 +308,86 @@ export interface paths {
         get: operations["chat.show"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["chat.update"];
+        trace?: never;
+    };
+    "/chats/{chat}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["chat.avatar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chats/{chat}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["chat.archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chats/{chat}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["chatMember.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chats/{chat}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["chatMember.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chats/{chat}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["chatMember.leave"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1204,6 +1284,10 @@ export interface components {
                 email: string | null;
             };
         };
+        /** AddMembersRequest */
+        AddMembersRequest: {
+            user_ids: string[];
+        };
         /** AnnouncementResource */
         AnnouncementResource: {
             id: string;
@@ -1255,6 +1339,10 @@ export interface components {
                 starts_at: string | null;
                 ends_at: string | null;
             }[];
+        };
+        /** ChatAvatarRequest */
+        ChatAvatarRequest: {
+            media_id: string;
         };
         /** ChatListItemResource */
         ChatListItemResource: {
@@ -1314,6 +1402,13 @@ export interface components {
             can_write: boolean;
             can_moderate: boolean;
             can_manage_members: boolean;
+        };
+        /** CreateChatRequest */
+        CreateChatRequest: {
+            /** @enum {string} */
+            type: "group";
+            title: string;
+            member_ids: string[];
         };
         /** CreateEventFromTemplateRequest */
         CreateEventFromTemplateRequest: {
@@ -1591,15 +1686,15 @@ export interface components {
          * Permission
          * @enum {string}
          */
-        Permission: "chat.moderate" | "chats.moderate_all" | "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "announcements.church.publish" | "calendar.church.manage" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit" | "announcements.publish" | "events.manage" | "slots.assign";
+        Permission: "chats.create_groups" | "chat.moderate" | "chats.moderate_all" | "people.view" | "people.view_contacts" | "people.view_notes" | "people.manage" | "people.invite" | "ministries.create" | "ministries.view_all" | "ministries.manage_all" | "roles.manage_global" | "settings.manage" | "audit.view" | "announcements.church.publish" | "calendar.church.manage" | "members.manage" | "members.view_contacts" | "roles.manage" | "ministry.edit" | "announcements.publish" | "events.manage" | "slots.assign";
         /** PermissionResource */
         PermissionResource: {
             key: string;
             scope: string;
             /** @enum {string} */
-            label: "Модерировать чат служения" | "Модерировать любые чаты" | "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Публиковать объявления церкви" | "Объявления служения" | "Управлять церковным календарём" | "Управлять событиями служения" | "Заполнять слоты своих ролей" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
+            label: "Создавать группы" | "Модерировать чат служения" | "Модерировать любые чаты" | "Видеть справочник" | "Видеть контакты" | "Видеть заметки" | "Управлять людьми" | "Приглашать" | "Создавать служения" | "Видеть все служения" | "Управлять всеми служениями" | "Управлять глобальными ролями" | "Настройки церкви" | "Журнал действий" | "Публиковать объявления церкви" | "Объявления служения" | "Управлять церковным календарём" | "Управлять событиями служения" | "Заполнять слоты своих ролей" | "Управлять составом" | "Контакты участников" | "Управлять ролями служения" | "Редактировать служение";
             /** @enum {string} */
-            description: "Удалять чужие сообщения и закреплять в чате служения." | "Удалять чужие сообщения, закреплять, менять состав групп, архивировать чаты." | "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий." | "События и шаблоны служения, все их слоты, отмена, чат события." | "Назначать людей в слоты с ролями этого служения в любых событиях." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
+            description: "Создавать групповые чаты с произвольным составом и управлять ими." | "Удалять чужие сообщения и закреплять в чате служения." | "Удалять чужие сообщения, закреплять, менять состав групп, архивировать чаты." | "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий." | "События и шаблоны служения, все их слоты, отмена, чат события." | "Назначать людей в слоты с ролями этого служения в любых событиях." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
         };
         /** PersonResource */
         PersonResource: {
@@ -1863,6 +1958,10 @@ export interface components {
             hide_after?: string | null;
             notify_on_publish?: boolean;
             media_ids?: string[];
+        };
+        /** UpdateChatRequest */
+        UpdateChatRequest: {
+            title: string;
         };
         /** UpdateEventRequest */
         UpdateEventRequest: {
@@ -2660,6 +2759,35 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
         };
     };
+    "chat.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateChatRequest"];
+            };
+        };
+        responses: {
+            /** @description `ChatResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "chat.show": {
         parameters: {
             query?: never;
@@ -2685,6 +2813,180 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "chat.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateChatRequest"];
+            };
+        };
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "chat.avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatAvatarRequest"];
+            };
+        };
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "chat.archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "chatMember.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "chatMember.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `ChatResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ChatResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "chatMember.leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The chat ID */
+                chat: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
             404: components["responses"]["ModelNotFoundException"];
         };
     };

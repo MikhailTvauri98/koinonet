@@ -10,6 +10,7 @@ use App\Modules\Calendar\Models\EventSlot;
 use App\Modules\Chat\Models\Chat;
 use App\Modules\Chat\Models\Message;
 use App\Modules\Directory\Models\Person;
+use App\Modules\Directory\Models\User;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -53,6 +54,10 @@ function actingAsMemberWithKey(Permission $key, bool $granted, array $globalBase
 function permissionCases(): array
 {
     return [
+        Permission::ChatsCreateGroups->value => function (bool $granted): void {
+            actingWithGlobalKey(Permission::ChatsCreateGroups, $granted);
+            test()->postJson('/api/v1/chats', ['type' => 'group', 'title' => 'Группа', 'member_ids' => [User::factory()->create()->id]])->assertStatus($granted ? 201 : 403);
+        },
         Permission::ChatModerate->value => function (bool $granted): void {
             $ministry = actingAsMemberWithKey(Permission::ChatModerate, $granted);
             $chat = Chat::query()->where('ministry_id', $ministry->id)->sole();

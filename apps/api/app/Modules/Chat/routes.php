@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Chat\Http\Controllers\ChatController;
+use App\Modules\Chat\Http\Controllers\ChatMemberController;
 use App\Modules\Chat\Http\Controllers\ChatReadController;
 use App\Modules\Chat\Http\Controllers\MessageController;
 use App\Modules\Chat\Http\Controllers\MuteController;
@@ -15,6 +16,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('messages/{message}', [MessageController::class, 'show']);
     Route::patch('messages/{message}', [MessageController::class, 'update']);
     Route::delete('messages/{message}', [MessageController::class, 'destroy']);
+    Route::post('chats', [ChatController::class, 'store']);
+    Route::patch('chats/{chat}', [ChatController::class, 'update']);
+    Route::put('chats/{chat}/avatar', [ChatController::class, 'avatar']);
+    Route::post('chats/{chat}/archive', [ChatController::class, 'archive']);
+    Route::post('chats/{chat}/members', [ChatMemberController::class, 'store']);
+    Route::delete('chats/{chat}/members/{userId}', [ChatMemberController::class, 'destroy']);
+    Route::post('chats/{chat}/leave', [ChatMemberController::class, 'leave']);
     Route::get('chats', [ChatController::class, 'index']);
     Route::get('chats/{chat}', [ChatController::class, 'show']);
     Route::post('chats/{chat}/read', ChatReadController::class);

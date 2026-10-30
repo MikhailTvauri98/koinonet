@@ -1799,7 +1799,7 @@ composer openapi && git add . && git commit -m "feat(chat,notifications): chat m
 - Отдаёт наружу: `POST /chats` с `{ type: 'group', title, member_ids: list<ulid> }` → `201 ChatResource` (создатель — владелец и участник); `PATCH /chats/{id}` с `{ title }`; `PUT /chats/{id}/avatar` с `{ media_id }`; `POST /chats/{id}/members` с `{ user_ids }`; `DELETE /chats/{id}/members/{userId}`; `POST /chats/{id}/leave`; `POST /chats/{id}/archive` (журнал `chat.archived`).
 - Коды ошибок: `chat.owner_cannot_leave`, `chat.members_managed_by_sync` (попытка править состав чата служения или события), `chat.not_group`, `chat.archived`, `chat.member_disabled`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1912,21 +1912,21 @@ it('lets chats.moderate_all manage and archive someone elses group', function ()
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/GroupChatTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 В `Permission`: `ChatsCreateGroups = 'chats.create_groups'` (глобальное; «Создавать группы»; «Создавать групповые чаты с произвольным составом и управлять ими.»). `CreateGroupChat::handle(User $owner, string $title, list<string> $memberIds): Chat` — проверяет, что все аккаунты существуют и не отключены (`chat.member_disabled`), создаёт чат, участника-владельца и остальных, публикует `ChatMembersChanged`. `AddGroupMembers`/`RemoveGroupMember` — только для `type = group` (`chat.members_managed_by_sync` для служения и события, `chat.not_group` для личного); удаление владельца запрещено (`chat.owner_cannot_leave`). `LeaveGroup` — `chat.not_group` для остальных типов. Архивация — `ArchiveChat` задачи 2 под `ChatPolicy::archive` (владелец или `chats.moderate_all`; служение и событие — `chat.archived_with_parent`). Аватар — `AttachDirectMedia::handle($media, MediaKind::Image)` и `avatar_media_id`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Access/PermissionCoverageTest.php`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): group chats with owner-managed membership, avatar and archiving"

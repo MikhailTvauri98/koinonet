@@ -12,6 +12,7 @@ use App\Modules\Chat\Broadcasts\MessageEditedBroadcast;
 use App\Modules\Chat\Broadcasts\MessageSentBroadcast;
 use App\Modules\Chat\Broadcasts\UnreadTotalBroadcast;
 use App\Modules\Chat\Events\ChatMembersChanged;
+use App\Modules\Chat\Events\ChatMetadataChanged;
 use App\Modules\Chat\Events\ChatPinsChanged;
 use App\Modules\Chat\Events\ChatRead;
 use App\Modules\Chat\Events\MessageDeleted;
@@ -22,10 +23,17 @@ use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 
 final class BroadcastChatChanges implements ShouldQueueAfterCommit
 {
-    public function handle(MessageSent|MessageEdited|MessageDeleted|ChatPinsChanged|ChatMembersChanged|ChatRead $event): void
+    public function handle(MessageSent|MessageEdited|MessageDeleted|ChatPinsChanged|ChatMembersChanged|ChatRead|ChatMetadataChanged $event): void
     {
         if ($event instanceof ChatRead) {
             $this->personal($event->chatId, $event->userId);
+
+            return;
+        }
+        if ($event instanceof ChatMetadataChanged) {
+            foreach (Chat::query()->find($event->chatId)?->members()->pluck('user_id')->all() ?? [] as $userId) {
+                $this->personal($event->chatId, $userId);
+            }
 
             return;
         }

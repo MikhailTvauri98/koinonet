@@ -30,7 +30,8 @@ class ChatListItemResource extends JsonResource
         assert($viewer instanceof User);
         $member = app(ChatAccess::class)->member($viewer, $chat);
         $partner = $chat->type === ChatType::Direct ? app(ChatTitle::class)->visiblePartner($viewer, $chat) : null;
-        $message = $chat->lastMessage;
+        $canRead = app(ChatAccess::class)->canRead($viewer, $chat);
+        $message = $canRead ? $chat->lastMessage : null;
 
         return [
             'id' => $chat->id,
@@ -42,7 +43,7 @@ class ChatListItemResource extends JsonResource
             'ministry_id' => $chat->ministry_id,
             'event_id' => $chat->event_id,
             'archived' => $chat->archived_at !== null,
-            'last_message_at' => $chat->last_message_at?->toISOString(),
+            'last_message_at' => $canRead ? $chat->last_message_at?->toISOString() : null,
             'last_message' => $message === null ? null : [
                 'id' => $message->id,
                 'body_preview' => $message->isDeleted() ? 'Сообщение удалено' : mb_substr($message->body ?? '', 0, 150),

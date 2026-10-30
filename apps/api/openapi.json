@@ -1378,6 +1378,51 @@
             }
         },
         "/chats": {
+            "post": {
+                "operationId": "chat.store",
+                "tags": [
+                    "Chat"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateChatRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
             "get": {
                 "operationId": "chat.index",
                 "tags": [
@@ -1415,6 +1460,62 @@
             }
         },
         "/chats/{chat}": {
+            "patch": {
+                "operationId": "chat.update",
+                "tags": [
+                    "Chat"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateChatRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
             "get": {
                 "operationId": "chat.show",
                 "tags": [
@@ -1452,6 +1553,250 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/chats/{chat}/avatar": {
+            "put": {
+                "operationId": "chat.avatar",
+                "tags": [
+                    "Chat"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatAvatarRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/chats/{chat}/archive": {
+            "post": {
+                "operationId": "chat.archive",
+                "tags": [
+                    "Chat"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/chats/{chat}/members": {
+            "post": {
+                "operationId": "chatMember.store",
+                "tags": [
+                    "ChatMember"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AddMembersRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/chats/{chat}/members/{userId}": {
+            "delete": {
+                "operationId": "chatMember.destroy",
+                "tags": [
+                    "ChatMember"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ChatResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ChatResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/chats/{chat}/leave": {
+            "post": {
+                "operationId": "chatMember.leave",
+                "tags": [
+                    "ChatMember"
+                ],
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "description": "The chat ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
@@ -5988,6 +6333,22 @@
                 ],
                 "title": "AccessLinkResource"
             },
+            "AddMembersRequest": {
+                "type": "object",
+                "properties": {
+                    "user_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "user_ids"
+                ],
+                "title": "AddMembersRequest"
+            },
             "AnnouncementResource": {
                 "type": "object",
                 "properties": {
@@ -6199,6 +6560,18 @@
                     "conflicts"
                 ],
                 "title": "CandidateResource"
+            },
+            "ChatAvatarRequest": {
+                "type": "object",
+                "properties": {
+                    "media_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "media_id"
+                ],
+                "title": "ChatAvatarRequest"
             },
             "ChatListItemResource": {
                 "type": "object",
@@ -6456,6 +6829,34 @@
                     "can_manage_members"
                 ],
                 "title": "ChatResource"
+            },
+            "CreateChatRequest": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "group"
+                        ]
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "member_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "type",
+                    "title",
+                    "member_ids"
+                ],
+                "title": "CreateChatRequest"
             },
             "CreateEventFromTemplateRequest": {
                 "type": "object",
@@ -7531,6 +7932,7 @@
             "Permission": {
                 "type": "string",
                 "enum": [
+                    "chats.create_groups",
                     "chat.moderate",
                     "chats.moderate_all",
                     "people.view",
@@ -7568,6 +7970,7 @@
                     "label": {
                         "type": "string",
                         "enum": [
+                            "\u0421\u043e\u0437\u0434\u0430\u0432\u0430\u0442\u044c \u0433\u0440\u0443\u043f\u043f\u044b",
                             "\u041c\u043e\u0434\u0435\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0447\u0430\u0442 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f",
                             "\u041c\u043e\u0434\u0435\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043b\u044e\u0431\u044b\u0435 \u0447\u0430\u0442\u044b",
                             "\u0412\u0438\u0434\u0435\u0442\u044c \u0441\u043f\u0440\u0430\u0432\u043e\u0447\u043d\u0438\u043a",
@@ -7595,6 +7998,7 @@
                     "description": {
                         "type": "string",
                         "enum": [
+                            "\u0421\u043e\u0437\u0434\u0430\u0432\u0430\u0442\u044c \u0433\u0440\u0443\u043f\u043f\u043e\u0432\u044b\u0435 \u0447\u0430\u0442\u044b \u0441 \u043f\u0440\u043e\u0438\u0437\u0432\u043e\u043b\u044c\u043d\u044b\u043c \u0441\u043e\u0441\u0442\u0430\u0432\u043e\u043c \u0438 \u0443\u043f\u0440\u0430\u0432\u043b\u044f\u0442\u044c \u0438\u043c\u0438.",
                             "\u0423\u0434\u0430\u043b\u044f\u0442\u044c \u0447\u0443\u0436\u0438\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f \u0438 \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u044f\u0442\u044c \u0432 \u0447\u0430\u0442\u0435 \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
                             "\u0423\u0434\u0430\u043b\u044f\u0442\u044c \u0447\u0443\u0436\u0438\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u044f\u0442\u044c, \u043c\u0435\u043d\u044f\u0442\u044c \u0441\u043e\u0441\u0442\u0430\u0432 \u0433\u0440\u0443\u043f\u043f, \u0430\u0440\u0445\u0438\u0432\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0447\u0430\u0442\u044b.",
                             "\u0421\u043f\u0438\u0441\u043e\u043a \u043b\u044e\u0434\u0435\u0439 \u0438 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0430: \u0424\u0418\u041e, \u0444\u043e\u0442\u043e, \u0441\u0442\u0430\u0442\u0443\u0441, \u0441\u043b\u0443\u0436\u0435\u043d\u0438\u044f.",
@@ -8582,6 +8986,19 @@
                     }
                 },
                 "title": "UpdateAnnouncementRequest"
+            },
+            "UpdateChatRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 100
+                    }
+                },
+                "required": [
+                    "title"
+                ],
+                "title": "UpdateChatRequest"
             },
             "UpdateEventRequest": {
                 "type": "object",
