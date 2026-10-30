@@ -12,6 +12,7 @@ import PinnedBar from './PinnedBar.vue'
 const props = defineProps<{ chatId: string }>()
 type Chat = components['schemas']['ChatResource']
 const api = useApi()
+const route = useRoute()
 const auth = useAuthStore()
 const chats = useChatsStore()
 const chat = shallowRef<Chat | null>(null)
@@ -35,6 +36,7 @@ const pins = computed(() => chat.value?.pinned_messages.map(m => {
   return loaded && (loaded.deleted || (loaded.edited_at ?? '') >= (m.edited_at ?? '')) ? loaded : m
 }).filter(m => !deletedIds.has(m.id) && !m.deleted) ?? [])
 let lifetime = 0
+let screenPath = ''
 let metadataRequest = 0
 let detach: (() => void) | undefined
 let initialized = false
@@ -44,6 +46,25 @@ let readBoundary: ChatMessage | undefined
 let reading = false
 let readTimer: ReturnType<typeof setTimeout> | undefined
 const current = (token: number) => token === lifetime && !unavailable.value
+
+async function answerPushQuery(event: MessageEvent) {
+  const port = event.ports?.[0]
+  if (event.data?.type !== 'chat-push-query' || !port || event.data.chatId !== props.chatId) return
+  const token = lifetime; const session = auth.sessionVersion; const userId = auth.user?.id
+  const path = route.fullPath; const url = window.location.href; const id = props.chatId
+  const active = () => current(token) && !!userId && auth.user?.id === userId && auth.sessionVersion === session
+    && props.chatId === id && chat.value?.id === id && !loading.value && !error.value
+    && route.fullPath === path && path === screenPath && window.location.href === url && document.visibilityState === 'visible'
+  if (!active()) return
+  try {
+    // Cookie/session may have changed in another tab. Verify both the current
+    // account and read authorization rather than trusting cached screen data.
+    const [me, result] = await Promise.all([
+      api.get<{ user: { id: string } }>('/auth/me'), api.get<{ data: Chat }>(`/chats/${id}`),
+    ])
+    if (active() && me.user.id === userId && result.data.id === id) port.postMessage({ chatId: id, url })
+  } catch { /* Worker deadline falls back to showing the notification. */ }
+}
 
 function invalidate() {
   lifetime++; metadataRequest++; initialized = false
@@ -69,6 +90,7 @@ async function refresh() {
 async function start(preserveDraft = false) {
   const previous = preserveDraft ? { chat: chat.value, reply: reply.value, editing: editing.value } : null
   invalidate(); unavailable.value = false; error.value = ''; loading.value = true
+  screenPath = route.fullPath
   // Restore synchronously before Vue renders. A retry renews network lifetimes
   // without unmounting the composer and its selected-file previews.
   if (previous) { chat.value = previous.chat; reply.value = previous.reply; editing.value = previous.editing }
@@ -198,8 +220,8 @@ watch(messages, () => {
   if (editing.value && messages.value.some(m => m.id === editing.value?.id && m.deleted)) editing.value = null
   tryRead()
 })
-onMounted(() => { document.addEventListener('visibilitychange', tryRead); void start() })
-onBeforeUnmount(() => { document.removeEventListener('visibilitychange', tryRead); invalidate() })
+onMounted(() => { document.addEventListener('visibilitychange', tryRead); navigator.serviceWorker?.addEventListener('message', answerPushQuery); void start() })
+onBeforeUnmount(() => { document.removeEventListener('visibilitychange', tryRead); navigator.serviceWorker?.removeEventListener('message', answerPushQuery); invalidate() })
 defineExpose({ refresh })
 </script>
 

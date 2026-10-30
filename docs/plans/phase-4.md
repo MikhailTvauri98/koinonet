@@ -2704,23 +2704,23 @@ git add apps/web apps/api && git commit -m "feat(web): groups, direct chats, mut
 ### Задача 16: Service worker для чата — сворачивание и гашение пушей
 
 **Файлы:**
-- Изменить: `apps/web/app/sw/handlers.ts` (`shouldShow(payload, clients)`), `apps/web/app/sw.ts` (проверка открытого чата), `app/pages/chats/[id].vue` (сообщение service worker о текущем чате через `postMessage`)
-- Тест: `tests/unit/sw-handlers.spec.ts` (дополнение)
+- Изменить: `apps/web/app/sw/handlers.ts` (`shouldShow(payload, clients)`), `apps/web/app/sw.ts` (проверка открытого чата), `apps/web/app/components/chat/ChatScreen.vue` (сообщение service worker о текущем чате через `postMessage`)
+- Тесты: `apps/web/tests/unit/sw-handlers.spec.ts`, `apps/web/tests/component/chat.spec.ts` (дополнение)
 
 **Интерфейсы:**
-- Отдаёт наружу: `shouldShow(payload: PushPayload, openUrls: string[]): boolean` — пуш чата не показывается, если среди видимых окон есть `/chats/{id}` этого чата; `pickWindow` предпочитает окно с тем же чатом.
+- Отдаёт наружу: `shouldShow(payload: PushPayload, openUrls: readonly string[], origin: string): boolean` — пуш чата не показывается, если среди видимых окон есть `/chats/{id}` этого чата; `pickWindow` предпочитает окно с тем же чатом.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```ts
 import { describe, expect, it } from 'vitest'
-import { pickWindow, shouldShow } from '~/app/sw/handlers'
+import { pickWindow, shouldShow } from '~/sw/handlers'
 
 describe('chat push handling', () => {
   it('hides a chat push when that chat is open and visible', () => {
-    expect(shouldShow({ tag: 'chat-c1', url: '/chats/c1' }, ['https://church.test/chats/c1'])).toBe(false)
-    expect(shouldShow({ tag: 'chat-c1', url: '/chats/c1' }, ['https://church.test/chats/c2'])).toBe(true)
-    expect(shouldShow({ tag: 'announcement-a1', url: '/announcements/a1' }, ['https://church.test/announcements/a1'])).toBe(true)
+    expect(shouldShow({ category: 'chat', tag: 'chat-c1', url: '/chats/c1' }, ['https://church.test/chats/c1'], 'https://church.test')).toBe(false)
+    expect(shouldShow({ category: 'chat', tag: 'chat-c1', url: '/chats/c1' }, ['https://church.test/chats/c2'], 'https://church.test')).toBe(true)
+    expect(shouldShow({ tag: 'announcement-a1', url: '/announcements/a1' }, ['https://church.test/announcements/a1'], 'https://church.test')).toBe(true)
   })
 
   it('prefers the window already showing the target chat', () => {
@@ -2731,16 +2731,16 @@ describe('chat push handling', () => {
 })
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `npm run test tests/unit/sw-handlers.spec.ts`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
-В `sw.ts` обработчик `push` перед показом собирает `clients.matchAll({ type: 'window' })`, оставляет окна с `visibilityState === 'visible'` и вызывает `shouldShow`. Тег `chat-{id}` уже сворачивает карточки одного чата средствами платформы; `renotify: true` сохраняется. `pickWindow` ищет окно, чей `url` заканчивается на целевой путь, иначе первое.
+В `sw.ts` обработчик `push` перед показом собирает `clients.matchAll({ type: 'window' })`, оставляет окна с `visibilityState === 'visible'` и вызывает `shouldShow`. Тег `chat-{id}` уже сворачивает карточки одного чата средствами платформы; `renotify: true` сохраняется. `pickWindow` предпочитает точный путь того же чата на том же источнике, иначе первое окно. Перед подавлением worker заново опрашивает видимые окна через MessageChannel с таймаутом 1 секунда; общий ChatScreen (включая служение) проверяет текущую сессию и доступ через GET /auth/me и GET /chats/{id}. Ошибка или устаревший ответ сохраняют показ. Подробности: раздел 7.6 архитектуры.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `npm run test && npm run build`
 Ожидается: PASS.
@@ -2750,7 +2750,7 @@ describe('chat push handling', () => {
 Открыть чат в установленной PWA, отправить сообщение с другого аккаунта; затем свернуть приложение и повторить.
 Ожидается: в открытом чате пуша нет, в свёрнутом — есть; второе сообщение заменяет карточку первого.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 git add apps/web && git commit -m "feat(web): suppress chat pushes for the open chat and collapse by tag"

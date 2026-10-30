@@ -20,7 +20,8 @@
 import { clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
-import { notificationOptions, pickWindow } from './sw/handlers'
+import { chatTarget, notificationOptions, pickWindow, safePath, shouldShow } from './sw/handlers'
+import type { PushPayload } from './sw/handlers'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -54,16 +55,49 @@ registerRoute(
   }),
 )
 
+// Never retain presence: workers restart and client sessions/routes change.
+// Each push owns fresh ports and a single deadline; errors always show it.
+async function visibleChatUrls(payload: PushPayload): Promise<string[]> {
+  const origin = self.location.origin
+  const chatId = chatTarget(payload, origin)
+  if (!chatId) return []
+  try {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    return (await Promise.all(windows.filter(client => client.visibilityState === 'visible' && safePath(client.url, origin) !== null).map(client => new Promise<string>((resolve) => {
+      const channel = new MessageChannel()
+      let settled = false
+      const finish = (url = '') => {
+        if (settled) return
+        settled = true; clearTimeout(timer); channel.port1.close(); channel.port2.close(); resolve(url)
+      }
+      const timer = setTimeout(() => finish(), 1000)
+      channel.port1.onmessage = async (event) => {
+        if (event.data?.chatId !== chatId || event.data?.url !== client.url) { finish(); return }
+        try {
+          const current = await self.clients.get(client.id)
+          finish(current?.type === 'window' && (current as WindowClient).visibilityState === 'visible' && current.url === event.data.url ? `/chats/${chatId}` : '')
+        } catch { finish() }
+      }
+      channel.port1.onmessageerror = () => finish()
+      try { client.postMessage({ type: 'chat-push-query', chatId }, [channel.port2]) } catch { finish() }
+    })))).filter(Boolean)
+  } catch { return [] }
+}
+
 self.addEventListener('push', (event) => {
-  let payload = {}
+  let payload: PushPayload = {}
   try { payload = event.data?.json() ?? {} } catch { /* Пустой/повреждённый JSON: стандартное уведомление. */ }
-  const { title, ...options } = notificationOptions(payload)
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil((async () => {
+    const open = await visibleChatUrls(payload)
+    if (!shouldShow(payload, open, self.location.origin)) return
+    const { title, ...options } = notificationOptions(payload)
+    await self.registration.showNotification(title, options)
+  })())
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url: string = event.notification.data?.url ?? '/'
+  const url = safePath(event.notification.data?.url ?? '/', self.location.origin) ?? '/'
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     const existing = pickWindow(windows, url)

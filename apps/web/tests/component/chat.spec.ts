@@ -6,7 +6,7 @@ import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import ChatScreen from '~/components/chat/ChatScreen.vue'
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), del: vi.fn(), listen: vi.fn(), stop: vi.fn(), leave: vi.fn(), fetch: vi.fn(), realtime: vi.fn(), upsert: vi.fn(), total: vi.fn(), observers: [] as { callback: IntersectionObserverCallback, targets: Element[], options?: IntersectionObserverInit }[] }))
-const state = reactive({ user: { id: 'me' }, sessionVersion: 0, refreshRealtime: mocks.realtime, chats: [] as ReturnType<typeof card>[], lastChange: null as { id: string, removed: boolean } | null })
+const state = reactive({ initialized: true, user: { id: 'me' }, sessionVersion: 0, refreshRealtime: mocks.realtime, chats: [] as ReturnType<typeof card>[], lastChange: null as { id: string, removed: boolean } | null })
 mockNuxtImport('useApi', () => () => ({ get: mocks.get, post: mocks.post, patch: mocks.patch, delete: mocks.del }))
 mockNuxtImport('useAuthStore', () => () => state)
 mockNuxtImport('useChatsStore', () => () => ({ get chats() { return state.chats }, get lastChange() { return state.lastChange }, fetch: mocks.fetch, upsert: mocks.upsert, setUnreadTotal: mocks.total }))
@@ -15,8 +15,17 @@ mockNuxtImport('useEcho', () => () => echo)
 function card(over = {}) { return { id: 'c1', title: 'Поездка', type: 'group', avatar_url: null, archived: false, muted_until: null, members: [{ user_id: 'me', full_name: 'Я' }], pinned_messages: [], can_write: true, can_moderate: false, can_manage_members: false, ...over } }
 function msg(id = 'a', over = {}) { return { id, chat_id: 'c1', body: `текст ${id}`, cursor: btoa(`2026-12-01T10:00:00.000001Z|${id}`), created_at: '2026-12-01T10:00:00.000001Z', sender: { id: 'me', person: { id: 'p', full_name: null, photo_thumb_url: null } }, deleted: false, edited_at: null, reply_to: null, attachments: [], ...over } }
 const mounted: { unmount: () => void }[] = []
-async function mount() { const screen = await mountSuspended(ChatScreen, { props: { chatId: 'c1' } }); mounted.push(screen); await flushPromises(); return screen }
+let worker: EventTarget
+async function queryChat() {
+  const reply = vi.fn()
+  worker.dispatchEvent(new MessageEvent('message', { data: { type: 'chat-push-query', chatId: 'c1' }, ports: [{ postMessage: reply } as unknown as MessagePort] }))
+  await flushPromises()
+  return reply
+}
+async function mount(route = '/') { const screen = await mountSuspended(ChatScreen, { props: { chatId: 'c1' }, route }); mounted.push(screen); await flushPromises(); return screen }
 beforeEach(() => {
+  worker = new EventTarget()
+  Object.defineProperty(navigator, 'serviceWorker', { value: worker, configurable: true })
   vi.resetAllMocks(); state.user = { id: 'me' }; state.sessionVersion = 0; state.chats = []; state.lastChange = null; mocks.observers = []
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
   vi.stubGlobal('IntersectionObserver', class {
@@ -28,6 +37,53 @@ beforeEach(() => {
   })
   mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [msg()], next_before: null, next_after: null } : { data: url.startsWith('/messages/') ? msg('live', { body: 'живое' }) : card() }))
   mocks.post.mockResolvedValue({ data: msg('sent') })
+})
+it('answers a fresh worker query only while the mounted authorized chat remains visible', async () => {
+  await mount()
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url === '/auth/me' ? { user: { id: 'me' } } : { data: card() }))
+  const reply = await queryChat()
+  expect(mocks.get).toHaveBeenCalledWith('/auth/me')
+  expect(reply).toHaveBeenCalledWith({ chatId: 'c1', url: window.location.href })
+  Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+  expect(await queryChat()).not.toHaveBeenCalled()
+})
+it('does not answer a stale-account query, revoked access, or an unmounted screen', async () => {
+  const screen = await mount()
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url === '/auth/me' ? { user: { id: 'different' } } : { data: card() }))
+  expect(await queryChat()).not.toHaveBeenCalled()
+  mocks.get.mockRejectedValue({ statusCode: 403 })
+  expect(await queryChat()).not.toHaveBeenCalled()
+  screen.unmount(); mounted.length = 0
+  expect(await queryChat()).not.toHaveBeenCalled()
+})
+it('answers for the shared read-only ministry screen using its real chat identity', async () => {
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [], next_before: null, next_after: null } : { data: card({ type: 'ministry', members: [], can_write: false }) }))
+  await mount('/ministries/m1/chat')
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url === '/auth/me' ? { user: { id: 'me' } } : { data: card({ type: 'ministry', members: [], can_write: false }) }))
+  expect(await queryChat()).toHaveBeenCalledWith({ chatId: 'c1', url: window.location.href })
+})
+it('does not report an outgoing screen after navigation changes before unmount', async () => {
+  const screen = await mount('/chats/c1')
+  await screen.vm.$router.push('/people')
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url === '/auth/me' ? { user: { id: 'me' } } : { data: card() }))
+  expect(await queryChat()).not.toHaveBeenCalled()
+})
+it.each(['account', 'route', 'hidden', 'unmount', 'removal'])('ignores an authorization response after screen lifecycle changes: %s', async (change) => {
+  const screen = await mount()
+  let resolve!: (value: unknown) => void
+  mocks.get.mockImplementation((url: string) => url === '/auth/me' ? Promise.resolve({ user: { id: 'me' } }) : new Promise(r => { resolve = r }))
+  const reply = await queryChat()
+  const finish = resolve
+  if (change === 'account') { state.sessionVersion++; state.user = { id: 'other' } }
+  if (change === 'route') await screen.setProps({ chatId: 'c2' })
+  if (change === 'hidden') Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+  if (change === 'unmount') { screen.unmount(); mounted.length = 0 }
+  if (change === 'removal') state.lastChange = { id: 'c1', removed: true }
+  // Avoid replacing the push query resolver with a new lifecycle request.
+  mocks.get.mockRejectedValue({ statusCode: 403 })
+  await flushPromises()
+  finish({ data: card() }); await flushPromises()
+  expect(reply).not.toHaveBeenCalled()
 })
 afterEach(() => { mounted.splice(0).forEach(w => w.unmount()); vi.useRealTimers(); vi.unstubAllGlobals() })
 it('refreshes pinned preview from hydrated edits for a read-only nonmember', async () => {
