@@ -3058,7 +3058,7 @@ git add . && git commit -m "feat(calendar,notifications): reminders 24h and 2h b
 - Отдаёт наружу: `POST /me/ical-token/rotate` → `{ data: { ical_url } }`; `GET /auth/me` отдаёт `user.ical_url`.
 - Отдаёт наружу: `IcalFeedBuilder::for(User $user): string`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -3123,12 +3123,12 @@ it('exposes the feed url in me', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar/IcalFeedTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```bash
 cd apps/api && composer require spatie/icalendar-generator
@@ -3170,7 +3170,7 @@ final class IcalFeedBuilder
 
 Контроллер: `User::where('ical_token', $token)->whereNull('disabled_at')->firstOrFail()`, ответ с `Content-Type: text/calendar; charset=UTF-8`, маршрут `calendar/feed/{token}.ics` без `auth`, с `throttle:60,1`. `RotateIcalToken::handle(User $user): User` — `Str::random(64)`, журнал не пишется (личное действие). `MeResource` добавляет `user.ical_url = url("/api/v1/calendar/feed/{$token}.ics")`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Calendar tests/Feature/Directory/LoginTest.php`
 Ожидается: PASS.
@@ -3180,7 +3180,7 @@ final class IcalFeedBuilder
 Добавить ссылку из `GET /auth/me` подпиской в календарь iPhone или Google Calendar.
 Ожидается: события появляются с названием и местом, время совпадает с поясом церкви.
 
-- [ ] **Шаг 6: Коммит**
+- [x] **Шаг 6: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(calendar): ical feed by account token and token rotation"

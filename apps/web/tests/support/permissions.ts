@@ -10,7 +10,7 @@ export interface PermissionGrant {
   ministries?: Record<string, string[]>
 }
 
-const signedInUser: MeUser = { id: 'u-signed-in', phone: null, email: 'signed-in@church.test' }
+const signedInUser: MeUser = { id: 'u-signed-in', phone: null, email: 'signed-in@church.test', ical_url: 'https://church.test/calendar.ics' }
 const signedInPerson: MePerson = {
   id: 'p-signed-in', last_name: 'Вошедший', first_name: 'Тест', patronymic: null, status: 'member',
 }

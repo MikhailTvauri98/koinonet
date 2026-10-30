@@ -17,7 +17,7 @@ final class MeResource extends JsonResource
 
     /**
      * @return array{
-     *     user: array{id: string, phone: string|null, email: string|null},
+     *     user: array{id: string, phone: string|null, email: string|null, ical_url: string},
      *     person: array{id: string, last_name: string, first_name: string, patronymic: string|null, status: string},
      *     permissions: UserPermissionsResource
      * }
@@ -35,6 +35,7 @@ final class MeResource extends JsonResource
                 'id' => $user->id,
                 'phone' => $user->phone,
                 'email' => $user->email,
+                'ical_url' => $user->icalUrl(),
             ],
             'person' => [
                 'id' => $person->id,

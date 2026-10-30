@@ -12,7 +12,7 @@ const get = vi.fn()
 mockNuxtImport('useApi', () => () => ({ get }))
 
 const me: MeResponse = {
-  user: { id: 'u1', phone: null, email: 'maria@example.com' },
+  user: { id: 'u1', phone: null, email: 'maria@example.com', ical_url: 'https://church.test/calendar.ics' },
   person: { id: 'p1', last_name: 'Прокопенко', first_name: 'Мария', patronymic: null, status: 'member' },
   permissions: { administrator: false, global: ['people.view'], ministries: {} },
 }

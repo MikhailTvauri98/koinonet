@@ -300,7 +300,7 @@ describe('account actions', () => {
     card.has_account = true
     const auth = useAuthStore(pinia)
     auth.person = { id: 'p1', last_name: 'Прокопенко', first_name: 'Мария', patronymic: null, status: 'member' }
-    auth.user = { id: 'u1', phone: null, email: 'maria@example.com' }
+    auth.user = { id: 'u1', phone: null, email: 'maria@example.com', ical_url: 'https://church.test/calendar.ics' }
     auth.initialized = true
     // Стор этого файла ходит за `/auth/me` настоящим `useApi`, мимо подменённого
     // `get`, — поэтому ответ задан конечной точкой тестового сервера. Раньше

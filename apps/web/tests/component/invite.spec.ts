@@ -125,7 +125,7 @@ describe('invite page', () => {
     // обёртку `{ data: { user: {...} } }` по аналогии с GET-ответом; это
     // дефект плана, тот же класс, что и два уже описанных в задаче.
     post.mockResolvedValue({
-      user: { id: 'u1', phone: null, email: 'maria@example.com' },
+      user: { id: 'u1', phone: null, email: 'maria@example.com', ical_url: 'https://church.test/calendar.ics' },
       person: { id: 'p1', first_name: 'Мария', last_name: 'Иванова', patronymic: null, status: 'member' },
       permissions: { administrator: false, global: [], ministries: {} },
     })

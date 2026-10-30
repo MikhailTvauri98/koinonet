@@ -330,6 +330,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/calendar/feed/{token}.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["calendar.icalFeed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ical-token/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["icalToken.rotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{person}/invite": {
         parameters: {
             query?: never;
@@ -1226,6 +1258,10 @@ export interface components {
          * @enum {string}
          */
         EventVisibility: "church" | "ministry" | "assigned";
+        /** IcalTokenResource */
+        IcalTokenResource: {
+            ical_url: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             login: string;
@@ -1247,6 +1283,7 @@ export interface components {
                 id: string;
                 phone: string | null;
                 email: string | null;
+                ical_url: string;
             };
             person: {
                 id: string;
@@ -2242,6 +2279,7 @@ export interface operations {
                             id: string;
                             phone: string | null;
                             email: string | null;
+                            ical_url: string;
                         };
                         person: {
                             id: string;
@@ -2302,6 +2340,7 @@ export interface operations {
                             id: string;
                             phone: string | null;
                             email: string | null;
+                            ical_url: string;
                         };
                         person: {
                             id: string;
@@ -2566,6 +2605,52 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    "calendar.icalFeed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/calendar; charset=UTF-8": string;
+                    "text/calendar": string;
+                };
+            };
+        };
+    };
+    "icalToken.rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `IcalTokenResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["IcalTokenResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
         };
     };
     "invitation.invite": {

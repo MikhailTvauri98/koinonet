@@ -109,7 +109,7 @@ describe('password reset page', () => {
     // оба исхода); он обязан сбросить локальное состояние безусловно, а не
     // тащить его дальше как есть.
     const auth = useAuthStore()
-    auth.user = { id: 'admin1', phone: null, email: 'admin@example.com' }
+    auth.user = { id: 'admin1', phone: null, email: 'admin@example.com', ical_url: 'https://church.test/admin-calendar.ics' }
     auth.initialized = true
 
     get.mockResolvedValue({ data: { kind: 'password_reset', person: { first_name: 'Мария' }, login_hint: {} } })

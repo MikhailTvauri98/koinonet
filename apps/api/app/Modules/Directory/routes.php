@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Directory\Http\Controllers\AccessLinkController;
 use App\Modules\Directory\Http\Controllers\AuthController;
+use App\Modules\Directory\Http\Controllers\IcalTokenController;
 use App\Modules\Directory\Http\Controllers\InvitationController;
 use App\Modules\Directory\Http\Controllers\PersonController;
 use App\Modules\Directory\Http\Controllers\ProfileController;
@@ -20,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('auth/sessions', [SessionController::class, 'index']);
     Route::delete('auth/sessions/{session}', [SessionController::class, 'destroy']);
     Route::post('auth/sessions/logout-others', [SessionController::class, 'logoutOthers']);
+    Route::post('me/ical-token/rotate', [IcalTokenController::class, 'rotate']);
 
     Route::get('me/profile', [ProfileController::class, 'show']);
     Route::patch('me/profile', [ProfileController::class, 'update']);

@@ -10,7 +10,7 @@ mockNuxtImport('useApi', () => () => ({ get, post, delete: remove }))
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
 
 const me = (id: string): MeResponse => ({
-  user: { id, phone: null, email: `${id}@test.local` },
+  user: { id, phone: null, email: `${id}@test.local`, ical_url: `https://church.test/${id}.ics` },
   person: { id: `p-${id}`, first_name: 'Иван', last_name: 'Иванов', patronymic: null, status: 'member' },
   permissions: { administrator: false, global: [], ministries: {} },
 })

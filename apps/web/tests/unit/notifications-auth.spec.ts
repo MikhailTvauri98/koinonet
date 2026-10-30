@@ -8,7 +8,7 @@ const { get, post, subscribe, unsubscribe } = vi.hoisted(() => ({ get: vi.fn(), 
 mockNuxtImport('useApi', () => () => ({ get, post }))
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe, unsubscribe }))
 const me: MeResponse = {
-  user: { id: 'u1', phone: null, email: 'one@test.local' },
+  user: { id: 'u1', phone: null, email: 'one@test.local', ical_url: 'https://church.test/calendar.ics' },
   person: { id: 'p1', last_name: 'Один', first_name: 'Иван', patronymic: null, status: 'member' },
   permissions: { administrator: false, global: [], ministries: {} },
 }

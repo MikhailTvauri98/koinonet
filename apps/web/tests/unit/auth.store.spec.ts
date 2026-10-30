@@ -13,7 +13,7 @@ mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}
 mockNuxtImport('usePush', () => () => ({ unsubscribe: unsubscribePush, setAccount: async () => {} }))
 
 const me: MeResponse = {
-  user: { id: 'u1', phone: null, email: 'ivan@example.com' },
+  user: { id: 'u1', phone: null, email: 'ivan@example.com', ical_url: 'https://church.test/calendar.ics' },
   person: { id: 'p1', first_name: 'Иван', last_name: 'Иванов', patronymic: null, status: 'member' },
   permissions: { administrator: false, global: ['people.view'], ministries: {} },
 }
@@ -191,7 +191,7 @@ describe('auth store', () => {
 
     it('drops the local account immediately and lets the next fetchMe confirm the server logged it out', async () => {
       const auth = useAuthStore()
-      auth.user = { id: 'u1', phone: null, email: 'maria@example.com' }
+      auth.user = { id: 'u1', phone: null, email: 'maria@example.com', ical_url: 'https://church.test/calendar.ics' }
       auth.initialized = true
 
       auth.forgetSession()
@@ -214,7 +214,7 @@ describe('auth store', () => {
       // Другой аккаунт был вошедшим в этой же вкладке (например
       // администратор открыл чужую ссылку сброса, чтобы её проверить) —
       // его сессию AcceptAccessLink.php не трогает вовсе.
-      auth.user = { id: 'admin1', phone: null, email: 'admin@example.com' }
+      auth.user = { id: 'admin1', phone: null, email: 'admin@example.com', ical_url: 'https://church.test/admin-calendar.ics' }
       auth.initialized = true
 
       auth.forgetSession()

@@ -10,7 +10,7 @@ import { useAuthStore, type MeResponse } from '~/stores/auth'
 mockNuxtImport('useNotificationsStore', () => () => ({ subscribe: async () => {}, unsubscribe: () => {} }))
 
 const me: MeResponse = {
-  user: { id: 'u1', phone: null, email: 'ivan@example.com' },
+  user: { id: 'u1', phone: null, email: 'ivan@example.com', ical_url: 'https://church.test/calendar.ics' },
   person: { id: 'p1', last_name: 'Иванов', first_name: 'Иван', patronymic: null, status: 'member' },
   permissions: { administrator: false, global: ['people.view'], ministries: {} },
 }

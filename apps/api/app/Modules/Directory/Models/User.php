@@ -19,6 +19,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $person_id
  * @property string|null $phone
  * @property string|null $email
+ * @property string $ical_token
  * @property Carbon|null $disabled_at
  * @property-read Person $person
  */
@@ -72,6 +73,11 @@ final class User extends Authenticatable
     public function isDisabled(): bool
     {
         return $this->getAttribute('disabled_at') !== null;
+    }
+
+    public function icalUrl(): string
+    {
+        return url("/api/v1/calendar/feed/{$this->ical_token}.ics");
     }
 
     public function receivesBroadcastNotificationsOn(): string

@@ -151,15 +151,11 @@ final readonly class EventAccess
             if ($viewAll) {
                 $visible->orWhere('owner_type', EventOwnerType::Ministry);
             }
-            $visible->orWhere(function (Builder $assigned) use ($user, $assignedMinistries): void {
-                $assigned->where('visibility', EventVisibility::Assigned)
-                    ->where(function (Builder $access) use ($user, $assignedMinistries): void {
-                        $access->whereHas('slots', fn (Builder $slots): Builder => $slots->whereNull('archived_at')
-                            ->whereHas('assignments', fn (Builder $assignments): Builder => $assignments->whereNull('archived_at')->where('person_id', $user->person_id)))
-                            ->orWhereHas('slots', fn (Builder $slots): Builder => $slots->whereNull('archived_at')
-                                ->whereHas('role', fn (Builder $roles): Builder => $roles->whereIn('ministry_id', $assignedMinistries)));
-                    });
-            });
+            $visible->orWhereHas('slots', fn (Builder $slots): Builder => $slots->whereNull('archived_at')
+                ->whereHas('assignments', fn (Builder $assignments): Builder => $assignments->whereNull('archived_at')->where('person_id', $user->person_id)));
+            $visible->orWhere(fn (Builder $assigned): Builder => $assigned->where('visibility', EventVisibility::Assigned)
+                ->whereHas('slots', fn (Builder $slots): Builder => $slots->whereNull('archived_at')
+                    ->whereHas('role', fn (Builder $roles): Builder => $roles->whereIn('ministry_id', $assignedMinistries))));
         });
     }
 }

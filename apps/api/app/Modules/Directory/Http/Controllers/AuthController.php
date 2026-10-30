@@ -19,7 +19,7 @@ use Illuminate\Validation\ValidationException;
 
 final class AuthController
 {
-    private const string ME_RESPONSE = 'array{user: array{id: string, phone: string|null, email: string|null}, person: array{id: string, last_name: string, first_name: string, patronymic: string|null, status: string}, permissions: array{administrator: bool, global: list<string>, ministries: array<string, list<string>>}}';
+    private const string ME_RESPONSE = 'array{user: array{id: string, phone: string|null, email: string|null, ical_url: string}, person: array{id: string, last_name: string, first_name: string, patronymic: string|null, status: string}, permissions: array{administrator: bool, global: list<string>, ministries: array<string, list<string>>}}';
 
     #[OpenApiResponse(type: self::ME_RESPONSE)]
     public function login(LoginRequest $request): JsonResponse

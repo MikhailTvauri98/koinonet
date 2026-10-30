@@ -1093,12 +1093,16 @@
                                                         "string",
                                                         "null"
                                                     ]
+                                                },
+                                                "ical_url": {
+                                                    "type": "string"
                                                 }
                                             },
                                             "required": [
                                                 "id",
                                                 "phone",
-                                                "email"
+                                                "email",
+                                                "ical_url"
                                             ]
                                         },
                                         "person": {
@@ -1222,12 +1226,16 @@
                                                         "string",
                                                         "null"
                                                     ]
+                                                },
+                                                "ical_url": {
+                                                    "type": "string"
                                                 }
                                             },
                                             "required": [
                                                 "id",
                                                 "phone",
-                                                "email"
+                                                "email",
+                                                "ical_url"
                                             ]
                                         },
                                         "person": {
@@ -1838,6 +1846,80 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/calendar/feed/{token}.ics": {
+            "get": {
+                "operationId": "calendar.icalFeed",
+                "tags": [
+                    "IcalFeed"
+                ],
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "text/calendar; charset=UTF-8": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "text/calendar": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Cache-Control": {
+                                "schema": {
+                                    "type": "string",
+                                    "const": "private, no-store"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/me/ical-token/rotate": {
+            "post": {
+                "operationId": "icalToken.rotate",
+                "tags": [
+                    "IcalToken"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`IcalTokenResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/IcalTokenResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
             }
@@ -5949,6 +6031,18 @@
                 ],
                 "title": "EventVisibility"
             },
+            "IcalTokenResource": {
+                "type": "object",
+                "properties": {
+                    "ical_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "ical_url"
+                ],
+                "title": "IcalTokenResource"
+            },
             "LoginRequest": {
                 "type": "object",
                 "properties": {
@@ -6023,12 +6117,16 @@
                                     "string",
                                     "null"
                                 ]
+                            },
+                            "ical_url": {
+                                "type": "string"
                             }
                         },
                         "required": [
                             "id",
                             "phone",
-                            "email"
+                            "email",
+                            "ical_url"
                         ]
                     },
                     "person": {
