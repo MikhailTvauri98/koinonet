@@ -4308,6 +4308,100 @@
                 }
             }
         },
+        "/messages/{message}/pin": {
+            "post": {
+                "operationId": "pin.store",
+                "tags": [
+                    "Pin"
+                ],
+                "parameters": [
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "description": "The message ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MessageResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MessageResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "pin.destroy",
+                "tags": [
+                    "Pin"
+                ],
+                "parameters": [
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "description": "The message ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MessageResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MessageResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/me/profile": {
             "get": {
                 "operationId": "profile.show",
@@ -6175,6 +6269,12 @@
                             "$ref": "#/components/schemas/ChatMemberResource"
                         }
                     },
+                    "pinned_messages": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MessageResource"
+                        }
+                    },
                     "can_write": {
                         "type": "boolean"
                     },
@@ -6199,6 +6299,7 @@
                     "muted_until",
                     "is_owner",
                     "members",
+                    "pinned_messages",
                     "can_write",
                     "can_moderate",
                     "can_manage_members"

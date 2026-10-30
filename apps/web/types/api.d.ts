@@ -842,6 +842,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/messages/{message}/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pin.store"];
+        delete: operations["pin.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/profile": {
         parameters: {
             query?: never;
@@ -1276,6 +1292,7 @@ export interface components {
             muted_until: string | null;
             is_owner: boolean;
             members: components["schemas"]["ChatMemberResource"][];
+            pinned_messages: components["schemas"]["MessageResource"][];
             can_write: boolean;
             can_moderate: boolean;
             can_manage_members: boolean;
@@ -4094,6 +4111,60 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "pin.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The message ID */
+                message: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `MessageResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MessageResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "pin.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The message ID */
+                message: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `MessageResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MessageResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "profile.show": {

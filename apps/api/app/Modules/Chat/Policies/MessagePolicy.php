@@ -27,4 +27,9 @@ final readonly class MessagePolicy
     {
         return $this->access->canWrite($user, $chat);
     }
+
+    public function pin(User $user, Message $message): bool
+    {
+        return $this->access->canModerate($user, $message->chat);
+    }
 }

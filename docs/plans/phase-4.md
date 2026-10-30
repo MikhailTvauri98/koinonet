@@ -1374,7 +1374,7 @@ composer openapi && git add . && git commit -m "feat(chat): read pointer and unr
 - Отдаёт наружу: `ChatPinsChanged(string $chatId)`.
 - Коды ошибок: `message.deleted`, `message.already_pinned`, `message.not_pinned`.
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -1437,21 +1437,21 @@ it('unpins automatically when the pinned message is deleted', function () {
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/PinTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 `PinMessage::handle(Message $m, User $actor)` — проверки `message.deleted`, `message.already_pinned`; запись в `chat_pinned_messages`; `ChatPinsChanged`. `UnpinMessage` — `message.not_pinned`. `DeleteMessage` (задача 5) дополняется удалением строки закрепления. Политика `pin` → `ChatAccess::canModerate`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): pinned messages"

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Chat\Actions;
 
 use App\Modules\Access\AuditLogger;
+use App\Modules\Chat\Events\ChatPinsChanged;
 use App\Modules\Chat\Events\MessageDeleted;
 use App\Modules\Chat\Models\Chat;
 use App\Modules\Chat\Models\Message;
@@ -30,6 +31,9 @@ final readonly class DeleteMessage
             }
             $this->media->handle($message);
             $message->update(['deleted_at' => now(), 'body' => null, 'reply_to_id' => null]);
+            if ($chat->pins()->where('message_id', $message->id)->delete() > 0) {
+                DB::afterCommit(static fn () => ChatPinsChanged::dispatch($chat->id));
+            }
             if ($message->sender_user_id !== $actor->id) {
                 $this->audit->recordForActor($actor, 'message.deleted_by_moderator', $message, ['chat_id' => $chat->id]);
             }
