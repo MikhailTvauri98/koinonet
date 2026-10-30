@@ -1357,6 +1357,7 @@ export interface components {
              */
             cover_url: string | null;
             default_role_id: string | null;
+            chat_id: string | null;
             archived_at: string | null;
         };
         /** MyProfileResource */

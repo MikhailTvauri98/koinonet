@@ -23,7 +23,7 @@ uses(RefreshDatabase::class);
 
 it('allows one chat per ministry', function () {
     $ministry = ministryWithRoles();
-    $chat = Chat::factory()->ministry($ministry)->create();
+    $chat = Chat::query()->where('ministry_id', $ministry->id)->sole();
     expect($chat->title)->toBeNull();
     expect(fn () => Chat::factory()->ministry($ministry)->create())->toThrow(QueryException::class);
 });

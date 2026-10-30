@@ -51,10 +51,16 @@ use App\Modules\Calendar\Policies\EventPolicy;
 use App\Modules\Calendar\Policies\EventSlotPolicy;
 use App\Modules\Calendar\Policies\EventTemplatePolicy;
 use App\Modules\Chat\Actions\ChatAccountEraser;
+use App\Modules\Chat\Console\BackfillChatsCommand;
+use App\Modules\Chat\Listeners\AddNewUserToChats;
+use App\Modules\Chat\Listeners\ArchiveChatOnMinistryArchived;
+use App\Modules\Chat\Listeners\CreateMinistryChatOnCreated;
+use App\Modules\Chat\Listeners\SyncMinistryChatOnMembership;
 use App\Modules\Chat\Models\Message;
 use App\Modules\Directory\Console\ErasePersonCommand;
 use App\Modules\Directory\Console\InstallCommand;
 use App\Modules\Directory\Contracts\SharedMinistryFinder;
+use App\Modules\Directory\Events\UserCreated;
 use App\Modules\Directory\Events\UserDisabled;
 use App\Modules\Directory\Events\UserEnabled;
 use App\Modules\Directory\Models\Person;
@@ -70,6 +76,7 @@ use App\Modules\Ministries\Events\MemberAdded;
 use App\Modules\Ministries\Events\MemberRemoved;
 use App\Modules\Ministries\Events\MemberRolesChanged;
 use App\Modules\Ministries\Events\MinistryArchived;
+use App\Modules\Ministries\Events\MinistryCreated;
 use App\Modules\Ministries\Listeners\BumpMembershipPermissionCache;
 use App\Modules\Ministries\Models\Ministry;
 use App\Modules\Ministries\Policies\MinistryPolicy;
@@ -176,7 +183,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
         $this->loadMigrationsFrom(glob(app_path('Modules/*/Database/Migrations')) ?: []);
-        $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class, GenerateVapidKeysCommand::class, MaterializeCommand::class, SendRemindersCommand::class]);
+        $this->commands([InstallCommand::class, ErasePersonCommand::class, PruneOrphanMediaCommand::class, GenerateVapidKeysCommand::class, MaterializeCommand::class, SendRemindersCommand::class, BackfillChatsCommand::class]);
         Gate::policy(AuditEntry::class, AuditPolicy::class);
         Gate::policy(Announcement::class, AnnouncementPolicy::class);
         Gate::policy(CalendarEvent::class, EventPolicy::class);
@@ -204,5 +211,10 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MemberRolesChanged::class, BumpMembershipPermissionCache::class);
         Event::listen(MinistryArchived::class, BumpMembershipPermissionCache::class);
         Event::listen(MinistryArchived::class, OnMinistryArchived::class);
+        Event::listen(MinistryCreated::class, CreateMinistryChatOnCreated::class);
+        Event::listen(MemberAdded::class, SyncMinistryChatOnMembership::class);
+        Event::listen(MemberRemoved::class, SyncMinistryChatOnMembership::class);
+        Event::listen(UserCreated::class, AddNewUserToChats::class);
+        Event::listen(MinistryArchived::class, ArchiveChatOnMinistryArchived::class);
     }
 }

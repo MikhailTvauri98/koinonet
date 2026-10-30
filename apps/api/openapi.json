@@ -6384,6 +6384,12 @@
                             "null"
                         ]
                     },
+                    "chat_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "archived_at": {
                         "type": [
                             "string",
@@ -6397,6 +6403,7 @@
                     "description",
                     "cover_url",
                     "default_role_id",
+                    "chat_id",
                     "archived_at"
                 ],
                 "title": "MinistryResource"

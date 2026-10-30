@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ministries\Http\Resources;
 
+use App\Modules\Chat\Models\Chat;
 use App\Modules\Media\SignedMediaUrl;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ final class MinistryResource extends JsonResource
      *     description: string|null,
      *     cover_url: string|null,
      *     default_role_id: string|null,
+     *     chat_id: string|null,
      *     archived_at: string|null
      * }
      */
@@ -26,6 +28,7 @@ final class MinistryResource extends JsonResource
     {
         $ministry = $this->resource;
         assert($ministry instanceof Ministry);
+        $chatId = Chat::query()->where('ministry_id', $ministry->id)->value('id');
 
         return [
             'id' => $ministry->id,
@@ -38,6 +41,7 @@ final class MinistryResource extends JsonResource
             // a 320px source would visibly blur stretched that wide.
             'cover_url' => SignedMediaUrl::variant($ministry->cover, 'large'),
             'default_role_id' => $ministry->default_role_id,
+            'chat_id' => $chatId === null ? null : (string) $chatId,
             'archived_at' => $ministry->archived_at?->toISOString(),
         ];
     }

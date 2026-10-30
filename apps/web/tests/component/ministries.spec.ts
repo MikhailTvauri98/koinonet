@@ -42,7 +42,7 @@ beforeEach(() => {
 // Тестовые данные — по типам ресурсов из схемы: `MemberResource` плоский,
 // имя и фото лежат в самой строке участника, а не во вложенном `person`.
 const ministry: Ministry = {
-  id: 'm1', name: 'Прославление', description: null, cover_url: null, default_role_id: 'r-member', archived_at: null,
+  id: 'm1', name: 'Прославление', description: null, cover_url: null, default_role_id: 'r-member', chat_id: null, archived_at: null,
 }
 const member: Member = {
   id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: 'Прокопенко Мария', joined_at: '2026-09-01T10:00:00Z',

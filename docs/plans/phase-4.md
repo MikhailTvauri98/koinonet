@@ -380,7 +380,7 @@ git add apps/api && git commit -m "feat(chat): tables, models, cursor and accoun
 - Отдаёт наружу: `MinistryResource.chat_id: string|null`.
 - Потребляет: `MinistryCreated`, `MinistryArchived`, `MemberAdded`, `MemberRemoved` (фаза 1), `UserCreated` (фаза 1), `AssignmentCreated` (фаза 3, для `AddNewUserToChats` — чаты событий, если уже есть).
 
-- [ ] **Шаг 1: Написать падающие тесты**
+- [x] **Шаг 1: Написать падающие тесты**
 
 ```php
 <?php
@@ -473,12 +473,12 @@ it('does not create chats for archived ministries during backfill', function () 
 });
 ```
 
-- [ ] **Шаг 2: Запустить тесты, убедиться что падают**
+- [x] **Шаг 2: Запустить тесты, убедиться что падают**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat/MinistryChatSyncTest.php`
 Ожидается: FAIL.
 
-- [ ] **Шаг 3: Реализовать**
+- [x] **Шаг 3: Реализовать**
 
 ```php
 final class CreateMinistryChat
@@ -510,12 +510,12 @@ final class CreateMinistryChat
 
 `BackfillChatsCommand`: `Ministry::whereNull('archived_at')->each(CreateMinistryChat::handle)`; идемпотентность даёт `firstOrCreate`.
 
-- [ ] **Шаг 4: Запустить тесты, убедиться что проходят**
+- [x] **Шаг 4: Запустить тесты, убедиться что проходят**
 
 Выполнить: `./vendor/bin/pest tests/Feature/Chat tests/Feature/Ministries`
 Ожидается: PASS.
 
-- [ ] **Шаг 5: Коммит**
+- [x] **Шаг 5: Коммит**
 
 ```bash
 composer openapi && git add . && git commit -m "feat(chat): ministry chats created and synchronised by listeners, backfill command"
