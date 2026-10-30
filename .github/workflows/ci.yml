@@ -38,7 +38,7 @@ jobs:
       DB_PASSWORD: secret
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
-      CACHE_STORE: redis
+      CACHE_STORE: array
     services:
       postgres:
         image: postgres:17-alpine
@@ -78,7 +78,7 @@ jobs:
       - run: composer lint
       - run: composer types
       # --ci: забытый ->only() не сужает прогон до одного теста.
-      - run: composer test -- --ci
+      - run: composer run --timeout=0 test -- --ci
       - name: OpenAPI schema is up to date
         run: composer openapi && git diff --exit-code openapi.json
 

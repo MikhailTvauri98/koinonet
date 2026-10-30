@@ -23,6 +23,18 @@ uses(RefreshDatabase::class);
 
 beforeEach(fn () => Storage::fake('media'));
 
+it('rejects sending with a stale actor after the account was disabled', function () {
+    Event::fake([MessageSent::class]);
+    $user = actingAsUser();
+    $chat = Chat::factory()->withMembers($user)->create();
+    User::query()->whereKey($user->id)->update(['disabled_at' => now()]);
+    expect($user->isDisabled())->toBeFalse();
+    expect(fn () => app(SendMessage::class)->handle($user, $chat, 'Недопустимое сообщение', [], null))
+        ->toThrow(AuthorizationException::class);
+    expect(Message::query()->count())->toBe(0)->and($chat->fresh()->last_message_id)->toBeNull();
+    Event::assertNotDispatched(MessageSent::class);
+});
+
 it('sends text and updates the last message with an event', function () {
     Event::fake([MessageSent::class]);
     $user = actingAsUser();

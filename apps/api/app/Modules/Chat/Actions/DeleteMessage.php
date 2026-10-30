@@ -24,6 +24,7 @@ final readonly class DeleteMessage
         DB::transaction(function () use ($message, $actor): void {
             $chat = Chat::query()->lockForUpdate()->findOrFail($message->chat_id);
             $message = Message::query()->lockForUpdate()->findOrFail($message->id);
+            $actor = User::query()->findOrFail($actor->id);
             $message->setRelation('chat', $chat);
             Gate::forUser($actor)->authorize('delete', $message);
             if ($message->isDeleted()) {

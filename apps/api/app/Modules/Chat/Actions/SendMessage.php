@@ -26,6 +26,9 @@ final readonly class SendMessage
         return DB::transaction(function () use ($sender, $chat, $body, $mediaIds, $replyToId): Message {
             // ArchiveChat takes this same lock: archive and send have one order.
             $chat = Chat::query()->lockForUpdate()->findOrFail($chat->id);
+            // The request may have waited on the chat lock after disabling.
+            // Read current account state without a User lock (sender FK order).
+            $sender = User::query()->findOrFail($sender->id);
             if ($sender->isDisabled() || $this->access->member($sender, $chat) === null) {
                 throw new AuthorizationException;
             }

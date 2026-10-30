@@ -20,6 +20,7 @@ final readonly class EditMessage
         return DB::transaction(function () use ($message, $body, $actor): Message {
             $chat = Chat::query()->lockForUpdate()->findOrFail($message->chat_id);
             $message = Message::query()->lockForUpdate()->findOrFail($message->id);
+            $actor = User::query()->findOrFail($actor->id);
             $message->setRelation('chat', $chat);
             Gate::forUser($actor)->authorize('update', $message);
             if ($message->isDeleted()) {

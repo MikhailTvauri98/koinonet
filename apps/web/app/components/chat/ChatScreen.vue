@@ -54,7 +54,7 @@ async function answerPushQuery(event: MessageEvent) {
   const path = route.fullPath; const url = window.location.href; const id = props.chatId
   const active = () => current(token) && !!userId && auth.user?.id === userId && auth.sessionVersion === session
     && props.chatId === id && chat.value?.id === id && !loading.value && !error.value
-    && route.fullPath === path && path === screenPath && window.location.href === url && document.visibilityState === 'visible'
+    && route.fullPath === path && route.path === screenPath && window.location.href === url && document.visibilityState === 'visible'
   if (!active()) return
   try {
     // Cookie/session may have changed in another tab. Verify both the current
@@ -90,7 +90,7 @@ async function refresh() {
 async function start(preserveDraft = false) {
   const previous = preserveDraft ? { chat: chat.value, reply: reply.value, editing: editing.value } : null
   invalidate(); unavailable.value = false; error.value = ''; loading.value = true
-  screenPath = route.fullPath
+  screenPath = route.path
   // Restore synchronously before Vue renders. A retry renews network lifetimes
   // without unmounting the composer and its selected-file previews.
   if (previous) { chat.value = previous.chat; reply.value = previous.reply; editing.value = previous.editing }

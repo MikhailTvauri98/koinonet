@@ -1,4 +1,4 @@
-import { test as base, devices, expect, type BrowserContext, type Locator, type Page } from '@playwright/test'
+import { test as base, devices, expect, type BrowserContext, type Locator, type Page, type Response } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
 import { apiRuntime, credentials, e2e } from './environment'
 
@@ -80,11 +80,12 @@ export function mainNav(page: Page): Locator {
 }
 
 export async function openSection(page: Page, section: string, heading: string): Promise<void> {
-  const name = section === 'Уведомления' ? /^Уведомления(?: Непрочитанных: \d+)?$/ : section
+  const name = section === 'Уведомления' ? /^Уведомления(?: Непрочитанных: \d+)?$/ : section === 'Чаты' ? /^Чаты(?: Непрочитанных: \d+)?$/ : section
   const link = mainNav(page).getByRole('link', { name, exact: true })
   const path = await link.getAttribute('href')
   const requests: Record<string, string[]> = {
-    '/': ['/announcements'],
+    '/': ['/announcements', '/events'],
+    '/chats': ['/chats'],
     '/people': ['/people', '/ministries'],
     '/ministries': ['/ministries'],
     '/announcements': ['/announcements'],
@@ -124,7 +125,8 @@ export async function visitAuthenticated(page: Page, url: string): Promise<void>
 async function initializeDocument(page: Page, navigate: () => Promise<unknown>, path: string): Promise<void> {
   await Promise.all([
     successfulGet(page, '/auth/me'), successfulGet(page, '/notifications'),
-    ...(path === '/' ? [successfulGet(page, '/announcements')] : []),
+    ...(path === '/' ? [successfulGet(page, '/announcements'), successfulGet(page, '/events')] : []),
+    successfulGet(page, '/chats'),
     navigate(),
   ])
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
@@ -155,18 +157,48 @@ export function fullName(person: NewPerson): string {
   return `${person.lastName} ${person.firstName}`
 }
 
-// Entry now waits for auth.setMe -> settings -> the initial notification
-// snapshot before router.push. Synchronize that HTTP lifecycle explicitly;
-// the short URL/heading assertions still prove the resulting screen.
+// Buffer fast responses from before submit, but start each 15s budget only
+// after its prerequisite stage. A home response cannot arrive until login,
+// settings, notifications and chats initialization have all finished. Reverb
+// auth can occupy the single PHP server first (measured 19.7s); its transport
+// stage uses the same 20s bound as the real subscription observers.
 async function enterAccount(page: Page, submit: Locator, path: string, status = 200): Promise<void> {
-  const [authenticated, initialized] = await Promise.all([
-    page.waitForResponse(response => new URL(response.url()).pathname === path && response.request().method() === 'POST'),
-    page.waitForResponse(response => response.url().endsWith('/api/v1/notifications') && response.request().method() === 'GET'),
-    successfulGet(page, '/announcements'),
-    submit.click(),
-  ])
-  expect(authenticated.status()).toBe(status)
-  expect(initialized.status()).toBe(200)
+  const keys = [
+    `POST ${path}`, 'GET /api/v1/notifications', 'GET /api/v1/chats',
+    'POST /broadcasting/auth', 'GET /api/v1/announcements', 'GET /api/v1/events',
+  ]
+  const received = new Map<string, Response>()
+  const waiting = new Map<string, (response: Response) => void>()
+  const timers = new Set<ReturnType<typeof setTimeout>>()
+  const capture = (response: Response) => {
+    const key = `${response.request().method()} ${new URL(response.url()).pathname}`
+    if (!keys.includes(key) || received.has(key)) return
+    received.set(key, response)
+    waiting.get(key)?.(response)
+  }
+  const stage = async (key: string, expected = 200, timeout = 15_000) => {
+    const response = received.get(key) ?? await new Promise<Response>((resolve, reject) => {
+      const timer = setTimeout(() => { waiting.delete(key); reject(new Error(`Account initialization timed out: ${key}`)) }, timeout)
+      timers.add(timer)
+      waiting.set(key, response => { clearTimeout(timer); timers.delete(timer); waiting.delete(key); resolve(response) })
+    })
+    expect(response.status(), key).toBe(expected)
+  }
+  page.on('response', capture)
+  try {
+    await submit.click()
+    await stage(keys[0]!, status)
+    await stage(keys[1]!)
+    await stage(keys[2]!)
+    await stage(keys[3]!, 200, 20_000)
+    // Requests may queue behind each other in the built-in PHP server. Buffer
+    // both early, but do not charge the previous response to the next budget.
+    await stage(keys[4]!)
+    await stage(keys[5]!)
+  } finally {
+    page.off('response', capture)
+    timers.forEach(timer => clearTimeout(timer))
+  }
 }
 
 // Человек открывает приложение и, не войдя, попадает на экран входа.

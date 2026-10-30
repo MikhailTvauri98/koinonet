@@ -68,6 +68,18 @@ it('does not report an outgoing screen after navigation changes before unmount',
   mocks.get.mockImplementation((url: string) => Promise.resolve(url === '/auth/me' ? { user: { id: 'me' } } : { data: card() }))
   expect(await queryChat()).not.toHaveBeenCalled()
 })
+it.each(['?unread=1', '#latest'])('answers a fresh query after same-chat URL change while rejecting the pending query: %s', async (suffix) => {
+  const screen = await mount('/chats/c1')
+  let finish!: (value: unknown) => void
+  mocks.get.mockImplementation((url: string) => url === '/auth/me' ? Promise.resolve({ user: { id: 'me' } }) : new Promise(resolve => { finish = resolve }))
+  const pending = await queryChat()
+  await screen.vm.$router.push(`/chats/c1${suffix}`)
+  await flushPromises()
+  finish({ data: card() }); await flushPromises()
+  expect(pending).not.toHaveBeenCalled()
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url === '/auth/me' ? { user: { id: 'me' } } : { data: card() }))
+  expect(await queryChat()).toHaveBeenCalledWith({ chatId: 'c1', url: window.location.href })
+})
 it.each(['account', 'route', 'hidden', 'unmount', 'removal'])('ignores an authorization response after screen lifecycle changes: %s', async (change) => {
   const screen = await mount()
   let resolve!: (value: unknown) => void

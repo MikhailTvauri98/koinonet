@@ -22,6 +22,22 @@ use Illuminate\Validation\ValidationException;
 uses(RefreshDatabase::class);
 beforeEach(fn () => Storage::fake('media'));
 
+it('rejects message mutation with a stale disabled actor', function (string $action) {
+    Event::fake([MessageEdited::class, MessageDeleted::class]);
+    $user = actingAsUser();
+    $chat = Chat::factory()->withMembers($user)->create();
+    $message = Message::factory()->for($chat)->from($user)->create(['body' => 'Сохранённый текст']);
+    User::query()->whereKey($user->id)->update(['disabled_at' => now()]);
+    expect($user->isDisabled())->toBeFalse();
+    expect(fn () => $action === 'edit'
+        ? app(EditMessage::class)->handle($message, 'Правка', $user)
+        : app(DeleteMessage::class)->handle($message, $user))->toThrow(AuthorizationException::class);
+    expect($message->fresh()->body)->toBe('Сохранённый текст')
+        ->and($message->fresh()->deleted_at)->toBeNull();
+    Event::assertNotDispatched(MessageEdited::class);
+    Event::assertNotDispatched(MessageDeleted::class);
+})->with(['edit', 'delete']);
+
 it('edits own messages without an age limit and publishes after commit', function () {
     Event::fake([MessageEdited::class]);
     $user = actingAsUser();

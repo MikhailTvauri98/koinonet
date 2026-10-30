@@ -60,8 +60,8 @@ export const e2e = {
 
 // Переменные каждого процесса API сквозных тестов, одинаковые для обоих
 // способов запуска. Реальные переменные окружения сильнее apps/api/.env, а
-// сервер запускается с `--no-reload`, иначе `artisan serve` не передал бы их
-// дочернему процессу встроенного сервера и тот читал бы только .env.
+// Docker-сервер наследует их напрямую; native запускается с `--no-reload`,
+// иначе `artisan serve` не передал бы их дочернему PHP и тот читал бы .env.
 export const apiEnvironment: Readonly<Record<string, string>> = {
   DB_DATABASE: e2e.database,
   REDIS_DB: e2e.redisDatabase,
@@ -168,8 +168,14 @@ function dockerRuntime(): ApiRuntime {
       return role === 'api'
         // Внутри контейнера сервер слушает все интерфейсы своего сетевого
         // пространства, наружу порт опубликован только на 127.0.0.1 хоста.
-        ? spec([...compose(name), '-p', `127.0.0.1:${e2e.apiPort}:8000`, ...environmentFlags,
-            'app', 'php', 'artisan', 'serve', '--no-reload', '--host=0.0.0.0', '--port=8000'], name)
+        // Запускаем тот же Laravel router из public/, как artisan serve, но
+        // флаг CLI OPcache передаём самому долгоживущему серверу. Artisan не
+        // передаёт -d дочернему PHP. Только этот свежий процесс на один прогон
+        // не проверяет Windows timestamps: исходники заморожены, после правок
+        // нужен новый запуск. Native, обычная разработка и другие роли прежние.
+        ? spec([...compose(name), '--workdir', '/app/public', '-p', `127.0.0.1:${e2e.apiPort}:8000`, ...environmentFlags,
+            'app', 'php', '-d', 'opcache.enable_cli=1', '-d', 'opcache.validate_timestamps=0', '-S', '0.0.0.0:8000',
+            '/app/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php'], name)
         : spec([...compose(name), ...environmentFlags, 'app', 'php', 'artisan', 'queue:work'], name)
     },
     listContainers: () => spec(['ps', '--all', '--quiet', '--filter', `label=${label}`]),

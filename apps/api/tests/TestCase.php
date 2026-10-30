@@ -4,10 +4,44 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\ConfigurationUrlParser;
+use RuntimeException;
 
 abstract class TestCase extends BaseTestCase
 {
+    public function createApplication(): Application
+    {
+        $app = parent::createApplication();
+        $config = $app->make('config');
+        $names = method_exists($this, 'connectionsToTransact') ? $this->connectionsToTransact() : [null];
+        $names[] = null;
+
+        foreach (array_unique($names) as $name) {
+            $name ??= $config->get('database.default');
+            $connection = $config->get('database.connections.'.$name);
+            if (! is_array($connection)) {
+                throw new RuntimeException('Unsafe test database configuration: missing connection.');
+            }
+            // Laravel's own parser includes URL path AND query overrides. It only
+            // reads configuration: no connection or SQL is needed before traits.
+            $resolved = (new ConfigurationUrlParser)->parseConfiguration($connection);
+            // This test environment has no split connections. Refuse them rather
+            // than allow a randomly selected read/write variant to bypass checks.
+            $safe = ! array_key_exists('read', $resolved) && ! array_key_exists('write', $resolved)
+                && (($resolved['driver'] ?? null) === 'sqlite'
+                    ? ($resolved['database'] ?? null) === ':memory:'
+                    : ($resolved['driver'] ?? null) === 'pgsql' && ($resolved['database'] ?? null) === 'church_test');
+            if (! $safe) {
+                // Never print URLs or credentials in a failed test log.
+                throw new RuntimeException('Unsafe test database configuration: use church_test or SQLite :memory:.');
+            }
+        }
+
+        return $app;
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
