@@ -26,6 +26,12 @@ composer openapi
 
 ## Dev-окружение
 
+Для клиента команды выполняются из `apps/web`: `npm run test -- --maxWorkers=1`, `npm run lint`, `npm run typecheck`, `npm run build`.
+
+Проверка визуальной геометрии — `npm run test:visual`. Она сама запускает Nuxt на http://localhost:3020, использует контролируемые ответы API и не требует Docker/БД. По умолчанию нужен установленный Chromium Playwright; для локального Edge в PowerShell задайте `$env:E2E_BROWSER_CHANNEL='msedge'` перед запуском. Порт 3020 должен быть свободен, другой Nuxt dev-процесс для этого checkout нужно завершить. Трассировки, снимки падений и контрольные снимки — `apps/web/test-results/visual/`. Это отдельная проверка CSS и клавиатуры, а не замена настоящих сквозных сценариев `npm run e2e`.
+
+План единого оформления и адаптивности — [фаза 5](docs/plans/phase-5.md). Визуальные токены и базовые HTML-стили находятся в `apps/web/app/assets/css/`; изменения конкретных модулей выполняются по отдельным задачам плана.
+
 `make up` поднимает `infra/compose.yml`: `postgres`, `redis`, `app` (php-fpm), `worker` (Horizon), `reverb` (WebSocket) и `web` (nginx на порту 8080). Код API смонтирован в контейнеры томом, команды контроля качества выполняются в `app`: `docker compose -f infra/compose.yml exec -T -e DB_DATABASE=church_test -e CACHE_STORE=array app ./vendor/bin/pest`. Клиент запускается на хосте из `apps/web` (`npm run dev`); его dev-сервер проксирует `/api`, `/sanctum`, `/broadcasting` и WebSocket `/app` на `NUXT_API_PROXY_TARGET` (по умолчанию `http://localhost:8080`). Сквозные сценарии — `npm run e2e` из `apps/web`, окружение описано в `apps/web/e2e/environment.ts`.
 
 Для API-тестов нужна отдельная существующая база `church_test`: `RefreshDatabase` очищает выбранную базу. `Tests\TestCase::createApplication` до запуска тестовых traits проверяет загруженную конфигурацию, включая кеш и переопределения `DB_URL`: разрешены только PostgreSQL `church_test` и SQLite `:memory:`, раздельные read/write-подключения запрещены. Чистые Unit-тесты без Laravel не затрагиваются. Параметры `DB_DATABASE` и `CACHE_STORE` задаются явно, потому что окружение Compose имеет приоритет над `phpunit.xml`; кеш `array` не переносит настройки между тестами. Полный набор запускается прямым Pest или `composer run --timeout=0 test -- --ci`, без стандартного ограничения Composer в 300 секунд; API-задание CI использует эту команду и кеш `array`.

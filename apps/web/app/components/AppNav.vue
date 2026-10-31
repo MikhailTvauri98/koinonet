@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { hasCalendarManagement } from '~/utils/templates'
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const canManageCalendar = computed(() => hasCalendarManagement(auth.permissions))
 const { can } = useCan()
 const notifications = useNotificationsStore()
@@ -59,6 +60,14 @@ const items = computed<NavItem[]>(() => {
 
 <template>
   <nav class="app-nav" aria-label="Основная навигация">
+    <div class="app-nav__brand">
+      <span class="app-nav__mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v5m-2-3h4M5 21V11l7-4 7 4v10H5Zm5 0v-6h4v6" />
+        </svg>
+      </span>
+      <span>{{ settings.churchName || 'Церковь' }}</span>
+    </div>
     <template v-for="item in items" :key="item.to">
       <NuxtLink
         :to="item.to"
@@ -88,21 +97,55 @@ const items = computed<NavItem[]>(() => {
 <style scoped>
 .app-nav {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--ui-space-1);
+  background: var(--ui-surface);
+  color: var(--ui-text-muted);
+}
+
+.app-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-2) var(--ui-space-2) var(--ui-space-6);
+  color: var(--ui-text);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.app-nav__mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 2.5rem;
+  height: 2.5rem;
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+  border-radius: var(--ui-radius-md);
 }
 
 .app-nav__item {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  min-height: var(--ui-control-height);
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--ui-radius-sm);
   text-decoration: none;
   color: inherit;
+  font-size: 0.9375rem;
+}
+
+.app-nav__item:hover {
+  background: var(--ui-surface-muted);
+  color: var(--ui-accent);
 }
 
 .app-nav__item--active {
   font-weight: 600;
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
 }
-.app-nav__subitem { font-size: .95em; }
-.app-nav__badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; background: #234e79; color: white; font-size: 0.85em; }
+.app-nav__subitem { font-size: .875rem; }
+.app-nav__badge { display: inline-block; margin-left: auto; padding: 0.1rem 0.4rem; border-radius: 999px; background: var(--ui-accent); color: white; font-size: 0.85em; }
 
 .app-nav__admin {
   display: flex;
@@ -110,21 +153,20 @@ const items = computed<NavItem[]>(() => {
   flex-direction: inherit;
 }
 
-/* Телефон: нижняя панель вкладок. Семь разделов администратора в ширину
-   телефона не помещаются: панель прокручивается вбок, а не обрезает
-   «Роли», «Настройки церкви» и «Журнал» за краем экрана. Пока разделов
-   немного, они делят ширину поровну. */
+/* Состав и горизонтальная лента сохраняются до задачи 5 фазы дизайна. */
 @media (max-width: 767px) {
   .app-nav {
     position: fixed;
+    z-index: 10;
     inset-inline: 0;
     bottom: 0;
     overflow-x: auto;
-    padding: 0.5rem;
-    border-top: 1px solid var(--border-color, #ddd);
-    background: var(--surface-color, #fff);
+    padding: var(--ui-space-2);
+    padding-bottom: calc(var(--ui-space-2) + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--ui-border);
   }
 
+  .app-nav__brand { display: none; }
   .app-nav__item,
   .app-nav__admin {
     flex: 1 0 auto;
@@ -133,17 +175,31 @@ const items = computed<NavItem[]>(() => {
   .app-nav__item {
     white-space: nowrap;
     text-align: center;
+    justify-content: center;
   }
 }
 
 /* Десктоп: боковая панель. */
 @media (min-width: 768px) {
   .app-nav {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    flex: 0 0 var(--ui-sidebar-width);
+    width: var(--ui-sidebar-width);
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
     flex-direction: column;
     align-items: stretch;
-    padding: 1rem;
-    border-right: 1px solid var(--border-color, #ddd);
-    min-height: 100vh;
+    padding: var(--ui-space-4);
+    border-right: 1px solid var(--ui-border);
   }
+  .app-nav__item { flex-shrink: 0; }
+  .app-nav__admin { margin-top: var(--ui-space-4); padding-top: var(--ui-space-4); border-top: 1px solid var(--ui-border); }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-nav { flex-basis: 12rem; width: 12rem; padding: var(--ui-space-3); }
 }
 </style>

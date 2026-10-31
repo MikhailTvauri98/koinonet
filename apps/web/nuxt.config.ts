@@ -12,6 +12,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: false,
   modules: ['@pinia/nuxt', '@nuxt/eslint', '@vite-pwa/nuxt'],
+  css: ['~/assets/css/tokens.css', '~/assets/css/base.css'],
   // Топология dev повторяет топологию прода (docs/architecture.md, раздел
   // 10 и 11): SPA и API отдаются с одного источника, клиент ходит
   // относительными путями ('/api/v1/...', '/sanctum/...'). В проде это
@@ -62,7 +63,7 @@ export default defineNuxtConfig({
     // nuxt.config.ts. Playwright сам типы не проверяет, только стирает.
     nodeTsConfig: {
       compilerOptions: { types: ['node'] },
-      include: ['../e2e/**/*', '../playwright.config.ts'],
+      include: ['../e2e/**/*', '../playwright.config.ts', '../playwright.visual.config.ts'],
     },
   },
   // PWA (задача 31): манифест и иконки статичны в public/ (см. app.head.link

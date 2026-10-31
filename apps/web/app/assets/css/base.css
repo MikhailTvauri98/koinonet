@@ -1,0 +1,133 @@
+/* Низкая специфичность: компоненты задают свою раскладку и смысловые варианты. */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--ui-font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ui-text);
+  background: var(--ui-canvas);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 0;
+}
+
+:where(h1, h2, h3, h4) {
+  color: var(--ui-text);
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+:where(h1) {
+  margin: 0 0 var(--ui-space-6);
+  font-size: clamp(1.65rem, 1.35rem + 1vw, 2rem);
+  letter-spacing: -0.025em;
+}
+
+:where(h2) {
+  margin: var(--ui-space-6) 0 var(--ui-space-4);
+  font-size: 1.25rem;
+  letter-spacing: -0.015em;
+}
+
+:where(h3) {
+  margin: var(--ui-space-4) 0 var(--ui-space-3);
+  font-size: 1.075rem;
+}
+
+:where(p) {
+  margin: var(--ui-space-3) 0;
+}
+
+:where(a) {
+  color: var(--ui-accent);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+
+:where(a:hover) {
+  color: var(--ui-accent-hover);
+}
+
+:where(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+}
+
+:where(button, input:not([type='checkbox'], [type='radio'], [type='hidden'], [type='file']), select, textarea) {
+  min-height: var(--ui-control-height);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-surface);
+  padding: 0.625rem 0.875rem;
+}
+
+:where(input, select, textarea) {
+  min-width: 0;
+}
+
+:where(input::placeholder, textarea::placeholder) {
+  color: var(--ui-text-muted);
+  opacity: 1;
+}
+
+:where(textarea) {
+  line-height: 1.5;
+  resize: vertical;
+}
+
+:where(button) {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+:where(button:hover:not(:disabled)) {
+  background-color: var(--ui-surface-muted);
+  border-color: var(--ui-accent);
+}
+
+:where(button:disabled, input:disabled, select:disabled, textarea:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+:where(input[type='checkbox'], input[type='radio']) {
+  accent-color: var(--ui-accent);
+  width: 1.125rem;
+  height: 1.125rem;
+  vertical-align: middle;
+}
+
+:where([aria-invalid='true']) {
+  border-color: var(--ui-danger);
+}
+
+:where([role='alert']) {
+  color: var(--ui-danger);
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 3px;
+}
+
+:where(dialog) {
+  color: var(--ui-text);
+  background: var(--ui-surface);
+}
+
+::selection {
+  background: var(--ui-accent-soft);
+  color: var(--ui-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html) { scroll-behavior: auto; }
+}
