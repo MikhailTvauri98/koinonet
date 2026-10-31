@@ -1721,6 +1721,10 @@ export interface components {
             /** @enum {string} */
             description: "Начинать личный чат с любым аккаунтом." | "Создавать групповые чаты с произвольным составом и управлять ими." | "Удалять чужие сообщения и закреплять в чате служения." | "Удалять чужие сообщения, закреплять, менять состав групп, архивировать чаты." | "Список людей и карточка: ФИО, фото, статус, служения." | "Телефон, почта и дата рождения любого человека." | "Заметки руководства о людях." | "Создавать, редактировать и архивировать людей, менять ФИО и статус, стирать данные." | "Создавать приглашения и ссылки сброса пароля, отключать и включать аккаунты." | "Создание и архивация служений." | "Состав, события и объявления любого служения без участия в нём." | "Все внутренние права в каждом служении." | "Редактор глобальных ролей и выдача их людям." | "Название церкви, часовой пояс, регион телефонов." | "Хронология административных действий." | "Публикация, правка, закрепление и архивация церковных объявлений." | "Публикация, правка, закрепление и архивация объявлений служения." | "События и шаблоны уровня церкви, все их слоты, отмена, чаты этих событий." | "События и шаблоны служения, все их слоты, отмена, чат события." | "Назначать людей в слоты с ролями этого служения в любых событиях." | "Добавлять и исключать участников, выдавать и снимать роли служения." | "Телефон, почта и дата рождения участников этого служения." | "Создавать, редактировать и удалять роли служения, выбирать роль по умолчанию." | "Название, описание и обложка служения.";
         };
+        /** PersonReferenceResource */
+        PersonReferenceResource: {
+            id: string;
+        };
         /** PersonResource */
         PersonResource: {
             id: string;
@@ -1731,11 +1735,9 @@ export interface components {
             status: string;
             archived: boolean;
             /**
-             * @description Same rule as the card itself (architecture 6.4: "фото человека
-             *      тем, у кого people.view" - see the class this resource is
-             *     never returned without passing): whoever the controller
-             *     already let see this person's card sees their photo too, so
-             *     no extra check is needed here.
+             * @description Reads authorize the card, own-profile responses concern the
+             *     caller, and mutation responses select this resource only after
+             *     PersonPolicy::view succeeds (see forMutation).
              */
             photo_url: string | null;
             has_account: boolean;
@@ -3427,7 +3429,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `PersonResource` */
+            /**
+             * @description `PersonResource`
+             *
+             *     `PersonReferenceResource`
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3435,6 +3441,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PersonResource"];
+                    } | {
+                        data: components["schemas"]["PersonReferenceResource"];
                     };
                 };
             };
@@ -3455,7 +3463,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `PersonResource` */
+            /**
+             * @description `PersonResource`
+             *
+             *     `PersonReferenceResource`
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3463,6 +3475,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PersonResource"];
+                    } | {
+                        data: components["schemas"]["PersonReferenceResource"];
                     };
                 };
             };
@@ -4390,14 +4404,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description `PersonResource` */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["PersonResource"];
+                        data: components["schemas"]["PersonResource"] | components["schemas"]["PersonReferenceResource"];
                         warnings: ({
                             /** @constant */
                             code: "person.duplicate_phone";
@@ -4461,7 +4474,11 @@ export interface operations {
             };
         };
         responses: {
-            /** @description `PersonResource` */
+            /**
+             * @description `PersonResource`
+             *
+             *     `PersonReferenceResource`
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4469,6 +4486,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PersonResource"];
+                    } | {
+                        data: components["schemas"]["PersonReferenceResource"];
                     };
                 };
             };
@@ -4494,7 +4513,11 @@ export interface operations {
             };
         };
         responses: {
-            /** @description `PersonResource` */
+            /**
+             * @description `PersonResource`
+             *
+             *     `PersonReferenceResource`
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4502,6 +4525,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PersonResource"];
+                    } | {
+                        data: components["schemas"]["PersonReferenceResource"];
                     };
                 };
             };
@@ -4523,7 +4548,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `PersonResource` */
+            /**
+             * @description `PersonResource`
+             *
+             *     `PersonReferenceResource`
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4531,6 +4560,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PersonResource"];
+                    } | {
+                        data: components["schemas"]["PersonReferenceResource"];
                     };
                 };
             };
@@ -4551,7 +4582,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `PersonResource` */
+            /**
+             * @description `PersonResource`
+             *
+             *     `PersonReferenceResource`
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4559,6 +4594,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PersonResource"];
+                    } | {
+                        data: components["schemas"]["PersonReferenceResource"];
                     };
                 };
             };

@@ -18,6 +18,15 @@ use Illuminate\Support\Facades\Gate;
 /** @mixin Person */
 final class PersonResource extends JsonResource
 {
+    // A permitted write does not grant permission to read its resulting card.
+    // Keep the full read schema distinct from a write-only acknowledgement.
+    public static function forMutation(Person $person): self|PersonReferenceResource
+    {
+        return Gate::allows('view', $person)
+            ? new self($person->loadCardFlags())
+            : new PersonReferenceResource($person);
+    }
+
     /**
      * @return array{
      *     id: string,
@@ -55,11 +64,9 @@ final class PersonResource extends JsonResource
             'full_name' => $person->fullName(),
             'status' => $person->status->value,
             'archived' => $person->archived_at !== null,
-            // Same rule as the card itself (architecture 6.4: "фото человека
-            // тем, у кого people.view" - see the class this resource is
-            // never returned without passing): whoever the controller
-            // already let see this person's card sees their photo too, so
-            // no extra check is needed here.
+            // Reads authorize the card, own-profile responses concern the
+            // caller, and mutation responses select this resource only after
+            // PersonPolicy::view succeeds (see forMutation).
             'photo_url' => SignedMediaUrl::variant($person->photo, 'thumb'),
             'has_account' => (bool) $person->getAttribute('user_exists'),
             'user_id' => $userId === null ? null : (string) $userId,

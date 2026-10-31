@@ -12,6 +12,7 @@ use App\Modules\Ministries\Models\MinistryMember;
 use App\Modules\Ministries\Models\MinistryMemberRole;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Gate;
 
 final class RoleUsageCollector
 {
@@ -37,7 +38,8 @@ final class RoleUsageCollector
                 $blockers[] = [
                     'type' => 'last_role_of_member',
                     'id' => $member->id,
-                    'title' => $member->person->fullName(),
+                    'title' => Gate::allows('view', $member->person)
+                        ? $member->person->fullName() : 'Скрытый человек',
                 ];
             }
         }

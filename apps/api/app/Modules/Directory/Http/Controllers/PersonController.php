@@ -13,6 +13,7 @@ use App\Modules\Directory\Http\Queries\PersonIndexQuery;
 use App\Modules\Directory\Http\Requests\SetPhotoRequest;
 use App\Modules\Directory\Http\Requests\StorePersonRequest;
 use App\Modules\Directory\Http\Requests\UpdatePersonRequest;
+use App\Modules\Directory\Http\Resources\PersonReferenceResource;
 use App\Modules\Directory\Http\Resources\PersonResource;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
@@ -64,10 +65,10 @@ final class PersonController
         $attributes = $request->validated();
         $result = $createPerson->handle($attributes);
 
-        return (new PersonResource($this->withFlags($result['person'])))
-            ->additional(['warnings' => $result['warnings']])
-            ->response()
-            ->setStatusCode(201);
+        return response()->json([
+            'data' => PersonResource::forMutation($result['person']),
+            'warnings' => $result['warnings'],
+        ], 201);
     }
 
     public function show(Person $person): PersonResource
@@ -83,39 +84,39 @@ final class PersonController
         UpdatePersonRequest $request,
         Person $person,
         UpdatePerson $updatePerson,
-    ): PersonResource {
+    ): PersonResource|PersonReferenceResource {
         Gate::authorize('update', $person);
 
         /** @var array<string, mixed> $attributes */
         $attributes = $request->validated();
 
-        return new PersonResource($this->withFlags($updatePerson->handle($person, $attributes)));
+        return PersonResource::forMutation($updatePerson->handle($person, $attributes));
     }
 
-    public function archive(Person $person, ArchivePerson $archivePerson): PersonResource
+    public function archive(Person $person, ArchivePerson $archivePerson): PersonResource|PersonReferenceResource
     {
         Gate::authorize('archive', $person);
 
-        return new PersonResource($this->withFlags($archivePerson->handle($person)));
+        return PersonResource::forMutation($archivePerson->handle($person));
     }
 
-    public function restore(Person $person, RestorePerson $restorePerson): PersonResource
+    public function restore(Person $person, RestorePerson $restorePerson): PersonResource|PersonReferenceResource
     {
         Gate::authorize('restore', $person);
 
-        return new PersonResource($this->withFlags($restorePerson->handle($person)));
+        return PersonResource::forMutation($restorePerson->handle($person));
     }
 
     public function updatePhoto(
         SetPhotoRequest $request,
         Person $person,
         SetPersonPhoto $setPersonPhoto,
-    ): PersonResource {
+    ): PersonResource|PersonReferenceResource {
         Gate::authorize('update', $person);
 
         $media = Media::query()->findOrFail($request->string('media_id')->toString());
 
-        return new PersonResource($this->withFlags($setPersonPhoto->handle($person, $media)));
+        return PersonResource::forMutation($setPersonPhoto->handle($person, $media));
     }
 
     private function withFlags(Person $person): Person

@@ -72,6 +72,19 @@ describe('login settings', () => {
 })
 
 describe('profile', () => {
+  it.each([
+    [{ id: 'p1', photo_url: '/new-photo.webp' }, '/new-photo.webp'],
+    [{ id: 'p1' }, '/current-photo.webp'],
+  ])('uses photo data only when the attachment response includes it', async (resource, expectedPhoto) => {
+    get.mockResolvedValue({ data: { photo_url: '/current-photo.webp', contacts: { phone: null, email: null, birth_date: null }, contacts_public: false } })
+    const page = await mountSuspended(ProfilePage)
+
+    page.findComponent(MediaUploader).vm.$emit('attached', resource)
+    await flushPromises()
+
+    expect(page.find('[data-test="photo"]').attributes('src')).toBe(expectedPhoto)
+  })
+
   it('sends the contacts_public toggle', async () => {
     // После записи экран перечитывает и профиль, и `/auth/me` — у каждого
     // свой ответ, иначе стор получил бы профиль вместо снимка вошедшего.

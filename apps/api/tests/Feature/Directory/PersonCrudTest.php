@@ -26,7 +26,7 @@ it('denies creating a person without people.manage', function () {
 });
 
 it('creates a person with normalised contacts', function () {
-    actingAsUserWith([Permission::PeopleManage]);
+    actingAsUserWith([Permission::PeopleManage, Permission::PeopleView]);
     Event::fake([PersonCreated::class]);
 
     $response = $this->postJson('/api/v1/people', [
@@ -144,7 +144,7 @@ it('omits the photo url when the person has no photo', function () {
 });
 
 it('updates only the submitted person fields', function () {
-    actingAsUserWith([Permission::PeopleManage]);
+    actingAsUserWith([Permission::PeopleManage, Permission::PeopleView]);
     $person = Person::factory()->create([
         'last_name' => 'Иванов',
         'first_name' => 'Иван',
@@ -212,7 +212,7 @@ it('archives a person and keeps the record available by direct link', function (
 });
 
 it('restores an archived person', function () {
-    actingAsUserWith([Permission::PeopleManage]);
+    actingAsUserWith([Permission::PeopleManage, Permission::PeopleView]);
     $person = Person::factory()->archived()->create();
 
     $this->postJson("/api/v1/people/{$person->id}/restore")

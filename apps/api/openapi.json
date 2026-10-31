@@ -2630,18 +2630,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "`PersonResource`",
+                        "description": "`PersonResource`\n\n`PersonReferenceResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonReferenceResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -2678,18 +2693,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "`PersonResource`",
+                        "description": "`PersonResource`\n\n`PersonReferenceResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonReferenceResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -4476,14 +4506,21 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "`PersonResource`",
+                        "description": "",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                            "anyOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                },
+                                                {
+                                                    "$ref": "#/components/schemas/PersonReferenceResource"
+                                                }
+                                            ]
                                         },
                                         "warnings": {
                                             "type": "array",
@@ -4632,18 +4669,33 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "`PersonResource`",
+                        "description": "`PersonResource`\n\n`PersonReferenceResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonReferenceResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -4693,18 +4745,33 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "`PersonResource`",
+                        "description": "`PersonResource`\n\n`PersonReferenceResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonReferenceResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -4744,18 +4811,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "`PersonResource`",
+                        "description": "`PersonResource`\n\n`PersonReferenceResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonReferenceResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -4792,18 +4874,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "`PersonResource`",
+                        "description": "`PersonResource`\n\n`PersonReferenceResource`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PersonResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PersonReferenceResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -8172,6 +8269,18 @@
                 ],
                 "title": "PermissionResource"
             },
+            "PersonReferenceResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id"
+                ],
+                "title": "PersonReferenceResource"
+            },
             "PersonResource": {
                 "type": "object",
                 "properties": {
@@ -8204,7 +8313,7 @@
                             "string",
                             "null"
                         ],
-                        "description": "Same rule as the card itself (architecture 6.4: \"\u0444\u043e\u0442\u043e \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0430\n \u0442\u0435\u043c, \u0443 \u043a\u043e\u0433\u043e people.view\" - see the class this resource is\nnever returned without passing): whoever the controller\nalready let see this person's card sees their photo too, so\nno extra check is needed here."
+                        "description": "Reads authorize the card, own-profile responses concern the\ncaller, and mutation responses select this resource only after\nPersonPolicy::view succeeds (see forMutation)."
                     },
                     "has_account": {
                         "type": "boolean"

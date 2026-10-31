@@ -9,6 +9,7 @@ use App\Modules\Directory\Actions\CreatePasswordResetLink;
 use App\Modules\Directory\Actions\DisableUser;
 use App\Modules\Directory\Actions\EnableUser;
 use App\Modules\Directory\Http\Resources\CreatedAccessLinkResource;
+use App\Modules\Directory\Http\Resources\PersonReferenceResource;
 use App\Modules\Directory\Http\Resources\PersonResource;
 use App\Modules\Directory\Models\Person;
 use Illuminate\Http\JsonResponse;
@@ -38,19 +39,19 @@ final class InvitationController
             ->setStatusCode(201);
     }
 
-    public function disable(Person $person, DisableUser $disableUser): PersonResource
+    public function disable(Person $person, DisableUser $disableUser): PersonResource|PersonReferenceResource
     {
         Gate::authorize('disable', $person);
         $disableUser->handle($person);
 
-        return new PersonResource($person->loadCardFlags());
+        return PersonResource::forMutation($person);
     }
 
-    public function enable(Person $person, EnableUser $enableUser): PersonResource
+    public function enable(Person $person, EnableUser $enableUser): PersonResource|PersonReferenceResource
     {
         Gate::authorize('enable', $person);
         $enableUser->handle($person);
 
-        return new PersonResource($person->loadCardFlags());
+        return PersonResource::forMutation($person);
     }
 }

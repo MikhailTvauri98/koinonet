@@ -3,7 +3,7 @@ import type { components } from '~~/types/api'
 import MediaUploader from '~/components/MediaUploader.vue'
 import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
-import type { Person } from '~/utils/people'
+import type { DirectLinkResources } from '~/utils/media'
 
 // «Профиль» правит контакты человека и не содержит полей логина — логин и
 // пароль меняются на отдельном экране «Вход» (settings/login.vue), так
@@ -76,8 +76,8 @@ async function submit() {
 
 // `PUT /me/photo` отвечает карточкой человека — из неё нужен только новый
 // адрес фото.
-function onPhotoAttached(person: Person) {
-  photoUrl.value = person.photo_url
+function onPhotoAttached(person: DirectLinkResources['person_photo']) {
+  if ('photo_url' in person) photoUrl.value = person.photo_url
 }
 
 const loggingOut = ref(false)
