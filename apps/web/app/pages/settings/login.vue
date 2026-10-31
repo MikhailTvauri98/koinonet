@@ -71,48 +71,48 @@ async function submitPassword() {
     <SettingsTabs />
     <h1>Вход</h1>
 
-    <section>
+    <section class="login-settings__section">
       <h2>Логин</h2>
-      <form data-test="login-form" @submit.prevent="submitLogin">
-        <label>
-          Новый логин (телефон или email)
-          <input v-model="login" data-test="login" type="text" required>
+      <form class="account-form" data-test="login-form" :aria-busy="loginSaving" @submit.prevent="submitLogin">
+        <label class="account-field">
+          <span>Новый логин (телефон или email)</span>
+          <input v-model="login" data-test="login" type="text" autocomplete="username" required>
         </label>
-        <label>
-          Текущий пароль
-          <input v-model="loginCurrentPassword" data-test="login-current-password" type="password" autocomplete="current-password" required>
-        </label>
-        <p v-if="loginError" data-test="login-error" role="alert">{{ loginError }}</p>
-        <button type="submit" data-test="save-login" :disabled="loginSaving">{{ loginSaving ? 'Сохранение…' : 'Изменить логин' }}</button>
+        <PasswordField v-model="loginCurrentPassword" data-test="login-current-password" label="Текущий пароль" autocomplete="current-password" />
+        <p v-if="loginError" class="account-notice account-notice--error" data-test="login-error" role="alert">{{ loginError }}</p>
+        <button class="account-form__submit" type="submit" data-test="save-login" :disabled="loginSaving">{{ loginSaving ? 'Сохранение…' : 'Изменить логин' }}</button>
       </form>
     </section>
 
-    <section>
+    <section class="login-settings__section">
       <h2>Пароль</h2>
-      <form data-test="password-form" @submit.prevent="submitPassword">
-        <label>
-          Текущий пароль
-          <input v-model="currentPassword" data-test="password-current" type="password" autocomplete="current-password" required>
-        </label>
-        <PasswordField v-model="newPassword" label="Новый пароль" data-test="password-new" />
+      <form class="account-form" data-test="password-form" :aria-busy="passwordSaving" @submit.prevent="submitPassword">
+        <PasswordField v-model="currentPassword" data-test="password-current" label="Текущий пароль" autocomplete="current-password" />
+        <div>
+          <PasswordField v-model="newPassword" label="Новый пароль" data-test="password-new" aria-describedby="settings-password-hint" />
+          <p id="settings-password-hint" class="account-form__hint">Не менее 8 символов.</p>
+        </div>
         <PasswordField v-model="newPasswordConfirmation" label="Повторите новый пароль" data-test="password-confirmation" />
-        <p v-if="passwordError" data-test="password-error" role="alert">{{ passwordError }}</p>
-        <p v-if="passwordChanged" data-test="password-changed" role="status">
+        <p v-if="passwordError" class="account-notice account-notice--error" data-test="password-error" role="alert">{{ passwordError }}</p>
+        <p v-if="passwordChanged" class="account-notice account-notice--success" data-test="password-changed" role="status">
           Пароль изменён. Остальные устройства вышли из системы.
         </p>
-        <button type="submit" data-test="save-password" :disabled="passwordSaving">{{ passwordSaving ? 'Сохранение…' : 'Изменить пароль' }}</button>
+        <button class="account-form__submit" type="submit" data-test="save-password" :disabled="passwordSaving">{{ passwordSaving ? 'Сохранение…' : 'Изменить пароль' }}</button>
       </form>
     </section>
   </section>
 </template>
 
 <style scoped>
-.login-settings { max-width: 32rem; margin: 0 auto; color: #202b3a; }
-section { margin-bottom: 2rem; }
-form { display: flex; flex-direction: column; gap: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.3rem; }
-input, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
-button { cursor: pointer; align-self: flex-start; }
-button:disabled { opacity: 0.6; cursor: wait; }
-[role='alert'] { color: #a32020; }
+.login-settings { max-width: 32rem; min-width: 0; margin: 0 auto; overflow-wrap: anywhere; }
+.login-settings__section h2 { margin: 0 0 var(--ui-space-4); }
+.login-settings__section + .login-settings__section {
+  margin-top: var(--ui-space-8);
+  padding-top: var(--ui-space-8);
+  border-top: 1px solid var(--ui-border);
+}
+.account-form__submit { justify-self: start; width: auto; max-width: 100%; }
+@media (max-width: 480px) {
+  .account-form__submit { width: 100%; }
+}
 </style>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { apiErrorMessage } from '~/utils/apiError'
+import AuthShell from '~/components/auth/AuthShell.vue'
+import PasswordField from '~/components/PasswordField.vue'
 
 definePageMeta({ layout: false })
 
@@ -21,6 +23,7 @@ const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 
 async function onSubmit() {
+  if (loading.value) return
   errorMessage.value = null
   loading.value = true
 
@@ -38,14 +41,13 @@ async function onSubmit() {
 </script>
 
 <template>
-  <main class="login-page">
-    <h1>Вход</h1>
-    <p v-if="passwordChanged" class="login-page__notice" role="status">
-      Пароль изменён. Войдите с новым паролем.
-    </p>
-    <form @submit.prevent="onSubmit">
-      <label>
-        Телефон или email
+  <AuthShell title="Вход" description="Используйте телефон или email вашего аккаунта.">
+    <form class="account-form" :aria-busy="loading" @submit.prevent="onSubmit">
+      <p v-if="passwordChanged" class="account-notice account-notice--success" role="status">
+        Пароль изменён. Войдите с новым паролем.
+      </p>
+      <label class="account-field">
+        <span>Телефон или email</span>
         <input
           v-model="loginValue"
           data-test="login"
@@ -54,26 +56,17 @@ async function onSubmit() {
           required
         >
       </label>
-      <label>
-        Пароль
-        <input
-          v-model="password"
-          data-test="password"
-          type="password"
-          autocomplete="current-password"
-          required
-        >
-      </label>
-      <label class="login-page__remember">
+      <PasswordField v-model="password" data-test="password" label="Пароль" autocomplete="current-password" />
+      <label class="account-form__remember">
         <input v-model="remember" type="checkbox">
         Запомнить меня
       </label>
-      <p v-if="errorMessage" class="login-page__error" role="alert">
+      <p v-if="errorMessage" class="account-notice account-notice--error" role="alert">
         {{ errorMessage }}
       </p>
-      <button data-test="submit" type="submit" :disabled="loading">
-        Войти
+      <button class="account-form__submit" data-test="submit" type="submit" :disabled="loading">
+        {{ loading ? 'Входим…' : 'Войти' }}
       </button>
     </form>
-  </main>
+  </AuthShell>
 </template>

@@ -12,7 +12,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: false,
   modules: ['@pinia/nuxt', '@nuxt/eslint', '@vite-pwa/nuxt'],
-  css: ['~/assets/css/tokens.css', '~/assets/css/base.css'],
+  css: ['~/assets/css/tokens.css', '~/assets/css/base.css', '~/assets/css/account-forms.css'],
   // Топология dev повторяет топологию прода (docs/architecture.md, раздел
   // 10 и 11): SPA и API отдаются с одного источника, клиент ходит
   // относительными путями ('/api/v1/...', '/sanctum/...'). В проде это

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { apiErrorMessage } from '~/utils/apiError'
+import AuthShell from '~/components/auth/AuthShell.vue'
+import PasswordField from '~/components/PasswordField.vue'
 
 // Маршрут публичный и без сессии — как /invite/{token}
 // (docs/architecture.md, раздел 7.2; CreatePasswordResetLink.php строит
@@ -19,7 +21,8 @@ const token = route.params.token as string
 // Загрузка ссылки, отказы по коду и по несовпадающему виду — общие с
 // экраном приглашения, вынесены в useAccessLinkInfo.ts.
 const { loading, linkError, info, load } = useAccessLinkInfo(token, 'password_reset')
-await load()
+// Показываем ожидание в общей оболочке, не выдавая форму до проверки.
+void load()
 
 const password = ref('')
 const passwordConfirmation = ref('')
@@ -27,6 +30,7 @@ const submitting = ref(false)
 const formError = ref<string | null>(null)
 
 async function onSubmit() {
+  if (submitting.value) return
   formError.value = null
 
   if (password.value !== passwordConfirmation.value) {
@@ -70,39 +74,42 @@ async function onSubmit() {
 </script>
 
 <template>
-  <main class="password-reset-page">
-    <p v-if="loading">
+  <AuthShell title="Сброс пароля" description="Задайте новый пароль для вашего аккаунта.">
+    <p v-if="loading" role="status">
       Проверяем ссылку…
     </p>
 
-    <p v-else-if="linkError" class="password-reset-page__error" role="alert">
-      {{ linkError }}
-    </p>
+    <div v-else-if="linkError" class="account-link-error">
+      <p class="account-notice account-notice--error" role="alert">{{ linkError }}</p>
+      <p>Попробуйте открыть ссылку ещё раз или попросите новую.</p>
+      <NuxtLink to="/login">Перейти ко входу</NuxtLink>
+    </div>
 
     <template v-else-if="info">
-      <h1>Сброс пароля</h1>
-      <p>Здравствуйте, {{ info.person.first_name }} {{ info.person.last_name }}!</p>
-
-      <form @submit.prevent="onSubmit">
-        <PasswordField
-          v-model="password"
-          data-test="password"
-          label="Пароль"
-        />
+      <form class="account-form" :aria-busy="submitting" @submit.prevent="onSubmit">
+        <p class="reset-greeting">Здравствуйте, {{ info.person.first_name }} {{ info.person.last_name }}!</p>
+        <div>
+          <PasswordField v-model="password" data-test="password" label="Пароль" aria-describedby="reset-password-hint" />
+          <p id="reset-password-hint" class="account-form__hint">Не менее 8 символов.</p>
+        </div>
         <PasswordField
           v-model="passwordConfirmation"
           data-test="password-confirmation"
           label="Повторите пароль"
         />
 
-        <p v-if="formError" class="password-reset-page__error" role="alert">
+        <p v-if="formError" class="account-notice account-notice--error" role="alert">
           {{ formError }}
         </p>
 
-        <button data-test="submit" type="submit" :disabled="submitting">
-          Сохранить пароль
+        <button class="account-form__submit" data-test="submit" type="submit" :disabled="submitting">
+          {{ submitting ? 'Сохраняем…' : 'Сохранить пароль' }}
         </button>
       </form>
     </template>
-  </main>
+  </AuthShell>
 </template>
+
+<style scoped>
+.reset-greeting { margin: 0; }
+</style>

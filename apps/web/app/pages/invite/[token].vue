@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { MeResponse } from '~/stores/auth'
 import { apiErrorMessage } from '~/utils/apiError'
+import AuthShell from '~/components/auth/AuthShell.vue'
+import PasswordField from '~/components/PasswordField.vue'
 
 // Маршрут публичный и без сессии (docs/architecture.md, раздел 7.2):
 // middleware/auth.global.ts уже считает `/invite/*` публичным путём по
@@ -19,18 +21,19 @@ const token = route.params.token as string
 // Загрузка ссылки, отказы по коду и по несовпадающему виду — общие с
 // экраном сброса пароля, вынесены в useAccessLinkInfo.ts.
 const { loading, linkError, info, load } = useAccessLinkInfo(token, 'invite')
-await load()
-
-// Верхнеуровневый await выше — сознательно: mountSuspended (и настоящий
-// Suspense в приложении) ждёт разрешения setup до первого рендера, так что
-// человек не видит пустую форму на мгновение раньше проверки ссылки.
-const login = ref(info.value?.login_hint.phone ?? info.value?.login_hint.email ?? '')
+const login = ref('')
+// Оболочка показывается сразу, форма — только после проверки ссылки.
+// Не блокируем первый рендер верхнеуровневым await.
+void load().then(() => {
+  login.value = info.value?.login_hint.phone ?? info.value?.login_hint.email ?? ''
+})
 const password = ref('')
 const passwordConfirmation = ref('')
 const submitting = ref(false)
 const formError = ref<string | null>(null)
 
 async function onSubmit() {
+  if (submitting.value) return
   formError.value = null
 
   if (password.value !== passwordConfirmation.value) {
@@ -69,22 +72,22 @@ async function onSubmit() {
 </script>
 
 <template>
-  <main class="invite-page">
-    <p v-if="loading">
+  <AuthShell title="Приглашение" description="Создайте аккаунт, чтобы войти в систему.">
+    <p v-if="loading" role="status">
       Проверяем ссылку…
     </p>
 
-    <p v-else-if="linkError" class="invite-page__error" role="alert">
-      {{ linkError }}
-    </p>
+    <div v-else-if="linkError" class="account-link-error">
+      <p class="account-notice account-notice--error" role="alert">{{ linkError }}</p>
+      <p>Попробуйте открыть ссылку ещё раз или попросите новую.</p>
+      <NuxtLink to="/login">Перейти ко входу</NuxtLink>
+    </div>
 
     <template v-else-if="info">
-      <h1>Приглашение</h1>
-      <p>Здравствуйте, {{ info.person.first_name }} {{ info.person.last_name }}!</p>
-
-      <form @submit.prevent="onSubmit">
-        <label>
-          Телефон или email
+      <form class="account-form" :aria-busy="submitting" @submit.prevent="onSubmit">
+        <p class="invite-greeting">Здравствуйте, {{ info.person.first_name }} {{ info.person.last_name }}!</p>
+        <label class="account-field">
+          <span>Телефон или email</span>
           <input
             v-model="login"
             data-test="login"
@@ -94,25 +97,28 @@ async function onSubmit() {
           >
         </label>
 
-        <PasswordField
-          v-model="password"
-          data-test="password"
-          label="Пароль"
-        />
+        <div>
+          <PasswordField v-model="password" data-test="password" label="Пароль" aria-describedby="invite-password-hint" />
+          <p id="invite-password-hint" class="account-form__hint">Не менее 8 символов.</p>
+        </div>
         <PasswordField
           v-model="passwordConfirmation"
           data-test="password-confirmation"
           label="Повторите пароль"
         />
 
-        <p v-if="formError" class="invite-page__error" role="alert">
+        <p v-if="formError" class="account-notice account-notice--error" role="alert">
           {{ formError }}
         </p>
 
-        <button data-test="submit" type="submit" :disabled="submitting">
-          Создать аккаунт
+        <button class="account-form__submit" data-test="submit" type="submit" :disabled="submitting">
+          {{ submitting ? 'Создаём аккаунт…' : 'Создать аккаунт' }}
         </button>
       </form>
     </template>
-  </main>
+  </AuthShell>
 </template>
+
+<style scoped>
+.invite-greeting { margin: 0; }
+</style>

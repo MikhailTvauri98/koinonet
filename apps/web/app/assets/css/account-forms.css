@@ -1,0 +1,62 @@
+/* Общие формы аккаунта: одинаковые поля внутри и вне AuthShell. */
+.account-form {
+  display: grid;
+  gap: var(--ui-space-4);
+  min-width: 0;
+}
+
+.account-field {
+  display: grid;
+  gap: var(--ui-space-2);
+  min-width: 0;
+}
+
+.account-field input { width: 100%; }
+.account-form__hint {
+  margin: var(--ui-space-2) 0 0;
+  color: var(--ui-text-muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.account-form__remember {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  min-height: var(--ui-control-height);
+  cursor: pointer;
+}
+
+.account-form__remember input { flex-shrink: 0; margin: 0; }
+
+.account-form__submit {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ui-control-height);
+  padding: 0.75rem 1rem;
+  border-color: var(--ui-accent);
+  background: var(--ui-accent);
+  color: var(--ui-surface);
+  overflow-wrap: anywhere;
+}
+
+.account-form__submit:hover:not(:disabled) {
+  border-color: var(--ui-accent-hover);
+  background: var(--ui-accent-hover);
+}
+
+.account-form__submit:disabled { cursor: wait; }
+
+.account-notice {
+  margin: 0;
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm);
+  overflow-wrap: anywhere;
+}
+
+.account-notice--error { color: var(--ui-danger); border-color: var(--ui-danger); }
+.account-notice--success { color: var(--ui-success); border-color: var(--ui-success); }
+.account-link-error { display: grid; gap: var(--ui-space-4); }
+.account-link-error p { margin: 0; }
+.account-link-error a { justify-self: start; padding-block: var(--ui-space-3); }

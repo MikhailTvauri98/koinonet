@@ -4,20 +4,23 @@
 // и не смогли бы вызвать setValue на элементе формы.
 defineOptions({ inheritAttrs: false })
 
-defineProps<{ label: string }>()
+withDefaults(defineProps<{
+  label: string
+  autocomplete?: 'new-password' | 'current-password'
+}>(), { autocomplete: 'new-password' })
 
 const model = defineModel<string>({ required: true })
 </script>
 
 <template>
-  <label class="password-field">
-    {{ label }}
+  <label class="password-field account-field">
+    <span>{{ label }}</span>
     <input
       v-model="model"
       v-bind="$attrs"
       type="password"
-      autocomplete="new-password"
-      minlength="8"
+      :autocomplete="autocomplete"
+      :minlength="autocomplete === 'new-password' ? 8 : undefined"
       required
     >
   </label>
