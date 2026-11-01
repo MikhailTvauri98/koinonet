@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingState from '~/components/ui/LoadingState.vue'
 // «Нет связи с сервером»: сервер не ответил на `/auth/me` (сеть, 5xx при
 // выкладке). Сессию при этом никто не сбрасывает — сброс только по 401
 // (stores/auth.ts). Два случая:
@@ -32,35 +33,21 @@ async function retry() {
 
 <template>
   <div v-if="auth.connectionLost" role="alert" class="connection-lost" :class="{ 'connection-lost--blocking': blocking }">
-    <p>Нет связи с сервером.</p>
+    <div><p class="connection-lost__title">Нет связи с сервером.</p><p>{{ blocking ? 'Не удалось проверить аккаунт. Проверьте подключение и повторите попытку.' : 'Не удалось обновить права. Проверьте подключение и повторите проверку.' }}</p></div>
     <button type="button" data-test="retry-connection" :disabled="retrying" @click="retry">
       {{ retrying ? 'Проверяем…' : 'Повторить' }}
     </button>
+    <LoadingState v-if="retrying" label="Проверяем связь с сервером…" />
   </div>
   <slot v-if="!blocking" />
 </template>
 
 <style scoped>
-.connection-lost {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: #fbeaea;
-  color: #7a1c1c;
-}
+.connection-lost { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-3); padding: var(--ui-space-4); background: var(--ui-surface-muted); color: var(--ui-danger); border-bottom: 1px solid var(--ui-border); overflow-wrap: anywhere; }
 .connection-lost p { margin: 0; }
-.connection-lost--blocking {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  flex-direction: column;
-  justify-content: center;
-  background: #fff;
-  color: #202b3a;
-  font-size: 1.125rem;
-}
-button { font: inherit; padding: 0.55rem 0.9rem; border: 1px solid #8b96a6; border-radius: 0.3rem; background: #fff; cursor: pointer; }
-button:disabled { opacity: 0.6; cursor: wait; }
+.connection-lost__title { font-weight: 650; }
+.connection-lost--blocking { min-height: 100vh; min-height: 100dvh; flex-direction: column; justify-content: center; align-items: stretch; padding: var(--ui-space-6); text-align: center; background: var(--ui-canvas); color: var(--ui-text); }
+.connection-lost--blocking > * { width: 100%; max-width: 36rem; margin-inline: auto; }
+.connection-lost--blocking button { width: auto; }
+button { max-width: 100%; }
 </style>

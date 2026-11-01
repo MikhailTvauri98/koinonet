@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import PushLifecycleError from '~/components/notifications/PushLifecycleError.vue'
+import LoadingState from '~/components/ui/LoadingState.vue'
+
+const { isLoading } = useLoadingIndicator({ throttle: 150, hideDelay: 150 })
 // Регистрация service worker (задача 31). Явным кодом, а не плагином модуля
 // @vite-pwa/nuxt (`pwa.client.registerPlugin: false` в nuxt.config.ts): его
 // плагин уходит через виртуальный модуль `virtual:pwa-register/vue`, который
@@ -31,6 +34,7 @@ onMounted(() => {
 <template>
   <div>
     <NuxtRouteAnnouncer />
+    <LoadingState v-if="isLoading" class="route-loading" label="Загружаем страницу…" />
     <!-- Подсказка установки — до макета: в конце документа её вместе с
          кнопкой «Не сейчас» закрывала нижняя панель вкладок телефона
          (AppNav, position: fixed). -->
@@ -48,3 +52,7 @@ onMounted(() => {
     </ConnectionGate>
   </div>
 </template>
+
+<style scoped>
+.route-loading { position: fixed; inset-inline: var(--ui-space-3); top: var(--ui-space-3); z-index: 25; width: fit-content; max-width: calc(100% - 2 * var(--ui-space-3)); margin: 0 auto; box-shadow: var(--ui-shadow); }
+</style>

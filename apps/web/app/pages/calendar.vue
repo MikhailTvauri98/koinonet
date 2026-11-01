@@ -2,6 +2,7 @@
 import type { EventItem } from '~/composables/useEvents'
 import { addCalendarDays, calendarWeekStart } from '~/composables/useEvents'
 import { apiErrorMessage } from '~/utils/apiError'
+import LoadingState from '~/components/ui/LoadingState.vue'
 import EventList from '~/components/calendar/EventList.vue'
 const settings = useSettingsStore(), auth = useAuthStore()
 const { todayInChurch } = useChurchDate(), { load: loadEvents } = useEvents()
@@ -45,9 +46,9 @@ await load()
       <p class="calendar-period__dates"><span><time :datetime="range.from">{{ formatPeriodDate(range.from) }}</time> — <time :datetime="range.to">{{ formatPeriodDate(range.to) }}</time></span><small>{{ settings.timezone }}</small></p>
       <button type="button" data-test="next-week" @click="moveWeek(7)">Неделя вперёд →</button>
     </div>
-    <p v-if="loading" role="status">Загружаем календарь…</p>
+    <LoadingState v-if="loading" label="Загружаем календарь…" />
     <p v-else-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" data-test="retry-calendar" @click="load">Повторить</button></p>
-    <EventList v-else :events="events" />
+    <EventList v-else :events="events" :empty-description="scope === 'mine' ? 'Выберите другой период или переключитесь на «Все», чтобы увидеть события церкви.' : canCreate ? 'Выберите другой период или создайте событие кнопкой «Создать событие».' : 'Выберите другой период, чтобы увидеть доступные события.'" />
   </main>
 </template>
 

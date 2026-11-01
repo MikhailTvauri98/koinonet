@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
+import LoadingState from '~/components/ui/LoadingState.vue'
+import EmptyState from '~/components/ui/EmptyState.vue'
 import PersonForm from '~/components/people/PersonForm.vue'
 import PersonListItem from '~/components/people/PersonListItem.vue'
 import { personStatuses, type Person, type PersonStatus, type PeopleResponse, type PersonCreatedResponse } from '~/utils/people'
-import { apiErrorMessage } from '~/utils/apiError'
+import { apiErrorMessage, apiErrorStatus } from '~/utils/apiError'
 
 const api = useApi()
+const auth = useAuthStore()
 const { can } = useCan()
 const canView = computed(() => can('people.view'))
 const canManage = computed(() => can('people.manage'))
+const filtered = computed(() => !!(search.value.trim() || status.value || ministry.value || archived.value || withoutRoles.value))
+const emptyDescription = computed(() => !filtered.value && canManage.value ? 'Создайте человека кнопкой «Создать человека».' : 'Измените поиск или фильтры, чтобы увидеть доступных людей.')
 const people = ref<Person[]>([])
 const ministries = ref<components['schemas']['MinistryResource'][]>([])
 const search = ref('')
@@ -33,11 +38,6 @@ async function loadPeople(page = 1) {
   const version = ++requestVersion
   loading.value = true
   errorMessage.value = ''
-  if (page === 1) {
-    people.value = []
-    currentPage.value = 0
-    lastPage.value = 0
-  }
   const query = new URLSearchParams({ page: String(page) })
   if (search.value.trim()) query.set('search', search.value.trim())
   if (status.value) query.set('status', status.value)
@@ -57,6 +57,12 @@ async function loadPeople(page = 1) {
     if (version !== requestVersion || !canView.value) return
     errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить людей. Попробуйте ещё раз.')
     failedPage = page
+    if ([401, 403].includes(apiErrorStatus(error) ?? 0)) {
+      people.value = []
+      currentPage.value = 0
+      lastPage.value = 0
+      failedPage = 1
+    }
   } finally {
     if (version === requestVersion) loading.value = false
   }
@@ -75,6 +81,9 @@ async function loadMinistries() {
 
 function resetList() {
   clearTimeout(searchTimer)
+  people.value = []
+  currentPage.value = 0
+  lastPage.value = 0
   void loadPeople()
 }
 
@@ -91,7 +100,7 @@ watch(search, () => {
 })
 watch([status, ministry, archived, withoutRoles], resetList)
 watch(canManage, (allowed) => { if (!allowed) showForm.value = false })
-watch(canView, (allowed) => {
+watch([canView, () => auth.sessionVersion], ([allowed]) => {
   clearTimeout(searchTimer)
   requestVersion++
   ministryVersion++
@@ -100,6 +109,10 @@ watch(canView, (allowed) => {
   created.value = null
   showForm.value = false
   loading.value = false
+  errorMessage.value = ''
+  ministryError.value = ''
+  currentPage.value = 0
+  lastPage.value = 0
   if (allowed) {
     void loadPeople()
     void loadMinistries()
@@ -115,7 +128,8 @@ function onCreated(response: PersonCreatedResponse) {
   if (!canView.value) return
   created.value = response
   showForm.value = false
-  resetList()
+  clearTimeout(searchTimer)
+  void loadPeople()
 }
 
 if (canView.value) await Promise.all([loadPeople(), loadMinistries()])
@@ -168,15 +182,15 @@ if (canView.value) await Promise.all([loadPeople(), loadMinistries()])
       <p v-if="ministryError" role="alert">
         {{ ministryError }} <button type="button" @click="loadMinistries">Повторить загрузку служений</button>
       </p>
-      <div :aria-busy="loading">
-        <ul class="people-page__list" aria-label="Список людей">
+      <div>
+        <ul class="people-page__list" aria-label="Список людей" :aria-busy="loading">
           <PersonListItem v-for="person in people" :key="person.id" :person="person" />
         </ul>
-        <p v-if="loading" role="status">Загрузка…</p>
+        <LoadingState v-if="loading" :label="people.length ? 'Обновляем список людей…' : 'Загружаем людей…'" />
         <p v-else-if="errorMessage" role="alert">
           {{ errorMessage }} <button type="button" data-test="retry" @click="loadPeople(failedPage)">Повторить</button>
         </p>
-        <p v-else-if="!people.length" role="status">Люди не найдены. Попробуйте изменить поиск или фильтры.</p>
+        <EmptyState v-else-if="!people.length" title="Люди не найдены." :description="emptyDescription" />
         <button
           v-if="currentPage < lastPage && !errorMessage" type="button" data-test="load-more"
           :disabled="loading" @click="loadPeople(currentPage + 1)"
