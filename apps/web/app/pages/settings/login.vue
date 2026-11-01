@@ -105,10 +105,11 @@ async function submitPassword() {
 
 <style scoped>
 .login-settings { max-width: 32rem; min-width: 0; margin: 0 auto; overflow-wrap: anywhere; }
+.login-settings__section { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
 .login-settings__section h2 { margin: 0 0 var(--ui-space-4); }
 .login-settings__section + .login-settings__section {
   margin-top: var(--ui-space-8);
-  padding-top: var(--ui-space-8);
+  padding-top: min(var(--ui-space-6), 20px);
   border-top: 1px solid var(--ui-border);
 }
 .account-form__submit { justify-self: start; width: auto; max-width: 100%; }

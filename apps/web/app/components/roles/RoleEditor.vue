@@ -163,7 +163,7 @@ function onDeleted(roleId: string) {
       </template>
     </form>
     <button
-      v-if="role && !isSystem" type="button" data-test="delete-role"
+      v-if="role && !isSystem" type="button" class="danger" data-test="delete-role"
       :disabled="saving" @click="showDeleteDialog = true"
     >Удалить роль</button>
     <RoleUsageDialog
@@ -174,13 +174,17 @@ function onDeleted(roleId: string) {
 </template>
 
 <style scoped>
-.role-editor { max-width: 32rem; min-width: 0; }
-label { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
-input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; }
-button { cursor: pointer; margin-right: 0.5rem; }
-button:disabled { opacity: 0.6; cursor: wait; }
-fieldset { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
-.role-editor__notice { background: #edf1f6; padding: 0.75rem 1rem; border-radius: 0.4rem; margin: 0.5rem 0 1rem; }
-[role='alert'] { color: #a32020; }
+.role-editor { width: 100%; max-width: 40rem; min-width: 0; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); overflow-wrap: anywhere; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--ui-space-4); }
+.role-editor__notice { background: var(--ui-surface-muted); padding: var(--ui-space-3) min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin: 0 0 var(--ui-space-4); }
+.role-editor > button { margin-top: var(--ui-space-6); }
+form { display: grid; gap: var(--ui-space-4); min-width: 0; }
+label { display: grid; gap: var(--ui-space-2); min-width: 0; }
+input:not([type='checkbox']), select, textarea { width: 100%; max-width: 100%; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+button[type='submit'], .primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
+.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
+[role='alert'], .error { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 </style>

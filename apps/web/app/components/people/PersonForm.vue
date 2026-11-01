@@ -101,15 +101,17 @@ async function submit() {
 </template>
 
 <style scoped>
-.person-form { padding: 1rem; border: 1px solid #c9d2df; border-radius: 0.5rem; margin: 1rem 0; }
+.person-form { width: 100%; max-width: 40rem; margin-block: var(--ui-space-6); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); min-width: 0; overflow-wrap: anywhere; }
 .person-form h2 { margin-top: 0; }
-fieldset { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.3rem; }
-input, select, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; }
-.person-form__actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
-button { cursor: pointer; }
-button[type='submit'] { background: #234e79; color: white; }
-button:disabled { opacity: 0.6; cursor: wait; }
-.error { color: #a32020; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--ui-space-4); }
+.person-form__actions { display: flex; flex-wrap: wrap; gap: var(--ui-space-3); margin-top: var(--ui-space-4); }
+form { display: grid; gap: var(--ui-space-4); min-width: 0; }
+label { display: grid; gap: var(--ui-space-2); min-width: 0; }
+input:not([type='checkbox']), select, textarea { width: 100%; max-width: 100%; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+button[type='submit'], .primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
+.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
+[role='alert'], .error { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 </style>

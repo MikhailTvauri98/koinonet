@@ -173,7 +173,7 @@ if (canView.value) {
         </label>
       </div>
       <p v-if="actorId" class="admin-audit__chip" data-test="actor-chip">
-        Актор: {{ actorName }}
+        Кто: {{ actorName }}
         <button type="button" data-test="clear-actor" @click="clearActorFilter">×</button>
       </p>
       <p v-if="subjectType" class="admin-audit__chip" data-test="subject-chip">
@@ -213,17 +213,21 @@ if (canView.value) {
 </template>
 
 <style scoped>
-.admin-audit { max-width: 48rem; margin: 0 auto; color: #202b3a; overflow-wrap: anywhere; }
+.admin-audit__filters { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
+.admin-audit__filters select, .admin-audit__filters input { width: 100%; }
+button { overflow-wrap: anywhere; }
+
+.admin-audit { max-width: 48rem; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
 .admin-audit__filters { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .admin-audit__filters label { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; }
-.admin-audit__chip { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 0.4rem; background: #edf1f6; padding: 0.4rem 0.7rem; border-radius: 999px; margin: 0 0.5rem 0.5rem 0; }
+.admin-audit__chip { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 0.4rem; background: var(--ui-surface-muted); padding: 0.4rem 0.7rem; border-radius: 999px; margin: 0 0.5rem 0.5rem 0; }
 .admin-audit__chip button { border: 0; background: none; cursor: pointer; font: inherit; }
 .admin-audit__list { list-style: none; padding: 0; margin: 0; }
-.admin-audit__list li { padding: 0.75rem 0; border-bottom: 1px solid #dfe4ea; }
-.admin-audit__meta { color: #4b5563; }
+.admin-audit__list li { padding: 0.75rem 0; border-bottom: 1px solid var(--ui-border); }
+.admin-audit__meta { color: var(--ui-text-muted); }
 .admin-audit__link { border: 0; background: none; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
-input, select, button { font: inherit; padding: 0.55rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; max-width: 100%; }
+input, select, button { font: inherit; padding: 0.55rem; border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); min-width: 0; max-width: 100%; }
 button { cursor: pointer; }
 button:disabled { opacity: 0.6; cursor: wait; }
-[role='alert'] { color: #a32020; }
+[role='alert'] { color: var(--ui-danger); }
 </style>

@@ -142,7 +142,7 @@ await load()
       </form>
     </template>
     <section class="profile-page__logout">
-      <button type="button" data-test="logout" :disabled="loggingOut" @click="logout">
+      <button type="button" class="danger" data-test="logout" :disabled="loggingOut" @click="logout">
         {{ loggingOut ? 'Выходим…' : 'Выйти' }}
       </button>
       <p v-if="logoutError" class="error" role="alert" data-test="logout-error">{{ logoutError }}</p>
@@ -151,15 +151,24 @@ await load()
 </template>
 
 <style scoped>
-.profile-page { max-width: 32rem; margin: 0 auto; color: #202b3a; }
-.profile-page__photo { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.profile-page { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+.profile-page__photo { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-space-4); margin-bottom: var(--ui-space-6); min-width: 0; }
 .profile-page__photo img { border-radius: 50%; object-fit: cover; }
-form { display: flex; flex-direction: column; gap: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.3rem; }
-.profile-page__checkbox { flex-direction: row; align-items: center; gap: 0.5rem; }
-input, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
-button { cursor: pointer; align-self: flex-start; }
-button:disabled { opacity: 0.6; cursor: wait; }
-.profile-page__logout { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #d8dce2; }
-.error { color: #a32020; }
+form { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
+.profile-page__checkbox { display: flex; align-items: flex-start; gap: var(--ui-space-3); cursor: pointer; }
+.profile-page__checkbox input { flex-shrink: 0; margin-top: .3em; }
+.profile-page__logout { margin-top: var(--ui-space-8); padding-top: var(--ui-space-6); border-top: 1px solid var(--ui-border); }
+form { display: grid; gap: var(--ui-space-4); min-width: 0; }
+label { display: grid; gap: var(--ui-space-2); min-width: 0; }
+input:not([type='checkbox']), select, textarea { width: 100%; max-width: 100%; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+button[type='submit'], .primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
+.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
+[role='alert'], .error { color: var(--ui-danger); }
+@media (max-width: 480px) {
+  /* Оболочка уже даёт поверхность: повторный отступ сужал дату и подпись при 200%. */
+  form { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .profile-page__checkbox { gap: min(var(--ui-space-3), 12px); }
+}
 </style>

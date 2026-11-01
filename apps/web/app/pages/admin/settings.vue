@@ -108,11 +108,14 @@ if (canManage.value) await load()
 </template>
 
 <style scoped>
-.admin-settings { max-width: 28rem; margin: 0 auto; color: #202b3a; }
-form { display: flex; flex-direction: column; gap: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.3rem; }
-input, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
-button { cursor: pointer; align-self: flex-start; }
-button:disabled { opacity: 0.6; cursor: wait; }
-[role='alert'] { color: #a32020; }
+.admin-settings { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+form { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
+form { display: grid; gap: var(--ui-space-4); min-width: 0; }
+label { display: grid; gap: var(--ui-space-2); min-width: 0; }
+input:not([type='checkbox']), select, textarea { width: 100%; max-width: 100%; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+button[type='submit'], .primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
+.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
+[role='alert'], .error { color: var(--ui-danger); }
 </style>

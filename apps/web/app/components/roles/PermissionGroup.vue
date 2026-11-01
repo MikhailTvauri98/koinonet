@@ -23,13 +23,16 @@ function toggle(key: string, current: string[], checked: boolean) {
         :data-test="`permission-${permission.key}`"
         @change="toggle(permission.key, modelValue, ($event.target as HTMLInputElement).checked)"
       >
-      {{ permission.label }}
+      <span>{{ permission.label }}<small>{{ permission.description }}</small></span>
     </label>
   </fieldset>
 </template>
 
 <style scoped>
-.permission-group { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
-.permission-group legend { font-weight: 600; padding: 0; margin-bottom: 0.4rem; }
-.permission-group label { display: flex; align-items: center; gap: 0.4rem; margin: 0.3rem 0; }
+.permission-group { border: 0; border-top: 1px solid var(--ui-border); padding: var(--ui-space-4) 0 0; margin: 0; min-width: 0; }
+legend { font-weight: 650; padding: 0 var(--ui-space-2) 0 0; overflow-wrap: anywhere; max-width: 100%; }
+label { display: flex; align-items: flex-start; gap: var(--ui-space-3); padding-block: var(--ui-space-3); cursor: pointer; }
+input { flex-shrink: 0; margin-top: .3em; }
+span { min-width: 0; overflow-wrap: anywhere; }
+small { display: block; color: var(--ui-text-muted); margin-top: var(--ui-space-1); }
 </style>

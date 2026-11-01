@@ -78,13 +78,13 @@ async function remove() {
               <input v-model="selectedRoleIds" type="checkbox" :value="role.id" :data-test="`role-${role.id}`"> {{ role.name }}
             </label>
           </fieldset>
-          <button type="button" data-test="save-roles" :disabled="savingRoles" @click="saveRoles">Сохранить роли</button>
+          <button type="button" class="primary" data-test="save-roles" :disabled="savingRoles" @click="saveRoles">Сохранить роли</button>
           <p v-if="rolesError" role="alert">{{ rolesError }}</p>
         </div>
-        <button v-if="!confirmRemove" type="button" data-test="remove-member" @click="confirmRemove = true">Исключить</button>
+        <button v-if="!confirmRemove" type="button" class="danger" data-test="remove-member" @click="confirmRemove = true">Исключить</button>
         <div v-else role="group" aria-label="Подтверждение исключения участника">
           <p>Исключить участника из служения?</p>
-          <button type="button" data-test="confirm-remove-member" :disabled="removing" @click="remove">Подтвердить</button>
+          <button type="button" class="danger" data-test="confirm-remove-member" :disabled="removing" @click="remove">Подтвердить</button>
           <button type="button" data-test="cancel-remove-member" :disabled="removing" @click="confirmRemove = false">Отмена</button>
         </div>
         <p v-if="removeError" role="alert">{{ removeError }}</p>
@@ -94,17 +94,23 @@ async function remove() {
 </template>
 
 <style scoped>
-.member-row { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 0; border-bottom: 1px solid #d8dce2; overflow-wrap: anywhere; }
+.primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
+button { max-width: 100%; overflow-wrap: anywhere; }
+
+.member-row { display: flex; align-items: flex-start; gap: 0.75rem; padding: min(var(--ui-space-4), 16px); margin-bottom: var(--ui-space-4); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); background: var(--ui-surface); overflow-wrap: anywhere; }
 .member-row img, .member-row__placeholder { width: 3rem; height: 3rem; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.member-row__placeholder { display: grid; place-items: center; background: #edf1f6; color: #34445a; }
+.member-row__placeholder { display: grid; place-items: center; background: var(--ui-surface-muted); color: var(--ui-text-muted); }
 .member-row__body { flex: 1; min-width: 0; }
-.member-row__hidden-name { color: #6b7686; font-weight: 400; font-style: italic; }
+.member-row__hidden-name { color: var(--ui-text-muted); font-weight: 400; font-style: italic; }
 .member-row__chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0.4rem 0; }
-.member-row__chip { padding: 0 0.5rem; border-radius: 1rem; background: #edf1f6; font-size: 0.875rem; }
+.member-row__chip { padding: 0 0.5rem; border-radius: 1rem; background: var(--ui-surface-muted); font-size: 0.875rem; }
 .member-row__roles fieldset { border: 0; padding: 0; margin: 0.5rem 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.member-row__roles label { display: flex; align-items: center; gap: 0.3rem; }
+.member-row__roles input { flex-shrink: 0; margin-top: .3em; }
+.member-row__roles label { display: flex; align-items: flex-start; gap: var(--ui-space-2); min-width: 0; max-width: 100%; }
 button { font: inherit; padding: 0.5rem 0.65rem; margin: 0.3rem 0.5rem 0.3rem 0; cursor: pointer; }
 button:disabled { opacity: 0.6; cursor: wait; }
-[role='alert'] { color: #a32020; }
+[role='alert'] { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 480px) { .member-row { flex-direction: column; } .member-row__body { width: 100%; } }
 </style>

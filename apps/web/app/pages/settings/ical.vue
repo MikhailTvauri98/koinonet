@@ -31,25 +31,34 @@ watch(() => auth.sessionVersion, () => { generation++; confirming.value = false;
 onBeforeUnmount(() => { generation++ })
 </script>
 <template>
-  <main class="ical-settings">
+  <section class="ical-settings">
     <SettingsTabs />
     <h1>Календарь телефона</h1>
     <p>Добавьте эту ссылку подпиской в календарь телефона. Тогда он будет получать обновления ваших назначений. Обычный импорт файла не обновляется автоматически.</p>
     <template v-if="url">
       <p><a :href="url" data-test="ical-url">{{ url }}</a></p>
       <p>Ссылка открывает ваш личный календарь без входа. Сохраните её для себя.</p>
-      <button type="button" data-test="copy" :disabled="rotating" @click="copy">Скопировать ссылку</button>
-      <button type="button" data-test="rotate" :disabled="rotating" @click="confirming = true; feedback = ''; errorMessage = ''">Перевыпустить ссылку</button>
+      <button type="button" class="primary" data-test="copy" :disabled="rotating" @click="copy">Скопировать ссылку</button>
+      <button type="button" class="danger" data-test="rotate" :disabled="rotating" @click="confirming = true; feedback = ''; errorMessage = ''">Перевыпустить ссылку</button>
     </template>
     <p v-else>Ссылка недоступна. Войдите в аккаунт заново.</p>
     <UiDialog :open="confirming" label="Перевыпуск ссылки календаря" @close="confirming = false">
       <h2>Перевыпустить ссылку?</h2>
       <p>Старая ссылка перестанет работать. После перевыпуска добавьте новую подписку в календарь телефона.</p>
-      <button type="button" data-test="confirm-rotate" :disabled="rotating" @click="rotate">{{ rotating ? 'Обновляется…' : 'Подтвердить перевыпуск' }}</button>
+      <button type="button" class="danger" data-test="confirm-rotate" :disabled="rotating" @click="rotate">{{ rotating ? 'Обновляется…' : 'Подтвердить перевыпуск' }}</button>
       <button type="button" :disabled="rotating" @click="confirming = false">Назад</button>
       <p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
     </UiDialog>
     <p v-if="feedback" role="status">{{ feedback }}</p><p v-if="errorMessage && !confirming" role="alert">{{ errorMessage }}</p>
-  </main>
+  </section>
 </template>
-<style scoped>.ical-settings { max-width: 40rem; margin: auto; overflow-wrap: anywhere; } button { font: inherit; padding: .6rem; margin: .3rem; } [role='alert'] { color: #a32020; }</style>
+<style scoped>
+.ical-settings { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+.ical-settings > p:has(a) { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
+button { margin: var(--ui-space-2) var(--ui-space-2) var(--ui-space-2) 0; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+button[type='submit'], .primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
+.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
+[role='alert'], .error { color: var(--ui-danger); }
+</style>

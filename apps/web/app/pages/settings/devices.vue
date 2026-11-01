@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
+import { deviceLabel } from '~/utils/deviceLabel'
 import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
 import { apiErrorMessage } from '~/utils/apiError'
@@ -80,21 +81,25 @@ await load()
       {{ loadError }} <button type="button" data-test="retry" @click="load">Повторить</button>
     </p>
     <template v-else>
-      <button type="button" data-test="logout-others" :disabled="busyAll" @click="endOthers">
+      <button type="button" class="danger" data-test="logout-others" :disabled="busyAll" @click="endOthers">
         Завершить остальные устройства
       </button>
       <p v-if="actionError" role="alert">{{ actionError }}</p>
       <ul class="devices-page__list">
         <li v-for="session in sessions" :key="session.id">
           <p>
-            {{ session.user_agent ?? 'Неизвестное устройство' }}
+            <strong>{{ deviceLabel(session.user_agent) }}</strong>
             <span v-if="session.current" class="devices-page__current">(текущее устройство)</span>
           </p>
+          <details v-if="session.user_agent">
+            <summary>Сведения о программе</summary>
+            <p class="devices-page__agent">{{ session.user_agent }}</p>
+          </details>
           <p class="devices-page__meta">
             {{ session.ip_address ?? '—' }} · {{ formatLastActivity(session.last_activity) }}
           </p>
           <button
-            type="button" :data-test="`end-${session.id}`" :disabled="session.current || busyId === session.id"
+            type="button" class="danger" :data-test="`end-${session.id}`" :disabled="session.current || busyId === session.id"
             @click="end(session)"
           >
             Завершить
@@ -107,12 +112,14 @@ await load()
 </template>
 
 <style scoped>
-.devices-page { max-width: 36rem; margin: 0 auto; color: #202b3a; }
-.devices-page__list { list-style: none; padding: 0; margin: 1rem 0 0; }
-.devices-page__list li { padding: 0.85rem 0; border-bottom: 1px solid #dfe4ea; }
-.devices-page__meta { color: #4b5563; }
-.devices-page__current { color: #234e79; font-weight: 600; }
-button { font: inherit; padding: 0.5rem 0.9rem; border: 1px solid #8b96a6; border-radius: 0.3rem; cursor: pointer; }
-button:disabled { opacity: 0.6; cursor: default; }
-[role='alert'] { color: #a32020; }
+.devices-page { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+.devices-page__list { display: grid; gap: var(--ui-space-4); list-style: none; padding: 0; margin: var(--ui-space-6) 0 0; }
+.devices-page__list li { min-width: 0; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
+.devices-page__list li > p:first-child { margin-top: 0; }
+.devices-page__meta, .devices-page__agent { color: var(--ui-text-muted); overflow-wrap: anywhere; }
+.devices-page__current { display: block; color: var(--ui-accent); font-weight: 600; }
+summary { cursor: pointer; color: var(--ui-accent); min-height: var(--ui-control-height); padding-block: var(--ui-space-2); }
+button { max-width: 100%; padding-inline: min(.875rem, 14px); overflow-wrap: anywhere; }
+.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
+[role='alert'], .error { color: var(--ui-danger); }
 </style>

@@ -82,10 +82,10 @@ if (canManage.value) await load()
       </p>
       <div v-else class="admin-roles__layout">
         <div class="admin-roles__list">
-          <button type="button" data-test="create-role" @click="startCreating">Создать роль</button>
+          <button type="button" class="primary" data-test="create-role" @click="startCreating">Создать роль</button>
           <ul>
             <li v-for="role in roles" :key="role.id">
-              <button type="button" :data-test="`select-role-${role.id}`" @click="selectRole(role.id)">
+              <button type="button" :aria-pressed="selectedId === role.id && !creating" :data-test="`select-role-${role.id}`" @click="selectRole(role.id)">
                 {{ role.name }}<span v-if="role.is_system"> (системная)</span>
               </button>
             </li>
@@ -102,19 +102,23 @@ if (canManage.value) await load()
 </template>
 
 <style scoped>
-.admin-roles { max-width: 64rem; margin: 0 auto; color: #202b3a; overflow-wrap: anywhere; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+.primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+button[aria-pressed='true'] { background: var(--ui-accent-soft); border-color: var(--ui-accent); color: var(--ui-accent); }
+
+.admin-roles { max-width: 64rem; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
 h1 { margin: 0 0 1rem; }
-/* Телефон: список ролей и редактор друг под другом; с 768px — рядом.
+/* Телефон: список ролей и редактор друг под другом; с 1024px — рядом.
    minmax(0, …) даёт колонке сжиматься уже содержимого, иначе редактор
    выталкивал страницу за край экрана. */
 .admin-roles__layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
-@media (min-width: 768px) {
-  .admin-roles__layout { grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr); gap: 2rem; }
+@media (min-width: 1024px) {
+  .admin-roles__layout { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--ui-space-6); }
 }
 .admin-roles__list ul { list-style: none; padding: 0; margin: 0.75rem 0 0; }
 .admin-roles__list button { display: block; width: 100%; text-align: left; margin: 0.3rem 0; }
-input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; }
+input, textarea, button { font: inherit; padding: .625rem min(.875rem, 14px); border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); min-width: 0; }
 button { cursor: pointer; }
 button:disabled { opacity: 0.6; cursor: wait; }
-[role='alert'] { color: #a32020; }
+[role='alert'] { color: var(--ui-danger); }
 </style>

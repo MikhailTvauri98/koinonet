@@ -126,10 +126,11 @@ await Promise.all([load(), loadRoles()])
 </template>
 
 <style scoped>
-.members-tab { max-width: 48rem; margin: 0 auto; color: #202b3a; }
-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+.members-tab { max-width: 48rem; margin: 0 auto; color: var(--ui-text); }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
 h1 { margin: 0; }
 .members-tab__list { list-style: none; padding: 0; margin: 0; }
-button { font: inherit; padding: 0.65rem; cursor: pointer; background: #234e79; color: white; border: none; border-radius: 0.3rem; }
-[role='alert'] { color: #a32020; }
+button { font: inherit; padding: .625rem min(.875rem, 14px); cursor: pointer; background: var(--ui-accent); color: white; border: none; border-radius: var(--ui-radius-sm); }
+[role='alert'] { color: var(--ui-danger); }
 </style>

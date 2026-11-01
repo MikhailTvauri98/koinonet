@@ -76,9 +76,9 @@ await load()
 </template>
 
 <style scoped>
-.notification-settings { max-width: 36rem; margin: 0 auto; color: #202b3a; }
-label { display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 0; }
-input { width: 1.2rem; height: 1.2rem; }
-button { font: inherit; padding: 0.5rem; cursor: pointer; }
-[role='alert'] { color: #a32020; }
+.notification-settings { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+label { display: flex; align-items: flex-start; gap: var(--ui-space-3); padding: var(--ui-space-4); margin-block: var(--ui-space-3); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); background: var(--ui-surface); cursor: pointer; }
+input { flex-shrink: 0; margin-top: .3em; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+[role='alert'] { color: var(--ui-danger); }
 </style>
