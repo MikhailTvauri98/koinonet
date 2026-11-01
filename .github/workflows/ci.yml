@@ -80,6 +80,9 @@ jobs:
       # --ci: забытый ->only() не сужает прогон до одного теста.
       - run: composer run --timeout=0 test -- --ci
       - name: OpenAPI schema is up to date
+        # Фиксированный адрес схемы, независимо от dev .env и порта Compose.
+        env:
+          APP_URL: http://localhost:8000
         run: composer openapi && git diff --exit-code openapi.json
 
   web:
