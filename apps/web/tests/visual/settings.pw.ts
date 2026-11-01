@@ -44,7 +44,13 @@ for (const [width, scale] of [[320, 1], [768, 1], [1440, 1], [320, 2], [768, 2]]
       await expect(page.locator('main h1')).toBeVisible()
       if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
       if (path.endsWith('/roles')) await page.locator('[data-test=select-role-long]').click()
-      if (path === '/people') await page.locator('[data-test=create-person]').click()
+      if (path === '/people') {
+        await page.locator('[data-test=create-person]').click()
+        const birthDate = page.locator('.person-form input[name=birth_date]')
+        await birthDate.fill('1990-01-01')
+        await expect(birthDate).toHaveValue('1990-01-01')
+        if (width === 320 && scale === 2) expect.soft((await birthDate.boundingBox())!.width).toBeGreaterThanOrEqual(250)
+      }
       await fit(page, width)
       if (path === '/settings/profile') {
         expect((await page.locator('form').boundingBox())!.width).toBeLessThanOrEqual(640 * scale)
@@ -61,7 +67,14 @@ for (const [width, scale] of [[320, 1], [768, 1], [1440, 1], [320, 2], [768, 2]]
         expect(await page.locator('[data-test=save-profile]').evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(35, 78, 121)')
       }
       if (path === '/settings/devices') expect.soft((await page.locator('[data-test=end-unknown]').boundingBox())!.height).toBeLessThanOrEqual(44 * scale + 1)
-      if (width === 320 || width === 1440) await screenshot(page, info.outputPath(path.slice(1).replaceAll('/', '-') + '.png'))
+      if (width === 320 || width === 1440) {
+        await screenshot(page, info.outputPath(path.slice(1).replaceAll('/', '-') + '.png'))
+        if (path === '/people') {
+          const birthDate = page.locator('.person-form input[name=birth_date]')
+          await birthDate.evaluate(el => el.scrollIntoView({ block: 'center' }))
+          await birthDate.screenshot({ path: info.outputPath('people-date.png') })
+        }
+      }
     }
   })
 }

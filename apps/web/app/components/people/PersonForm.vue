@@ -114,4 +114,8 @@ button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { back
 .danger { color: var(--ui-danger); border-color: var(--ui-danger); }
 [role='alert'], .error { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 480px) {
+  /* На телефоне поверхность оболочки оставляет место полной дате и системной кнопке календаря. */
+  .person-form { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
+}
 </style>
