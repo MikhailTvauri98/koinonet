@@ -12,6 +12,9 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Keep the initial SPA shell on its theme canvas before Vue mounts. */
+html, body, #__nuxt { min-height: 100%; }
+
 body {
   margin: 0;
   min-width: 0;
