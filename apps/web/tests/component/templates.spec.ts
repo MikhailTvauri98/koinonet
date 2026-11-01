@@ -18,7 +18,7 @@ import { useSettingsStore } from '~/stores/settings'
 import { grantPermissions } from '../support/permissions'
 import type { components } from '~~/types/api'
 type Template = components['schemas']['EventTemplateResource']
-const { get, post, patch, push, route } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), push: vi.fn(), route: { params: { id: 't1' } } }))
+const { get, post, patch, push, route } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), push: vi.fn(), route: { params: { id: 't1' }, path: '/templates/t1', fullPath: '/templates/t1' } }))
 mockNuxtImport('useApi', () => () => ({ get, post, patch }))
 mockNuxtImport('useRoute', () => () => route)
 enableAutoUnmount(afterEach)
@@ -126,6 +126,8 @@ it('keeps readable templates accessible without management and reacts to revoked
   const nav = await mountSuspended(AppNav); expect(nav.find('a[href="/templates"]').exists()).toBe(false)
   grantPermissions({ ministries: { m1: ['events.manage'] } }); await flushPromises()
   expect(nav.find('a[href="/templates"]').exists()).toBe(true)
+  await nav.get('[data-test="nav-more"]').trigger('click')
+  expect(nav.get('dialog[open]').find('a[href="/templates"]').exists()).toBe(true)
 })
 it('loads ministry events and opens the shared creation editor for its owner', async () => {
   grantPermissions({ ministries: { t1: ['events.manage'] } })

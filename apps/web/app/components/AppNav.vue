@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { hasCalendarManagement } from '~/utils/templates'
 const auth = useAuthStore()
+const route = useRoute()
+const emit = defineEmits<{ resize: [height: number] }>()
+const navigation = ref<HTMLElement>()
+const moreOpen = ref(false)
 const settings = useSettingsStore()
 const canManageCalendar = computed(() => hasCalendarManagement(auth.permissions))
 const { can } = useCan()
@@ -56,10 +60,40 @@ const items = computed<NavItem[]>(() => {
 
   return list
 })
+const primaryPaths = ['/', '/calendar', '/chats', '/notifications']
+const secondaryItems = computed(() => {
+  const list = items.value.filter(item => !primaryPaths.includes(item.to))
+  if (canManageCalendar.value) list.splice(list.findIndex(item => item.to === '/announcements'), 0, { to: '/templates', label: 'Шаблоны' })
+  return list
+})
+function isActive(to: string) {
+  if (to === '/') return route.path === '/'
+  if (to === '/settings/profile') return route.path.startsWith('/settings/')
+  if (to === '/calendar' && route.path.startsWith('/events/')) return true
+  return route.path === to || route.path.startsWith(to + '/')
+}
+const moreActive = computed(() => [...secondaryItems.value, ...adminItems.value].some(item => isActive(item.to)))
+watch([() => route.fullPath, () => auth.sessionVersion, () => JSON.stringify(auth.permissions)], () => { moreOpen.value = false })
+
+// The layout reserves the rendered height, including wrapped text and safe-area.
+let observer: ResizeObserver | undefined
+let desktop: MediaQueryList | undefined
+function measureNavigation() {
+  if (desktop?.matches) moreOpen.value = false
+  emit('resize', desktop?.matches ? 0 : Math.ceil(navigation.value?.getBoundingClientRect().height ?? 0))
+}
+onMounted(() => {
+  desktop = window.matchMedia('(min-width: 768px)')
+  desktop.addEventListener('change', measureNavigation)
+  observer = new ResizeObserver(measureNavigation)
+  if (navigation.value) observer.observe(navigation.value, { box: 'border-box' })
+  measureNavigation()
+})
+onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('change', measureNavigation) })
 </script>
 
 <template>
-  <nav class="app-nav" aria-label="Основная навигация">
+  <nav ref="navigation" class="app-nav" :class="{ 'app-nav--unread': chats.unreadTotal || notifications.unreadCount }" aria-label="Основная навигация">
     <div class="app-nav__brand">
       <span class="app-nav__mark" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -72,13 +106,16 @@ const items = computed<NavItem[]>(() => {
       <NuxtLink
         :to="item.to"
         class="app-nav__item"
-        active-class="app-nav__item--active"
+        :class="{ 'app-nav__secondary': !primaryPaths.includes(item.to), 'app-nav__item--active': isActive(item.to) }"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
+        active-class=""
+        exact-active-class=""
       >
-        {{ item.label }}
+        <span data-nav-label>{{ item.label }}</span>
         <span v-if="item.to === '/chats' && chats.unreadTotal" class="app-nav__badge" data-test="chat-badge" :aria-label="`Непрочитанных: ${chats.unreadTotal}`">{{ chats.unreadTotal }}</span>
         <span v-if="item.to === '/notifications' && notifications.unreadCount" class="app-nav__badge" data-test="notification-badge" :aria-label="`Непрочитанных: ${notifications.unreadCount}`">{{ notifications.unreadCount }}</span>
       </NuxtLink>
-      <NuxtLink v-if="item.to === '/calendar' && canManageCalendar" to="/templates" class="app-nav__item app-nav__subitem" active-class="app-nav__item--active">Шаблоны</NuxtLink>
+      <NuxtLink v-if="item.to === '/calendar' && canManageCalendar" to="/templates" class="app-nav__item app-nav__subitem app-nav__secondary" :class="{ 'app-nav__item--active': isActive('/templates') }" :aria-current="isActive('/templates') ? 'page' : undefined" active-class="" exact-active-class="">Шаблоны</NuxtLink>
     </template>
     <div v-if="adminItems.length" data-test="nav-admin" class="app-nav__admin">
       <NuxtLink
@@ -86,11 +123,18 @@ const items = computed<NavItem[]>(() => {
         :key="item.to"
         :to="item.to"
         class="app-nav__item"
-        active-class="app-nav__item--active"
+        :class="{ 'app-nav__item--active': isActive(item.to) }"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
+        active-class=""
+        exact-active-class=""
       >
         {{ item.label }}
       </NuxtLink>
     </div>
+    <button type="button" data-test="nav-more" class="app-nav__item app-nav__more" :class="{ 'app-nav__item--active': moreActive }" aria-haspopup="dialog" :aria-expanded="moreOpen" @click="moreOpen = true">
+      <span data-nav-label>Ещё</span>
+    </button>
+    <NavigationMoreMenu v-if="moreOpen" :items="secondaryItems" :admin-items="adminItems" @close="moreOpen = false" />
   </nav>
 </template>
 
@@ -105,8 +149,8 @@ const items = computed<NavItem[]>(() => {
 .app-nav__brand {
   display: flex;
   align-items: center;
-  gap: var(--ui-space-3);
-  padding: var(--ui-space-2) var(--ui-space-2) var(--ui-space-6);
+  gap: min(var(--ui-space-3), 12px);
+  padding: min(var(--ui-space-2), 8px) min(var(--ui-space-2), 8px) min(var(--ui-space-6), 24px);
   color: var(--ui-text);
   font-weight: 650;
   overflow-wrap: anywhere;
@@ -115,8 +159,8 @@ const items = computed<NavItem[]>(() => {
 .app-nav__mark {
   display: grid;
   place-items: center;
-  flex: 0 0 2.5rem;
-  height: 2.5rem;
+  flex: 0 0 min(2.5rem, 40px);
+  height: min(2.5rem, 40px);
   background: var(--ui-accent-soft);
   color: var(--ui-accent);
   border-radius: var(--ui-radius-md);
@@ -127,7 +171,7 @@ const items = computed<NavItem[]>(() => {
   align-items: center;
   gap: var(--ui-space-2);
   min-height: var(--ui-control-height);
-  padding: 0.625rem 0.875rem;
+  padding: 0.625rem min(0.875rem, 14px);
   border-radius: var(--ui-radius-sm);
   text-decoration: none;
   color: inherit;
@@ -153,29 +197,45 @@ const items = computed<NavItem[]>(() => {
   flex-direction: inherit;
 }
 
-/* Состав и горизонтальная лента сохраняются до задачи 5 фазы дизайна. */
+.app-nav__more { display: none; }
+
 @media (max-width: 767px) {
   .app-nav {
     position: fixed;
     z-index: 10;
     inset-inline: 0;
     bottom: 0;
-    overflow-x: auto;
-    padding: var(--ui-space-2);
-    padding-bottom: calc(var(--ui-space-2) + env(safe-area-inset-bottom, 0px));
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 4px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--ui-border);
   }
-
-  .app-nav__brand { display: none; }
-  .app-nav__item,
-  .app-nav__admin {
-    flex: 1 0 auto;
-  }
-
+  .app-nav__brand, .app-nav__secondary, .app-nav__admin { display: none; }
   .app-nav__item {
+    position: relative;
+    flex: 1 0 auto;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 2px;
+    border: 0;
+    background: transparent;
+    font-size: .8125rem;
+    line-height: 1.5;
     white-space: nowrap;
     text-align: center;
     justify-content: center;
+  }
+  .app-nav__more { display: flex; }
+  .app-nav__item--active { background: var(--ui-accent-soft); }
+  .app-nav--unread .app-nav__item { padding-top: calc(.9375rem + 2px); padding-bottom: 4px; }
+  .app-nav__badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0 4px;
+    font-size: .75rem;
+    line-height: 1.25;
   }
 }
 
@@ -185,14 +245,14 @@ const items = computed<NavItem[]>(() => {
     position: sticky;
     top: 0;
     align-self: flex-start;
-    flex: 0 0 var(--ui-sidebar-width);
-    width: var(--ui-sidebar-width);
+    flex: 0 0 min(var(--ui-sidebar-width), 280px);
+    width: min(var(--ui-sidebar-width), 280px);
     height: 100vh;
     height: 100dvh;
     overflow-y: auto;
     flex-direction: column;
     align-items: stretch;
-    padding: var(--ui-space-4);
+    padding: min(var(--ui-space-4), 16px);
     border-right: 1px solid var(--ui-border);
   }
   .app-nav__item { flex-shrink: 0; }
@@ -200,6 +260,6 @@ const items = computed<NavItem[]>(() => {
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .app-nav { flex-basis: 12rem; width: 12rem; padding: var(--ui-space-3); }
+  .app-nav { flex-basis: min(12rem, 280px); width: min(12rem, 280px); padding: min(var(--ui-space-3), 12px); }
 }
 </style>

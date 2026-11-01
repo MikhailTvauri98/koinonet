@@ -73,7 +73,7 @@ export function runArtisan(args: string[]): string {
 }
 
 // Основная навигация (AppNav): боковая панель на десктопе, нижняя панель
-// вкладок на телефоне. Разделы открываются через неё, как это делает
+// вкладок и меню «Ещё» на телефоне. Разделы открываются через неё, как это делает
 // человек, а не вводом адреса.
 export function mainNav(page: Page): Locator {
   return page.getByRole('navigation', { name: 'Основная навигация' })
@@ -81,7 +81,12 @@ export function mainNav(page: Page): Locator {
 
 export async function openSection(page: Page, section: string, heading: string): Promise<void> {
   const name = section === 'Уведомления' ? /^Уведомления(?: Непрочитанных: \d+)?$/ : section === 'Чаты' ? /^Чаты(?: Непрочитанных: \d+)?$/ : section
-  const link = mainNav(page).getByRole('link', { name, exact: true })
+  let link = mainNav(page).getByRole('link', { name, exact: true })
+  const more = mainNav(page).getByRole('button', { name: 'Ещё', exact: true })
+  if (!await link.isVisible() && await more.isVisible()) {
+    await more.click()
+    link = page.getByRole('dialog', { name: 'Ещё', exact: true }).getByRole('link', { name, exact: true })
+  }
   const path = await link.getAttribute('href')
   const requests: Record<string, string[]> = {
     '/': ['/announcements', '/events'],
@@ -144,8 +149,8 @@ export async function expectPhoneTabBar(page: Page): Promise<void> {
 
 // Экран не шире телефона: ничего не выталкивает страницу вбок. Сравнение —
 // с шириной экрана устройства, а не с `innerWidth`: мобильный браузер
-// растягивает `innerWidth` под вылезшее содержимое. Навигация прокручивается
-// внутри себя и ширину документа не меняет.
+// растягивает `innerWidth` под вылезшее содержимое. Нижняя панель и меню
+// «Ещё» также должны помещаться без горизонтальной прокрутки.
 export async function expectNoHorizontalScroll(page: Page, where: string): Promise<void> {
   const viewport = page.viewportSize()
   expect(viewport, 'у телефона задан размер экрана').not.toBeNull()

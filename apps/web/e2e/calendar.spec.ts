@@ -190,7 +190,10 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   await leaderPhone.setViewportSize({ width: 390, height: 844 })
   await expect(async () => {
     await reloadAuthenticated(leaderPhone)
-    await expect(leaderPhone.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Служения', exact: true })).toBeVisible({ timeout: 2_000 })
+    await leaderPhone.getByRole('navigation', { name: 'Основная навигация' }).getByRole('button', { name: 'Ещё', exact: true }).click()
+    const more = leaderPhone.getByRole('dialog', { name: 'Ещё', exact: true })
+    await expect(more.getByRole('link', { name: 'Служения', exact: true })).toBeVisible({ timeout: 2_000 })
+    await more.getByRole('button', { name: 'Закрыть', exact: true }).click()
   }).toPass({ timeout: 30_000 })
   await openSection(leaderPhone, 'Календарь', 'Календарь')
   await expectPhoneTabBar(leaderPhone)

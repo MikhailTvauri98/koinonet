@@ -189,6 +189,8 @@ describe('navigation', () => {
     const nav = await mountSuspended(AppNav)
 
     expect(nav.find('[data-test="nav-admin"]').exists()).toBe(false)
+    await nav.get('[data-test="nav-more"]').trigger('click')
+    expect(nav.get('dialog[open]').find('a[href^="/admin/"]').exists()).toBe(false)
   })
 
   it('shows the admin section with audit.view', async () => {
@@ -197,5 +199,8 @@ describe('navigation', () => {
     const nav = await mountSuspended(AppNav)
 
     expect(nav.find('[data-test="nav-admin"]').exists()).toBe(true)
+    await nav.get('[data-test="nav-more"]').trigger('click')
+    expect(nav.get('dialog[open]').find('a[href="/admin/audit"]').exists()).toBe(true)
+    expect(nav.get('dialog[open]').find('a[href="/admin/settings"]').exists()).toBe(false)
   })
 })
