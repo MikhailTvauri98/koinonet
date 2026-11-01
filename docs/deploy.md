@@ -22,6 +22,8 @@
 
 `.github/workflows/deploy.yml`:
 
+CI запускается сразу. Сборка образов и выкладка включаются переменной репозитория `DEPLOY_ENABLED=true`; до готовности DNS и первого TLS-сертификата переменная отсутствует или равна `false`, поэтому задание `deploy` пропускается. После подготовки тот же коммит можно выложить кнопкой Actions → deploy → Run workflow (ветка main).
+
 1. Прогоняет CI — `ci.yml` как вызываемый workflow, задания `api`, `web`, `e2e` (в запуске они видны как `ci / api` и так далее). Дальше запуск идёт, только если все три прошли. Выкладывается тот же коммит, который проверен. Отдельно `ci.yml` на пуши в `main` не запускается.
 2. Собирает и публикует образы `app` и `web`. Слои кешируются в кеше GitHub Actions, поэтому неизменившиеся слои сохраняют дайджест и сервер их не скачивает заново.
 3. Копирует `compose.prod.yml` и `deploy.sh` в `/srv/church` по SSH. SSH и scp — из образа раннера, ключ хоста сверяется с секретом `DEPLOY_KNOWN_HOSTS`.
@@ -200,6 +202,8 @@ docker compose -f compose.prod.yml run --rm --entrypoint certbot certbot \
 
 Токен для GHCR заводить не нужно: workflow публикует и скачивает образы токеном `GITHUB_TOKEN` с правом `packages: write`.
 
+Settings → Secrets and variables → Actions → Variables: `DEPLOY_ENABLED=false` во время подготовки. Поменять на `true` только после выпуска первого сертификата. Путь `IMAGE_PREFIX` на сервере — `ghcr.io/mikhailtvauri98/koinonet` (строчными буквами).
+
 Правило защиты ветки `main` обеспечивает требование раздела 12 архитектуры: CI блокирует слияние при падении любого шага. Деплой закрывает другую дыру: `deploy.yml` не выкладывает коммит, пока в том же запуске не прошли `api`, `web` и `e2e`. Попасть в `main` без проверок коммиту он не мешает — это делает только правило. В Settings → Branches → Add classic branch protection rule, шаблон `main`:
 
 - **Require a pull request before merging** — в `main` только через pull request;
@@ -210,7 +214,7 @@ docker compose -f compose.prod.yml run --rm --entrypoint certbot certbot \
 
 ### 7. Первый деплой
 
-Пуш или слияние в `main`. Workflow `deploy` проходит зелёным: шаг `up --wait` дождался здоровых `web`, `app` и `reverb`.
+После готовности сертификата установить `DEPLOY_ENABLED=true`, затем пуш/слияние в `main` или Actions → deploy → Run workflow на main. Workflow `deploy` проходит зелёным: шаг `up --wait` дождался здоровых `web`, `app` и `reverb`.
 
 ```bash
 cd /srv/church
@@ -374,3 +378,9 @@ docker compose -f compose.prod.yml up -d --wait
 - Журналы: `docker compose -f compose.prod.yml logs -f app worker scheduler reverb`. Приложение пишет в stderr, Docker ротирует журналы (10 МБ, пять файлов на сервис).
 - Команды artisan: `docker compose -f compose.prod.yml exec app php artisan <команда>`, например `people:erase`.
 - Изменение `.env`: `docker compose -f compose.prod.yml up -d --wait` пересоздаёт контейнеры с новым окружением.
+
+### Сервер с ISPmanager и занятым портом 80
+
+На сервере 168.113.177.224 порт 80 обслуживает nginx панели. В `/srv/church/.env` задано `WEB_HTTP_BIND=127.0.0.1:8081`; свободный порт 443 предназначен для контейнера web. Файл `/etc/nginx/conf.d/koinonet.conf` передаёт HTTP koinonet-cc.ru на `http://127.0.0.1:8081`, сохраняя Host, X-Real-IP и X-Forwarded-For. Остальные сайты и панель не меняются. Первый certbot запуск вместо `-p 80:80` использует `-p 127.0.0.1:8081:80`. Продление через webroot работает через тот же HTTP-прокси.
+
+Публичный DNS проверяется внешним резолвером (`dig @1.1.1.1 A koinonet-cc.ru`): запись в `/etc/hosts` сервера не подтверждает доступность домена в интернете.

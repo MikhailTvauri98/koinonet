@@ -14,6 +14,7 @@ name: deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 # Запуски идут по одному, в порядке пушей: следующий ждёт окончания
 # предыдущего, а ожидающий заменяется более новым, так что старый коммит
@@ -30,6 +31,8 @@ jobs:
 
   deploy:
     needs: ci
+    # Первая установка: CI работает сразу, выкладку включают после DNS/TLS.
+    if: ${{ github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
