@@ -1,9 +1,11 @@
 <script setup lang="ts">
 const navigationHeight = ref<number>()
+const route = useRoute()
+const chatLayout = computed(() => route.meta.chatLayout === true)
 </script>
 
 <template>
-  <div class="app-layout" :style="navigationHeight === undefined ? undefined : { '--app-nav-height': navigationHeight + 'px' }">
+  <div class="app-layout" :class="{ 'app-layout--chat': chatLayout }" :style="navigationHeight === undefined ? undefined : { '--app-nav-height': navigationHeight + 'px' }">
     <a class="app-layout__skip" href="#main-content">К содержимому</a>
     <AppNav @resize="navigationHeight = $event" />
     <main id="main-content" class="app-layout__content" tabindex="-1">
@@ -71,5 +73,17 @@ const navigationHeight = ref<number>()
   .app-layout__content {
     padding: clamp(16px, 2.5vw, 40px);
   }
+}
+/* Chat routes distribute available block size through every ancestor.
+   Navigation supplies its measured border-box height, including safe areas. */
+.app-layout--chat { height: 100dvh; min-height: 0; }
+.app-layout--chat .app-layout__content { display: flex; min-height: 0; padding: 8px; padding-bottom: calc(var(--app-nav-height) + 8px); }
+.app-layout--chat .app-layout__inner { display: flex; flex-direction: column; min-height: 0; padding: 8px; overflow-y: auto; }
+@media (min-width: 768px) {
+  .app-layout--chat .app-layout__content { padding: min(var(--ui-space-4), 16px); }
+  .app-layout--chat .app-layout__inner { padding: min(var(--ui-space-4), 16px); }
+}
+@media (min-width: 768px) and (max-height: 500px) {
+  .app-layout--chat .app-layout__content, .app-layout--chat .app-layout__inner { padding: 8px; }
 }
 </style>

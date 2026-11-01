@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
 import MediaUploader from '~/components/MediaUploader.vue'
+import UiDialog from '~/components/ui/UiDialog.vue'
 import ChatMembersDialog from './ChatMembersDialog.vue'
 import MuteMenu from './MuteMenu.vue'
 import { apiErrorMessage } from '~/utils/apiError'
@@ -38,6 +39,16 @@ function confirm() {
   if (action.value === 'leave' && canLeave.value) void run(() => api.post(`/chats/${props.chat.id}/leave`, {}), true)
   else if (action.value === 'archive' && canArchive.value) void run(() => api.post(`/chats/${props.chat.id}/archive`, {}))
 }
+async function openAction(next: 'members' | 'rename' | 'avatar' | 'leave' | 'archive') {
+  const token = revision
+  menu.value = false
+  await nextTick()
+  if (token !== revision) return
+  if (next === 'members') members.value = true
+  else if (next === 'rename') { title.value = props.chat.title; rename.value = true }
+  else if (next === 'avatar') avatar.value = true
+  else action.value = next
+}
 function reset() { revision++; menu.value = false; members.value = false; rename.value = false; avatar.value = false; action.value = null; error.value = ''; saving.value = false }
 watch([() => props.chat.id, () => auth.sessionVersion], reset)
 onBeforeUnmount(() => { revision++ })
@@ -46,35 +57,48 @@ onBeforeUnmount(() => { revision++ })
   <header class="chat-header">
     <img v-if="chat.avatar_url" :src="chat.avatar_url" alt="" width="44" height="44">
     <div><h1>{{ chat.title }}</h1><details><summary>Участники: {{ chat.members.length }}</summary><ul><li v-for="person in chat.members" :key="person.user_id">{{ person.full_name || 'Участник' }}</li></ul></details></div>
-    <button type="button" data-test="menu" :aria-expanded="menu" @click="menu = !menu">Меню чата</button>
-    <div v-if="menu" class="chat-menu">
+    <button type="button" data-test="menu" aria-haspopup="dialog" :aria-expanded="menu" @click="menu = !menu">Меню чата</button>
+    <UiDialog v-if="menu" :open="true" label="Меню чата" @close="menu = false">
+      <h2>Меню чата</h2>
+      <div class="chat-menu">
       <MuteMenu v-if="member" :until="chat.muted_until" :disabled="disabled" @mute="mute" @unmute="unmute" />
-      <button v-if="chat.type === 'group'" type="button" data-test="members" :disabled="disabled" @click="members = true">Участники группы</button>
-      <button v-if="manage" type="button" data-test="rename" :disabled="disabled" @click="title = chat.title; rename = true">Переименовать</button>
-      <button v-if="manage" type="button" data-test="avatar" :disabled="disabled" @click="avatar = !avatar">Сменить аватар</button>
-      <button v-if="canLeave" type="button" data-test="leave" :disabled="disabled" @click="action = 'leave'">Выйти</button>
-      <button v-if="canArchive" type="button" data-test="archive" :disabled="disabled" @click="action = 'archive'">Архивировать</button>
+      <button v-if="chat.type === 'group'" type="button" data-test="members" :disabled="disabled" @click="openAction('members')">Участники группы</button>
+      <button v-if="manage" type="button" data-test="rename" :disabled="disabled" @click="openAction('rename')">Переименовать</button>
+      <button v-if="manage" type="button" data-test="avatar" :disabled="disabled" @click="openAction('avatar')">Сменить аватар</button>
+      <button v-if="canLeave" type="button" data-test="leave" :disabled="disabled" @click="openAction('leave')">Выйти</button>
+      <button v-if="canArchive" type="button" data-test="archive" :disabled="disabled" @click="openAction('archive')">Архивировать</button>
       <slot name="menu" />
-    </div>
+      <button type="button" @click="menu = false">Закрыть</button>
+      </div>
+      <p v-if="error" role="alert">{{ error }}</p>
+    </UiDialog>
     <ChatMembersDialog v-if="members && chat.type === 'group'" :key="chat.id" :chat="chat" @changed="emit('changed')" @close="members = false" />
-    <form v-if="rename && manage" @submit.prevent="saveTitle">
+    <UiDialog v-if="rename && manage" :open="true" label="Переименовать группу" @close="!disabled && (rename = false)">
+    <form @submit.prevent="saveTitle">
       <label>Название<input v-model="title" data-test="group-title" maxlength="100" required :disabled="disabled"></label>
       <button type="submit" data-test="save-title" :disabled="disabled || !title.trim()">Сохранить</button><button type="button" :disabled="disabled" @click="rename = false">Отмена</button>
     </form>
-    <MediaUploader v-if="avatar && manage" :key="chat.id" purpose="chat_avatar" :target="`/chats/${chat.id}/avatar`" label="Выбрать аватар" :disabled="busy || saving" @busy="uploading = $event" @attached="emit('changed'); void chats.fetch()" />
-    <div v-if="action && (action === 'leave' ? canLeave : canArchive)" role="alertdialog" :aria-label="action === 'leave' ? 'Выйти из группы?' : 'Архивировать группу?'">
+    <p v-if="error" role="alert">{{ error }}</p>
+    </UiDialog>
+    <UiDialog v-if="avatar && manage" :open="true" label="Сменить аватар" @close="!disabled && (avatar = false)">
+    <MediaUploader :key="chat.id" purpose="chat_avatar" :target="`/chats/${chat.id}/avatar`" label="Выбрать аватар" :disabled="busy || saving" @busy="uploading = $event" @attached="emit('changed'); void chats.fetch()" />
+    <button type="button" :disabled="disabled" @click="avatar = false">Закрыть</button>
+    </UiDialog>
+    <UiDialog v-if="action && (action === 'leave' ? canLeave : canArchive)" :open="true" role="alertdialog" :label="action === 'leave' ? 'Выйти из группы?' : 'Архивировать группу?'" @close="!disabled && (action = null)">
       <p>{{ action === 'leave' ? 'Выйти из группы? Доступ к истории будет закрыт.' : 'Архивировать группу? История сохранится, писать будет нельзя.' }}</p>
       <button type="button" data-test="confirm-action" :disabled="disabled" @click="confirm">Подтвердить</button><button type="button" :disabled="disabled" @click="action = null">Отмена</button>
-    </div>
-    <p v-if="error" role="alert">{{ error }}</p>
+      <p v-if="error" role="alert">{{ error }}</p>
+    </UiDialog>
+    <p v-if="error && !menu && !rename && !action" role="alert">{{ error }}</p>
   </header>
 </template>
 <style scoped>
-.chat-header { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; padding: .7rem 0; border-bottom: 1px solid #d5dde4; }
-h1 { font-size: 1.25rem; margin: 0 0 .2rem; overflow-wrap: anywhere; }
-.chat-header > button { margin-left: auto; }
+.chat-header { display: flex; align-items: start; gap: .4rem; padding: .25rem 0; border-bottom: 1px solid var(--ui-border); }
+.chat-header > div { flex: 1; min-width: 0; }
+h1 { font-size: 1.125rem; margin: 0 0 .2rem; overflow-wrap: anywhere; }
+.chat-header > button { flex: 0 0 auto; max-width: 45%; margin-left: auto; }
 .chat-header img { border-radius: 50%; object-fit: cover; }
-.chat-menu { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .4rem; }
+.chat-menu { display: flex; flex-direction: column; gap: .4rem; }
 [role='dialog'], [role='alertdialog'], form { flex-basis: 100%; }
-[role='alert'] { color: #a32020; }
+[role='alert'] { color: var(--ui-danger); }
 </style>

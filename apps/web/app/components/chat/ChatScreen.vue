@@ -5,6 +5,7 @@ import { compareMessages, useChatMessages } from '~/composables/useChatMessages'
 import { acquireChatChannel } from '~/utils/chatChannel'
 import { apiErrorMessage, apiErrorStatus } from '~/utils/apiError'
 import ChatHeader from './ChatHeader.vue'
+import UiDialog from '~/components/ui/UiDialog.vue'
 import MessageList from './MessageList.vue'
 import Composer from './Composer.vue'
 import PinnedBar from './PinnedBar.vue'
@@ -150,6 +151,11 @@ async function retry() {
   } catch (failure) { fail(failure, token) }
   finally { if (current(token)) busy.value = false }
 }
+function compose(message: ChatMessage, edit = false) {
+  if (!writable.value) return
+  editing.value = edit ? message : null; reply.value = edit ? null : message
+  void nextTick(() => composer.value?.focus())
+}
 function send(payload: { body: string, media_ids: string[], reply_to_id: string | null }) {
   if (!writable.value || loading.value) return
   const token = lifetime; const selected = editing.value
@@ -227,22 +233,31 @@ defineExpose({ refresh })
 
 <template>
   <section class="chat-screen" aria-label="Чат">
-    <p v-if="loading" role="status">Загрузка чата…</p>
-    <p v-if="error" role="alert">{{ error }} <button v-if="!unavailable" type="button" :disabled="busy || loading" @click="retry">Повторить</button></p>
+    <div class="chat-screen__heading">
+      <p v-if="loading" role="status">Загрузка чата…</p>
+      <p v-if="error" role="alert">{{ error }} <button v-if="!unavailable" type="button" :disabled="busy || loading" @click="retry">Повторить</button></p>
+      <template v-if="chat">
+        <ChatHeader :key="chat.id" :chat="chat" :member="member" :busy="busy" @changed="refresh"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
+        <PinnedBar :messages="pins" :moderate="moderate" @unpin="pin" />
+      </template>
+    </div>
     <template v-if="chat">
-      <ChatHeader :key="chat.id" :chat="chat" :member="member" :busy="busy" @changed="refresh"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
-      <PinnedBar :messages="pins" :moderate="moderate" @unpin="pin" />
-      <MessageList :messages="messages" :has-older="history?.hasOlder.value ?? false" :loading-older="history?.loadingOlder.value ?? false" :user-id="auth.user?.id" :writable="writable" :moderate="moderate" :pinned-ids="pins.map(m => m.id)" @older="history?.loadOlder().catch(e => fail(e, lifetime))" @visible="visibility" @reply="reply = $event; editing = null" @edit="editing = $event; reply = null" @delete="deleting = $event" @pin="pin" />
-      <div v-if="deleting" role="alertdialog" aria-label="Удалить сообщение?" class="confirm">
+      <MessageList :messages="messages" :has-older="history?.hasOlder.value ?? false" :loading-older="history?.loadingOlder.value ?? false" :user-id="auth.user?.id" :writable="writable" :moderate="moderate" :pinned-ids="pins.map(m => m.id)" @older="history?.loadOlder().catch(e => fail(e, lifetime))" @visible="visibility" @reply="compose($event)" @edit="compose($event, true)" @delete="deleting = $event" @pin="pin" />
+      <UiDialog v-if="deleting" :open="true" role="alertdialog" label="Удалить сообщение?" @close="!busy && (deleting = null)">
         <p>Удалить сообщение?</p><button type="button" :disabled="busy" @click="remove">Удалить</button> <button type="button" :disabled="busy" @click="deleting = null">Отмена</button>
-      </div>
+      </UiDialog>
       <Composer v-if="writable" ref="composer" :busy="busy || loading" :reply="reply" :editing="editing" @send="send" @cancel="reply = null; editing = null" />
-      <p v-else role="status">{{ chat.archived ? 'Чат архивирован' : 'Чат доступен только для чтения' }}</p>
+      <p v-else class="chat-screen__status" role="status">{{ chat.archived ? 'Чат архивирован' : 'Чат доступен только для чтения' }}</p>
     </template>
   </section>
 </template>
 <style scoped>
-.chat-screen { display: flex; flex-direction: column; height: calc(100dvh - 140px); min-height: 360px; max-width: 900px; margin: auto; }
-[role='alert'] { color: #a32020; }
-.confirm { padding: .8rem; background: #fff2df; }
+/* Natural header/composer rows keep their controls whole. If those rows and
+   readable history no longer fit, the shared inner surface scrolls as one flow. */
+.chat-screen { display: grid; grid-template-rows: auto minmax(6rem, 1fr) auto; flex: 1; min-height: min-content; min-width: 0; width: 100%; max-width: 900px; margin-inline: auto; }
+.chat-screen__heading { grid-row: 1; min-width: 0; }
+.chat-screen > :deep(.message-list) { grid-row: 2; }
+.chat-screen > :deep(.composer), .chat-screen__status { grid-row: 3; }
+.chat-screen__status, .chat-screen__heading > p { margin: .25rem 0; }
+[role='alert'] { color: var(--ui-danger); }
 </style>

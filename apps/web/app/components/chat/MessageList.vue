@@ -6,6 +6,7 @@ const emit = defineEmits<{ older: [], visible: [id: string, visible: boolean], r
 const scroll = ref<HTMLElement>()
 const top = ref<HTMLElement>()
 const latest = ref<HTMLElement>()
+let resizeObserver: ResizeObserver | undefined
 let observer: IntersectionObserver | undefined
 let viewportObserver: IntersectionObserver | undefined
 let observerRun = 0
@@ -58,8 +59,18 @@ async function observe() {
   if (latest.value) viewportObserver.observe(latest.value)
 }
 watch([() => props.messages, () => props.loadingOlder], observe, { flush: 'post' })
-onMounted(observe)
-onBeforeUnmount(() => { observerRun++; observer?.disconnect(); viewportObserver?.disconnect() })
+onMounted(() => {
+  void observe()
+  if (typeof ResizeObserver !== 'undefined' && scroll.value) {
+    resizeObserver = new ResizeObserver(() => {
+      // Preserve the reader's position unless they were following the newest
+      // message before a composer/header/viewport resize.
+      if (atBottom && !restore && scroll.value) scroll.value.scrollTop = scroll.value.scrollHeight
+    })
+    resizeObserver.observe(scroll.value)
+  }
+})
+onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.disconnect(); viewportObserver?.disconnect() })
 </script>
 <template>
   <div ref="scroll" class="message-list" aria-label="История сообщений" @scroll="measure">
@@ -74,5 +85,6 @@ onBeforeUnmount(() => { observerRun++; observer?.disconnect(); viewportObserver?
   </div>
 </template>
 <style scoped>
-.message-list { flex: 1; overflow-y: auto; min-height: 120px; overscroll-behavior: contain; padding: .4rem; }
+/* History content must not set the grid's intrinsic minimum height. */
+.message-list { contain: size; flex: 1 1 0; overflow-y: auto; min-height: 0; min-width: 0; overscroll-behavior: contain; padding: .4rem; }
 </style>

@@ -27,3 +27,32 @@ it('keeps the visible message anchored when older prepend overlaps a live append
   expect(scroller.scrollTop).toBe(150)
   list.unmount(); vi.unstubAllGlobals()
 })
+
+it('keeps the latest message at the bottom when the history viewport shrinks, without moving a reader of older messages', async () => {
+  const observers: { callback: ResizeObserverCallback, targets: Element[] }[] = []
+  vi.stubGlobal('ResizeObserver', class {
+    item: { callback: ResizeObserverCallback, targets: Element[] }
+    constructor(callback: ResizeObserverCallback) { this.item = { callback, targets: [] }; observers.push(this.item) }
+    observe(target: Element) { this.item.targets.push(target) }
+    disconnect() {}
+  })
+  const list = await mountSuspended(MessageList, { props: { messages: [message('a'), message('b')], hasOlder: false, loadingOlder: false, writable: true, moderate: false, pinnedIds: [] } })
+  await flushPromises()
+  const scroller = list.get('[aria-label="История сообщений"]').element as HTMLElement
+  Object.defineProperty(scroller, 'scrollHeight', { get: () => 800 })
+  Object.defineProperty(scroller, 'clientHeight', { get: () => 300 })
+  scroller.scrollTop = 500
+  await list.get('[aria-label="История сообщений"]').trigger('scroll')
+  const observer = observers.find(o => o.targets.includes(scroller))
+  expect(observer, 'history must respond to its real available height').toBeDefined()
+  scroller.scrollTop = 450
+  observer!.callback([], {} as ResizeObserver)
+  await flushPromises()
+  expect(scroller.scrollTop).toBe(800)
+  scroller.scrollTop = 100
+  await list.get('[aria-label="История сообщений"]').trigger('scroll')
+  observer!.callback([], {} as ResizeObserver)
+  await flushPromises()
+  expect(scroller.scrollTop).toBe(100)
+  list.unmount(); vi.unstubAllGlobals()
+})

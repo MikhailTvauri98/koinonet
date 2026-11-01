@@ -150,13 +150,13 @@
 
 **Цель:** отправка видна при малой высоте, история не перегружена кнопками.
 
-**Файлы:** app/components/chat/ChatScreen.vue, ChatHeader.vue, MessageList.vue, MessageItem.vue, Composer.vue; новый MessageActions.vue; app/pages/chats/[id].vue, ministries/[id]/chat.vue; при необходимости layouts/default.vue; tests/component/chat.spec.ts, chat-scroll.spec.ts, chat-groups.spec.ts; новый tests/visual/chat-layout.pw.ts.
+**Файлы:** app/components/chat/ChatScreen.vue, ChatHeader.vue, MessageList.vue, MessageItem.vue, Composer.vue; новый MessageActions.vue; app/pages/chats/[id].vue, ministries/[id]/chat.vue; при необходимости layouts/default.vue; tests/component/chat.spec.ts, chat-scroll.spec.ts, chat-groups.spec.ts; новый tests/visual/chat-layout.pw.ts; e2e/chat.spec.ts (открытие меню перед проверкой прав и удалением); docs/architecture.md, docs/plans/phase-5.md.
 
-- [ ] RED: 375×390; открытое меню 375×500; чат служения 375×844; ввод/отправка не пересекают навигацию.
-- [ ] Заменить фиксированное вычитание 140 px компоновкой фактических блоков; прокрутка истории, min-height: 0, safe-area; последняя запись видима после изменения размера.
-- [ ] Действия сообщения в явном доступном меню с сохранением ограничений автора/модератора, ответа, редактирования, удаления, закрепления.
-- [ ] GREEN: длинное сообщение, вложение, ответ, редактирование, readonly/archived, поворот/высота, автопрокрутка и живые обновления.
-- [ ] Общие проверки, документы, ревью, коммит.
+- [x] RED: 375×390; открытое меню 375×500; чат служения 375×844; ввод/отправка не пересекают навигацию.
+- [x] Заменить фиксированное вычитание 140 px компоновкой фактических блоков; прокрутка истории, min-height: 0, safe-area; последняя запись видима после изменения размера.
+- [x] Действия сообщения в явном доступном меню с сохранением ограничений автора/модератора, ответа, редактирования, удаления, закрепления.
+- [x] GREEN: длинное сообщение, вложение, ответ, редактирование, readonly/archived, поворот/высота, автопрокрутка и живые обновления.
+- [x] Общие проверки, документы, ревью, коммит.
 
 **Готово:** Composer не перекрыт, история читаема, действия доступны с касания и клавиатуры.
 
