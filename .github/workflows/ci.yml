@@ -80,6 +80,9 @@ jobs:
       # --ci: забытый ->only() не сужает прогон до одного теста.
       - run: composer run --timeout=0 test -- --ci
       - name: OpenAPI schema is up to date
+        # Фиксированный адрес схемы, независимо от dev .env и порта Compose.
+        env:
+          APP_URL: http://localhost:8000
         run: composer openapi && git diff --exit-code openapi.json
 
   web:
@@ -169,6 +172,10 @@ jobs:
         working-directory: apps/api
       - run: cp .env.example .env && php artisan key:generate
         working-directory: apps/api
+      # В native-окружении нет Docker-тома /media. Фото в сквозном сценарии
+      # загружается на настоящий диск, доступный процессам PHP этого раннера.
+      - name: Prepare media storage
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /media
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

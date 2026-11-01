@@ -30,6 +30,8 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- HTTP tests send Origin: http://localhost, independently of dev .env. -->
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

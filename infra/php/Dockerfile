@@ -48,7 +48,7 @@ COPY apps/api ./
 # dump-autoload запускает post-autoload-dump (package:discover), которому нужны
 # каталоги storage и bootstrap/cache: их нет в контексте сборки.
 RUN mkdir -p storage/app/private storage/app/public storage/framework/cache/data \
-        storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+        storage/framework/sessions storage/framework/views storage/logs bootstrap/cache resources/views \
     && composer dump-autoload --no-dev --optimize --no-interaction
 
 FROM base AS prod
