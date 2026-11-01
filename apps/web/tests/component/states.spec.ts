@@ -202,6 +202,3 @@ describe('list feedback', () => {
     expect(notifications.text()).not.toContain('Всё прочитано')
   })
 })
-
-
-

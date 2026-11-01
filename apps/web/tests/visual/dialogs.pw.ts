@@ -52,6 +52,12 @@ test('new group traps keyboard focus, Escape closes and returns focus', async ({
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect(trigger).toBeFocused()
+  await trigger.click()
+  await trigger.evaluate(element => element.remove())
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(page.locator('#main-content')).toBeVisible()
+  await expect(page.locator('#main-content')).toBeFocused()
 })
 
 for (const width of [320, 768, 1440]) {

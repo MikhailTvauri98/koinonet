@@ -4,9 +4,13 @@ const emit = defineEmits<{ close: [] }>()
 const dialog = ref<HTMLDialogElement>()
 let opener: HTMLElement | null = null
 function restoreFocus() {
-  const target = opener?.isConnected && !opener.matches(':disabled') ? opener : document.getElementById('main-content')
-  target?.focus()
+  const target = opener
   opener = null
+  if (target?.isConnected && !target.matches(':disabled') && target.getClientRects().length > 0) {
+    target.focus()
+    if (document.activeElement === target) return
+  }
+  document.getElementById('main-content')?.focus()
 }
 function syncOpen() {
   const element = dialog.value

@@ -64,3 +64,36 @@ it('keeps the latest message at the bottom when the history viewport shrinks, wi
   expect(scroller.scrollTop).toBe(100)
   list.unmount(); vi.unstubAllGlobals()
 })
+
+it('keeps an open message menu attached to its original message after a live append', async () => {
+  const observers: { callback: IntersectionObserverCallback, targets: Element[], options?: IntersectionObserverInit }[] = []
+  vi.stubGlobal('IntersectionObserver', class {
+    item: typeof observers[number]
+    constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) { this.item = { callback, targets: [], options }; observers.push(this.item) }
+    observe(target: Element) { this.item.targets.push(target) }
+    disconnect() { this.item.targets = [] }
+  })
+  const original = message('a'), incoming = message('b')
+  const list = await mountSuspended(MessageList, { attachTo: document.body, props: { messages: [original], hasOlder: false, loadingOlder: false, writable: true, moderate: false, pinnedIds: [] } })
+  try {
+    await flushPromises()
+    await list.get('[data-test=actions-a]').trigger('click')
+    await flushPromises()
+    expect(list.find('dialog[open]').exists()).toBe(true)
+    await list.setProps({ messages: [original, incoming] })
+    await flushPromises()
+    expect(list.find('dialog[open]').exists(), 'a new last row must not destroy the old row menu').toBe(true)
+    expect(list.get('[data-test=latest-message] article').attributes('data-message-id')).toBe('b')
+    const latest = list.get('[data-test=latest-message]').element
+    const viewportObserver = observers.findLast(observer => observer.options?.root === null && observer.targets.includes(latest))
+    expect(viewportObserver, 'the new latest row remains observed even when the old ref clears').toBeDefined()
+    viewportObserver!.callback([{ target: latest, isIntersecting: true, intersectionRect: { width: 100, height: 100 } } as IntersectionObserverEntry], {} as IntersectionObserver)
+    expect(list.emitted('visible')?.at(-1)).toEqual(['b', true])
+    await list.get('[data-test=reply-a]').trigger('click')
+    await flushPromises()
+    expect(list.emitted('reply')).toEqual([[original]])
+    expect(list.find('dialog[open]').exists()).toBe(false)
+  } finally {
+    list.unmount(); vi.unstubAllGlobals()
+  }
+})

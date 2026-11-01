@@ -77,6 +77,9 @@ test('resizing a phone with More open closes it on desktop', async ({ page }) =>
   await page.setViewportSize({ width: 1024, height: 600 })
   await expect(page.getByRole('dialog', { name: 'Ещё', exact: true })).toHaveCount(0)
   await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link')).toHaveCount(12)
+  await expect(page.getByRole('button', { name: 'Ещё', exact: true })).toBeHidden()
+  await expect(page.locator('#main-content')).toBeVisible()
+  await expect(page.locator('#main-content')).toBeFocused()
 })
 
 for (const scale of [1, 2]) {

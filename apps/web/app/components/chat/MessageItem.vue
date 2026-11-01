@@ -40,4 +40,7 @@ time { display: block; font-size: .75rem; color: var(--ui-text-muted); }
 .attachments { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
 .attachments li { min-width: 0; }
 .attachments img { max-width: min(240px, 100%); max-height: 240px; border-radius: .4rem; }
+@media (max-width: 767px) {
+  .message { padding-inline: min(.9rem, 10px); }
+}
 </style>
