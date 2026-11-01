@@ -212,3 +212,15 @@ it('offers no group mutations in direct/archived chats or mute for nonmembers', 
     for (const key of ['leave', 'archive', 'rename', 'avatar', 'mute-forever']) expect(header.find(`[data-test="${key}"]`).exists()).toBe(false)
   }
 })
+
+it('uses native dialogs, closes on Escape and invalidates old session actions', async () => {
+  const w = await mountSuspended(NewGroupDialog)
+  expect(w.find('dialog').exists()).toBe(true)
+  await w.get('dialog').trigger('cancel')
+  expect(w.emitted('close')).toHaveLength(1)
+  const members = await mountSuspended(ChatMembersDialog, { props: { chat: chat({ can_manage_members: true }) } })
+  await members.get('[data-test="remove-u2"]').trigger('click')
+  useAuthStore().sessionVersion++; await flushPromises()
+  expect(members.emitted('close')).toHaveLength(1)
+  expect(members.find('[data-test="confirm-remove"]').exists()).toBe(false)
+})

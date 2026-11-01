@@ -149,7 +149,7 @@ it('copies iCal with feedback, confirms rotation and updates auth for later navi
   const w = await mountSuspended(IcalPage)
   expect(w.get('[data-test="ical-url"]').text()).toContain(oldUrl)
   await w.get('[data-test="copy"]').trigger('click'); await flushPromises(); expect(writeText).toHaveBeenCalledWith(oldUrl); expect(w.text()).toContain('Ссылка скопирована')
-  await w.get('[data-test="rotate"]').trigger('click'); expect(post).not.toHaveBeenCalled(); expect(w.get('[role="dialog"]').text()).toContain('Старая ссылка перестанет работать')
+  await w.get('[data-test="rotate"]').trigger('click'); expect(post).not.toHaveBeenCalled(); expect(w.get('dialog').text()).toContain('Старая ссылка перестанет работать')
   await w.get('[data-test="confirm-rotate"]').trigger('click'); await flushPromises()
   expect(post).toHaveBeenCalledWith('/me/ical-token/rotate'); expect(useAuthStore().user!.ical_url).toContain('/feed/new.ics')
   const next = await mountSuspended(IcalPage); expect(next.text()).toContain('/feed/new.ics')
@@ -178,4 +178,13 @@ it('retains a successful iCal rotation in auth after leaving and reopening setti
   const next = await mountSuspended(IcalPage)
   expect(useAuthStore().user!.ical_url).toContain('/feed/after-navigation.ics')
   expect(next.get('[data-test="ical-url"]').text()).toContain('/feed/after-navigation.ics')
+})
+
+it('opens a native iCal dialog and closes with Escape without rotating', async () => {
+  const w = await mountSuspended(IcalPage)
+  await w.get('[data-test="rotate"]').trigger('click')
+  expect(w.get('dialog').attributes('aria-label')).toBe('Перевыпуск ссылки календаря')
+  await w.get('dialog').trigger('cancel'); await flushPromises()
+  expect(w.find('dialog').attributes('open')).toBeUndefined()
+  expect(post).not.toHaveBeenCalled()
 })

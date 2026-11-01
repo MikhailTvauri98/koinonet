@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
+import UiDialog from '~/components/ui/UiDialog.vue'
 import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import { apiErrorMessage } from '~/utils/apiError'
 const auth = useAuthStore(), api = useApi()
@@ -41,13 +42,14 @@ onBeforeUnmount(() => { generation++ })
       <button type="button" data-test="rotate" :disabled="rotating" @click="confirming = true; feedback = ''; errorMessage = ''">Перевыпустить ссылку</button>
     </template>
     <p v-else>Ссылка недоступна. Войдите в аккаунт заново.</p>
-    <section v-if="confirming" role="dialog" aria-modal="true" aria-label="Перевыпуск ссылки календаря">
+    <UiDialog :open="confirming" label="Перевыпуск ссылки календаря" @close="confirming = false">
       <h2>Перевыпустить ссылку?</h2>
       <p>Старая ссылка перестанет работать. После перевыпуска добавьте новую подписку в календарь телефона.</p>
       <button type="button" data-test="confirm-rotate" :disabled="rotating" @click="rotate">{{ rotating ? 'Обновляется…' : 'Подтвердить перевыпуск' }}</button>
       <button type="button" :disabled="rotating" @click="confirming = false">Назад</button>
-    </section>
-    <p v-if="feedback" role="status">{{ feedback }}</p><p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
+      <p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
+    </UiDialog>
+    <p v-if="feedback" role="status">{{ feedback }}</p><p v-if="errorMessage && !confirming" role="alert">{{ errorMessage }}</p>
   </main>
 </template>
-<style scoped>.ical-settings { max-width: 40rem; margin: auto; overflow-wrap: anywhere; } button { font: inherit; padding: .6rem; margin: .3rem; } [role='dialog'] { margin-top: 1rem; padding: 1rem; border: 1px solid #8b96a6; border-radius: .5rem; background: #edf1f6; } [role='alert'] { color: #a32020; }</style>
+<style scoped>.ical-settings { max-width: 40rem; margin: auto; overflow-wrap: anywhere; } button { font: inherit; padding: .6rem; margin: .3rem; } [role='alert'] { color: #a32020; }</style>

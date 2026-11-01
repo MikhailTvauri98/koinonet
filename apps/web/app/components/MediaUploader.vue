@@ -36,6 +36,8 @@ const emit = defineEmits<{
 type Phase = 'idle' | 'uploading' | 'processing' | 'attaching' | 'failed'
 
 const api = useApi()
+const auth = useAuthStore()
+const fileInput = ref<HTMLInputElement>()
 const phase = ref<Phase>('idle')
 const errorMessage = ref('')
 // Номер текущего запуска загрузки. Новый выбор файла, отказ, истечение
@@ -51,7 +53,7 @@ const previews = ref<{ name: string, url: string | null, id?: string }[]>([])
 let currentPreview: { name: string, url: string | null, id?: string } | undefined
 function removePreview(index: number) {
   const file = previews.value[index]
-  if (!file || busy.value) return
+  if (!file || busy.value || props.disabled) return
   if (file.url) URL.revokeObjectURL(file.url)
   previews.value.splice(index, 1)
   readyIds = (props.mediaIds ?? readyIds).filter(id => id !== file.id)
@@ -121,6 +123,7 @@ async function poll(token: number, mediaId: string) {
 }
 
 async function upload(file: File, continuing = false) {
+  if (props.disabled || (!continuing && busy.value)) return
   if (!continuing) readyIds = [...(props.mediaIds ?? [])]
   if (props.purpose === 'message') {
     previews.value.push({ name: file.name, url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null })
@@ -158,6 +161,7 @@ async function upload(file: File, continuing = false) {
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
+  if (props.disabled || busy.value) { input.value = ''; return }
   const files = Array.from(input.files ?? [])
   const file = files.shift()
   input.value = ''
@@ -173,6 +177,20 @@ const statusLabel = computed(() => {
   return props.label
 })
 
+function invalidate() {
+  run++
+  stopTimers()
+  queue = []; readyIds = []; currentPreview = undefined
+  phase.value = 'idle'; errorMessage.value = ''
+  previews.value.forEach(file => { if (file.url) URL.revokeObjectURL(file.url) })
+  previews.value = []
+}
+watch(() => props.disabled, disabled => {
+  if (!disabled || !busy.value) return
+  run++; stopTimers(); queue = []; phase.value = 'idle'
+}, { flush: 'sync' })
+watch(() => auth.sessionVersion, invalidate, { flush: 'sync' })
+
 onBeforeUnmount(() => {
   run++
   stopTimers()
@@ -186,13 +204,13 @@ defineExpose({ upload })
 
 <template>
   <div class="media-uploader">
-    <label
-      class="media-uploader__button" :class="{ 'media-uploader__button--disabled': busy || disabled }"
-      :title="disabled ? disabledReason : undefined"
+    <button
+      type="button" data-test="choose-file" class="media-uploader__button" :disabled="busy || disabled" :aria-busy="busy"
+      :title="disabled ? disabledReason : undefined" @click="fileInput?.click()"
     >
-      <input type="file" :accept="(purpose === 'announcement' || purpose === 'event' || purpose === 'message') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event' || purpose === 'message')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
-      <span>{{ statusLabel }}</span>
-    </label>
+      <span aria-live="polite">{{ statusLabel }}</span>
+    </button>
+    <input ref="fileInput" hidden type="file" :accept="(purpose === 'announcement' || purpose === 'event' || purpose === 'message') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event' || purpose === 'message')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
     <p v-if="errorMessage" role="alert" data-test="media-error">{{ errorMessage }}</p>
     <ul v-if="purpose === 'message'" class="previews" aria-label="Выбранные вложения">
       <li v-for="(file, index) in previews" :key="index">
@@ -207,14 +225,14 @@ defineExpose({ upload })
 <style scoped>
 .media-uploader__button {
   display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 0.5rem 0.9rem;
-  border: 1px solid #8b96a6;
+  border: 1px solid var(--ui-border-strong);
   border-radius: 0.4rem;
   cursor: pointer;
 }
-.media-uploader__button--disabled { opacity: 0.6; cursor: default; }
-.media-uploader__button input { display: none; }
-[role='alert'] { color: #a32020; }
+[role='alert'] { color: var(--ui-danger); }
 .previews { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
 .previews li { display: flex; flex-direction: column; align-items: center; max-width: 140px; overflow-wrap: anywhere; }
 .previews img { object-fit: cover; }

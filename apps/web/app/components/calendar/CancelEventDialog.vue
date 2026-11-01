@@ -12,7 +12,7 @@ async function confirm() {
 }
 </script>
 <template>
-  <section role="dialog" aria-modal="true" aria-label="Отмена события">
+  <section role="region" aria-label="Отмена события">
     <h2>Отменить событие?</h2><p>Назначенные получат уведомление об отмене.</p>
     <label>Причина <textarea v-model="reason" data-test="reason" maxlength="500" :disabled="saving" /></label>
     <p v-if="errorMessage" role="alert">{{ errorMessage }}</p>

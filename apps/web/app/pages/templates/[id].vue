@@ -61,7 +61,7 @@ await load()
           <label>Дата события по календарю церкви <input v-model="date" data-test="event-date" type="date" :disabled="busy"></label>
           <button type="button" data-test="create-event" :disabled="busy" @click="act('create')">Создать событие на дату</button>
           <button type="button" data-test="archive-template" :disabled="busy" @click="confirmArchive = true">Архивировать шаблон</button>
-          <section v-if="confirmArchive" role="dialog" aria-modal="true" aria-label="Архивация шаблона">
+          <section v-if="confirmArchive" role="region" aria-label="Архивация шаблона">
             <h2>Архивировать шаблон?</h2><p>Новые события автоматически создаваться не будут. Уже созданные события сохранятся.</p>
             <button type="button" data-test="confirm-archive" :disabled="busy" @click="act('archive')">Подтвердить архивацию</button>
             <button type="button" :disabled="busy" @click="confirmArchive = false">Назад</button>
