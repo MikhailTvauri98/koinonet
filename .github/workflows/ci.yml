@@ -172,6 +172,10 @@ jobs:
         working-directory: apps/api
       - run: cp .env.example .env && php artisan key:generate
         working-directory: apps/api
+      # В native-окружении нет Docker-тома /media. Фото в сквозном сценарии
+      # загружается на настоящий диск, доступный процессам PHP этого раннера.
+      - name: Prepare media storage
+        run: sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /media
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
