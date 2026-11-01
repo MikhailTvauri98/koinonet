@@ -4,7 +4,7 @@
 
 Цель: подготовить сервер, перенести репозиторий в GitHub и включить автоматическую выкладку после готовности публичного DNS и TLS.
 
-Файлы: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `infra/compose.prod.yml`, `apps/api/phpunit.xml` (независимость тестового Origin от dev .env), `docs/architecture.md`, `docs/deploy.md`, этот план. Зависимости: завершённая фаза 5, доступ к GitHub/серверу, зарегистрированный домен.
+Файлы: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `infra/compose.prod.yml`, `infra/php/Dockerfile`, `apps/api/phpunit.xml` (независимость тестового Origin от dev .env), `docs/architecture.md`, `docs/deploy.md`, этот план. Зависимости: завершённая фаза 5, доступ к GitHub/серверу, зарегистрированный домен.
 
 - [x] Проверить сервер и существующие сервисы: Ubuntu 24.04, 2 CPU, 3.7 GiB RAM, ISPmanager занимает порт 80, порт 443 свободен.
 - [x] Установить Docker, подготовить пользователя deploy, ключ, окружение и образы приложения.
@@ -28,4 +28,6 @@
 - Пользователь заменил GitLab на GitHub. Черновик GitLab сохранён отдельно в ветке `phase-6/task-1-gitlab-deploy`, не объединён в main; ключ в GitLab не сохранялся.
 - После готовности DNS: Центральная Церковь ЕХБ; Михаил Тваури; mikhailtvauri1@gmail.com; Europe/Moscow; RU. Пароль администратора сгенерировать при установке и передать отдельно.
 
-Фактически проверено: обе Docker-сборки успешны, Compose config успешен, web 58 файлов / 562 теста, Nuxt typecheck, ESLint 0 ошибок / 1 существующее предупреждение MessageList.vue:91. Pint — 568 файлов PASS, PHPStan — No errors. На GitHub прошли 1297 тестов API (5249 assertions). Две особенности окружения исправлены: тестовый Origin фиксируется как localhost, адрес сервера при экспорте OpenAPI — http://localhost:8000, как в закоммиченной схеме. Повторный локальный экспорт не изменил openapi.json. Сквозные тесты и окончательный CI проверяются в PR #1.
+Фактически проверено: обе Docker-сборки успешны, Compose config успешен, web 58 файлов / 562 теста, Nuxt typecheck, ESLint 0 ошибок / 1 существующее предупреждение MessageList.vue:91. Pint — 568 файлов PASS, PHPStan — No errors. На GitHub прошли 1297 тестов API (5249 assertions). Две особенности окружения исправлены: тестовый Origin фиксируется как localhost, адрес сервера при экспорте OpenAPI — http://localhost:8000, как в закоммиченной схеме. Повторный локальный экспорт не изменил openapi.json. Первые этапы api/web в прогоне 41325902830 успешны; сквозные тесты выполняются в PR #1.
+
+Пробный запуск production-образа обнаружил отсутствие пустого resources/views в чистом checkout: optimize завершался ошибкой до миграций. Каталог теперь создаётся Dockerfile; проверка настоящего entrypoint дала config/events/routes/views DONE и Laravel Framework 13.31.0. Эта проверка добавлена в workflow до переключения сервера.
