@@ -21,7 +21,22 @@ export interface InvitedPerson extends NewPerson {
 // браузера (свои cookie, свой вход) с мобильным экраном. Контексты
 // закрываются по завершении теста, трассировка и снимки падения в них
 // сохраняются так же, как в основной странице.
-export const test = base.extend<{ openPhone: () => Promise<Page> }>({
+export const test = base.extend<{ resetCache: undefined, openPhone: () => Promise<Page> }>({
+  // Automatic fixture выполняется у каждого теста во всех файлах. Общий
+  // beforeEach при импорте модуля регистрировался бы только в первом файле.
+  // Изолированный кеш сбрасывает лимиты предыдущего сценария; внутри нового
+  // сценария ограничения остаются штатными. Зависимостей у фикстуры нет.
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture dependencies.
+  resetCache: [async ({}, use) => {
+    runArtisan(['tinker', '--execute', [
+      '$redis = Illuminate\\Support\\Facades\\Redis::connection("cache");',
+      'if (Illuminate\\Support\\Facades\\DB::connection()->getConfig("database") !== "church_e2e" || (string) $redis->client()->getDBNum() !== "15") {',
+      'throw new RuntimeException("Refusing to clear cache outside the isolated E2E environment.");',
+      '}',
+      '$redis->flushdb();',
+    ].join(' ')])
+    await use(undefined)
+  }, { auto: true }],
   openPhone: async ({ browser }, use) => {
     const contexts: BrowserContext[] = []
     await use(async () => {
@@ -71,19 +86,6 @@ export function runArtisan(args: string[]): string {
     throw error
   }
 }
-
-// Быстрый CI выполняет несколько сценариев с одного IP за минуту. Счётчики
-// ограничений запросов предыдущего сценария не должны влиять на следующий.
-// Очищается только выделенный кеш E2E; внутри сценария лимиты остаются штатными.
-test.beforeEach(() => {
-  runArtisan(['tinker', '--execute', [
-    '$redis = Illuminate\\Support\\Facades\\Redis::connection("cache");',
-    'if (Illuminate\\Support\\Facades\\DB::connection()->getConfig("database") !== "church_e2e" || (string) $redis->client()->getDBNum() !== "15") {',
-    'throw new RuntimeException("Refusing to clear cache outside the isolated E2E environment.");',
-    '}',
-    '$redis->flushdb();',
-  ].join(' ')])
-})
 
 // Основная навигация (AppNav): боковая панель на десктопе, нижняя панель
 // вкладок и меню «Ещё» на телефоне. Разделы открываются через неё, как это делает
