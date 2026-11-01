@@ -4,7 +4,7 @@
 
 Цель: подготовить сервер, перенести репозиторий в GitHub и включить автоматическую выкладку после готовности публичного DNS и TLS.
 
-Файлы: `.github/workflows/deploy.yml`, `infra/compose.prod.yml`, `docs/architecture.md`, `docs/deploy.md`, этот план. Зависимости: завершённая фаза 5, доступ к GitHub/серверу, зарегистрированный домен.
+Файлы: `.github/workflows/deploy.yml`, `infra/compose.prod.yml`, `apps/api/phpunit.xml` (независимость тестового Origin от dev .env), `docs/architecture.md`, `docs/deploy.md`, этот план. Зависимости: завершённая фаза 5, доступ к GitHub/серверу, зарегистрированный домен.
 
 - [x] Проверить сервер и существующие сервисы: Ubuntu 24.04, 2 CPU, 3.7 GiB RAM, ISPmanager занимает порт 80, порт 443 свободен.
 - [x] Установить Docker, подготовить пользователя deploy, ключ, окружение и образы приложения.
