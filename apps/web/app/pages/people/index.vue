@@ -187,19 +187,17 @@ if (canView.value) await Promise.all([loadPeople(), loadMinistries()])
 </template>
 
 <style scoped>
-.people-page { max-width: 64rem; margin: 0 auto; color: #202b3a; }
-header { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; margin-bottom: 1rem; }
+.people-page { min-width: 0; width: 100%; max-width: var(--ui-content-width); margin-inline: auto; overflow-wrap: anywhere; }
+header { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-space-4); justify-content: space-between; margin-bottom: var(--ui-space-6); }
 h1 { margin: 0; }
-.people-page__filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.4rem; }
+header button { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+.people-page__filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--ui-space-4); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-4), 16px); }
+label { min-width: 0; display: flex; flex-direction: column; gap: var(--ui-space-2); }
 .people-page__search { grid-column: 1 / -1; }
 .people-page__checkbox { flex-direction: row; align-items: center; }
-input, select, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; min-width: 0; }
-input[type='checkbox'] { width: 1.1rem; height: 1.1rem; }
-button { cursor: pointer; background: #f3f5f8; color: #202b3a; }
-header button { background: #234e79; color: white; }
-button:disabled { opacity: 0.6; cursor: wait; }
-.people-page__list { list-style: none; padding: 0; margin: 1rem 0; }
-.people-page__notice { padding: 0.75rem 1rem; margin-bottom: 1rem; background: #edf5ee; border-radius: 0.4rem; }
-[role='alert'] { color: #a32020; }
+input, select { width: 100%; max-width: 100%; }
+input[type='checkbox'] { flex-shrink: 0; width: 1.125rem; }
+button { max-width: 100%; }
+.people-page__list { display: grid; gap: var(--ui-space-3); list-style: none; padding: 0; margin: var(--ui-space-6) 0; }
+.people-page__notice { padding: min(var(--ui-space-4), 16px); margin-bottom: var(--ui-space-4); background: var(--ui-surface-muted); border-radius: var(--ui-radius-sm); }
 </style>

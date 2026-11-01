@@ -17,5 +17,7 @@ const { groupByChurchDay } = useEvents()
 </template>
 
 <style scoped>
-.event-list__day { display: grid; gap: 0.75rem; }
+.event-list { min-width: 0; display: grid; gap: var(--ui-space-6); }
+h2 { margin: 0 0 var(--ui-space-3); color: var(--ui-text-muted); font-size: 1rem; }
+.event-list__day { display: grid; gap: var(--ui-space-3); }
 </style>

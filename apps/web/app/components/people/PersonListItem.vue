@@ -21,9 +21,12 @@ defineProps<{ person: Person }>()
 </template>
 
 <style scoped>
-.person-item { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 0; border-bottom: 1px solid #d8dce2; overflow-wrap: anywhere; }
-.person-item img, .person-item__placeholder { width: 3rem; height: 3rem; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.person-item__placeholder { display: grid; place-items: center; background: #edf1f6; color: #34445a; }
-.person-item__details { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem; color: #4b5563; font-size: 0.875rem; }
-.person-item__badge { padding: 0 0.4rem; border-radius: 0.25rem; background: #edf1f6; }
+.person-item { display: flex; align-items: center; gap: var(--ui-space-3); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-4), 16px); overflow-wrap: anywhere; }
+.person-item > div { min-width: 0; flex: 1; }
+.person-item a { text-decoration: none; }
+.person-item a:hover { text-decoration: underline; }
+.person-item img, .person-item__placeholder { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.person-item__placeholder { display: grid; place-items: center; background: var(--ui-accent-soft); color: var(--ui-accent); font-weight: 600; }
+.person-item__details { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-top: var(--ui-space-1); color: var(--ui-text-muted); font-size: 0.875rem; }
+.person-item__badge { padding: 0 var(--ui-space-2); border-radius: var(--ui-radius-sm); background: var(--ui-surface-muted); }
 </style>

@@ -40,6 +40,7 @@ await load()
 </template>
 
 <style scoped>
-.upcoming-events { display: grid; gap: 0.75rem; }
-[role='alert'] { color: #a32020; }
+.upcoming-events { display: grid; gap: var(--ui-space-3); margin-block: var(--ui-space-4); }
+section { min-width: 0; }
+section > h2 { margin-top: 0; }
 </style>

@@ -28,3 +28,21 @@ const hasMinistries = useHasVisibleMinistries()
     </ul>
   </div>
 </template>
+
+<style scoped>
+.home-page { min-width: 0; width: 100%; max-width: var(--ui-content-width); margin-inline: auto; overflow-wrap: anywhere; display: grid; gap: var(--ui-space-6); }
+h1 { margin: 0; }
+.home-page > :deep(section) { min-width: 0; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-6), 24px) min(var(--ui-space-4), 16px); }
+.home-page > :deep(section > h2:first-child) { margin-top: 0; }
+.home-page__links { display: flex; flex-wrap: wrap; gap: var(--ui-space-3); list-style: none; margin: 0; padding: 0; }
+.home-page__links a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); padding: var(--ui-space-2) var(--ui-space-4); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); }
+@media (max-width: 40rem) {
+  h1 { font-size: 1.25rem; }
+  .home-page > :deep(section) { padding-inline: 0; border: 0; border-top: 1px solid var(--ui-border); border-radius: 0; box-shadow: none; }
+  .home-page > :deep(section > h2:first-child) { font-size: 1.125rem; }
+  .home-page__links a { padding-inline: min(var(--ui-space-3), 12px); }
+}
+@media (max-width: 22rem) {
+  .home-page > :deep(section > h2:first-child) { font-size: 1.0625rem; }
+}
+</style>

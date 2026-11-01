@@ -144,14 +144,13 @@ await load()
 </template>
 
 <style scoped>
-.person-card { max-width: 56rem; margin: 0 auto; color: #202b3a; overflow-wrap: anywhere; }
-header { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; }
-header img { border-radius: 50%; object-fit: cover; }
+.person-card { min-width: 0; width: 100%; max-width: var(--ui-content-width); margin-inline: auto; overflow-wrap: anywhere; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-6), 24px) min(var(--ui-space-4), 16px); }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-4); margin-block: var(--ui-space-6); }
+header > div { min-width: 0; flex: 1 1 12rem; }
+header img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
 h1 { margin: 0; }
-.person-card > section { border-top: 1px solid #d8dce2; margin-top: 1.5rem; }
-button { font: inherit; padding: 0.65rem; margin-right: 0.5rem; cursor: pointer; }
-button:disabled { opacity: 0.6; cursor: default; }
-.notice { background: #edf1f6; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem; }
+.person-card > section { border-top: 1px solid var(--ui-border); margin-top: var(--ui-space-6); padding-top: var(--ui-space-4); }
+button { max-width: 100%; margin: var(--ui-space-1) var(--ui-space-2) var(--ui-space-1) 0; }
+.notice { background: var(--ui-surface-muted); padding: min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin-top: var(--ui-space-4); }
 .note { white-space: pre-wrap; }
-[role='alert'] { color: #a32020; }
 </style>

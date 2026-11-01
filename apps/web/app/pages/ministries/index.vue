@@ -109,20 +109,21 @@ await load()
 </template>
 
 <style scoped>
-.ministries-page { max-width: 48rem; margin: 0 auto; color: #202b3a; }
-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+.ministries-page { min-width: 0; width: 100%; max-width: var(--ui-content-width); margin-inline: auto; overflow-wrap: anywhere; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-4); margin-bottom: var(--ui-space-6); }
 h1 { margin: 0; }
-.ministries-page__form { padding: 1rem; border: 1px solid #c9d2df; border-radius: 0.5rem; margin-bottom: 1rem; }
-.ministries-page__form fieldset { border: 0; padding: 0; margin: 0; }
-label { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
-input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
-button { cursor: pointer; margin-right: 0.5rem; }
-header button { background: #234e79; color: white; }
-button:disabled { opacity: 0.6; cursor: wait; }
-.ministries-page__notice { padding: 0.75rem 1rem; margin: 0 0 1rem; background: #edf1f6; border-radius: 0.4rem; }
-.ministries-page__list { list-style: none; padding: 0; margin: 0; }
-.ministries-page__item { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 0; border-bottom: 1px solid #d8dce2; color: inherit; text-decoration: none; }
-.ministries-page__item img, .ministries-page__placeholder { width: 3.5rem; height: 3.5rem; border-radius: 0.5rem; object-fit: cover; flex-shrink: 0; }
-.ministries-page__placeholder { display: grid; place-items: center; background: #edf1f6; color: #34445a; }
-[role='alert'] { color: #a32020; }
+header button { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+.ministries-page__form { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-4), 16px); margin-bottom: var(--ui-space-6); }
+.ministries-page__form fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
+label { display: flex; flex-direction: column; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
+input, textarea { width: 100%; max-width: 100%; }
+button { max-width: 100%; margin: var(--ui-space-1) var(--ui-space-2) var(--ui-space-1) 0; }
+.ministries-page__notice { padding: min(var(--ui-space-4), 16px); margin-bottom: var(--ui-space-4); background: var(--ui-surface-muted); border-radius: var(--ui-radius-sm); }
+.ministries-page__list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--ui-space-3); }
+.ministries-page__item { display: flex; align-items: center; gap: var(--ui-space-4); padding: min(var(--ui-space-4), 16px); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); color: inherit; text-decoration: none; }
+.ministries-page__item:hover { border-color: var(--ui-accent); }
+.ministries-page__item > div { min-width: 0; flex: 1; }
+.ministries-page__item p { color: var(--ui-text-muted); margin-bottom: 0; }
+.ministries-page__item img, .ministries-page__placeholder { width: 56px; height: 56px; border-radius: var(--ui-radius-sm); object-fit: cover; flex-shrink: 0; }
+.ministries-page__placeholder { display: grid; place-items: center; background: var(--ui-accent-soft); color: var(--ui-accent); font-weight: 600; }
 </style>

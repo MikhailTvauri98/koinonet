@@ -17,11 +17,12 @@ const { formatDateTime } = useChurchDate()
 .announcement-card {
   min-width: 0;
   overflow-wrap: anywhere;
-  padding: var(--ui-space-4);
+  padding: min(var(--ui-space-4), 16px);
   margin: var(--ui-space-4) 0;
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius-md);
   background: var(--ui-surface);
+  box-shadow: var(--ui-shadow);
 }
 h2 { margin: var(--ui-space-2) 0; }
 p { color: var(--ui-text-muted); }

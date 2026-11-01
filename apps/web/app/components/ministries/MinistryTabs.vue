@@ -41,6 +41,8 @@ const canSeeRoles = computed(() => canIn(props.ministryId, 'roles.manage') || ca
 </template>
 
 <style scoped>
-.ministry-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 1rem 0; }
-.ministry-tabs__active { font-weight: 600; }
+.ministry-tabs { min-width: 0; display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-block: var(--ui-space-4) var(--ui-space-6); }
+.ministry-tabs a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); max-width: 100%; padding: var(--ui-space-2) var(--ui-space-3); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); text-decoration: none; background: var(--ui-surface); overflow-wrap: anywhere; }
+.ministry-tabs .ministry-tabs__active { font-weight: 650; background: var(--ui-accent-soft); border-color: var(--ui-accent); }
+.ministry-tabs button { max-width: 100%; }
 </style>

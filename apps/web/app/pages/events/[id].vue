@@ -66,7 +66,7 @@ await load()
 </script>
 
 <template>
-  <main>
+  <main class="event-page">
     <NuxtLink to="/calendar">Календарь</NuxtLink>
     <p v-if="loading" role="status">Загружаем событие…</p>
     <p v-else-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" @click="load">Повторить</button></p>
@@ -82,3 +82,8 @@ await load()
     <EventSlotManager v-if="item" :event="item" @saved="load" />
   </main>
 </template>
+
+<style scoped>
+.event-page { min-width: 0; width: 100%; max-width: var(--ui-content-width); margin-inline: auto; overflow-wrap: anywhere; display: grid; gap: var(--ui-space-4); }
+.event-page > a, .event-page > button { justify-self: start; max-width: 100%; }
+</style>

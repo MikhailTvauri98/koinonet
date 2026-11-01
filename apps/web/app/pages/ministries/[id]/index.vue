@@ -164,16 +164,18 @@ await load()
 </template>
 
 <style scoped>
-.ministry-card { max-width: 48rem; margin: 0 auto; color: #202b3a; overflow-wrap: anywhere; }
-header { margin: 1rem 0; }
-header img { display: block; width: 100%; max-height: 16rem; object-fit: cover; border-radius: 0.5rem; margin-bottom: 0.75rem; }
+.ministry-card { min-width: 0; width: 100%; max-width: var(--ui-content-width); margin-inline: auto; overflow-wrap: anywhere; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-6), 24px) min(var(--ui-space-4), 16px); }
+header { margin: var(--ui-space-4) 0; }
+header img { display: block; width: 100%; max-height: 16rem; object-fit: cover; border-radius: var(--ui-radius-sm); margin-bottom: var(--ui-space-3); }
 h1 { margin: 0; }
-.ministry-card > section { border-top: 1px solid #d8dce2; margin-top: 1.5rem; padding-top: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
-input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid #8b96a6; border-radius: 0.3rem; }
-button { cursor: pointer; margin-right: 0.5rem; }
+.ministry-card > section { border-top: 1px solid var(--ui-border); margin-top: var(--ui-space-6); padding-top: var(--ui-space-4); }
+label { display: flex; flex-direction: column; gap: var(--ui-space-1); margin-bottom: var(--ui-space-4); }
+input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); }
+button { cursor: pointer; margin-right: var(--ui-space-2); }
 button:disabled { opacity: 0.6; cursor: wait; }
-.notice { background: #edf1f6; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem; }
-[role='alert'] { color: #a32020; }
+.notice { background: var(--ui-surface-muted); padding: min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin-top: var(--ui-space-4); }
+[role='alert'] { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+fieldset { min-width: 0; } input, textarea { width: 100%; max-width: 100%; } button { max-width: 100%; }
 </style>

@@ -34,10 +34,13 @@ const ministryVisible = computed(() => !!props.event.ministry && (can('ministrie
 </template>
 
 <style scoped>
-.event-card { border: 1px solid #d8dce2; border-radius: 0.5rem; padding: 1rem; overflow-wrap: anywhere; }
-h1, h3 { margin-top: 0; }
-.cancelled { color: #a32020; font-weight: 600; }
-.description { white-space: pre-wrap; }
-.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-button { font: inherit; padding: 0.5rem 0.75rem; cursor: pointer; }
+.event-card { min-width: 0; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-6), 24px) min(var(--ui-space-4), 16px); overflow-wrap: anywhere; }
+h1, h3 { margin: 0 0 var(--ui-space-3); }
+h3 a { text-decoration: none; }
+h3 a:hover { text-decoration: underline; }
+p { color: var(--ui-text-muted); }
+.cancelled { color: var(--ui-danger); font-weight: 600; background: var(--ui-surface-muted); padding: var(--ui-space-2) var(--ui-space-3); border-radius: var(--ui-radius-sm); }
+.description { white-space: pre-wrap; color: var(--ui-text); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-block: var(--ui-space-4); }
+.actions button { max-width: 100%; }
 </style>
