@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { installAcceptanceApi } from './support/acceptance-api'
 import { checkDocumentWidth, settleLayout, takeAcceptanceScreenshot } from './support/acceptance-layout'
+import { measureWordWrapping } from './support/word-wrapping'
 
 // A fixed chat-height subtraction or competing minimum height must expose an
 // overlap here. Resizing a desktop viewport does not simulate a phone keyboard.
@@ -85,17 +86,9 @@ for (const path of ['/chats/c1', '/ministries/m1/chat']) {
       }), stage))
     }
     const menu = page.getByRole('button', { name: 'Меню чата', exact: true })
-    const headingWords = await page.locator('.chat-header h1').evaluate(element => {
-      const node = element.firstChild!
-      const broken: string[] = []
-      for (const word of (node.textContent ?? '').matchAll(/\p{L}+/gu)) {
-        const range = document.createRange()
-        range.setStart(node, word.index!)
-        range.setEnd(node, word.index! + word[0].length)
-        if (new Set(Array.from(range.getClientRects(), rect => Math.round(rect.top))).size > 1) broken.push(word[0])
-      }
-      return { width: element.getBoundingClientRect().width, font: getComputedStyle(element).fontSize, broken }
-    })
+    const wrapping = await page.locator('.chat-header h1').evaluateAll(measureWordWrapping, null)
+    const headingGeometry = await page.locator('.chat-header h1').evaluate(element => ({ width: element.getBoundingClientRect().width, font: getComputedStyle(element).fontSize }))
+    const headingWords = { ...headingGeometry, broken: wrapping[0]!.broken }
     expect.soft(headingWords.broken, 'ordinary chat title words receive a readable column').toEqual([])
     expect.soft(parseFloat(headingWords.font), 'the chat title retains enlarged text').toBeGreaterThanOrEqual(36)
     const headingFile = info.outputPath('320-text-200-heading-words.json')

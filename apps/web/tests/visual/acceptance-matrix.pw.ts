@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { installAcceptanceApi } from './support/acceptance-api'
 import { checkDocumentWidth, settleLayout, takeAcceptanceScreenshot } from './support/acceptance-layout'
+import { measureWordWrapping } from './support/word-wrapping'
 
 // A removed width constraint, unbreakable title or intrinsic select/fieldset
 // minimum must fail real browser layout; API operations belong to the real E2E.
@@ -80,21 +81,15 @@ for (const [path, heading, guest] of routes) {
         const date = page.locator('[data-test=event-date]')
         await date.fill('2026-11-08')
         await expect(date).toHaveValue('2026-11-08')
-        const controls = await page.locator('.template-page button, .template-page input').evaluateAll(elements => elements.map((element) => {
+        const locator = page.locator('.template-page button, .template-page input')
+        const wrapping = await locator.evaluateAll(measureWordWrapping, null)
+        const geometry = await locator.evaluateAll(elements => elements.map((element) => {
           const bounds = element.getBoundingClientRect(), parent = element.parentElement!.getBoundingClientRect()
           const style = getComputedStyle(element)
-          const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
-          const broken: string[] = []
-          let node: Node | null
-          while ((node = walker.nextNode())) for (const word of (node.textContent ?? '').matchAll(/\p{L}[\p{L}\p{M}]*/gu)) {
-            const range = document.createRange()
-            range.setStart(node, word.index!)
-            range.setEnd(node, word.index! + word[0].length)
-            if (new Set(Array.from(range.getClientRects(), rect => Math.round(rect.top))).size > 1) broken.push(word[0])
-          }
           return { tag: element.tagName, text: element.textContent?.trim(), left: bounds.left, right: bounds.right, width: bounds.width, parentRight: parent.right,
-            marginLeft: style.marginLeft, marginRight: style.marginRight, paddingLeft: style.paddingLeft, paddingRight: style.paddingRight, broken }
+            marginLeft: style.marginLeft, marginRight: style.marginRight, paddingLeft: style.paddingLeft, paddingRight: style.paddingRight }
         }))
+        const controls = geometry.map((item, index) => ({ ...item, broken: wrapping[index]!.broken }))
         const controlFile = info.outputPath('template-controls.json')
         await writeFile(controlFile, JSON.stringify(controls, null, 2))
         await info.attach('template-controls', { path: controlFile, contentType: 'application/json' })

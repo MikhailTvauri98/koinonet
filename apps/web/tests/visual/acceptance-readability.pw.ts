@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { installAcceptanceApi } from './support/acceptance-api'
 import { checkDocumentWidth, settleLayout, takeAcceptanceScreenshot } from './support/acceptance-layout'
+import { measureWordWrapping } from './support/word-wrapping'
 
 async function openEnlarged(page: Page, path: string) {
   await page.setViewportSize({ width: 320, height: 900 })
@@ -13,19 +14,10 @@ async function openEnlarged(page: Page, path: string) {
 
 async function wholeWords(locator: Locator, maxLength = 30) {
   expect(await locator.count(), 'the reviewed content is present').toBeGreaterThan(0)
-  const measurements = await locator.evaluateAll((elements, maximum) => elements.map((element) => {
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
-    const broken: string[] = []
-    let node: Node | null
-    while ((node = walker.nextNode())) for (const word of (node.textContent ?? '').matchAll(/\p{L}[\p{L}\p{M}]*/gu)) {
-      if (word[0].length > maximum) continue // Legal long user names/titles still wrap.
-      const range = document.createRange()
-      range.setStart(node, word.index!)
-      range.setEnd(node, word.index! + word[0].length)
-      if (new Set(Array.from(range.getClientRects(), rect => Math.round(rect.top))).size > 1) broken.push(word[0])
-    }
-    return { text: element.textContent?.trim(), width: element.getBoundingClientRect().width, broken }
-  }), maxLength)
+  // Legal long user names/titles still wrap; each scenario chooses its limit.
+  const wrapping = await locator.evaluateAll(measureWordWrapping, maxLength)
+  const geometry = await locator.evaluateAll(elements => elements.map(element => ({ text: element.textContent?.trim(), width: element.getBoundingClientRect().width })))
+  const measurements = geometry.map((item, index) => ({ ...item, broken: wrapping[index]!.broken }))
   for (const item of measurements) expect.soft(item.broken, item.text).toEqual([])
   return measurements
 }
