@@ -208,9 +208,9 @@ header button { background: var(--ui-accent); color: var(--ui-surface); border-c
 .people-page__filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--ui-space-4); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-4), 16px); }
 label { min-width: 0; display: flex; flex-direction: column; gap: var(--ui-space-2); }
 .people-page__search { grid-column: 1 / -1; }
-.people-page__checkbox { flex-direction: row; align-items: center; }
+.people-page__checkbox { flex-direction: row; align-items: center; gap: min(var(--ui-space-2), 8px); }
 input, select { width: 100%; max-width: 100%; }
-input[type='checkbox'] { flex-shrink: 0; width: 1.125rem; }
+input[type='checkbox'] { flex-shrink: 0; width: min(1.125rem, 24px); height: min(1.125rem, 24px); }
 button { max-width: 100%; }
 .people-page__list { display: grid; gap: var(--ui-space-3); list-style: none; padding: 0; margin: var(--ui-space-6) 0; }
 .people-page__notice { padding: min(var(--ui-space-4), 16px); margin-bottom: var(--ui-space-4); background: var(--ui-surface-muted); border-radius: var(--ui-radius-sm); }

@@ -55,8 +55,10 @@ onBeforeUnmount(() => { revision++ })
 </script>
 <template>
   <header class="chat-header">
-    <img v-if="chat.avatar_url" :src="chat.avatar_url" alt="" width="44" height="44">
-    <div><h1>{{ chat.title }}</h1><details><summary>Участники: {{ chat.members.length }}</summary><ul><li v-for="person in chat.members" :key="person.user_id">{{ person.full_name || 'Участник' }}</li></ul></details></div>
+    <div class="chat-header__identity">
+      <img v-if="chat.avatar_url" :src="chat.avatar_url" alt="" width="44" height="44">
+      <div><h1>{{ chat.title }}</h1><details><summary>Участники: {{ chat.members.length }}</summary><ul><li v-for="person in chat.members" :key="person.user_id">{{ person.full_name || 'Участник' }}</li></ul></details></div>
+    </div>
     <button type="button" data-test="menu" aria-haspopup="dialog" :aria-expanded="menu" @click="menu = !menu">Меню чата</button>
     <UiDialog v-if="menu" :open="true" label="Меню чата" @close="menu = false">
       <h2>Меню чата</h2>
@@ -93,11 +95,12 @@ onBeforeUnmount(() => { revision++ })
   </header>
 </template>
 <style scoped>
-.chat-header { display: flex; align-items: start; gap: .4rem; padding: .25rem 0; border-bottom: 1px solid var(--ui-border); }
-.chat-header > div { flex: 1; min-width: 0; }
+.chat-header { display: flex; flex-wrap: wrap; align-items: start; gap: .4rem; padding: .25rem 0; border-bottom: 1px solid var(--ui-border); }
+.chat-header__identity { display: flex; flex: 1 1 12rem; min-width: 0; align-items: start; gap: .4rem; }
+.chat-header__identity > div { flex: 1; min-width: 0; }
 h1 { font-size: 1.125rem; margin: 0 0 .2rem; overflow-wrap: anywhere; }
-.chat-header > button { flex: 0 0 auto; max-width: 45%; margin-left: auto; }
-.chat-header img { border-radius: 50%; object-fit: cover; }
+.chat-header > button { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
+.chat-header img { flex: 0 0 44px; border-radius: 50%; object-fit: cover; }
 .chat-menu { display: flex; flex-direction: column; gap: .4rem; }
 [role='dialog'], [role='alertdialog'], form { flex-basis: 100%; }
 [role='alert'] { color: var(--ui-danger); }

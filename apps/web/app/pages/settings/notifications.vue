@@ -77,8 +77,8 @@ await load()
 
 <style scoped>
 .notification-settings { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
-label { display: flex; align-items: flex-start; gap: var(--ui-space-3); padding: var(--ui-space-4); margin-block: var(--ui-space-3); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); background: var(--ui-surface); cursor: pointer; }
-input { flex-shrink: 0; margin-top: .3em; }
+label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: min(var(--ui-space-2), 8px); padding: min(var(--ui-space-2), 8px); margin-block: var(--ui-space-3); min-height: var(--ui-control-height); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); background: var(--ui-surface); cursor: pointer; }
+input { width: min(1.125rem, 24px); height: min(1.125rem, 24px); margin: .3em 0 0; }
 button { max-width: 100%; overflow-wrap: anywhere; }
 [role='alert'] { color: var(--ui-danger); }
 </style>

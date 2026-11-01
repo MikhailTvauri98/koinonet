@@ -28,9 +28,9 @@ async function enable() {
 </template>
 
 <style scoped>
-.enable-notifications { margin: 1rem 0; padding: 0.75rem; background: #edf1f6; border-radius: 0.3rem; }
+.enable-notifications { margin: 1rem 0; padding: min(0.75rem, 12px); background: #edf1f6; border-radius: 0.3rem; }
 p { margin: 0; }
-button { font: inherit; padding: 0.5rem 0.9rem; border: 1px solid #8b96a6; border-radius: 0.3rem; background: #fff; cursor: pointer; }
+button { font: inherit; padding: 0.5rem min(0.9rem, 14px); border: 1px solid #8b96a6; border-radius: 0.3rem; background: #fff; cursor: pointer; }
 button:disabled { opacity: 0.6; cursor: wait; }
 [role='alert'] { color: #a32020; margin-top: 0.5rem; }
 </style>

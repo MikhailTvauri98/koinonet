@@ -51,7 +51,7 @@ async function calendarSnapshot(page: Page, templateId: string, until: string): 
     await expect(page.getByRole('link', { name: title, exact: true })).toHaveCount(events.length)
     for (const event of events) {
       expect(event.occurrence_date).not.toBeNull()
-      await expect(page.locator(`time[datetime="${event.occurrence_date}"]`)).toBeVisible()
+      await expect(page.locator(`.event-list h2 time[datetime="${event.occurrence_date}"]`)).toBeVisible()
       await expect(page.getByRole('link', { name: title, exact: true }).and(page.locator(`[href="/events/${event.id}"]`))).toBeVisible()
       seen.set(event.id, event)
     }

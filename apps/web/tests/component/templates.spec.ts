@@ -110,12 +110,13 @@ it.each([{ can_manage: false }, { archived: true }])('keeps template detail read
 it('lists recurrence, state and owner filter, and opens creation', async () => {
   get.mockImplementation((url: string) => Promise.resolve({ data: url === '/templates' ? [template({ recurrence: { type: 'weekly', weekday: 7 }, active: false, archived: true })] : [{ id: 'm1', name: 'Хор' }] }))
   const w = await mountSuspended(TemplatesPage)
+  expect(get).toHaveBeenCalledWith('/templates', { scope: 'church', archived: 0 })
   expect(w.text()).toContain('Каждое воскресенье'); expect(w.text()).toContain('Неактивен'); expect(w.text()).toContain('Архив')
   expect(w.find('a[href="/templates/t1"]').exists()).toBe(true)
   await w.get('[data-test="owner-filter"]').setValue('m1'); await flushPromises()
-  expect(get).toHaveBeenCalledWith('/templates', { scope: 'ministry:m1', archived: false })
+  expect(get).toHaveBeenCalledWith('/templates', { scope: 'ministry:m1', archived: 0 })
   await w.get('[data-test="include-archived"]').setValue(true); await flushPromises()
-  expect(get).toHaveBeenCalledWith('/templates', { scope: 'ministry:m1', archived: true })
+  expect(get).toHaveBeenCalledWith('/templates', { scope: 'ministry:m1', archived: 1 })
   await w.get('[data-test="new-template"]').trigger('click'); expect(w.findComponent(TemplateEditor).exists()).toBe(true)
 })
 it('keeps readable templates accessible without management and reacts to revoked rights', async () => {

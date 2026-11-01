@@ -26,12 +26,19 @@ const preview = computed(() => !props.chat.last_message ? 'Сообщений п
 </template>
 
 <style scoped>
-.chat-item { display: flex; gap: .75rem; align-items: center; padding: 1rem .5rem; color: inherit; text-decoration: none; border-bottom: 1px solid #ddd; }
+li { container-type: inline-size; }
+.chat-item { display: flex; gap: min(.75rem, 12px); align-items: center; padding: 1rem min(.5rem, 8px); color: inherit; text-decoration: none; border-bottom: 1px solid #ddd; }
 .chat-item:focus-visible { outline: 2px solid #234e79; outline-offset: 2px; }
-.chat-item__avatar { width: 3rem; height: 3rem; border-radius: 50%; background: #edf2f7; display: flex; align-items: center; justify-content: center; object-fit: cover; flex-shrink: 0; }
+.chat-item__avatar { width: min(3rem, 48px); height: min(3rem, 48px); border-radius: 50%; background: #edf2f7; display: flex; align-items: center; justify-content: center; object-fit: cover; flex-shrink: 0; }
 .chat-item__content { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .chat-item__preview { display: block; white-space: pre-line; color: #4b5563; }
 .chat-item__marker, time { font-size: .85rem; color: #4b5563; }
 .chat-item__marker { margin-inline-start: .5rem; }
 .chat-item__badge { border-radius: 999px; padding: .15rem .5rem; background: #234e79; color: white; }
+@container (max-width: 18rem) {
+  .chat-item { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: start; }
+  .chat-item__avatar { grid-row: 1; grid-column: 1; }
+  .chat-item__content { grid-row: 2; grid-column: 1 / -1; }
+  .chat-item__badge { grid-row: 1; grid-column: 2; justify-self: end; }
+}
 </style>

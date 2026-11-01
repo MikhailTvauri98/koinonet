@@ -66,10 +66,13 @@ test('a leader manages members of their own ministry only', async ({ page, openP
   // при загрузке приложения. Как и настоящий человек, лидер обновляет
   // страницу, пока воркер не обработает задания: сначала в навигации
   // появляются «Служения», затем в составе — кнопка управления.
-  const ministriesTab = mainNav(leaderPhone).getByRole('link', { name: 'Служения', exact: true })
   await expect(async () => {
     await reloadAuthenticated(leaderPhone)
-    await expect(ministriesTab).toBeVisible({ timeout: 2_000 })
+    await mainNav(leaderPhone).getByRole('button', { name: 'Ещё', exact: true }).click()
+    const more = leaderPhone.getByRole('dialog', { name: 'Ещё', exact: true })
+    await expect(more.getByRole('link', { name: 'Служения', exact: true })).toBeVisible({ timeout: 2_000 })
+    await more.getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect(mainNav(leaderPhone).getByRole('button', { name: 'Ещё', exact: true })).toBeFocused()
   }).toPass({ timeout: 30_000 })
 
   // В своём списке служений у лидера только его служение.
@@ -101,7 +104,7 @@ test('a leader manages members of their own ministry only', async ({ page, openP
   ])
   await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Роли служения' })).toBeVisible()
   await Promise.all([expectApiResponse(leaderPhone, 'GET', '/permissions', 200), leaderPhone.getByRole('button', { name: 'Участник', exact: true }).click()])
-  await leaderPhone.getByLabel('Описание').fill(description)
+  await leaderPhone.getByRole('textbox', { name: 'Описание', exact: true }).fill(description)
   await expectNoHorizontalScroll(leaderPhone, 'редактор роли служения')
   // Экран редактора не пишет «Сохранено», поэтому ждём ответ на правку роли,
   // прежде чем перезагрузить страницу.
@@ -112,7 +115,7 @@ test('a leader manages members of their own ministry only', async ({ page, openP
   // Правка сохранена на сервере: после перезагрузки описание на месте.
   await reloadAuthenticated(leaderPhone)
   await Promise.all([expectApiResponse(leaderPhone, 'GET', '/permissions', 200), leaderPhone.getByRole('button', { name: 'Участник', exact: true }).click()])
-  await expect(leaderPhone.getByLabel('Описание')).toHaveValue(description)
+  await expect(leaderPhone.getByRole('textbox', { name: 'Описание', exact: true })).toHaveValue(description)
   await Promise.all([
     expectApiResponse(leaderPhone, 'GET', `${ministryPath}/members`, 200),
     expectApiResponse(leaderPhone, 'GET', `${ministryPath}/roles`, 200),

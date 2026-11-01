@@ -120,9 +120,9 @@ input, textarea { width: 100%; max-width: 100%; }
 button { max-width: 100%; margin: var(--ui-space-1) var(--ui-space-2) var(--ui-space-1) 0; }
 .ministries-page__notice { padding: min(var(--ui-space-4), 16px); margin-bottom: var(--ui-space-4); background: var(--ui-surface-muted); border-radius: var(--ui-radius-sm); }
 .ministries-page__list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--ui-space-3); }
-.ministries-page__item { display: flex; align-items: center; gap: var(--ui-space-4); padding: min(var(--ui-space-4), 16px); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); color: inherit; text-decoration: none; }
+.ministries-page__item { display: flex; flex-wrap: wrap; align-items: center; gap: min(var(--ui-space-4), 12px); padding: min(var(--ui-space-4), 16px); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); color: inherit; text-decoration: none; }
 .ministries-page__item:hover { border-color: var(--ui-accent); }
-.ministries-page__item > div { min-width: 0; flex: 1; }
+.ministries-page__item > div { min-width: 0; flex: 1 1 12rem; }
 .ministries-page__item p { color: var(--ui-text-muted); margin-bottom: 0; }
 .ministries-page__item img, .ministries-page__placeholder { width: 56px; height: 56px; border-radius: var(--ui-radius-sm); object-fit: cover; flex-shrink: 0; }
 .ministries-page__placeholder { display: grid; place-items: center; background: var(--ui-accent-soft); color: var(--ui-accent); font-weight: 600; }

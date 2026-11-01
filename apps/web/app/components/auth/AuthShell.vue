@@ -58,4 +58,8 @@ defineProps<{ title: string; description?: string }>()
   background: var(--ui-accent-soft);
   color: var(--ui-accent);
 }
+@media (max-width: 767px) {
+  .auth-shell { padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); }
+  .auth-shell__card { padding-inline: 12px; }
+}
 </style>

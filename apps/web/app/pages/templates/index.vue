@@ -12,7 +12,7 @@ async function load() {
   const version = ++generation, session = auth.sessionVersion
   loading.value = true; errorMessage.value = ''; templates.value = []
   try {
-    const response = await api.get<{ data: TemplateItem[] }>('/templates', { scope: owner.value ? `ministry:${owner.value}` : 'church', archived: archived.value })
+    const response = await api.get<{ data: TemplateItem[] }>('/templates', { scope: owner.value ? `ministry:${owner.value}` : 'church', archived: archived.value ? 1 : 0 })
     if (version === generation && session === auth.sessionVersion) templates.value = response.data
   } catch (error) { if (version === generation && session === auth.sessionVersion) errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить шаблоны. Попробуйте ещё раз.') }
   finally { if (version === generation && session === auth.sessionVersion) loading.value = false }

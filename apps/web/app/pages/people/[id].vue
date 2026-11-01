@@ -150,7 +150,11 @@ header > div { min-width: 0; flex: 1 1 12rem; }
 header img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
 h1 { margin: 0; }
 .person-card > section { border-top: 1px solid var(--ui-border); margin-top: var(--ui-space-6); padding-top: var(--ui-space-4); }
-button { max-width: 100%; margin: var(--ui-space-1) var(--ui-space-2) var(--ui-space-1) 0; }
+button { max-width: calc(100% - min(var(--ui-space-2), 8px)); margin: var(--ui-space-1) min(var(--ui-space-2), 8px) var(--ui-space-1) 0; }
 .notice { background: var(--ui-surface-muted); padding: min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin-top: var(--ui-space-4); }
 .note { white-space: pre-wrap; }
+@media (max-width: 767px) {
+  .person-card { padding-inline: 0; border: 0; box-shadow: none; }
+  header > div { flex-basis: 100%; }
+}
 </style>

@@ -170,12 +170,15 @@ header img { display: block; width: 100%; max-height: 16rem; object-fit: cover; 
 h1 { margin: 0; }
 .ministry-card > section { border-top: 1px solid var(--ui-border); margin-top: var(--ui-space-6); padding-top: var(--ui-space-4); }
 label { display: flex; flex-direction: column; gap: var(--ui-space-1); margin-bottom: var(--ui-space-4); }
-input, textarea, button { font: inherit; padding: 0.65rem; border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); }
-button { cursor: pointer; margin-right: var(--ui-space-2); }
+input, textarea, button { font: inherit; padding: 0.65rem min(0.65rem, 10px); border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); }
+button { cursor: pointer; margin-right: min(var(--ui-space-2), 8px); }
 button:disabled { opacity: 0.6; cursor: wait; }
 .notice { background: var(--ui-surface-muted); padding: min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin-top: var(--ui-space-4); }
 [role='alert'] { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
 fieldset { min-width: 0; } input, textarea { width: 100%; max-width: 100%; } button { max-width: 100%; }
+@media (max-width: 767px) {
+  .ministry-card { padding-inline: 0; border: 0; box-shadow: none; }
+}
 </style>

@@ -21,8 +21,8 @@ defineProps<{ person: Person }>()
 </template>
 
 <style scoped>
-.person-item { display: flex; align-items: center; gap: var(--ui-space-3); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-4), 16px); overflow-wrap: anywhere; }
-.person-item > div { min-width: 0; flex: 1; }
+.person-item { display: flex; flex-wrap: wrap; align-items: center; gap: min(var(--ui-space-3), 12px); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); padding: min(var(--ui-space-4), 16px); overflow-wrap: anywhere; }
+.person-item > div { min-width: 0; flex: 1 1 12rem; }
 .person-item a { text-decoration: none; }
 .person-item a:hover { text-decoration: underline; }
 .person-item img, .person-item__placeholder { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }

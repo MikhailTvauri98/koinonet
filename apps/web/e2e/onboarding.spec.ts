@@ -37,9 +37,16 @@ test('an administrator installs, creates a role, a person and invites them', asy
   await expectPhoneTabBar(phone)
   // Новый аккаунт получил ровно то, что даёт роль: справочник, но не
   // служения и не администрирование.
-  await expect(mainNav(phone).getByRole('link', { name: 'Люди', exact: true })).toBeVisible()
-  await expect(mainNav(phone).getByRole('link', { name: 'Служения', exact: true })).toHaveCount(0)
+  await mainNav(phone).getByRole('button', { name: 'Ещё', exact: true }).click()
+  const more = phone.getByRole('dialog', { name: 'Ещё', exact: true })
+  await expect(more.getByRole('link', { name: 'Люди', exact: true })).toBeVisible()
+  await expect(more.getByRole('link', { name: 'Служения', exact: true })).toHaveCount(0)
+  await expect(more.getByRole('link', { name: 'Роли', exact: true })).toHaveCount(0)
+  await expect(more.getByRole('link', { name: 'Настройки церкви', exact: true })).toHaveCount(0)
+  await expect(more.getByRole('link', { name: 'Журнал', exact: true })).toHaveCount(0)
   await expect(phone.getByTestId('nav-admin')).toHaveCount(0)
+  await more.getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(mainNav(phone).getByRole('button', { name: 'Ещё', exact: true })).toBeFocused()
   await openSection(phone, 'Люди', 'Люди')
   await expect(phone.getByRole('list', { name: 'Список людей' }).getByRole('link', { name: 'Петров Пётр' })).toBeVisible()
   // Администрирование закрыто и по прямому адресу.

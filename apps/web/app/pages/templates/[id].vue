@@ -55,12 +55,14 @@ await load()
         <h2>Слоты</h2><p v-if="!item.slots.length">Слотов пока нет.</p>
         <ul><li v-for="slot in item.slots" :key="slot.id">{{ slot.label }} — {{ slot.required_count }}<span v-if="slot.role"> · {{ slot.role.name }}</span></li></ul>
         <section v-if="manageable">
-          <button type="button" data-test="edit-template" :disabled="busy" @click="editing = true">Редактировать шаблон</button>
+          <div class="template-actions"><button type="button" data-test="edit-template" :disabled="busy" @click="editing = true">Редактировать шаблон</button>
           <button type="button" data-test="toggle-active" :disabled="busy" @click="act('active')">{{ item.active ? 'Выключить автоматическое создание' : 'Включить автоматическое создание' }}</button>
+          </div>
           <p>Правки шаблона не меняют уже созданные события.</p>
           <label>Дата события по календарю церкви <input v-model="date" data-test="event-date" type="date" :disabled="busy"></label>
-          <button type="button" data-test="create-event" :disabled="busy" @click="act('create')">Создать событие на дату</button>
+          <div class="template-actions"><button type="button" data-test="create-event" :disabled="busy" @click="act('create')">Создать событие на дату</button>
           <button type="button" data-test="archive-template" :disabled="busy" @click="confirmArchive = true">Архивировать шаблон</button>
+          </div>
           <section v-if="confirmArchive" role="region" aria-label="Архивация шаблона">
             <h2>Архивировать шаблон?</h2><p>Новые события автоматически создаваться не будут. Уже созданные события сохранятся.</p>
             <button type="button" data-test="confirm-archive" :disabled="busy" @click="act('archive')">Подтвердить архивацию</button>
@@ -72,4 +74,13 @@ await load()
     </template>
   </main>
 </template>
-<style scoped>.template-page { max-width: 48rem; margin: auto; overflow-wrap: anywhere; } button, input { font: inherit; padding: .6rem; margin: .3rem; } label { display: block; margin-top: 1rem; } [role='dialog'] { background: #edf1f6; border: 1px solid #8b96a6; padding: 1rem; } [role='alert'] { color: #a32020; } .description { white-space: pre-wrap; }</style>
+<style scoped>
+.template-page { max-width: 48rem; margin: auto; overflow-wrap: anywhere; }
+button, input { font: inherit; min-width: 0; max-width: 100%; padding: .6rem min(.6rem, 10px); margin: .3rem 0; }
+.template-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: .3rem; }
+.template-actions > button { margin: 0; }
+label { display: block; margin-top: 1rem; }
+[role='dialog'] { background: #edf1f6; border: 1px solid #8b96a6; padding: 1rem; }
+[role='alert'] { color: #a32020; }
+.description { white-space: pre-wrap; }
+</style>

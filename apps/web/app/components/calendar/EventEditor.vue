@@ -14,6 +14,11 @@ const owner = ref(props.event ? props.event.owner_type === 'church' ? 'church' :
 const owners = computed(() => [...(can('calendar.church.manage') ? [{ id: 'church', name: 'Церковь' }] : []), ...ministries.value.filter(m => canIn(m.id, 'events.manage'))])
 const title = ref(props.event?.title ?? ''), description = ref(props.event?.description ?? ''), location = ref(props.event?.location ?? ''), visibility = ref(props.event?.visibility ?? 'church')
 const starts = ref(''), ends = ref(''), slots = ref<SlotDraft[]>([]), notify = ref(false)
+const startsReadoutId = useId(), endsReadoutId = useId()
+function selectedLocalDateTime(value: string) {
+  const [date, time] = value.split('T')
+  return date && time ? `${date.split('-').reverse().join('.')}, ${time}` : ''
+}
 const mediaIds = ref(props.event?.attachments.map(m => m.id) ?? [])
 const retained = computed(() => props.event?.attachments.filter(m => mediaIds.value.includes(m.id)) ?? [])
 const saving = ref(false), uploading = ref(false), uploadError = ref(''), errorMessage = ref(''), settingsError = ref(''), choiceError = ref(''), fieldErrors = ref<Record<string, string[]>>({})
@@ -91,8 +96,10 @@ await initialize()
       <label>Описание <textarea v-model="description" maxlength="5000" /></label>
       <label>Место <input v-model="location" data-test="location" maxlength="200"></label>
       <p>Начало и конец по времени церкви: {{ settings.loaded ? settings.timezone : 'загрузка…' }}. При повторе часа используется первый момент.</p>
-      <label>Начало <input v-model="starts" data-test="starts-at" type="datetime-local" step="1" :disabled="cancelled || !settings.loaded" required></label>
-      <label>Конец <input v-model="ends" data-test="ends-at" type="datetime-local" step="1" :disabled="cancelled || !settings.loaded" required></label>
+      <label class="datetime-field">Начало <input v-model="starts" data-test="starts-at" type="datetime-local" step="1" :aria-describedby="starts ? startsReadoutId : undefined" :disabled="cancelled || !settings.loaded" required></label>
+      <p v-if="starts" :id="startsReadoutId" class="datetime-readout"><time :datetime="starts">{{ selectedLocalDateTime(starts) }}</time></p>
+      <label class="datetime-field">Конец <input v-model="ends" data-test="ends-at" type="datetime-local" step="1" :aria-describedby="ends ? endsReadoutId : undefined" :disabled="cancelled || !settings.loaded" required></label>
+      <p v-if="ends" :id="endsReadoutId" class="datetime-readout"><time :datetime="ends">{{ selectedLocalDateTime(ends) }}</time></p>
       <template v-if="!event"><p v-if="choiceError" role="alert">{{ choiceError }} <button type="button" @click="loadChoices">Повторить</button></p><SlotEditor v-model="slots" :choices="choices" /></template>
       <AttachmentList :attachments="retained" />
       <ul><li v-for="(id, index) in mediaIds" :key="id">Вложение {{ index + 1 }} <button type="button" :disabled="uploading" :data-test="`remove-media-${id}`" @click="mediaIds = mediaIds.filter(m => m !== id)">Убрать</button></li></ul>
@@ -108,6 +115,8 @@ await initialize()
 form { min-width: 0; max-width: 40rem; overflow-wrap: anywhere; }
 fieldset { min-inline-size: 0; max-width: 100%; margin: 0; border: 0; padding: 0; }
 label { display: block; margin: var(--ui-space-4) 0; }
+.datetime-field { margin-bottom: var(--ui-space-2); }
+.datetime-readout { margin: 0 0 var(--ui-space-4); color: var(--ui-text-muted); overflow-wrap: anywhere; }
 input:not([type='checkbox']), textarea, select { display: block; min-width: 0; max-width: 100%; width: 100%; }
 button { max-width: calc(100% - var(--ui-space-1)); margin: var(--ui-space-1) var(--ui-space-1) var(--ui-space-1) 0; overflow-wrap: anywhere; }
 [role='alert'] { color: var(--ui-danger); }

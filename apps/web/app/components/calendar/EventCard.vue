@@ -10,7 +10,7 @@ const ministryVisible = computed(() => !!props.event.ministry && (can('ministrie
 </script>
 
 <template>
-  <article class="event-card">
+  <article class="event-card" :class="{ 'event-card--detail': detail }">
     <h1 v-if="detail">{{ event.title }}</h1>
     <h3 v-else><NuxtLink :to="`/events/${encodeURIComponent(event.id)}`">{{ event.title }}</NuxtLink></h3>
     <p v-if="event.status === 'cancelled'" :data-test="`cancelled-${event.id}`" class="cancelled">Отменено<span v-if="event.cancel_reason">: {{ event.cancel_reason }}</span></p>
@@ -39,8 +39,11 @@ h1, h3 { margin: 0 0 var(--ui-space-3); }
 h3 a { text-decoration: none; }
 h3 a:hover { text-decoration: underline; }
 p { color: var(--ui-text-muted); }
-.cancelled { color: var(--ui-danger); font-weight: 600; background: var(--ui-surface-muted); padding: var(--ui-space-2) var(--ui-space-3); border-radius: var(--ui-radius-sm); }
+.cancelled { color: var(--ui-danger); font-weight: 600; background: var(--ui-surface-muted); padding: min(var(--ui-space-2), 8px) min(var(--ui-space-3), 12px); border-radius: var(--ui-radius-sm); }
 .description { white-space: pre-wrap; color: var(--ui-text); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-block: var(--ui-space-4); }
 .actions button { max-width: 100%; }
+@media (max-width: 767px) {
+  .event-card--detail { padding-inline: 0; border: 0; box-shadow: none; }
+}
 </style>

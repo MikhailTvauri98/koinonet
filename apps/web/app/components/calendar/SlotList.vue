@@ -51,10 +51,12 @@ async function removeAssignment() {
 
 <style scoped>
 .slots { list-style: none; padding: 0; display: grid; gap: 1rem; }
-.slot { border: 1px solid #d8dce2; border-radius: 0.5rem; padding: 1rem; overflow-wrap: anywhere; }
+.slot { border: 1px solid #d8dce2; border-radius: 0.5rem; padding: min(var(--ui-space-2), 8px); overflow-wrap: anywhere; }
+.slot > ul { list-style: none; padding: 0; }
 .overfilled { color: #9a5600; font-weight: 600; }
-.assignee { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
+.assignee { display: flex; flex-wrap: wrap; align-items: center; gap: min(0.5rem, 8px); margin: 0.5rem 0; }
+.assignee > span { min-width: 0; flex: 1 1 12rem; }
 img { border-radius: 50%; object-fit: cover; }
-button { font: inherit; padding: 0.5rem 0.75rem; cursor: pointer; }
+button { font: inherit; max-width: 100%; padding: 0.5rem min(0.75rem, 10px); cursor: pointer; }
 [role='alert'] { color: #a32020; }
 </style>

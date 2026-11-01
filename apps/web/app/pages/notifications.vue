@@ -60,4 +60,5 @@ await load()
 <style scoped>
 .notifications-page { min-width: 0; max-width: 42rem; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
 button { max-width: 100%; margin-block: var(--ui-space-2); }
+.notifications-page > a { display: inline-block; margin-inline-end: min(var(--ui-space-3), 12px); margin-block: var(--ui-space-2); }
 </style>

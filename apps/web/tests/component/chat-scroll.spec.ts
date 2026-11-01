@@ -40,16 +40,24 @@ it('keeps the latest message at the bottom when the history viewport shrinks, wi
   await flushPromises()
   const scroller = list.get('[aria-label="История сообщений"]').element as HTMLElement
   Object.defineProperty(scroller, 'scrollHeight', { get: () => 800 })
-  Object.defineProperty(scroller, 'clientHeight', { get: () => 300 })
+  let clientHeight = 300
+  Object.defineProperty(scroller, 'clientHeight', { get: () => clientHeight })
   scroller.scrollTop = 500
   await list.get('[aria-label="История сообщений"]').trigger('scroll')
   const observer = observers.find(o => o.targets.includes(scroller))
   expect(observer, 'history must respond to its real available height').toBeDefined()
-  scroller.scrollTop = 450
+  observer!.callback([], {} as ResizeObserver)
+  scroller.scrollTop = 500
+  clientHeight = 96
+  // Chromium can deliver the resize-induced scroll before ResizeObserver.
+  // That is not a reader choosing to leave the newest message.
+  await list.get('[aria-label="История сообщений"]').trigger('scroll')
   observer!.callback([], {} as ResizeObserver)
   await flushPromises()
   expect(scroller.scrollTop).toBe(800)
   scroller.scrollTop = 100
+  await list.get('[aria-label="История сообщений"]').trigger('scroll')
+  clientHeight = 80
   await list.get('[aria-label="История сообщений"]').trigger('scroll')
   observer!.callback([], {} as ResizeObserver)
   await flushPromises()

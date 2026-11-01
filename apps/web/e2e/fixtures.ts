@@ -93,6 +93,8 @@ export async function openSection(page: Page, section: string, heading: string):
     '/chats': ['/chats'],
     '/people': ['/people', '/ministries'],
     '/ministries': ['/ministries'],
+    '/calendar': ['/events'],
+    '/templates': ['/templates', '/ministries'],
     '/announcements': ['/announcements'],
     '/notifications': ['/notifications'],
     '/settings/profile': ['/me/profile'],
@@ -227,9 +229,12 @@ export async function loginAsAdmin(page: Page): Promise<void> {
 export async function createGlobalRole(page: Page, name: string, permissions: string[]): Promise<void> {
   await openSection(page, 'Роли', 'Глобальные роли')
   await Promise.all([successfulGet(page, '/permissions'), page.getByTestId('create-role').click()])
-  await page.getByLabel('Название').fill(name)
+  await page.getByRole('textbox', { name: 'Название', exact: true }).fill(name)
   for (const permission of permissions) {
-    await page.getByLabel(permission, { exact: true }).check()
+    // Descriptions are visible inside the label; match its catalogue title
+    // first, rather than a substring that might occur in another description.
+    const title = permission.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    await page.getByRole('checkbox', { name: new RegExp('^' + title + '(?:\\s|$)') }).check()
   }
   await Promise.all([
     expectApiResponse(page, 'POST', '/roles', 201),

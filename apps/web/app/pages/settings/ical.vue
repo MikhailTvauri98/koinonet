@@ -55,8 +55,7 @@ onBeforeUnmount(() => { generation++ })
 <style scoped>
 .ical-settings { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
 .ical-settings > p:has(a) { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
-button { margin: var(--ui-space-2) var(--ui-space-2) var(--ui-space-2) 0; }
-button { max-width: 100%; overflow-wrap: anywhere; }
+button { margin: min(var(--ui-space-2), 8px) min(var(--ui-space-2), 8px) min(var(--ui-space-2), 8px) 0; padding-inline: min(.5rem, 8px); max-width: calc(100% - min(var(--ui-space-2), 8px)); overflow-wrap: anywhere; }
 button[type='submit'], .primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
 button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
 .danger { color: var(--ui-danger); border-color: var(--ui-danger); }

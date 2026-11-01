@@ -59,9 +59,11 @@ await load()
       <AttachmentList :attachments="item.attachments" />
       <p v-if="item.views_count !== undefined" data-test="views">Просмотров: {{ item.views_count }}</p>
       <template v-if="editable">
-        <button data-test="edit" :disabled="busy || editing" @click="startEditing">Изменить</button>
-        <button data-test="pin" :disabled="busy || editing" @click="act(item.pinned ? 'unpin' : 'pin')">{{ item.pinned ? 'Открепить' : 'Закрепить' }}</button>
-        <button data-test="archive" :disabled="busy || editing" @click="confirming = true">Архивировать</button>
+        <div class="announcement-page__actions">
+          <button data-test="edit" :disabled="busy || editing" @click="startEditing">Изменить</button>
+          <button data-test="pin" :disabled="busy || editing" @click="act(item.pinned ? 'unpin' : 'pin')">{{ item.pinned ? 'Открепить' : 'Закрепить' }}</button>
+          <button data-test="archive" :disabled="busy || editing" @click="confirming = true">Архивировать</button>
+        </div>
         <div v-if="confirming && !editing" role="alertdialog" aria-label="Архивация объявления">
           <p>Архивировать объявление?</p><button data-test="confirm-archive" :disabled="busy" @click="act('archive')">Архивировать</button><button :disabled="busy" @click="confirming = false">Отмена</button>
         </div>
@@ -75,4 +77,5 @@ await load()
 <style scoped>
 .announcement-page { min-width: 0; max-width: 48rem; margin-inline: auto; overflow-wrap: anywhere; }
 button { max-width: 100%; overflow-wrap: anywhere; }
+.announcement-page__actions { display: flex; flex-wrap: wrap; gap: min(var(--ui-space-2), 8px); margin-block: var(--ui-space-4); }
 </style>

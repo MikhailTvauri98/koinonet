@@ -16,6 +16,11 @@ test('the administrator reaches every section from the phone tab bar', async ({ 
   const sections: [section: string, heading: string][] = [
     ['Люди', 'Люди'],
     ['Служения', 'Служения'],
+    ['Календарь', 'Календарь'],
+    ['Шаблоны', 'Шаблоны'],
+    ['Объявления', 'Объявления'],
+    ['Чаты', 'Чаты'],
+    ['Уведомления', 'Уведомления'],
     ['Профиль', 'Профиль'],
     ['Роли', 'Глобальные роли'],
     ['Настройки церкви', 'Настройки церкви'],
@@ -26,11 +31,20 @@ test('the administrator reaches every section from the phone tab bar', async ({ 
     await openSection(phone, section, heading)
     await expectPhoneTabBar(phone)
     await expectNoHorizontalScroll(phone, section)
+    if (section === 'Шаблоны') {
+      for (const archived of [true, false]) {
+        const response = phone.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/templates' && response.request().method() === 'GET')
+        await phone.getByTestId('include-archived').setChecked(archived)
+        const result = await response
+        expect(new URL(result.url()).searchParams.get('archived')).toBe(archived ? '1' : '0')
+        expect(result.status(), 'both template archive filter states obey the real API contract').toBe(200)
+      }
+    }
   }
 
   // Редактор глобальной роли на узком экране встаёт под список ролей.
   await openSection(phone, 'Роли', 'Глобальные роли')
   await Promise.all([expectApiResponse(phone, 'GET', '/permissions', 200), phone.getByTestId('create-role').click()])
-  await expect(phone.getByLabel('Название')).toBeVisible()
+  await expect(phone.getByRole('textbox', { name: 'Название', exact: true })).toBeVisible()
   await expectNoHorizontalScroll(phone, 'редактор глобальной роли')
 })

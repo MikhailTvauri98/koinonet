@@ -36,10 +36,14 @@ async function remove() {
 <template>
   <section v-if="event.can_manage && event.status === 'scheduled'" aria-label="Управление слотами">
     <h2>Управление слотами</h2>
-    <ul><li v-for="slot in event.slots" :key="slot.id">{{ slot.label }} <button type="button" :disabled="saving" :data-test="`edit-slot-${slot.id}`" @click="edit(slot)">Изменить слот</button><button type="button" :disabled="saving" @click="removing = slot.id; editing = null">Убрать слот</button></li></ul>
+    <ul role="list"><li v-for="slot in event.slots" :key="slot.id">{{ slot.label }} <button type="button" :disabled="saving" :data-test="`edit-slot-${slot.id}`" @click="edit(slot)">Изменить слот</button><button type="button" :disabled="saving" @click="removing = slot.id; editing = null">Убрать слот</button></li></ul>
     <button type="button" :disabled="saving" data-test="new-slot" @click="edit()">Добавить слот</button>
     <div v-if="removing" role="dialog" aria-label="Убрать слот"><p>Убрать слот и снять все его назначения?</p><button type="button" :disabled="saving" data-test="confirm-remove-slot" @click="remove">Подтвердить</button><button type="button" :disabled="saving" @click="removing = null">Назад</button></div>
     <div v-if="editing"><SlotEditor v-model="drafts" single :choices="choices" :disabled="saving" /><button type="button" :disabled="saving || drafts.length !== 1" data-test="save-slot" @click="save">Сохранить слот</button><button type="button" :disabled="saving" @click="editing = null">Назад</button></div>
     <p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
   </section>
 </template>
+<style scoped>
+ul { padding: 0; list-style: none; }
+button { max-width: calc(100% - 4px); margin: .25rem 4px .25rem 0; }
+</style>

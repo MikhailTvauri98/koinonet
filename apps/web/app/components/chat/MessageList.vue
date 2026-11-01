@@ -12,6 +12,7 @@ let viewportObserver: IntersectionObserver | undefined
 let observerRun = 0
 let previousLatest: string | undefined
 let atBottom = true
+let viewportHeight = 0
 let restore: { id: string, offset: number } | undefined
 let autoBoundary: string | undefined
 function loadOlder() {
@@ -21,7 +22,12 @@ function loadOlder() {
   if (anchor?.dataset.messageId) restore = { id: anchor.dataset.messageId, offset: anchor.getBoundingClientRect().top - rootTop }
   emit('older')
 }
-function measure() { const el = scroll.value; if (el) atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60 }
+function measure() {
+  const el = scroll.value
+  // A resized viewport can dispatch scroll before ResizeObserver. Keep the
+  // previous follow intent until that observer handles the new height.
+  if (el && (!resizeObserver || el.clientHeight === viewportHeight)) atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+}
 async function observe() {
   const run = ++observerRun
   observer?.disconnect()
@@ -62,10 +68,14 @@ watch([() => props.messages, () => props.loadingOlder], observe, { flush: 'post'
 onMounted(() => {
   void observe()
   if (typeof ResizeObserver !== 'undefined' && scroll.value) {
+    viewportHeight = scroll.value.clientHeight
     resizeObserver = new ResizeObserver(() => {
       // Preserve the reader's position unless they were following the newest
       // message before a composer/header/viewport resize.
-      if (atBottom && !restore && scroll.value) scroll.value.scrollTop = scroll.value.scrollHeight
+      if (scroll.value) {
+        viewportHeight = scroll.value.clientHeight
+        if (atBottom && !restore) scroll.value.scrollTop = scroll.value.scrollHeight
+      }
     })
     resizeObserver.observe(scroll.value)
   }

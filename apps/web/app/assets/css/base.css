@@ -30,6 +30,10 @@ body {
   letter-spacing: -0.025em;
 }
 
+@media (max-width: 767px) {
+  :where(h1) { font-size: 1.25rem; }
+}
+
 :where(h2) {
   margin: var(--ui-space-6) 0 var(--ui-space-4);
   font-size: 1.25rem;
@@ -86,6 +90,7 @@ body {
   cursor: pointer;
   font-weight: 600;
   line-height: 1.25;
+  padding-inline: min(0.875rem, 14px);
 }
 
 :where(button:hover:not(:disabled)) {
