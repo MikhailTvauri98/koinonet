@@ -46,7 +46,7 @@ await load()
 </script>
 
 <template>
-  <div>
+  <div class="announcement-page">
     <NuxtLink to="/announcements">Объявления</NuxtLink>
     <p v-if="errorMessage" role="alert">{{ errorMessage }} <button @click="load">Повторить</button></p>
     <template v-if="item">
@@ -71,3 +71,8 @@ await load()
     </template>
   </div>
 </template>
+
+<style scoped>
+.announcement-page { min-width: 0; max-width: 48rem; margin-inline: auto; overflow-wrap: anywhere; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+</style>

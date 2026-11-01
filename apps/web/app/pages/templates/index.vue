@@ -52,4 +52,11 @@ await Promise.all([load(), loadMinistries()])
     </template>
   </main>
 </template>
-<style scoped>.templates-page { max-width: 48rem; margin: auto; } article { border: 1px solid #d8dce2; border-radius: .5rem; padding: 1rem; margin: 1rem 0; } label { display: block; margin: 1rem 0; } button, select { padding: .6rem; font: inherit; } [role='alert'] { color: #a32020; }</style>
+<style scoped>
+.templates-page { min-width: 0; max-width: 48rem; margin: auto; overflow-wrap: anywhere; }
+article { border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); background: var(--ui-surface); padding: var(--ui-space-4); margin: var(--ui-space-4) 0; }
+label { display: block; margin: var(--ui-space-4) 0; }
+select { display: block; min-width: 0; width: 100%; max-width: 40rem; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+[role='alert'] { color: var(--ui-danger); }
+</style>

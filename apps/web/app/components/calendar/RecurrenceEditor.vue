@@ -31,4 +31,10 @@ function update() {
     <p v-if="type === 'monthly_nth_weekday' && nth === 5">Месяцы без пятого выбранного дня пропускаются.</p>
   </fieldset>
 </template>
-<style scoped>fieldset { margin: 1rem 0; } label { display: block; margin: .75rem 0; } input, select { padding: .5rem; max-width: 100%; } p { max-width: 42rem; }</style>
+<style scoped>
+fieldset { min-inline-size: 0; max-width: 100%; margin: var(--ui-space-4) 0; padding: var(--ui-space-3); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); overflow-wrap: anywhere; }
+legend { max-width: 100%; padding: 0 var(--ui-space-1); font-weight: 600; }
+label { display: block; margin: var(--ui-space-3) 0; }
+input, select { display: block; min-width: 0; max-width: 100%; width: 100%; }
+p { color: var(--ui-text-muted); }
+</style>

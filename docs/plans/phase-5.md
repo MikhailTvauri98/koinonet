@@ -110,14 +110,16 @@
 
 **Цель:** длинные данные без горизонтальной прокрутки документа.
 
-**Файлы:** app/components/announcements/AnnouncementCard.vue, AnnouncementEditor.vue; app/pages/announcements/[id].vue, templates/index.vue; app/components/calendar/SlotEditor.vue, EventEditor.vue, TemplateEditor.vue, RecurrenceEditor.vue; новый tests/visual/content-overflow.pw.ts.
+**Файлы:** app/components/announcements/AnnouncementCard.vue, AnnouncementEditor.vue, AnnouncementList.vue; app/pages/announcements/[id].vue, templates/index.vue; app/components/calendar/SlotEditor.vue, EventEditor.vue, TemplateEditor.vue, RecurrenceEditor.vue; новый tests/visual/content-overflow.pw.ts.
 
-- [ ] RED: заголовок 200 символов без пробелов, служение 100, длинные option, добавление/изменение слота на 320 px.
-- [ ] Исправить min-width/fieldset, box-sizing, ширины полей/select, перенос слов; использовать токены без глобального обрезания.
-- [ ] GREEN: 320/375/768/1440 и текст 200%; даты, количество, длинные подписи и предупреждения доступны.
-- [ ] Общие проверки, документы, ревью, коммит.
+- [x] RED: заголовок 200 символов без пробелов, служение 100, длинные option, добавление/изменение слота на 320 px.
+- [x] Исправить min-width/fieldset, box-sizing, ширины полей/select, перенос слов; использовать токены без глобального обрезания.
+- [x] GREEN: 320/375/768/1440 и текст 200%; даты, количество, длинные подписи и предупреждения доступны.
+- [x] Общие проверки, документы, ревью, коммит.
 
 **Готово:** scrollWidth ≤ clientWidth во всех новых сценариях, содержимое не потеряно.
+
+**Результат:** RED на 320 px: ширина документа 962 px (объявления), 986 px (фильтр шаблонов), 1013 px (слоты события). После локальных исправлений — 24/24 браузерных сценария в Edge на 320/375/768/1440 px при тексте 100/200%; даты, количество, подписи и предупреждения сохраняются. Дополнительный RED при 200% выявил переполнение фильтра/кнопки AnnouncementList (351 px): по согласованию координатора компонент включён в задачу и проверка стала зелёной. npm run test -- --maxWorkers=1 — 55 файлов / 519 тестов; lint, typecheck и generate — код 0. Снимки просмотрены, выполнено саморевью по границам модулей, ключам прав, словарю и документам.
 
 **Зависимости:** 1.
 

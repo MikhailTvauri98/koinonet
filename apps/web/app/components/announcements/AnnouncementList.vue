@@ -47,3 +47,10 @@ await load(true)
     <button v-if="page < lastPage && !errorMessage" data-test="more" :disabled="loading" @click="load()">Показать ещё</button>
   </section>
 </template>
+
+<style scoped>
+section { min-width: 0; overflow-wrap: anywhere; }
+label { display: block; margin-bottom: var(--ui-space-3); }
+select { display: block; min-width: 0; width: 100%; max-width: 40rem; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+</style>

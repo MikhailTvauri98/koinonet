@@ -19,4 +19,12 @@ function selectedMinistry(_index: number, slot: SlotDraft) { return props.choice
     <button v-if="!single && modelValue.length < 30" type="button" data-test="add-slot" :disabled="disabled" @click="emit('update:modelValue', [...modelValue, { role_id: null, label: null, required_count: 1 }])">Добавить слот</button>
   </section>
 </template>
-<style scoped>fieldset { margin: 1rem 0; } label { display: block; margin: .5rem 0; } input, select { max-width: 100%; padding: .5rem; } button { padding: .5rem; }</style>
+<style scoped>
+section { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+/* fieldset по умолчанию сохраняет min-content ширину длинного select. */
+fieldset { min-inline-size: 0; max-width: 100%; margin: var(--ui-space-4) 0; padding: var(--ui-space-3); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); }
+legend { max-width: 100%; padding: 0 var(--ui-space-1); font-weight: 600; }
+label { display: block; margin: var(--ui-space-2) 0; }
+input, select { display: block; min-width: 0; max-width: 100%; width: 100%; }
+button { max-width: 100%; overflow-wrap: anywhere; }
+</style>

@@ -14,6 +14,15 @@ const { formatDateTime } = useChurchDate()
 </template>
 
 <style scoped>
-.announcement-card { padding: 1rem; margin: 1rem 0; border: 1px solid #ddd; border-radius: 0.5rem; }
-h2 { margin: 0.5rem 0; }
+.announcement-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: var(--ui-space-4);
+  margin: var(--ui-space-4) 0;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface);
+}
+h2 { margin: var(--ui-space-2) 0; }
+p { color: var(--ui-text-muted); }
 </style>

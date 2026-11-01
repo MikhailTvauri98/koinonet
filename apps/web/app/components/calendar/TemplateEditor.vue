@@ -96,4 +96,11 @@ await loadOwners(); await loadChoices()
     <button type="button" :disabled="saving" @click="emit('cancel')">Назад</button>
   </form>
 </template>
-<style scoped>fieldset { border: 0; padding: 0; } label { display: block; margin: 1rem 0; } input:not([type='checkbox']), textarea, select { display: block; box-sizing: border-box; padding: .6rem; max-width: 100%; width: 100%; } button { padding: .6rem; margin: .3rem; } [role='alert'] { color: #a32020; }</style>
+<style scoped>
+form { min-width: 0; max-width: 40rem; overflow-wrap: anywhere; }
+fieldset { min-inline-size: 0; max-width: 100%; margin: 0; border: 0; padding: 0; }
+label { display: block; margin: var(--ui-space-4) 0; }
+input:not([type='checkbox']), textarea, select { display: block; min-width: 0; max-width: 100%; width: 100%; }
+button { max-width: calc(100% - var(--ui-space-1)); margin: var(--ui-space-1) var(--ui-space-1) var(--ui-space-1) 0; overflow-wrap: anywhere; }
+[role='alert'] { color: var(--ui-danger); }
+</style>

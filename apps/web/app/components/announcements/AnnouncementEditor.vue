@@ -70,9 +70,10 @@ async function save() {
 </template>
 
 <style scoped>
-fieldset { border: 0; padding: 0; }
-label { display: block; margin: 1rem 0; }
-input:not([type='checkbox']), textarea { display: block; width: 100%; box-sizing: border-box; padding: 0.5rem; }
-button { margin: 0.4rem; padding: 0.5rem; }
-[role='alert'] { color: #a32020; }
+.announcement-editor { min-width: 0; max-width: 40rem; overflow-wrap: anywhere; }
+fieldset { min-inline-size: 0; max-width: 100%; margin: 0; border: 0; padding: 0; }
+label { display: block; margin: var(--ui-space-4) 0; }
+input:not([type='checkbox']), textarea { display: block; min-width: 0; max-width: 100%; width: 100%; }
+button { max-width: calc(100% - var(--ui-space-1)); margin: var(--ui-space-1) var(--ui-space-1) var(--ui-space-1) 0; overflow-wrap: anywhere; }
+[role='alert'] { color: var(--ui-danger); }
 </style>
