@@ -72,6 +72,19 @@ export function runArtisan(args: string[]): string {
   }
 }
 
+// Быстрый CI выполняет несколько сценариев с одного IP за минуту. Счётчики
+// ограничений запросов предыдущего сценария не должны влиять на следующий.
+// Очищается только выделенный кеш E2E; внутри сценария лимиты остаются штатными.
+test.beforeEach(() => {
+  runArtisan(['tinker', '--execute', [
+    '$redis = Illuminate\\Support\\Facades\\Redis::connection("cache");',
+    'if (Illuminate\\Support\\Facades\\DB::connection()->getConfig("database") !== "church_e2e" || (string) $redis->client()->getDBNum() !== "15") {',
+    'throw new RuntimeException("Refusing to clear cache outside the isolated E2E environment.");',
+    '}',
+    '$redis->flushdb();',
+  ].join(' ')])
+})
+
 // Основная навигация (AppNav): боковая панель на десктопе, нижняя панель
 // вкладок и меню «Ещё» на телефоне. Разделы открываются через неё, как это делает
 // человек, а не вводом адреса.
