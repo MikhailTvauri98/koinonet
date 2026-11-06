@@ -3,7 +3,7 @@ defineProps<{ items: { to: string, label: string }[], adminItems: { to: string, 
 const emit = defineEmits<{ close: [] }>()
 const route = useRoute()
 function isActive(to: string) {
-  return to === '/settings/profile' ? route.path.startsWith('/settings/') : route.path === to || route.path.startsWith(to + '/')
+  return to === '/settings/profile' ? route.path.startsWith('/settings/') && route.path !== '/settings/ical' : route.path === to || route.path.startsWith(to + '/')
 }
 </script>
 
@@ -26,7 +26,7 @@ function isActive(to: string) {
 .more-menu__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
 .more-menu__header h2 { margin: 0; }
 .more-menu__links { display: flex; flex-direction: column; gap: var(--ui-space-1); }
-.more-menu__link { min-width: 0; min-height: var(--ui-control-height); padding: min(var(--ui-space-3), 12px); border-radius: var(--ui-radius-sm); text-decoration: none; color: var(--ui-text); }
+.more-menu__link { display: flex; align-items: center; min-width: 0; min-height: var(--ui-control-height); padding: 12px; border-radius: var(--ui-radius-sm); text-decoration: none; color: var(--ui-text); }
 .more-menu__link:hover { background: var(--ui-surface-muted); }
 .more-menu__link--active { background: var(--ui-accent-soft); color: var(--ui-accent); font-weight: 600; }
 .more-menu__admin { border-top: 1px solid var(--ui-border); margin-top: var(--ui-space-3); padding-top: var(--ui-space-3); }

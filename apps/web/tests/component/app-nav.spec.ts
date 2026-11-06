@@ -22,18 +22,18 @@ describe('phone navigation', () => {
   it('opens always available secondary sections without granting forbidden links', async () => {
     const nav = await openMore()
     const dialog = nav.get('dialog[open]')
-    expect(dialog.findAll('a').map(a => a.text())).toEqual(['Объявления', 'Профиль'])
+    expect(dialog.findAll('a').map(a => a.text())).toEqual(['Объявления', 'Профиль', 'Календарь телефона'])
     expect(dialog.attributes('aria-label')).toBe('Ещё')
   })
   it('includes every permitted secondary destination with all permissions', async () => {
     grantPermissions({ administrator: true })
     const nav = await openMore()
-    expect(nav.get('dialog[open]').findAll('a').map(a => a.attributes('href'))).toEqual(['/people', '/ministries', '/templates', '/announcements', '/settings/profile', '/admin/roles', '/admin/settings', '/admin/audit'])
+    expect(nav.get('dialog[open]').findAll('a').map(a => a.attributes('href'))).toEqual(['/people', '/ministries', '/templates', '/announcements', '/settings/profile', '/settings/ical', '/admin/roles', '/admin/settings', '/admin/audit'])
   })
   it('includes ministry-only management without exposing global administration', async () => {
     grantPermissions({ ministries: { m1: ['events.manage'] } })
     const nav = await openMore()
-    expect(nav.get('dialog[open]').findAll('a').map(a => a.attributes('href'))).toEqual(['/ministries', '/templates', '/announcements', '/settings/profile'])
+    expect(nav.get('dialog[open]').findAll('a').map(a => a.attributes('href'))).toEqual(['/ministries', '/templates', '/announcements', '/settings/profile', '/settings/ical'])
   })
   it('closes on permission revocation and recomputes available destinations', async () => {
     grantPermissions({ administrator: true })
@@ -41,7 +41,7 @@ describe('phone navigation', () => {
     grantPermissions(); await flushPromises()
     expect(nav.find('dialog[open]').exists()).toBe(false)
     await nav.get('[data-test="nav-more"]').trigger('click')
-    expect(nav.get('dialog[open]').findAll('a').map(a => a.text())).toEqual(['Объявления', 'Профиль'])
+    expect(nav.get('dialog[open]').findAll('a').map(a => a.text())).toEqual(['Объявления', 'Профиль', 'Календарь телефона'])
   })
   it('closes when the session changes', async () => {
     const nav = await openMore()
@@ -65,5 +65,12 @@ describe('phone navigation', () => {
     expect(nav.findAll('[data-test="chat-badge"]')).toHaveLength(1)
     expect(nav.get('[data-test="chat-badge"]').text()).toBe('12')
     expect(nav.get('[data-test="notification-badge"]').text()).toBe('3')
+  })
+  it('marks the phone calendar destination without also selecting profile', async () => {
+    const nav = await openMore()
+    await useRouter().push('/settings/ical'); await flushPromises()
+    await nav.get('[data-test="nav-more"]').trigger('click')
+    expect(nav.get('dialog[open] a[href="/settings/ical"]').attributes('aria-current')).toBe('page')
+    expect(nav.get('dialog[open] a[href="/settings/profile"]').attributes('aria-current')).toBeUndefined()
   })
 })

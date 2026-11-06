@@ -26,8 +26,10 @@ test('base typography and controls are readable without page-specific styles', a
   }
 })
 
-for (const width of [320, 375, 767, 768, 1024, 1440, 1920]) {
-  test('shell fits ' + width + 'px and keeps its content bounded', async ({ page }, testInfo) => {
+for (const theme of ['dark', 'light']) {
+for (const width of [320, 390, 767, 768, 1024, 1440, 1920]) {
+  test(`${theme} shell fits ${width}px and keeps its content bounded`, async ({ page }, testInfo) => {
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
     await mockVisualApi(page)
     await page.setViewportSize({ width, height: 900 })
     for (const [path, heading] of [['/people', 'Люди'], ['/calendar', 'Календарь'], ['/settings/login', 'Вход'], ['/events/new', 'Создать событие']] as const) {
@@ -36,6 +38,13 @@ for (const width of [320, 375, 767, 768, 1024, 1440, 1920]) {
       const content = page.locator('.app-layout__inner')
       await expect(content).toBeVisible()
       const bounds = await content.boundingBox()
+      const shellStyle = await content.evaluate(element => {
+        const style = getComputedStyle(element)
+        return { background: style.backgroundColor, border: style.borderTopWidth, padding: style.paddingLeft, shadow: style.boxShadow }
+      })
+      expect(shellStyle).toEqual({ background: 'rgba(0, 0, 0, 0)', border: '0px', padding: '0px', shadow: 'none' })
+      const title = await page.getByRole('heading', { name: heading, exact: true }).boundingBox()
+      expect(title!.x).toBe(bounds!.x)
       expect(bounds!.width).toBeLessThanOrEqual(1152)
       expect(bounds!.x).toBeGreaterThanOrEqual(0)
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
@@ -47,13 +56,14 @@ for (const width of [320, 375, 767, 768, 1024, 1440, 1920]) {
         const bottomPadding = await page.locator('#main-content').evaluate(e => parseFloat(getComputedStyle(e).paddingBottom))
         expect(main!.y + main!.height - bottomPadding).toBeLessThanOrEqual(nav!.y)
       }
-      if ([375, 1440].includes(width)) {
+      if ([390, 1440].includes(width)) {
         await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important; }' })
         await page.evaluate(() => window.scrollTo(0, 0))
         await page.screenshot({ path: testInfo.outputPath(path.slice(1).replaceAll('/', '-') + '.png'), fullPage: true })
       }
     }
   })
+}
 }
 
 test('keyboard can skip navigation and the active link has a visible state', async ({ page }) => {

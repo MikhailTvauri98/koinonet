@@ -28,21 +28,19 @@ const chatLayout = computed(() => route.meta.chatLayout === true)
 .app-layout__content {
   flex: 1;
   min-width: 0;
-  padding: var(--ui-space-4);
-  padding-bottom: calc(var(--app-nav-height) + var(--ui-space-4));
+  padding: 24px 16px;
+  padding-bottom: calc(var(--app-nav-height) + 24px);
 }
 
 .app-layout__inner {
   width: 100%;
-  max-width: var(--ui-content-width);
+  max-width: min(var(--ui-content-width), 1152px);
   min-width: 0;
-  margin-inline: auto;
-  padding: min(var(--ui-space-6), 24px);
-  border: 1px solid var(--ui-border);
-  border-radius: var(--ui-radius-lg);
-  background: var(--ui-surface);
-  box-shadow: var(--ui-shadow);
+  margin-inline: 0;
 }
+
+/* Page roots may constrain reading width, but share the shell's left edge. */
+.app-layout .app-layout__inner > :deep(:is(main, section, div)) { margin-inline: 0; }
 
 .app-layout__skip {
   position: fixed;
@@ -50,7 +48,7 @@ const chatLayout = computed(() => route.meta.chatLayout === true)
   top: var(--ui-space-3);
   left: var(--ui-space-3);
   padding: var(--ui-space-3) var(--ui-space-4);
-  color: var(--ui-surface);
+  color: var(--ui-on-accent);
   background: var(--ui-accent);
   border-radius: var(--ui-radius-sm);
   transform: translateY(calc(-100% - 1rem));
@@ -60,30 +58,24 @@ const chatLayout = computed(() => route.meta.chatLayout === true)
   transform: translateY(0);
 }
 
-@media (max-width: 767px) {
-  .app-layout__content { padding-inline: min(var(--ui-space-3), 12px); }
-  .app-layout__inner { padding: min(var(--ui-space-4), 16px); }
-}
-
 @media (min-width: 768px) {
   .app-layout {
     flex-direction: row;
   }
 
   .app-layout__content {
-    padding: clamp(16px, 2.5vw, 40px);
+    padding: 32px clamp(24px, 2.2vw, 32px);
   }
 }
 /* Chat routes distribute available block size through every ancestor.
    Navigation supplies its measured border-box height, including safe areas. */
 .app-layout--chat { height: 100dvh; min-height: 0; }
 .app-layout--chat .app-layout__content { display: flex; min-height: 0; padding: 8px; padding-bottom: calc(var(--app-nav-height) + 8px); }
-.app-layout--chat .app-layout__inner { display: flex; flex-direction: column; min-height: 0; padding: 8px; overflow-y: auto; }
+.app-layout--chat .app-layout__inner { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
 @media (min-width: 768px) {
-  .app-layout--chat .app-layout__content { padding: min(var(--ui-space-4), 16px); }
-  .app-layout--chat .app-layout__inner { padding: min(var(--ui-space-4), 16px); }
+  .app-layout--chat .app-layout__content { padding: 16px; }
 }
 @media (min-width: 768px) and (max-height: 500px) {
-  .app-layout--chat .app-layout__content, .app-layout--chat .app-layout__inner { padding: 8px; }
+  .app-layout--chat .app-layout__content { padding: 8px; }
 }
 </style>

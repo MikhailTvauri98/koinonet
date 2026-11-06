@@ -18,6 +18,22 @@ interface NavItem {
   label: string
 }
 
+// Small local line icons share the labels' current color; labels stay visible.
+const icons: Record<string, string> = {
+  '/': 'm3 10 9-7 9 7v10H3V10Zm6 10v-7h6v7',
+  '/people': 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m8-7.87a4 4 0 0 1 0 7.75',
+  '/ministries': 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m8-7.87a4 4 0 0 1 0 7.75',
+  '/calendar': 'M8 2v4m8-4v4M3 10h18M4 4h16a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1m3 10h2m4 0h2m-8 4h2m4 0h2',
+  '/announcements': 'm3 10 14-5v14L3 14v-4Zm14 0h4v4h-4M5 15l2 6h4l-2-5',
+  '/chats': 'M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z',
+  '/notifications': 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-9 12a3 3 0 0 0 6 0',
+  '/settings/profile': 'M20 21v-2a7 7 0 0 0-14 0v2M13 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8',
+  '/settings/ical': 'M8 2v4m8-4v4M3 10h18M4 4h16v17H3V4h1m4 11 3 3 5-5',
+  '/admin/roles': 'm12 3 9 4v6c0 5-9 9-9 9s-9-4-9-9V7l9-4Zm-4 9 3 3 5-6',
+  '/admin/settings': 'M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-8 0v6',
+  '/admin/audit': 'M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h4',
+}
+
 // Раздел администрирования виден тому, у кого есть хотя бы один пункт в нём
 // (задача 29 добавила «Роли» тем же приёмом; задача 30 — «Настройки церкви»
 // и «Журнал», docs/architecture.md, раздел 10). `nav-admin` — сама секция,
@@ -57,6 +73,7 @@ const items = computed<NavItem[]>(() => {
   list.push({ to: '/chats', label: 'Чаты' })
   list.push({ to: '/notifications', label: 'Уведомления' })
   list.push({ to: '/settings/profile', label: 'Профиль' })
+  list.push({ to: '/settings/ical', label: 'Календарь телефона' })
 
   return list
 })
@@ -68,7 +85,7 @@ const secondaryItems = computed(() => {
 })
 function isActive(to: string) {
   if (to === '/') return route.path === '/'
-  if (to === '/settings/profile') return route.path.startsWith('/settings/')
+  if (to === '/settings/profile') return route.path.startsWith('/settings/') && route.path !== '/settings/ical'
   if (to === '/calendar' && route.path.startsWith('/events/')) return true
   return route.path === to || route.path.startsWith(to + '/')
 }
@@ -111,11 +128,12 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
         active-class=""
         exact-active-class=""
       >
+        <svg class="app-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path :d="icons[item.to]" /></svg>
         <span data-nav-label>{{ item.label }}</span>
         <span v-if="item.to === '/chats' && chats.unreadTotal" class="app-nav__badge" data-test="chat-badge" :aria-label="`Непрочитанных: ${chats.unreadTotal}`">{{ chats.unreadTotal }}</span>
         <span v-if="item.to === '/notifications' && notifications.unreadCount" class="app-nav__badge" data-test="notification-badge" :aria-label="`Непрочитанных: ${notifications.unreadCount}`">{{ notifications.unreadCount }}</span>
       </NuxtLink>
-      <NuxtLink v-if="item.to === '/calendar' && canManageCalendar" to="/templates" class="app-nav__item app-nav__subitem app-nav__secondary" :class="{ 'app-nav__item--active': isActive('/templates') }" :aria-current="isActive('/templates') ? 'page' : undefined" active-class="" exact-active-class="">Шаблоны</NuxtLink>
+      <NuxtLink v-if="item.to === '/calendar' && canManageCalendar" to="/templates" class="app-nav__item app-nav__subitem app-nav__secondary" :class="{ 'app-nav__item--active': isActive('/templates') }" :aria-current="isActive('/templates') ? 'page' : undefined" active-class="" exact-active-class=""><svg class="app-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4V3Zm4 5h8m-8 4h8m-8 4h4" /></svg><span>Шаблоны</span></NuxtLink>
     </template>
     <div v-if="adminItems.length" data-test="nav-admin" class="app-nav__admin">
       <NuxtLink
@@ -128,10 +146,12 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
         active-class=""
         exact-active-class=""
       >
-        {{ item.label }}
+        <svg class="app-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path :d="icons[item.to]" /></svg>
+        <span>{{ item.label }}</span>
       </NuxtLink>
     </div>
     <button type="button" data-test="nav-more" class="app-nav__item app-nav__more" :class="{ 'app-nav__item--active': moreActive }" aria-haspopup="dialog" :aria-expanded="moreOpen" @click="moreOpen = true">
+      <svg class="app-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg>
       <span data-nav-label>Ещё</span>
     </button>
     <NavigationMoreMenu v-if="moreOpen" :items="secondaryItems" :admin-items="adminItems" @close="moreOpen = false" />
@@ -142,7 +162,7 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
 .app-nav {
   display: flex;
   gap: var(--ui-space-1);
-  background: var(--ui-surface);
+  background: var(--ui-navigation);
   color: var(--ui-text-muted);
 }
 
@@ -150,7 +170,7 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
   display: flex;
   align-items: center;
   gap: min(var(--ui-space-3), 12px);
-  padding: min(var(--ui-space-2), 8px) min(var(--ui-space-2), 8px) min(var(--ui-space-6), 24px);
+  padding: 8px 8px 24px;
   color: var(--ui-text);
   font-weight: 650;
   overflow-wrap: anywhere;
@@ -159,9 +179,9 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
 .app-nav__mark {
   display: grid;
   place-items: center;
-  flex: 0 0 min(2.5rem, 40px);
-  height: min(2.5rem, 40px);
-  background: var(--ui-accent-soft);
+  flex: 0 0 36px;
+  height: 36px;
+  border: 1px solid var(--ui-accent);
   color: var(--ui-accent);
   border-radius: var(--ui-radius-md);
 }
@@ -169,14 +189,16 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
 .app-nav__item {
   display: flex;
   align-items: center;
-  gap: var(--ui-space-2);
+  gap: 8px;
   min-height: var(--ui-control-height);
-  padding: 0.625rem min(0.875rem, 14px);
+  min-width: 0;
+  padding: 10px 12px;
   border-radius: var(--ui-radius-sm);
   text-decoration: none;
   color: inherit;
-  font-size: 0.9375rem;
+  font-size: .875rem;
 }
+.app-nav__icon { flex: 0 0 20px; width: 20px; height: 20px; }
 
 .app-nav__item:hover {
   background: var(--ui-surface-muted);
@@ -188,8 +210,7 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
   background: var(--ui-accent-soft);
   color: var(--ui-accent);
 }
-.app-nav__subitem { font-size: .875rem; }
-.app-nav__badge { display: inline-block; margin-left: auto; padding: 0.1rem 0.4rem; border-radius: 999px; background: var(--ui-accent); color: white; font-size: 0.85em; }
+.app-nav__badge { display: inline-block; margin-left: auto; padding: 0.1rem 0.4rem; border-radius: 6px; background: var(--ui-accent); color: var(--ui-on-accent); font-size: .875rem; font-weight: 600; }
 
 .app-nav__admin {
   display: flex;
@@ -215,12 +236,14 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
   .app-nav__item {
     position: relative;
     flex: 1 0 auto;
+    flex-direction: column;
+    gap: 4px;
     min-width: 44px;
     min-height: 44px;
-    padding: 8px 2px;
+    padding: 8px 4px;
     border: 0;
     background: transparent;
-    font-size: .8125rem;
+    font-size: .875rem;
     line-height: 1.5;
     white-space: nowrap;
     text-align: center;
@@ -228,11 +251,11 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
   }
   .app-nav__more { display: flex; }
   .app-nav__item--active { background: var(--ui-accent-soft); }
-  .app-nav--unread .app-nav__item { padding-top: calc(.9375rem + 2px); padding-bottom: 4px; }
+  .app-nav--unread .app-nav__item { padding-top: calc(1rem + 4px); }
   .app-nav__badge {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 2px;
+    right: 4px;
     padding: 0 4px;
     font-size: .75rem;
     line-height: 1.25;
@@ -245,21 +268,21 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
     position: sticky;
     top: 0;
     align-self: flex-start;
-    flex: 0 0 min(var(--ui-sidebar-width), 280px);
-    width: min(var(--ui-sidebar-width), 280px);
+    flex: 0 0 clamp(224px, var(--ui-sidebar-width), 280px);
+    width: clamp(224px, var(--ui-sidebar-width), 280px);
     height: 100vh;
     height: 100dvh;
     overflow-y: auto;
     flex-direction: column;
     align-items: stretch;
-    padding: min(var(--ui-space-4), 16px);
+    padding: 24px 12px;
     border-right: 1px solid var(--ui-border);
   }
-  .app-nav__item { flex-shrink: 0; }
-  .app-nav__admin { margin-top: var(--ui-space-4); padding-top: var(--ui-space-4); border-top: 1px solid var(--ui-border); }
+  .app-nav__item { flex-shrink: 0; flex-wrap: wrap; }
+  .app-nav__admin { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ui-border); }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .app-nav { flex-basis: min(12rem, 280px); width: min(12rem, 280px); padding: min(var(--ui-space-3), 12px); }
+  .app-nav { flex-basis: clamp(192px, 12rem, 280px); width: clamp(192px, 12rem, 280px); }
 }
 </style>
