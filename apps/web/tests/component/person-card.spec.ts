@@ -374,3 +374,58 @@ describe('global role assignment', () => {
     expect(page.find('[data-test="role-r1"]').exists()).toBe(true)
   })
 })
+
+describe('direct chat entry from person card', () => {
+  beforeEach(() => { permit('people.view', 'chats.dm'); Object.assign(card, { has_account: true, user_id: 'account-p1' }) })
+  it('retries navigation to a confirmed chat without posting again after unrelated permission refresh', async () => {
+    const push = vi.spyOn(useRouter(), 'push').mockRejectedValueOnce(new Error('navigation')).mockResolvedValue(undefined)
+    post.mockResolvedValue({ data: { id: 'chat-confirmed' } })
+    const page = await mountPage()
+    await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+    expect(page.text()).toContain('Не удалось перейти')
+    permit('people.view', 'chats.dm', 'people.view_contacts'); await flushPromises()
+    await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(push).toHaveBeenNthCalledWith(2, '/chats/chat-confirmed')
+  })
+  it('ignores a late chat after the person route changes', async () => {
+    let finish!: (value: unknown) => void
+    post.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const push = vi.spyOn(useRouter(), 'push').mockResolvedValue(undefined)
+    const page = await mountPage()
+    await page.get('[data-test="write"]').trigger('click')
+    card = { ...card, id: 'p2', user_id: 'account-p2' }; route.params.id = 'p2'; await flushPromises()
+    finish({ data: { id: 'old-chat' } }); await flushPromises()
+    expect(push).not.toHaveBeenCalled()
+  })
+})
+
+describe('person direct chat context isolation', () => {
+  beforeEach(() => { permit('people.view', 'chats.dm', 'people.manage'); Object.assign(card, { has_account: true, user_id: 'account-p1' }) })
+  it('allows another card to start while the previous request is pending and masks its late error', async () => {
+    let reject!: (value: unknown) => void
+    post.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({ data: { id: 'new-chat' } })
+    const push = vi.spyOn(useRouter(), 'push').mockResolvedValue(undefined)
+    const page = await mountPage()
+    await page.get('[data-test="write"]').trigger('click')
+    card = { ...card, id: 'p2', user_id: 'account-p2' }; route.params.id = 'p2'; await flushPromises()
+    await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+    expect(post).toHaveBeenCalledTimes(2)
+    expect(push).toHaveBeenCalledWith('/chats/new-chat')
+    reject(new Error('old card error')); await flushPromises()
+    expect(page.text()).not.toContain('Не удалось открыть личный чат')
+    expect(page.get('[data-test="write"]').attributes('disabled')).toBeUndefined()
+  })
+  it('does not post the previous card account during an immediate route change', async () => {
+    const page = await mountPage()
+    route.params.id = 'p2'
+    await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+    expect(post).not.toHaveBeenCalled()
+  })
+  it('keeps archive actions locked during direct chat creation', async () => {
+    post.mockImplementationOnce(() => new Promise(() => {}))
+    const page = await mountPage()
+    await page.get('[data-test="write"]').trigger('click')
+    expect(page.get('[data-test="archive"]').attributes('disabled')).toBeDefined()
+  })
+})

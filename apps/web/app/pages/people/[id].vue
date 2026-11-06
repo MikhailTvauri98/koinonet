@@ -4,6 +4,7 @@ import PersonContacts from '~/components/people/PersonContacts.vue'
 import PersonRoles from '~/components/people/PersonRoles.vue'
 import PersonAccountActions from '~/components/people/PersonAccountActions.vue'
 import { personStatuses, type Person, type PersonStatus } from '~/utils/people'
+import { isDirectChatTarget, useDirectChatNavigation } from '~/composables/useStartDirectChat'
 import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
@@ -21,6 +22,8 @@ const actionError = ref('')
 const notice = ref('')
 const personId = computed(() => String(route.params.id))
 const canView = computed(() => can('people.view') || auth.person?.id === personId.value)
+const direct = useDirectChatNavigation(() => personId.value)
+const canWrite = computed(() => can('people.view') && can('chats.dm') && person.value?.id === personId.value && isDirectChatTarget(person.value, auth.user?.id))
 let requestVersion = 0
 let active = true
 
@@ -62,7 +65,7 @@ async function changed() {
 }
 
 async function archive(restore = false) {
-  if (busy.value || !can('people.manage')) return
+  if (busy.value || direct.pending.value || !can('people.manage')) return
   busy.value = true
   actionError.value = ''
   const id = personId.value
@@ -77,15 +80,7 @@ async function archive(restore = false) {
 }
 
 async function write() {
-  const target = person.value, session = auth.sessionVersion
-  if (busy.value || !can('chats.dm') || !target?.user_id || !target.has_account || target.account_disabled || target.archived || target.user_id === auth.user?.id) return
-  busy.value = true; actionError.value = ''
-  try {
-    const result = await api.post<{ data: { id: string } }>('/chats', { type: 'direct', user_id: target.user_id })
-    if (active && session === auth.sessionVersion && personId.value === target.id) await router.push(`/chats/${result.data.id}`)
-  } catch (failure) {
-    if (active && session === auth.sessionVersion && personId.value === target.id) actionError.value = apiErrorMessage(failure, 'Не удалось открыть личный чат. Попробуйте ещё раз.')
-  } finally { if (active) busy.value = false }
+  if (!busy.value && canWrite.value && person.value?.user_id) await direct.open(person.value.user_id)
 }
 
 // Изменения прав требуют перечитать серверную видимость контактов и заметки.
@@ -108,7 +103,8 @@ await load()
         <div><h1>{{ person.full_name }}</h1><p>{{ personStatuses[person.status as PersonStatus] ?? person.status }}</p></div>
       </header>
       <p v-if="person.archived" class="notice">В архиве</p>
-      <button v-if="can('chats.dm') && person.has_account && person.user_id && !person.account_disabled && !person.archived && person.user_id !== auth.user?.id" type="button" data-test="write" :disabled="busy" @click="write">Написать</button>
+      <button v-if="canWrite" type="button" data-test="write" :disabled="busy || direct.pending.value" @click="write">{{ direct.confirmedId.value ? 'Открыть чат' : direct.pending.value ? 'Открываем чат…' : 'Написать' }}</button>
+      <p v-if="direct.error.value" role="alert">{{ direct.error.value }}</p>
       <p v-if="actionError && !can('people.manage')" role="alert">{{ actionError }}</p>
       <p v-if="notice" role="status">{{ notice }}</p>
       <PersonForm v-if="editing && can('people.manage')" :person="person" @updated="changed" @cancel="editing = false" />
@@ -130,12 +126,12 @@ await load()
       <PersonAccountActions :person="person" @changed="changed" />
       <section v-if="can('people.manage')">
         <h2>Архивация</h2>
-        <button v-if="person.archived" type="button" data-test="restore" :disabled="busy" @click="archive(true)">Вернуть из архива</button>
-        <button v-else type="button" data-test="archive" :disabled="busy" @click="confirmArchive = true">Архивировать</button>
+        <button v-if="person.archived" type="button" data-test="restore" :disabled="busy || direct.pending.value" @click="archive(true)">Вернуть из архива</button>
+        <button v-else type="button" data-test="archive" :disabled="busy || direct.pending.value" @click="confirmArchive = true">Архивировать</button>
         <div v-if="confirmArchive" role="group" aria-label="Подтверждение архивации" class="notice">
           <p>Архивировать человека? Запись будет скрыта из активного списка, история сохранится.</p>
-          <button type="button" data-test="confirm-action" :disabled="busy" @click="archive()">Подтвердить архивацию</button>
-          <button type="button" data-test="cancel-action" :disabled="busy" @click="confirmArchive = false">Отмена</button>
+          <button type="button" data-test="confirm-action" :disabled="busy || direct.pending.value" @click="archive()">Подтвердить архивацию</button>
+          <button type="button" data-test="cancel-action" :disabled="busy || direct.pending.value" @click="confirmArchive = false">Отмена</button>
         </div>
         <p v-if="actionError" role="alert">{{ actionError }}</p>
       </section>

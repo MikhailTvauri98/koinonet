@@ -352,7 +352,7 @@ export async function addMember(page: Page, lastName: string, name: string): Pro
   const [searched] = await Promise.all([
     page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/people'
       && new URL(response.url()).searchParams.get('search') === lastName && response.request().method() === 'GET'),
-    dialog.getByLabel('Поиск по имени и фамилии').fill(lastName),
+    dialog.getByLabel('Найти человека').fill(lastName),
   ])
   expect(searched.status()).toBe(200)
   await Promise.all([

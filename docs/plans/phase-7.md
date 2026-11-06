@@ -218,13 +218,15 @@
 
 **Цель:** начать чат с доступным человеком без промежуточного открытия его профиля.
 **Зависимости:** 9–10.
-**Файлы:** новые `app/components/chat/NewDirectChatDialog.vue`, `app/composables/useStartDirectChat.ts`, `tests/component/new-direct-chat.spec.ts`; `app/pages/chats/index.vue`, `app/pages/people/[id].vue`, `app/components/ministries/MemberDetailsDialog.vue`, `tests/component/person-card.spec.ts`, `e2e/chat.spec.ts`.
+**Файлы:** новые `app/components/chat/NewDirectChatDialog.vue`, `app/composables/useStartDirectChat.ts`, `tests/component/new-direct-chat.spec.ts`; `app/pages/chats/index.vue`, `app/pages/people/[id].vue`, `app/components/ministries/MemberDetailsDialog.vue`, `tests/component/person-card.spec.ts`, `e2e/chat.spec.ts`, `tests/visual/new-direct-chat.pw.ts`, `e2e/fixtures.ts` (подпись поиска после задачи 9).
 **Интерфейс:** `useStartDirectChat(): { pending: Ref<boolean>; error: Ref<string>; start(userId:string):Promise<string|null> }`; существующий `POST /chats {type:'direct',user_id}`; сохранённый id возвращается только для текущей сессии. Если у MemberResource нет user_id, получать доступную карточку по personId только при people.view, не предполагать равенство идентификаторов.
 
-- [ ] RED: доступная кнопка при `people.view`+`chats.dm`, выбор→запрос→переход; нет запросов без права; исключены сам человек, архивные и отключённые; повтор не создаёт новый запрос во время ожидания.
-- [ ] Реализовать общий запуск для списка чатов/карточки/подробностей участника; ошибки и сброс при смене аккаунта. Новая группа остаётся отдельным действием со своим правом.
-- [ ] GREEN: new-direct-chat/person-card; e2e chat проверяет возврат существующего чата той же пары. Пустой личный чат открыт, но не искусственно добавлен в серверный список до первого сообщения.
-- [ ] Общие проверки, документы, саморевью, коммит.
+- [x] RED: доступная кнопка при `people.view`+`chats.dm`, выбор→запрос→переход; нет запросов без права; исключены сам человек, архивные и отключённые; повтор не создаёт новый запрос во время ожидания.
+- [x] Реализовать общий запуск для списка чатов/карточки/подробностей участника; ошибки и сброс при смене аккаунта. Новая группа остаётся отдельным действием со своим правом.
+- [x] GREEN: new-direct-chat/person-card; e2e chat проверяет возврат существующего чата той же пары. Пустой личный чат открыт, но не искусственно добавлен в серверный список до первого сообщения.
+- [x] Общие проверки, документы, саморевью, коммит.
+
+**Проверка 06.11.2026:** web719/719, lint0 ошибок (прежнее предупреждение MessageList), typecheck/generate/verify-sw0; Edge visual13/13. Native PHP8.4/PG16/Redis: два существующих chat E2E прошли; отдельный новый direct E2E1/1 доказывает201→200, один ID пары и отсутствие пустого чата в списке. Подробный отчёт и просмотренные снимки — `.superpowers/sdd/phase-7/task-11-report.md`, `task-11-screenshots/`; итоговая общая E2E-приёмка остаётся задаче20.
 
 **Критерий готовности:** сценарий «Чаты → Новое сообщение → Человек» завершён реальным API.
 

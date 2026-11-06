@@ -193,3 +193,39 @@ test('a plain group member cannot delete another sender but the owner can modera
   expect(live.snapshot()).toEqual(before)
   await testInfo.attach('chat-moderation', { body: JSON.stringify({ id, denied: denied.status(), adminMessage, memberMessage, frames: live.frames }, null, 2), contentType: 'application/json' })
 })
+
+test('a new direct message opens an empty chat and reuses the same pair after returning to the list', async ({ page, openPhone }, testInfo) => {
+  test.setTimeout(180_000)
+  await loginAsAdmin(page)
+  const person = { lastName: 'Личныйчатов', firstName: 'Александр', login: 'direct-chat@e2e.test', globalRole: 'Личный чат e2e' }
+  await createGlobalRole(page, person.globalRole, ['Видеть справочник'])
+  await createInvitedAccount(page, openPhone, person)
+  await openSection(page, 'Чаты', 'Чаты')
+  const statuses: number[] = [], ids: string[] = []
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.getByRole('button', { name: 'Новое сообщение', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Новое сообщение', exact: true })
+    await Promise.all([
+      page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/people' && new URL(response.url()).searchParams.get('search') === person.lastName),
+      dialog.getByRole('searchbox', { name: 'Найти человека', exact: true }).fill(person.lastName),
+    ])
+    const created = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/chats' && response.request().method() === 'POST')
+    await dialog.getByRole('button', { name: fullName(person), exact: true }).click()
+    const response = await created
+    statuses.push(response.status())
+    const id = ((await response.json()) as { data: { id: string } }).data.id
+    ids.push(id)
+    await expect(page).toHaveURL(`/chats/${id}`)
+    await expect(page.getByTestId('composer')).toBeEnabled()
+    await expect(page.getByText('Пока нет сообщений', { exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`direct-empty-real-api-${attempt + 1}.png`) })
+    const list = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/chats' && response.request().method() === 'GET')
+    await visitAuthenticated(page, '/chats')
+    const listData = ((await (await list).json()) as { data: { id: string }[] }).data
+    expect(listData.some(chat => chat.id === id)).toBe(false)
+    await expect(page.locator(`a[href="/chats/${id}"]`)).toHaveCount(0)
+  }
+  expect(statuses).toEqual([201, 200])
+  expect(ids[1]).toBe(ids[0])
+  await testInfo.attach('direct-chat-idempotency', { body: JSON.stringify({ statuses, ids }), contentType: 'application/json' })
+})
