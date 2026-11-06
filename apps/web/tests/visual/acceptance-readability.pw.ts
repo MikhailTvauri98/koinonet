@@ -58,7 +58,7 @@ test('fixed labels and detail actions keep normal words at enlarged text', async
     ['/people', '.people-page__checkbox'],
     ['/people/p1', '.person-card h2, .person-card button'],
     ['/ministries/m1', '.ministry-card .ministry-tabs a, .ministry-card button'],
-    ['/settings/ical', '.ical-settings > button'],
+    ['/settings/ical', '.ical-settings button'],
   ] as const) {
     await openEnlarged(page, path)
     await evidence(page, info, path.slice(1).replaceAll('/', '-'), await wholeWords(page.locator(selector)))
@@ -125,7 +125,7 @@ test('detail controls keep visible spacing and image attachments keep list seman
       : path === '/events/e1'
         ? page.locator('.slot__actions button')
         : path === '/notifications'
-          ? page.locator('.notifications-page > a, .notifications-page [data-test=mark-all-read]')
+          ? page.locator('.notifications-page a[href="/settings/notifications"], .notifications-page [data-test=mark-all-read]')
           : page.locator('[data-test=edit-template], [data-test=toggle-active]')
     expect(await controls.count()).toBeGreaterThanOrEqual(2)
     const first = (await controls.nth(0).boundingBox())!, second = (await controls.nth(1).boundingBox())!
