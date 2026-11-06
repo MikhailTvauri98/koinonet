@@ -25,7 +25,7 @@ const initials = computed(() => [props.person.last_name, props.person.first_name
 </template>
 
 <style scoped>
-.person-item { min-width: 0; background: var(--ui-surface); }
+.person-item { container-type: inline-size; min-width: 0; background: var(--ui-surface); }
 .person-item + .person-item { border-top: 1px solid var(--ui-border); }
 .person-item__open { display: flex; align-items: center; gap: var(--ui-space-3); min-height: 76px; padding: 1rem; color: var(--ui-text); text-decoration: none; overflow-wrap: anywhere; }
 .person-item__open:hover { background: var(--ui-surface-muted); }
@@ -36,4 +36,9 @@ const initials = computed(() => [props.person.last_name, props.person.first_name
 .person-item__details { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); color: var(--ui-text-muted); font-size: .875rem; }
 .person-item__badge { padding-inline: var(--ui-space-2); border-radius: 6px; background: var(--ui-surface-muted); }
 .person-item__arrow { color: var(--ui-text-muted); flex-shrink: 0; }
+@container (max-width: 16rem) {
+  .person-item__open { display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+  .person-item__body { grid-column: 1 / -1; grid-row: 2; }
+  .person-item__arrow { grid-column: 2; grid-row: 1; justify-self: end; }
+}
 </style>

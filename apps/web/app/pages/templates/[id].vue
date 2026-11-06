@@ -94,8 +94,8 @@ await load()
             <button type="button" class="ui-button ui-button--primary" data-test="create-event" :disabled="busy || !!createdId" @click="act('create')">{{ busy ? 'Создаётся…' : 'Создать событие на дату' }}</button>
             <p v-if="createdId" role="status">Событие создано. <NuxtLink :to="createdLink">Открыть событие</NuxtLink></p>
           </FormSection>
-          <FormSection v-if="manageable" title="Автоматическое создание" :description="item.recurrence ? 'Активный шаблон создаёт события по правилу повторения.' : 'Без повторения события создаются только вручную.'">
-            <button type="button" class="ui-button" data-test="toggle-active" :disabled="busy" @click="act('active')">{{ item.active ? 'Выключить автоматическое создание' : 'Включить автоматическое создание' }}</button>
+          <FormSection v-if="manageable" title="Создание по правилу" :description="item.recurrence ? 'Активный шаблон создаёт события автоматически по правилу повторения.' : 'Без повторения события создаются только вручную.'">
+            <button type="button" class="ui-button" data-test="toggle-active" :disabled="busy" @click="act('active')">{{ item.active ? 'Выключить создание' : 'Включить создание' }}</button>
           </FormSection>
         </div>
         <p v-if="actionError && !confirmArchive" role="alert" class="ui-field-error">{{ actionError }}</p>

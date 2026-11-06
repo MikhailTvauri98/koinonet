@@ -87,4 +87,7 @@ label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: 
 input { width: min(1.125rem, 24px); height: min(1.125rem, 24px); margin: .3em 0 0; }
 button { max-width: 100%; overflow-wrap: anywhere; }
 [role='alert'] { color: var(--ui-danger); }
+@media (max-width: 359px) {
+  .notification-settings > :deep(.ui-form-section) { padding: 8px; }
+}
 </style>

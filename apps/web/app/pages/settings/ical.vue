@@ -48,7 +48,7 @@ onBeforeUnmount(() => { generation++ })
     <p v-else>Ссылка недоступна. Войдите в аккаунт заново.</p>
     </FormSection>
     <UiDialog :open="confirming" label="Перевыпуск ссылки календаря" @close="confirming = false">
-      <h2>Перевыпустить ссылку?</h2>
+      <h2>Заменить ссылку?</h2>
       <p>Старая ссылка перестанет работать. После перевыпуска добавьте новую подписку в календарь телефона.</p>
       <p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
       <template #actions>
@@ -67,4 +67,7 @@ button[type='submit'], .primary { background: var(--ui-accent); color: var(--ui-
 button[type='submit']:hover:not(:disabled), .primary:hover:not(:disabled) { background: var(--ui-accent-hover); }
 .danger { color: var(--ui-danger); border-color: var(--ui-danger); }
 [role='alert'], .error { color: var(--ui-danger); }
+@media (max-width: 359px) {
+  .ical-settings button { padding-inline: 8px; }
+}
 </style>
