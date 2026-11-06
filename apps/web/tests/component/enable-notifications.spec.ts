@@ -3,6 +3,7 @@ import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAuthStore } from '~/stores/auth'
 import EnableNotificationsButton from '~/components/notifications/EnableNotificationsButton.vue'
 
 const subscribe = vi.fn()
@@ -26,6 +27,18 @@ describe('enable notifications button', () => {
     expect(subscribe).not.toHaveBeenCalled()
     await wrapper.find('[data-test="enable-push"]').trigger('click')
     expect(subscribe).toHaveBeenCalledOnce()
+  })
+  it('ignores an old session failure after logout and relogin, including the same account', async () => {
+    let reject!: (error: Error) => void
+    subscribe.mockReturnValueOnce(new Promise((_, fail) => { reject = fail }))
+    const wrapper = await mountSuspended(EnableNotificationsButton)
+    await wrapper.get('[data-test="enable-push"]').trigger('click')
+    useAuthStore().sessionVersion++
+    await flushPromises()
+    reject(new Error('old session failed'))
+    await flushPromises()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="enable-push"]').attributes('disabled')).toBeUndefined()
   })
   it('explains installation on iOS Safari even when push APIs are missing', async () => {
     platform.isIos = true

@@ -65,6 +65,21 @@ describe('connection gate', () => {
     expect(replace).toHaveBeenCalledWith(expect.objectContaining({ force: true }))
   })
 
+  it('keeps a failed navigation retry available without an unhandled rejection', async () => {
+    const auth = useAuthStore()
+    auth.initialized = false
+    auth.connectionLost = true
+    const gate = await mountGate()
+    const replace = vi.spyOn(useRouter(), 'replace').mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined)
+    await gate.get('[data-test="retry-connection"]').trigger('click')
+    await flushPromises()
+    expect(gate.text()).toContain('Не удалось повторить проверку')
+    expect(gate.get('[data-test="retry-connection"]').attributes('disabled')).toBeUndefined()
+    await gate.get('[data-test="retry-connection"]').trigger('click')
+    await flushPromises()
+    expect(replace).toHaveBeenCalledTimes(2)
+  })
+
   it('keeps the screen and offers a retry when a refresh of the session got no answer mid-session', async () => {
     useAuthStore().connectionLost = true
 

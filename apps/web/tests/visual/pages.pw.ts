@@ -158,3 +158,79 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
     })
   })
 }
+
+// Task18 owns only notification-center scenarios in this shared suite.
+test.describe('task18 notification center', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' })
+  for (const theme of ['dark', 'light'] as const) {
+    for (const [width, height, scale] of [[390, 844, 100], [1440, 1000, 100], [320, 900, 200], [375, 390, 100], [320, 390, 200]] as const) {
+      test(`task18 ${theme} ${width}x${height}px ${scale}%: notification dates, unread text, pending read and keyboard`, async ({ page }, info) => {
+        await mockVisualApi(page)
+        await page.setViewportSize({ width, height })
+        await page.addInitScript(({ theme, scale }) => {
+          localStorage.setItem('church.ui.theme', theme)
+          Object.defineProperty(window, 'Notification', { configurable: true, value: Object.assign(function () {}, { permission: 'denied' }) })
+          document.addEventListener('DOMContentLoaded', () => {
+            document.documentElement.style.fontSize = `${scale}%`
+            const style = document.createElement('style'); style.textContent = 'nuxt-devtools-frame { display: none !important }'; document.head.append(style)
+          })
+        }, { theme, scale })
+        const entries = [
+          { id: 'new', category: 'assignments', title: 'Вы назначены на событие «Воскресное собрание»', body: 'Музыкальное служение · Вокал. Начало события в 10:00. ' + 'Пожалуйста, проверьте время и место события. '.repeat(3), url: '/calendar', read_at: null, created_at: '2026-12-31T21:05:00Z' },
+          { id: 'read', category: 'announcements', title: 'Подготовка к праздничному событию', body: 'Подробности доступны в объявлении для всей церкви.', url: '/calendar', read_at: '2027-01-01T08:00:00Z', created_at: '2027-01-01T07:00:00Z' },
+          { id: 'older', category: 'reminders', title: 'Напоминание о назначении', body: 'Длинныйтекстбезпробелов'.repeat(5), url: '/calendar', read_at: null, created_at: '2026-12-31T20:59:00Z' },
+        ]
+        await page.route('**/api/v1/notifications', route => route.fulfill({ json: { data: entries, meta: { unread_count: 2 }, next_cursor: null } }))
+        let finish!: () => void
+        const pending = new Promise<void>(resolve => { finish = resolve })
+        await page.route('**/api/v1/notifications/read', async route => { await pending; await route.fulfill({ status: 500, json: { message: 'Private diagnostic' } }) })
+        await page.goto('/notifications')
+        await expect(page.getByRole('heading', { name: 'Уведомления', exact: true })).toBeVisible()
+        await expect(page.locator('.notification-list__group')).toHaveCount(2)
+        await expect(page.locator('.notification-list__group h2').first()).toHaveText('1 янв. 2027 г.')
+        await expect(page.locator('[data-test=notification-new]')).toContainText('00:05')
+        await expect(page.locator('[data-test=notification-new]')).toContainText('Непрочитано')
+        await expect(page.locator('[data-test=notification-read]')).not.toContainText('Непрочитано')
+        await expect(page.locator('.enable-notifications')).toContainText('запрещены')
+        await expect(page.locator('[data-test=enable-push]')).toHaveCount(0)
+        const axes = await page.locator('.page-header h1, .enable-notifications, .notification-list__group h2').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().left))
+        expect(Math.max(...axes) - Math.min(...axes)).toBeLessThanOrEqual(1)
+        await fits(page)
+        await page.screenshot({ path: info.outputPath(`notifications-${height}h.png`), fullPage: true })
+        const markAll = page.getByRole('button', { name: 'Отметить всё прочитанным' })
+        await markAll.focus()
+        await markAll.press('Enter')
+        await expect(markAll).toBeDisabled()
+        await expect(page.locator('[data-test=notification-summary]')).toContainText('Отмечаем')
+        await page.screenshot({ path: info.outputPath(`notifications-pending-${height}h.png`), fullPage: true })
+        finish()
+        await expect(page.locator('.notifications-page [role=alert]')).toContainText('Не удалось отметить')
+        await expect(page.locator('[data-test=notification-summary]')).toHaveText('Непрочитано: 2')
+        await expect(page.locator('#main-content')).not.toContainText('Private diagnostic')
+        const older = page.locator('[data-test=notification-older]')
+        // Tab to the last row using native focus scrolling on a short, enlarged screen.
+        await page.locator('[data-test=notification-read]').focus()
+        await page.keyboard.press('Tab')
+        await expect(older).toBeFocused()
+        await expect.poll(() => older.evaluate(element => element.getBoundingClientRect().top)).toBeGreaterThanOrEqual(0)
+        const position = await older.boundingBox()
+        const navigation = width < 768 ? await page.locator('.app-nav').boundingBox() : null
+        // A long row may exceed the viewport; its focused top must remain above navigation.
+        const navTop = navigation?.y ?? height
+        expect(position!.y).toBeGreaterThanOrEqual(0)
+        expect(position!.y).toBeLessThan(navTop)
+        if (position!.height < navTop - 32) expect(position!.y + position!.height).toBeLessThanOrEqual(navTop)
+        // Combined 320x390/200% is diagnostic only: the existing fixed navigation
+        // occupies almost the full viewport. The coordinator has this separate finding.
+        if (height > 390 || scale === 100) {
+          const title = await older.locator('strong').boundingBox()
+          expect(title!.y).toBeGreaterThanOrEqual(0)
+          expect(title!.y + title!.height).toBeLessThanOrEqual(navTop)
+        }
+        await page.screenshot({ path: info.outputPath(`notifications-keyboard-${height}h.png`), fullPage: false })
+        await fits(page)
+      })
+    }
+  }
+
+})

@@ -16,7 +16,7 @@ import { usePlatform } from '~/composables/usePlatform'
 const DISMISS_KEY = 'install-prompt:dismissed'
 
 interface BeforeInstallPromptEvent extends Event {
-  prompt: () => void
+  prompt: () => void | Promise<void>
   userChoice?: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
@@ -45,6 +45,9 @@ const platform = usePlatform()
 const dismissed = ref(readDismissed())
 const standalone = ref(platform.isStandalone)
 const iosSafari = ref(platform.isIosSafari)
+const busy = ref(false)
+const installError = ref('')
+let active = true
 const deferredPrompt = ref<BeforeInstallPromptEvent | null>(null)
 
 function onBeforeInstallPrompt(event: Event): void {
@@ -64,6 +67,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  active = false
   window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
   window.removeEventListener('appinstalled', onAppInstalled)
 })
@@ -77,14 +81,16 @@ const variant = computed<'ios' | 'android' | null>(() => {
 
 async function install(): Promise<void> {
   const event = deferredPrompt.value
-  if (!event) return
-  event.prompt()
+  if (!event || busy.value) return
+  busy.value = true
+  installError.value = ''
   try {
+    await event.prompt()
     await event.userChoice
-  }
-  finally {
-    deferredPrompt.value = null
-  }
+    if (active && deferredPrompt.value === event) deferredPrompt.value = null
+  } catch {
+    if (active) installError.value = 'Не удалось открыть подсказку установки. Попробуйте ещё раз.'
+  } finally { if (active) busy.value = false }
 }
 
 function dismiss(): void {
@@ -94,27 +100,25 @@ function dismiss(): void {
 </script>
 
 <template>
-  <aside v-if="variant" data-test="install-prompt" role="note">
-    <template v-if="variant === 'ios'">
-      <p>
-        Поставьте приложение на домашний экран: нажмите «Поделиться» внизу экрана
-        и выберите На экран «Домой».
-      </p>
-    </template>
-    <template v-else>
-      <p>Поставьте приложение на домашний экран для быстрого доступа.</p>
-      <button type="button" data-test="install-button" @click="install">
-        Установить
-      </button>
-    </template>
-    <button type="button" data-test="dismiss-install" @click="dismiss">
-      Не сейчас
-    </button>
+  <aside v-if="variant" data-test="install-prompt" role="note" aria-label="Приложение на домашнем экране">
+    <div class="install-prompt__content">
+      <strong>Приложение на домашнем экране</strong>
+      <p v-if="variant === 'ios'">Поставьте приложение на домашний экран: нажмите «Поделиться» внизу экрана и выберите На экран «Домой».</p>
+      <p v-else>Поставьте приложение на домашний экран для быстрого доступа.</p>
+      <p v-if="installError" role="alert">{{ installError }}</p>
+    </div>
+    <div class="install-prompt__actions">
+      <button v-if="variant === 'android'" type="button" class="ui-button ui-button--primary" data-test="install-button" :disabled="busy" @click="install">{{ busy ? 'Открываем…' : 'Установить' }}</button>
+      <button type="button" class="ui-button" data-test="dismiss-install" @click="dismiss">Не сейчас</button>
+    </div>
   </aside>
 </template>
 
 <style scoped>
-aside { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #edf1f6; border-top: 1px solid #8b96a6; }
-p { margin: 0; flex: 1 1 auto; min-width: 0; }
-button { font: inherit; padding: 0.5rem 0.9rem; border: 1px solid #8b96a6; border-radius: 0.3rem; background: #fff; }
+aside { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-4); padding: var(--ui-space-4) clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--ui-border); background: var(--ui-surface); color: var(--ui-text); overflow-wrap: anywhere; }
+.install-prompt__content { flex: 1 1 24rem; min-width: 0; }
+strong { font-weight: 600; }
+p { margin: var(--ui-space-2) 0 0; color: var(--ui-text-muted); font-size: .875rem; }
+p[role='alert'] { color: var(--ui-danger); }
+.install-prompt__actions { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); max-width: 100%; }
 </style>
