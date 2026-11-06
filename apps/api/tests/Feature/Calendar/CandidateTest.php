@@ -78,12 +78,41 @@ it('limits free search to twenty results and requires filling permission for fre
     Person::factory()->count(25)->create(['last_name' => 'Прокопенко']);
     $slot = EventSlot::factory()->create();
     $this->getJson("/api/v1/slots/{$slot->id}/candidates?search=прокоп")->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('data.0.has_role', false);
-    $this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertOk()->assertJsonCount(0, 'data');
+    $this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertOk()->assertJsonCount(20, 'data');
     app('auth')->forgetGuards();
     $ministry = ministryWithRoles();
     $user = actingAsUser();
     memberOf($ministry, $user->person, [$ministry->roles()->where('name', 'Лидер')->sole()->id]);
     $this->getJson("/api/v1/slots/{$slot->id}/candidates?search=прокоп")->assertForbidden();
+});
+
+it('previews the stable first twenty active people for an empty free search', function () {
+    $actor = actingAsUserWith([Permission::CalendarChurchManage, Permission::PeopleView]);
+    $actor->person->update(['last_name' => 'Яяя']);
+    $people = collect(range(22, 1))->map(fn ($number) => Person::factory()->create([
+        'last_name' => sprintf('А%02d', $number), 'first_name' => 'Анна',
+    ]));
+    Person::factory()->archived()->create(['last_name' => 'А00']);
+    $slot = EventSlot::factory()->create();
+    $expected = $people->sortBy('last_name')->take(20)->pluck('id')->values()->all();
+
+    foreach (['', '?search=', '?search=%20%20'] as $query) {
+        $data = $this->getJson("/api/v1/slots/{$slot->id}/candidates{$query}")->assertOk()->json('data');
+        expect(array_column(array_column($data, 'person'), 'id'))->toBe($expected);
+    }
+});
+
+it('previews only the viewer without people view', function () {
+    $actor = actingAsUserWith([Permission::CalendarChurchManage]);
+    Person::factory()->create(['last_name' => 'Чужое имя']);
+    $slot = EventSlot::factory()->create();
+
+    $this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.person.id', $actor->person_id)
+        ->assertJsonPath('data.0.person.full_name', $actor->person->fullName())
+        ->assertJsonPath('data.0.person.photo_thumb_url', null);
+    $actor->person->update(['archived_at' => now()]);
+    $this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertOk()->assertJsonCount(0, 'data');
 });
 
 it('redacts candidate identities and hidden conflict details but keeps the warning', function () {
@@ -124,4 +153,20 @@ it('excludes archived role candidates and unavailable slots', function () {
     $this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertForbidden();
     $slot->update(['archived_at' => now()]);
     $this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertNotFound();
+});
+
+it('keeps inaccessible conflict details hidden in the free preview', function () {
+    $actor = actingAsUserWith([Permission::CalendarChurchManage, Permission::PeopleView]);
+    $actor->person->update(['last_name' => 'Яяя']);
+    $person = Person::factory()->create(['last_name' => 'Ааа']);
+    $hidden = Event::factory()->ministry(ministryWithRoles('Закрытое'))->create(['visibility' => 'assigned', 'title' => 'Скрытое название']);
+    EventAssignment::factory()->for(EventSlot::factory()->for($hidden)->create())->for($person)->create();
+    $slot = EventSlot::factory()->for(Event::factory()->create(['starts_at' => $hidden->starts_at, 'ends_at' => $hidden->ends_at]))->create();
+
+    $this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertOk()
+        ->assertJsonPath('data.0.person.id', $person->id)
+        ->assertJsonPath('data.0.conflicts.0.event_id', null)
+        ->assertJsonPath('data.0.conflicts.0.title', 'Пересечение с недоступным событием')
+        ->assertJsonPath('data.0.conflicts.0.starts_at', null)
+        ->assertJsonPath('data.0.conflicts.0.ends_at', null);
 });

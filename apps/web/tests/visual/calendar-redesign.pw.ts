@@ -359,3 +359,135 @@ test('saved detail restores focus while the follow-up GET is pending and calenda
   expect((await page.locator('[data-test=calendar-return]').boundingBox())!.height).toBeGreaterThanOrEqual(44)
   expect(api.unhandled).toEqual([])
 })
+
+const candidateScreenshots = resolve('../../.superpowers/sdd/phase-7/task-7-screenshots')
+for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
+  test(`${theme} candidate preview search and confirmed warnings at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    const api = await installAcceptanceApi(page)
+    const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
+    const conflicts = [{ event_id: 'visible', title: 'Репетиция музыкального служения', starts_at: '2026-11-08T08:00:00Z', ends_at: '2026-11-08T09:00:00Z' }, { event_id: null, title: 'Пересечение с недоступным событием', starts_at: null, ends_at: null }]
+    const requests: string[] = []
+    let writes = 0, failRead = false
+    api.respond('GET', '/slots/s1/candidates', request => {
+      const query = new URL(request.url()).searchParams.get('search') ?? ''; requests.push(query)
+      return { json: { data: query ? [] : [
+        { person: { id: 'p1', full_name: api.data.person.full_name, photo_thumb_url: api.data.person.photo_url }, has_role: false, conflicts: [] },
+        { person, has_role: false, conflicts },
+      ] } }
+    })
+    api.respond('POST', '/slots/s1/assignments', request => {
+      writes++; expect(request.postDataJSON()).toEqual({ person_id: 'p2' }); failRead = true
+      const assignment = { id: 'as2', person, created_at: null }
+      api.data.event.slots[0]!.assignments.push(assignment); api.data.event.slots[0]!.filled_count++
+      return { status: 201, json: { data: assignment, warnings: [{ code: 'time_conflict', message: 'Есть пересечение.', event_ids: ['visible'] }, { code: 'over_capacity', message: 'Сверх нормы.' }] } }
+    })
+    api.respond('GET', '/events/e1', () => failRead ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: api.data.event } })
+    await page.goto('/events/e1')
+    await page.locator('[data-test=assign-s1]').click()
+    const dialog = page.getByRole('dialog', { name: 'Назначить: Помощь в подготовке зала', exact: true })
+    await expect(dialog).toBeVisible()
+    await expect(page.locator('[data-test=search]')).toBeFocused()
+    await expect(page.locator('[data-test=candidate-p1]')).toBeDisabled()
+    await expect(page.locator('[data-test=candidate-p2]')).toContainText('11:00')
+    await expect(page.locator('[data-test=candidate-p2]')).toContainText('Пересечение с недоступным событием')
+    expect(await dialog.locator('a').count()).toBe(0)
+    await page.addStyleTag({ content: 'nuxt-devtools-frame{display:none!important}' })
+    await mkdir(candidateScreenshots, { recursive: true })
+    await page.screenshot({ path: resolve(candidateScreenshots, `preview-${width}-${theme}.png`) })
+    await page.locator('[data-test=search]').fill('а')
+    await expect(dialog).toContainText('Введите хотя бы два символа')
+    await expect(dialog.locator('.candidates')).toHaveCount(0)
+    expect(requests).toEqual([''])
+    await page.locator('[data-test=search]').fill('никого')
+    await expect(dialog).toContainText('Никого не найдено')
+    await page.locator('[data-test=search]').fill('')
+    await expect(page.locator('[data-test=candidate-p2]')).toBeVisible()
+    expect(requests).toEqual(['', 'никого', ''])
+    expect((await page.locator('[data-test=candidate-p2]').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await page.locator('[data-test=candidate-p2]').click()
+    await expect(dialog).toContainText('Назначение создано')
+    await expect(page.locator('[data-test=warnings]')).toContainText('Репетиция музыкального служения')
+    await expect(page.locator('[data-test=warnings]')).toContainText('Есть и другие пересечения')
+    await expect(page.locator('[data-test=warnings]')).toContainText('сверх нормы')
+    await expect(page.locator('[data-test=candidate-p2]')).toBeDisabled()
+    await page.screenshot({ path: resolve(candidateScreenshots, `success-${width}-${theme}.png`) })
+    failRead = false
+    await page.locator('[data-test=close-assign]').click()
+    await page.locator('[data-test=retry-assignments]').click()
+    await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('2 из 3')
+    expect(writes).toBe(1)
+    await page.locator('[data-test=assign-s1]').click()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-test=assign-s1]')).toBeFocused()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    expect(api.unhandled).toEqual([])
+  })
+}
+for (const theme of ['dark', 'light']) test(`${theme} narrow candidate preview at 200% keeps errors warnings and close reachable`, async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 })
+  await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+  const api = await installAcceptanceApi(page)
+  let fail = true
+  const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
+  api.respond('GET', '/slots/s1/candidates', () => fail ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: [{ person, has_role: false, conflicts: [{ event_id: null, title: 'Пересечение с недоступным событием', starts_at: null, ends_at: null }] }] } })
+  api.respond('POST', '/slots/s1/assignments', () => ({ status: 201, json: { data: { id: 'as2', person, created_at: null }, warnings: [{ code: 'time_conflict', message: 'Есть пересечение.', event_ids: [] }] } }))
+  await page.goto('/events/e1')
+  await page.addStyleTag({ content: 'html{font-size:200%!important} nuxt-devtools-frame{display:none!important}' })
+  await page.locator('[data-test=assign-s1]').click()
+  const dialog = page.getByRole('dialog', { name: 'Назначить: Помощь в подготовке зала', exact: true })
+  await expect(dialog.getByRole('alert')).toBeVisible()
+  fail = false
+  await dialog.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.locator('[data-test=candidate-p2]')).toBeVisible()
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await mkdir(candidateScreenshots, { recursive: true })
+  await dialog.evaluate(element => { element.scrollTop = 0 })
+  await page.screenshot({ path: resolve(candidateScreenshots, `preview-320-text-200-${theme}.png`) })
+  await page.locator('[data-test=candidate-p2]').click()
+  await expect(page.locator('[data-test=warnings]')).toContainText('пересечение')
+  const close = page.locator('[data-test=close-assign]')
+  await close.scrollIntoViewIfNeeded(); await expect(close).toBeInViewport()
+  await page.screenshot({ path: resolve(candidateScreenshots, `success-320-text-200-${theme}.png`) })
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+  await close.focus(); await page.keyboard.press('Tab')
+  await expect(page.locator('[data-test=search]')).toBeFocused()
+  await page.keyboard.press('Shift+Tab'); await expect(close).toBeFocused()
+  await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible()
+  await expect(page.locator('[data-test=assign-s1]')).toBeFocused()
+  expect(api.unhandled).toEqual([])
+})
+
+test('candidate dialog blocks a second write after failed roster read and recovers through reading', async ({ page }) => {
+  const api = await installAcceptanceApi(page)
+  const person = { id: 'p2', full_name: 'Мария Орлова', photo_thumb_url: null }
+  const other = { id: 'p3', full_name: 'Михаил Орлов', photo_thumb_url: null }
+  let failRead = false, writes = 0
+  api.respond('GET', '/slots/s1/candidates', () => ({ json: { data: [person, other].map(person => ({ person, has_role: false, conflicts: [] })) } }))
+  api.respond('POST', '/slots/s1/assignments', () => {
+    writes++; failRead = true
+    const assignment = { id: 'as2', person, created_at: null }
+    api.data.event.slots[0]!.assignments.push(assignment); api.data.event.slots[0]!.filled_count++
+    return { status: 201, json: { data: assignment, warnings: [{ code: 'over_capacity', message: 'Сверх нормы.' }] } }
+  })
+  api.respond('GET', '/events/e1', () => failRead ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: api.data.event } })
+  await page.goto('/events/e1')
+  await page.locator('[data-test=assign-s1]').click()
+  await expect(page.locator('[data-test=candidate-p3]')).toBeEnabled()
+  await page.locator('[data-test=candidate-p2]').click()
+  await expect(page.getByRole('dialog')).toContainText('Назначение создано')
+  await expect(page.locator('[data-test=warnings]')).toContainText('сверх нормы')
+  await expect(page.locator('[data-test=candidate-p3]')).toBeDisabled()
+  await expect(page.getByRole('dialog')).toContainText('Закройте окно')
+  await page.locator('[data-test=close-assign]').click()
+  failRead = false
+  await page.locator('[data-test=retry-assignments]').click()
+  await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('2 из 3')
+  await page.locator('[data-test=assign-s1]').click()
+  await expect(page.locator('[data-test=candidate-p3]')).toBeEnabled()
+  await expect(page.locator('[data-test=candidate-p2]')).toBeDisabled()
+  expect(writes).toBe(1)
+  expect(api.unhandled).toEqual([])
+})

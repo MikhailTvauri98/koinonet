@@ -15,10 +15,11 @@ function text(warning: AssignmentWarning): string {
 
 <template>
   <ul v-if="warnings.length" data-test="warnings" aria-label="Предупреждения о назначении" class="warnings">
-    <li v-for="(warning, index) in warnings" :key="index">{{ text(warning) }}</li>
+    <li v-for="(warning, index) in warnings" :key="index"><span aria-hidden="true">⚠ </span>{{ text(warning) }}</li>
   </ul>
 </template>
 
 <style scoped>
-.warnings { color: #885000; padding: 0.75rem 0.75rem 0.75rem 2rem; background: #fff8e7; border: 1px solid #b48c39; border-radius: 0.3rem; overflow-wrap: anywhere; }
+.warnings[aria-label] { list-style: none; color: var(--ui-text); padding: 12px; background: var(--ui-accent-soft); border: 1px solid var(--ui-accent); border-radius: var(--ui-radius-sm); overflow-wrap: anywhere; }
+.warnings li + li { margin-top: var(--ui-space-2); }
 </style>

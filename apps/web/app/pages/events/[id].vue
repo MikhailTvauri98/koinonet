@@ -118,7 +118,7 @@ await load()
         <p v-if="chatError" role="alert">{{ chatError }}</p>
       </template>
     </EventCard>
-    <AssignDialog v-if="item && selectedSlot" :key="`${item.id}-${selectedSlot.id}`" v-bind="{ slot: selectedSlot }" :event-id="item.id" @assigned="changed" @close="selectedSlot = null" />
+    <AssignDialog v-if="item && selectedSlot" :key="`${item.id}-${selectedSlot.id}`" v-bind="{ slot: selectedSlot }" :event-id="item.id" :disabled="blocked" @assigned="changed" @close="selectedSlot = null" />
     <CancelEventDialog v-if="item && action === 'cancel'" :event-id="item.id" @saved="cancelledEvent" @cancel="action = null" />
     <EventSlotManager v-if="item && slotAction" v-bind="{ slot: slotAction.slot }" :event="item" :mode="slotAction.mode" @saved="savedSlot" @close="slotAction = null" />
   </main>

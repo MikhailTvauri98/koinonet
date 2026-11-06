@@ -1315,6 +1315,7 @@
         "/slots/{slot}/candidates": {
             "get": {
                 "operationId": "candidate.index",
+                "summary": "Candidates for an authorized slot. Free slots preview up to twenty active\nvisible people in stable name/id order for an empty search; one character\nreturns no results, two or more use ranked search. Role slots retain their\nmembership list. Person identities and conflict details retain visibility rules",
                 "tags": [
                     "Candidate"
                 ],
