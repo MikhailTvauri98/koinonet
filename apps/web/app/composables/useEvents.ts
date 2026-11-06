@@ -27,6 +27,18 @@ export function groupByChurchDay(events: EventItem[], timeZone: string): { day: 
   }
   return [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([day, items]) => ({ day, events: items }))
 }
+// Event intervals are [start,end): midnight belongs only to the preceding day.
+// Clip before expanding so a long-running event cannot create unbounded rows.
+export function groupCalendarDays(events: EventItem[], timeZone: string, range: EventRange): { day: string, events: EventItem[] }[] {
+  const formatter = new Intl.DateTimeFormat('sv-SE', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+  const groups = new Map<string, EventItem[]>()
+  for (const event of [...events].sort((a, b) => a.starts_at.localeCompare(b.starts_at) || a.id.localeCompare(b.id))) {
+    const start = formatter.format(new Date(event.starts_at)), end = formatter.format(new Date(Date.parse(event.ends_at) - 1))
+    const from = start < range.from ? range.from : start, to = end > range.to ? range.to : end
+    for (let day = from; day <= to; day = addCalendarDays(day, 1)) groups.set(day, [...(groups.get(day) ?? []), event])
+  }
+  return [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([day, items]) => ({ day, events: items }))
+}
 export function useEvents() {
   const api = useApi(), auth = useAuthStore(), settings = useSettingsStore()
   async function load(range: EventRange, scope: string): Promise<EventItem[]> {

@@ -22,7 +22,7 @@ import type { components } from '~~/types/api'
 
 const m = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), del: vi.fn(), put: vi.fn(), push: vi.fn() }))
 mockNuxtImport('useApi', () => () => ({ get: m.get, post: m.post, patch: m.patch, delete: m.del, put: m.put }))
-mockNuxtImport('useRoute', () => () => ({ params: { id: 'x1' } }))
+mockNuxtImport('useRoute', () => () => ({ params: { id: 'x1' }, query: {} }))
 type Chat = components['schemas']['ChatResource']
 const chat = (over = {}): Chat => ({ id: 'c1', type: 'group', title: 'Поездка', avatar_url: null, ministry_id: null, event_id: null, archived: false, last_message: null, last_message_at: null, unread_count: 0, muted_until: null, is_owner: false, can_write: true, can_moderate: false, can_manage_members: false, pinned_messages: [], members: [{ user_id: 'u2', person_id: 'p1', full_name: 'Анна', photo_url: null, is_owner: false, joined_at: '' }], ...over })
 const person = (over = {}) => ({ id: 'p1', full_name: 'Анна', has_account: true, user_id: 'u2', account_disabled: false, archived: false, status: 'member', has_global_roles: false, ...over })

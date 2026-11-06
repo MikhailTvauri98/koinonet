@@ -6,6 +6,7 @@ import CancelEventDialog from '~/components/calendar/CancelEventDialog.vue'
 import EventSlotManager from '~/components/calendar/EventSlotManager.vue'
 import EventCard from '~/components/calendar/EventCard.vue'
 import AssignDialog from '~/components/calendar/AssignDialog.vue'
+import { safeCalendarReturn } from '~/composables/useCalendarView'
 const api = useApi(), route = useRoute(), auth = useAuthStore(), settings = useSettingsStore()
 const item = ref<EventItem | null>(null), errorMessage = ref(''), loading = ref(false)
 const action = ref<'edit' | 'cancel' | null>(null), selectedSlot = ref<EventSlot | null>(null)
@@ -67,7 +68,7 @@ await load()
 
 <template>
   <main class="event-page">
-    <NuxtLink to="/calendar">Календарь</NuxtLink>
+    <NuxtLink :to="safeCalendarReturn(route.query.return)">Календарь</NuxtLink>
     <p v-if="loading" role="status">Загружаем событие…</p>
     <p v-else-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" @click="load">Повторить</button></p>
     <p v-if="refreshing" role="status">Обновляем состав…</p>

@@ -11,10 +11,12 @@ import type { EventItem } from '~/composables/useEvents'
 import { useSettingsStore } from '~/stores/settings'
 import { useAuthStore } from '~/stores/auth'
 import { grantPermissions } from '../support/permissions'
+import { useRouter } from '#app'
 
 const get = vi.fn()
+const { routeQuery, replace } = vi.hoisted(() => ({ routeQuery: {} as Record<string, string>, replace: vi.fn().mockResolvedValue(undefined) }))
 mockNuxtImport('useApi', () => () => ({ get }))
-mockNuxtImport('useRoute', () => () => ({ params: { id: 'e1' }, query: {} }))
+mockNuxtImport('useRoute', () => () => ({ params: { id: 'e1' }, path: '/calendar', query: routeQuery }))
 enableAutoUnmount(afterEach)
 const event = (over: Partial<EventItem> = {}): EventItem => ({
   id: 'e1', chat_id: null, owner_type: 'church', ministry: null, template_id: null, occurrence_date: null,
@@ -25,36 +27,81 @@ const event = (over: Partial<EventItem> = {}): EventItem => ({
 })
 const list = (items: EventItem[]) => ({ data: items, meta: { current_page: 1, last_page: 1, total: items.length } })
 beforeEach(() => {
-  get.mockReset(); grantPermissions()
+  get.mockReset(); replace.mockClear(); Object.keys(routeQuery).forEach(key => Reflect.deleteProperty(routeQuery, key)); grantPermissions()
+  vi.spyOn(useRouter(), 'replace').mockImplementation(replace)
   useSettingsStore().apply({ church_name: 'Церковь', timezone: 'Asia/Vladivostok' } as never)
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-08T20:30:00Z'))
 })
 afterEach(() => vi.useRealTimers())
 describe('calendar page', () => {
-  it('starts at church Monday, requests four weeks and switches scopes and weeks', async () => {
+  it('requests the entire visible month, switches scopes and crosses the year without losing context', async () => {
+    Object.assign(routeQuery, { date: '2026-12-31', view: 'month' })
     get.mockResolvedValue(list([event()]))
     const page = await mountSuspended(CalendarPage)
-    expect(get).toHaveBeenCalledWith('/events', expect.objectContaining({ from: '2026-11-09', to: '2026-12-06', scope: 'church' }))
+    expect(get).toHaveBeenCalledWith('/events', expect.objectContaining({ from: '2026-11-30', to: '2027-01-03', scope: 'church' }))
     await page.get('[data-test="scope-mine"]').trigger('click'); await flushPromises()
     expect(get).toHaveBeenLastCalledWith('/events', expect.objectContaining({ scope: 'mine' }))
-    await page.get('[data-test="next-week"]').trigger('click'); await flushPromises()
-    expect(get).toHaveBeenLastCalledWith('/events', expect.objectContaining({ from: '2026-11-16', to: '2026-12-13', scope: 'mine' }))
+    await page.get('[data-test="next-month"]').trigger('click'); await flushPromises()
+    expect(get).toHaveBeenLastCalledWith('/events', expect.objectContaining({ from: '2026-12-28', to: '2027-01-31', scope: 'mine' }))
+    expect(replace).toHaveBeenLastCalledWith(expect.objectContaining({ query: expect.objectContaining({ date: '2027-01-31', view: 'month', scope: 'mine' }) }))
+    await page.get('[data-test="calendar-today"]').trigger('click'); await flushPromises()
+    expect(page.get('[data-test="calendar-date"]').element).toHaveProperty('value', '2026-11-09')
   })
   it('keeps western date-only headers on their chosen day', async () => {
+    routeQuery.view = 'list'
     useSettingsStore().timezone = 'America/Los_Angeles'; get.mockResolvedValue(list([event({ starts_at: '2026-11-09T02:00:00Z' })]))
     const page = await mountSuspended(CalendarPage)
     expect(page.text()).toContain('8 ноября')
-    expect(get).toHaveBeenCalledWith('/events', expect.objectContaining({ from: '2026-11-02', to: '2026-11-29' }))
+    expect(get).toHaveBeenCalledWith('/events', expect.objectContaining({ from: '2026-11-01', to: '2026-11-30' }))
   })
   it('ignores stale scope responses', async () => {
     get.mockResolvedValueOnce(list([]))
     const page = await mountSuspended(CalendarPage)
     let old!: (value: unknown) => void
-    get.mockImplementationOnce(() => new Promise(resolve => { old = resolve })).mockResolvedValueOnce(list([event({ title: 'Актуальное' })]))
-    await page.get('[data-test="next-week"]').trigger('click')
+    get.mockImplementationOnce(() => new Promise(resolve => { old = resolve })).mockResolvedValueOnce(list([event({ title: 'Актуальное', starts_at: '2026-12-09T07:00:00Z', ends_at: '2026-12-09T09:00:00Z' })]))
+    await page.get('[data-test="next-month"]').trigger('click')
+    await flushPromises()
     await page.get('[data-test="scope-mine"]').trigger('click'); await flushPromises()
     old(list([event({ title: 'Устаревшее' })])); await flushPromises()
     expect(page.text()).toContain('Актуальное'); expect(page.text()).not.toContain('Устаревшее')
+  })
+  it('opens every overflow event on its church day and keeps a safe return link', async () => {
+    Object.assign(routeQuery, { date: '2026-11-09', view: 'month', scope: 'mine' })
+    const items = Array.from({ length: 4 }, (_, i) => event({ id: `e${i}`, title: `Событие ${i}`, starts_at: '2026-11-08T20:00:00Z', ends_at: '2026-11-09T20:00:00Z' }))
+    get.mockResolvedValue(list(items))
+    const page = await mountSuspended(CalendarPage)
+    await page.get('[data-test="overflow-2026-11-09"]').trigger('click'); await flushPromises()
+    const day = page.get('[data-test="selected-day"]')
+    expect(day.findAll('a[href*="/events/"]')).toHaveLength(4)
+    expect(day.text()).toContain('Событие 3')
+    const target = new URL(day.get('a[href*="/events/"]').attributes('href')!, 'https://church.test')
+    expect(target.searchParams.get('return')).toContain('/calendar?date=2026-11-09&view=month&scope=mine')
+    expect(page.find('[data-test="day-2026-11-10"]').text()).toContain('Событие')
+  })
+  it('labels the ending day with its end time, rather than repeating the original start', async () => {
+    Object.assign(routeQuery, { date: '2026-11-10', view: 'month' })
+    get.mockResolvedValue(list([event({ starts_at: '2026-11-08T20:00:00Z', ends_at: '2026-11-09T20:00:00Z' })]))
+    const page = await mountSuspended(CalendarPage)
+    expect(page.get('[data-test="selected-day"] .event-row time').text()).toBe('До 06:00')
+  })
+  it('shows the chosen date first in list mode, including an explicit empty day', async () => {
+    Object.assign(routeQuery, { date: '2026-11-09', view: 'list' })
+    get.mockResolvedValue(list([event()]))
+    const page = await mountSuspended(CalendarPage)
+    await page.get('[data-test="calendar-date"]').setValue('2026-11-20'); await flushPromises()
+    expect(page.get('[data-test="selected-day"]').text()).toContain('20 ноября')
+    expect(page.get('[data-test="selected-day"]').text()).toContain('Событий пока нет')
+  })
+  it('offers only visible ministry filters and drops a revoked ministry scope', async () => {
+    grantPermissions({ ministries: { m1: [] } })
+    Object.assign(routeQuery, { date: '2026-11-09', view: 'list', scope: 'ministry:m1' })
+    get.mockImplementation(async (path: string) => path === '/ministries' ? { data: [{ id: 'm1', name: 'Хор' }] } : list([]))
+    const page = await mountSuspended(CalendarPage)
+    expect(page.get('select').text()).toContain('Хор')
+    expect(get).toHaveBeenCalledWith('/events', expect.objectContaining({ scope: 'ministry:m1' }))
+    grantPermissions(); await flushPromises()
+    expect(page.find('select').exists()).toBe(false)
+    expect(get).toHaveBeenLastCalledWith('/events', expect.objectContaining({ scope: 'church' }))
   })
   it('shows settings failure without querying dates and retries', async () => {
     useSettingsStore().reset(); get.mockRejectedValueOnce(new Error('offline'))
@@ -67,6 +114,11 @@ describe('calendar page', () => {
   })
 })
 describe('event detail and display hooks', () => {
+  it('shows the next civil end date at midnight without adding a second calendar day', async () => {
+    const card = await mountSuspended(EventCard, { props: { compact: true, day: '2026-11-08', event: event({ starts_at: '2026-11-08T07:00:00Z', ends_at: '2026-11-08T14:00:00Z' }) } })
+    expect(card.text()).toContain('9 нояб.')
+    expect(card.text()).toContain('00:00')
+  })
   it('shows both church dates for an event crossing midnight', async () => {
     const card = await mountSuspended(EventCard, { props: { event: event({ starts_at: '2026-11-08T13:30:00Z', ends_at: '2026-11-08T15:30:00Z' }) } })
     expect(card.text()).toContain('8 нояб.'); expect(card.text()).toContain('9 нояб.')

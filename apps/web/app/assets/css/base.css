@@ -164,6 +164,7 @@ body {
 .ui-dialog-header > h2 { flex: 1 1 10rem; min-width: 0; margin: 0; }
 .ui-dialog-header > button { flex-shrink: 0; min-width: 44px; }
 .ui-button { min-width: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; background: var(--ui-surface-muted); }
+:where(a).ui-button { display: inline-flex; align-items: center; justify-content: center; min-height: var(--ui-control-height); padding: .625rem .875rem; border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); color: var(--ui-text); text-decoration: none; }
 .ui-button--primary { background: var(--ui-accent); border-color: var(--ui-accent); color: var(--ui-on-accent); }
 .ui-button--primary:hover:not(:disabled) { background: var(--ui-accent-hover); border-color: var(--ui-accent-hover); }
 .ui-button--danger { color: var(--ui-danger); border-color: var(--ui-danger); }

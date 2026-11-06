@@ -18,7 +18,7 @@ import { useSettingsStore } from '~/stores/settings'
 import { grantPermissions } from '../support/permissions'
 import type { components } from '~~/types/api'
 type Template = components['schemas']['EventTemplateResource']
-const { get, post, patch, push, route } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), push: vi.fn(), route: { params: { id: 't1' }, path: '/templates/t1', fullPath: '/templates/t1' } }))
+const { get, post, patch, push, route } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), push: vi.fn(), route: { params: { id: 't1' }, query: {}, path: '/templates/t1', fullPath: '/templates/t1' } }))
 mockNuxtImport('useApi', () => () => ({ get, post, patch }))
 mockNuxtImport('useRoute', () => () => route)
 enableAutoUnmount(afterEach)
