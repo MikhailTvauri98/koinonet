@@ -121,3 +121,68 @@ test('a selected portrait has a decoded local preview and can be removed', async
   await expect(preview).toHaveCount(0)
   expect(api.unhandled).toEqual([])
 })
+
+// Task17: announcement-only media scenarios; shared contracts remain unchanged.
+for (const theme of ['dark', 'light'] as const) {
+  for (const width of [390, 1440]) {
+    test(`task17 ${theme} ${width}: announcement gallery decodes real image proportions`, async ({ page }, info) => {
+      const api = await installAcceptanceApi(page)
+      await page.setViewportSize({ width, height: 900 })
+      await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+      await page.goto('/announcements/a1')
+      const images = page.getByRole('list', { name: 'Вложения', exact: true }).getByRole('img')
+      await expect(page.getByRole('heading', { name: api.data.announcement.title, exact: true })).toBeVisible()
+      await expect(images).toHaveCount(3)
+      for (const image of await images.all()) {
+        await image.scrollIntoViewIfNeeded()
+        await expect.poll(() => image.evaluate(node => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+      }
+      await checkDocumentWidth(page)
+      await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}-announcement-gallery`)
+      expect(api.unhandled).toEqual([])
+    })
+  }
+  test(`task17 ${theme}: announcement processing failure, retry and confirmed publication survive a failed read`, async ({ page }, info) => {
+    const api = await installAcceptanceApi(page)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    let finish!: () => void
+    const pending = new Promise<void>(resolve => { finish = resolve })
+    api.respond('POST', '/media', () => ({ status: 201, json: { data: { ...api.data.media[0], status: 'processing' } } }))
+    api.respond('GET', '/media/media-square/status', async () => { await pending; return { json: { data: { ...api.data.media[0], status: 'failed' } } } })
+    await page.goto('/announcements')
+    await page.getByRole('button', { name: 'Опубликовать объявление', exact: true }).click()
+    await page.getByRole('textbox', { name: 'Заголовок', exact: true }).fill('Публикация с вложением')
+    await page.getByRole('textbox', { name: 'Текст объявления', exact: true }).fill('Подробности публикации')
+    const file = { name: 'photo-square.jpg', mimeType: 'image/jpeg', buffer: readFileSync(fixtureFile('photo-square.jpg')) }
+    await page.locator('input[type=file]').setInputFiles(file)
+    await expect(page.getByRole('button', { name: 'Обрабатывается…', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Опубликовать', exact: true })).toBeDisabled()
+    await takeAcceptanceScreenshot(page, info, `task17-${theme}-processing`)
+    finish()
+    await expect(page.locator('[data-test=media-error]')).toContainText('Не удалось обработать файл.')
+    await expect(page.getByRole('button', { name: 'Опубликовать', exact: true })).toBeDisabled()
+    await takeAcceptanceScreenshot(page, info, `task17-${theme}-processing-failed`)
+    api.respond('POST', '/media', () => ({ status: 201, json: { data: api.data.media[0] } }))
+    await page.locator('input[type=file]').setInputFiles(file)
+    await expect(page.getByRole('button', { name: 'Опубликовать', exact: true })).toBeEnabled()
+    let writes = 0
+    api.respond('POST', '/announcements', request => {
+      writes++
+      expect(request.postDataJSON().media_ids).toEqual(['media-square'])
+      return { status: 201, json: { data: api.data.announcement } }
+    })
+    api.respond('GET', '/announcements', () => ({ status: 500, json: { message: 'Private diagnostic' } }))
+    await page.getByRole('button', { name: 'Опубликовать', exact: true }).click()
+    await expect(page.locator('[data-test=published-result]')).toHaveAttribute('href', '/announcements/a1')
+    await expect(page.locator('[data-test=retry-announcements]')).toBeVisible()
+    await takeAcceptanceScreenshot(page, info, `task17-${theme}-confirmed-refresh-failed`)
+    api.respond('GET', '/announcements', () => ({ json: { data: [api.data.announcement], meta: { current_page: 1, last_page: 1, total: 1 } } }))
+    await page.locator('[data-test=retry-announcements]').click()
+    await expect(page.locator('.announcement-card')).toHaveCount(1)
+    await expect(page.locator('[data-test=published-result]')).toBeVisible()
+    expect(writes).toBe(1)
+    await checkDocumentWidth(page)
+    expect(api.unhandled).toEqual([])
+  })
+}

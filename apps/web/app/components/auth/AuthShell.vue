@@ -41,8 +41,9 @@ defineProps<{ title: string; description?: string }>()
   padding: clamp(20px, 4vw, 32px);
   background: var(--ui-surface);
   border: 1px solid var(--ui-border);
-  border-radius: var(--ui-radius-lg);
+  border-radius: 14px;
   box-shadow: var(--ui-shadow);
+  border-top: 3px solid var(--ui-accent);
   overflow-wrap: anywhere;
 }
 

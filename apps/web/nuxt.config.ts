@@ -47,7 +47,11 @@ export default defineNuxtConfig({
         // apple-touch-icon читается отдельно от манифеста.
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/icons/apple-touch-icon-180x180.png' },
       ],
-      meta: [{ name: 'theme-color', content: '#34445a' }],
+      // Numeric priority keeps this meta before the blocking script; Unhead's
+      // "critical" alias only offsets the normal meta weight (after scripts).
+      meta: [{ name: 'theme-color', content: '#141719', tagPriority: -9 }],
+      // No async/defer: saved light must apply before CSS or Vue can paint.
+      script: [{ src: '/theme-init.js', tagPosition: 'head', tagPriority: 'high' }],
     },
   },
   // По умолчанию `nuxt typecheck` проверяет только app/, tests/nuxt и tests/unit

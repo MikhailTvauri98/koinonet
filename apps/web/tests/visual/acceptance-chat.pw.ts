@@ -62,7 +62,7 @@ for (const path of ['/chats/c1', '/ministries/m1/chat']) {
     }
     await page.setViewportSize({ width: 375, height: 500 })
     await page.getByRole('button', { name: 'Меню чата', exact: true }).click()
-    const dialog = page.getByRole('dialog', { name: 'Меню чата', exact: true })
+    const dialog = page.getByRole('dialog', { name: 'Сведения о чате', exact: true })
     await expect(dialog).toBeVisible()
     await settleLayout(page)
     await checkDocumentWidth(page)
@@ -119,7 +119,16 @@ for (const path of ['/chats/c1', '/ministries/m1/chat']) {
     await expect(enlargedSend).toBeFocused()
     await enlargedSend.scrollIntoViewIfNeeded()
     await expect(enlargedSend).toBeInViewport()
-    expect.soft((await enlargedSend.boundingBox())!.y + (await enlargedSend.boundingBox())!.height).toBeLessThanOrEqual((await page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox())!.y + 1)
+    const enlargedNav = page.getByRole('navigation', { name: 'Основная навигация' })
+    const enlargedNavFixed = await enlargedNav.evaluate(element => getComputedStyle(element).position === 'fixed')
+    // Task20a intentionally moves a tall bar into ordinary flow. Only an
+    // overlay reserves the lower edge; flow content uses the viewport edge.
+    expect.soft((await enlargedSend.boundingBox())!.y + (await enlargedSend.boundingBox())!.height).toBeLessThanOrEqual(enlargedNavFixed ? (await enlargedNav.boundingBox())!.y + 1 : 845)
+    const sendHit = await enlargedSend.evaluate(element => {
+      const box = element.getBoundingClientRect()
+      return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest('.app-nav') !== null
+    })
+    expect.soft(sendHit, 'focused send stays clear of both fixed and flow navigation').toBe(false)
     await capture('composer-and-send')
     await takeAcceptanceScreenshot(page, info, '320-text-200-composer')
     const positionsFile = info.outputPath('320-text-200-positions.json')
@@ -227,5 +236,114 @@ test('message author and ordinary body words remain readable at 320px text 200%'
   const file = info.outputPath('message-word-geometry.json')
   await writeFile(file, JSON.stringify(measurements, null, 2))
   await info.attach('message-word-geometry', { path: file, contentType: 'application/json' })
+  expect(api.unhandled).toEqual([])
+})
+
+for (const type of ['direct', 'ministry', 'event'] as const) {
+  test(`chat information preserves draft and exposes only available ${type} composition`, async ({ page }) => {
+    const api = await installAcceptanceApi(page)
+    api.data.chat.type = type
+    api.data.chat.members.push({ ...api.data.chat.members[0]!, user_id: 'hidden', full_name: null, is_owner: false })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/chats/c1')
+    const composer = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+    await composer.fill('Черновик до просмотра сведений')
+    expect(await page.locator('.chat-header details').count()).toBe(0)
+    const trigger = page.getByRole('button', { name: 'Меню чата', exact: true })
+    await trigger.click()
+    const dialog = page.getByRole('dialog', { name: 'Сведения о чате', exact: true })
+    await expect(dialog).toBeVisible()
+    for (const action of ['rename', 'avatar', 'leave', 'archive']) await expect(dialog.locator(`[data-test="${action}"]`)).toHaveCount(0)
+    if (type === 'direct') {
+      await expect(dialog.locator('[data-test="members"]')).toHaveCount(0)
+      await expect(dialog).not.toContainText('Участники')
+      await page.keyboard.press('Escape')
+    } else {
+      await dialog.locator('[data-test="members"]').click()
+      const members = page.getByRole('dialog', { name: type === 'ministry' ? 'Состав чата служения' : 'Состав чата события', exact: true })
+      await expect(dialog).toHaveCount(0)
+      await expect(members).toContainText('автоматически')
+      await expect(members).toContainText('Участник')
+      await expect(members.locator('[data-test="add-members"]')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+    }
+    await expect(trigger).toBeFocused()
+    await expect(composer).toHaveValue('Черновик до просмотра сведений')
+    expect(api.unhandled).toEqual([])
+  })
+}
+
+for (const theme of ['dark', 'light']) for (const width of [390, 1440]) test(`message surfaces and readable metadata ${theme} ${width}`, async ({ page }, info) => {
+  const api = await installAcceptanceApi(page)
+  api.data.chat.pinned_messages = [api.data.messages[6]!]
+  api.data.messages[6]!.edited_at = api.data.messages[6]!.created_at
+  await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+  await page.setViewportSize({ width, height: 1000 })
+  await page.goto('/chats/c1')
+  const own = page.locator('[data-message-id=msg6]')
+  await expect(own).toHaveAttribute('aria-label', 'Ваше сообщение')
+  await expect(own.locator('.message-heading strong')).toHaveCount(0)
+  const incoming = page.locator('[data-message-id=msg7]')
+  await expect(incoming.locator('.message-heading strong')).toHaveText('Михаил Орлов')
+  for (const metadata of [own.locator('time'), incoming.locator('time'), own.locator('.message-edited')]) {
+    expect(await metadata.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
+  }
+  const expected = theme === 'dark' ? 'rgb(37, 51, 75)' : 'rgb(230, 237, 255)'
+  for (const surface of [page.locator('.pinned-bar'), own.locator('.reply-preview')]) {
+    expect(await surface.evaluate(element => getComputedStyle(element).backgroundColor)).toBe(expected)
+  }
+  await expect(page.getByRole('button', { name: 'Отправить', exact: true })).toHaveClass(/ui-button--primary/)
+  await own.scrollIntoViewIfNeeded()
+  await checkDocumentWidth(page)
+  await takeAcceptanceScreenshot(page, info, `${theme}-${width}-messages`)
+  await page.locator('[data-message-id=msg4]').scrollIntoViewIfNeeded()
+  await expect.poll(() => page.locator('.message-list img').evaluateAll(elements => elements.every(element => (element as HTMLImageElement).naturalWidth > 0))).toBe(true)
+  await takeAcceptanceScreenshot(page, info, `${theme}-${width}-attachments`)
+  expect(api.unhandled).toEqual([])
+})
+
+for (const theme of ['dark', 'light']) test(`failed send keeps reply and draft, retry confirms once ${theme}`, async ({ page }, info) => {
+  const api = await installAcceptanceApi(page)
+  const writes: unknown[] = []
+  api.respond('POST', '/chats/c1/messages', request => {
+    writes.push(request.postDataJSON())
+    return { status: 422, json: { message: 'Не удалось отправить сообщение. Повторите отправку.' } }
+  })
+  await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/chats/c1')
+  await page.locator('[data-test=actions-msg7]').click()
+  await page.getByRole('button', { name: 'Ответить', exact: true }).click()
+  const composer = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const send = page.getByRole('button', { name: 'Отправить', exact: true })
+  await composer.fill('Приду пораньше и помогу подготовить зал.')
+  await send.click()
+  await expect(page.locator('.chat-screen [role=alert]')).toContainText('Не удалось отправить сообщение')
+  await expect(composer).toHaveValue('Приду пораньше и помогу подготовить зал.')
+  await expect(page.getByRole('button', { name: 'Отменить ответ', exact: true })).toBeVisible()
+  await send.scrollIntoViewIfNeeded()
+  await takeAcceptanceScreenshot(page, info, `${theme}-390-failed-send-reply`)
+  api.respond('POST', '/chats/c1/messages', request => {
+    writes.push(request.postDataJSON())
+    return { status: 201, json: { data: { ...api.data.messages[0]!, id: 'sent-once', body: request.postDataJSON().body, reply_to: { id: 'msg7', sender_name: 'Михаил Орлов', body_preview: api.data.messages[7]!.body, deleted: false } } } }
+  })
+  // Confirmed send survives an unrelated subsequent list-read failure.
+  let failedReads = 0
+  api.respond('GET', '/chats', () => {
+    failedReads++
+    return { status: 422, json: { message: 'Не удалось обновить список чатов' } }
+  })
+  await send.click()
+  await expect.poll(() => failedReads).toBe(1)
+  await expect(page.locator('.chat-workspace__list [role=alert]')).toContainText('Не удалось обновить список чатов')
+  await expect(composer).toHaveValue('')
+  await expect(page.getByRole('button', { name: 'Отменить ответ', exact: true })).toHaveCount(0)
+  await expect(page.locator('[data-message-id=sent-once]')).toHaveCount(1)
+  await expect(send).toBeDisabled()
+  expect(writes).toEqual([
+    { body: 'Приду пораньше и помогу подготовить зал.', media_ids: [], reply_to_id: 'msg7' },
+    { body: 'Приду пораньше и помогу подготовить зал.', media_ids: [], reply_to_id: 'msg7' },
+  ])
+  await checkDocumentWidth(page)
   expect(api.unhandled).toEqual([])
 })

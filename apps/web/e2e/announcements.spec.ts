@@ -50,7 +50,7 @@ function observeNotifications(page: Page) {
 async function publish(page: Page, title: string, body: string) {
   await page.getByTestId('publish').click()
   await page.getByLabel('Заголовок').fill(title)
-  await page.getByLabel('Текст', { exact: true }).fill(body)
+  await page.getByLabel('Текст объявления', { exact: true }).fill(body)
   const response = page.waitForResponse(response => response.url().endsWith('/api/v1/announcements') && response.request().method() === 'POST')
   await page.getByRole('button', { name: 'Опубликовать', exact: true }).click()
   const published = await response

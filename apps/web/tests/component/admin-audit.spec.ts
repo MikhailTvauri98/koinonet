@@ -225,3 +225,14 @@ describe('admin audit page', () => {
     expect(page.find('[data-test="load-more"]').exists()).toBe(false)
   })
 })
+
+
+it('explains the date range in church time and names filter removal actions', async () => {
+  grantPermissions({ global: ['audit.view'] })
+  const page = await mountSuspended(AdminAudit)
+  expect(page.find('.ui-form-section h2').text()).toBe('Фильтры журнала')
+  expect(page.text()).toContain('Europe/Moscow')
+  await page.get('[data-test="entry-actor-a1"]').trigger('click')
+  await flushPromises()
+  expect(page.get('[data-test="clear-actor"]').attributes('aria-label')).toBe('Сбросить фильтр по автору')
+})

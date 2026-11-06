@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { mockVisualApi } from './support/api'
-for (const width of [320, 375, 768, 1440]) {
+for (const width of [320, 390, 767, 768, 1024, 1440, 1920]) {
   for (const scale of [1, 2]) {
     test(`navigation fits ${width} at ${scale * 100}% text`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 700 }); await mockVisualApi(page); await page.goto('/')
@@ -21,16 +21,27 @@ for (const width of [320, 375, 768, 1440]) {
         }
         await expect.poll(async () => {
           const box = (await nav.boundingBox())!
-          return page.locator('main').evaluate((el, height) => parseFloat(getComputedStyle(el).paddingBottom) >= height, box.height)
+          const fixed = await nav.evaluate(el => getComputedStyle(el).position === 'fixed')
+          return page.locator('#main-content').evaluate((el, { height, fixed }) => {
+            const style = getComputedStyle(el)
+            return fixed ? parseFloat(style.paddingBottom) >= height : parseFloat(style.getPropertyValue('--app-nav-height')) === 0
+          }, { height: box.height, fixed })
         }).toBe(true)
+        if (await nav.evaluate(el => getComputedStyle(el).position === 'static')) {
+          const heading = page.locator('#main-content h1')
+          await heading.scrollIntoViewIfNeeded()
+          await expect(heading).toBeInViewport({ ratio: 1 })
+        }
+        await nav.getByRole('link', { name: 'Главная', exact: true }).focus()
+        await expect(nav.getByRole('link', { name: 'Главная', exact: true })).toBeInViewport({ ratio: 1 })
         await page.screenshot({ path: testInfo.outputPath(`navigation-${width}-${scale}.png`), fullPage: false })
         await nav.getByRole('button', { name: 'Ещё', exact: true }).click()
         const dialog = page.getByRole('dialog', { name: 'Ещё', exact: true })
-        await expect(dialog.getByRole('link')).toHaveCount(8)
+        await expect(dialog.getByRole('link')).toHaveCount(9)
         expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
         await page.screenshot({ path: testInfo.outputPath(`more-${width}-${scale}.png`) })
       } else {
-        await expect(nav.getByRole('link')).toHaveCount(12)
+        await expect(nav.getByRole('link')).toHaveCount(13)
         await expect(nav.getByRole('button', { name: 'Ещё', exact: true })).toBeHidden()
         await page.screenshot({ path: testInfo.outputPath('navigation-desktop-' + width + '-' + scale + '.png') })
       }
@@ -53,8 +64,8 @@ test('More traps Tab, restores focus on Escape and closes on selection', async (
 })
 
 for (const [name, permissions, links] of [
-  ['no permissions', { administrator: false, global: [], ministries: {} }, ['Объявления', 'Профиль']],
-  ['one ministry', { administrator: false, global: [], ministries: { m1: ['events.manage'] } }, ['Служения', 'Шаблоны', 'Объявления', 'Профиль']],
+  ['no permissions', { administrator: false, global: [], ministries: {} }, ['Объявления', 'Профиль', 'Календарь телефона']],
+  ['one ministry', { administrator: false, global: [], ministries: { m1: ['events.manage'] } }, ['Служения', 'Шаблоны', 'Объявления', 'Профиль', 'Календарь телефона']],
 ] as const) {
   test('More exposes only allowed sections: ' + name, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 600 })
@@ -76,7 +87,7 @@ test('resizing a phone with More open closes it on desktop', async ({ page }) =>
   await page.getByRole('button', { name: 'Ещё', exact: true }).click()
   await page.setViewportSize({ width: 1024, height: 600 })
   await expect(page.getByRole('dialog', { name: 'Ещё', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link')).toHaveCount(12)
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link')).toHaveCount(13)
   await expect(page.getByRole('button', { name: 'Ещё', exact: true })).toBeHidden()
   await expect(page.locator('#main-content')).toBeVisible()
   await expect(page.locator('#main-content')).toBeFocused()

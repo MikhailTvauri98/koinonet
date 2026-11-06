@@ -12,6 +12,9 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Keep the initial SPA shell on its theme canvas before Vue mounts. */
+html, body, #__nuxt { min-height: 100%; }
+
 body {
   margin: 0;
   min-width: 0;
@@ -76,6 +79,10 @@ body {
   min-width: 0;
 }
 
+:where(input:not([type='checkbox'], [type='radio'], [type='hidden'], [type='file']), select, textarea) {
+  background: var(--ui-canvas);
+}
+
 :where(input::placeholder, textarea::placeholder) {
   color: var(--ui-text-muted);
   opacity: 1;
@@ -136,3 +143,28 @@ body {
 @media (prefers-reduced-motion: reduce) {
   :where(html) { scroll-behavior: auto; }
 }
+
+/* Semantic form primitives: fields stay native; groups respond to their own width. */
+.ui-form, .ui-field { display: grid; gap: var(--ui-space-4); min-width: 0; }
+.ui-form > p { margin: 0; }
+.ui-field { gap: var(--ui-space-2); }
+.ui-field :where(input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden']), select, textarea) { width: 100%; max-width: 100%; }
+.ui-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: min(var(--ui-space-6), 24px); min-width: 0; container-type: inline-size; }
+.ui-form-grid > * { min-width: 0; grid-column: 1 / -1; }
+@container (min-width: 680px) { .ui-form-grid > * { grid-column: auto; } }
+.ui-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ui-fieldset > legend { padding: 0; margin-bottom: var(--ui-space-2); font-weight: 600; }
+.ui-choice { display: flex; align-items: center; gap: var(--ui-space-3); min-width: 0; min-height: var(--ui-control-height); cursor: pointer; overflow-wrap: anywhere; }
+.ui-choice > input { flex-shrink: 0; margin: 0; }
+.ui-hint, .ui-field-error { margin: 0; font-size: 0.875rem; overflow-wrap: anywhere; }
+.ui-hint { color: var(--ui-text-muted); }
+.ui-field-error { color: var(--ui-danger); }
+.ui-form-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--ui-space-3); padding-top: var(--ui-space-4); border-top: 1px solid var(--ui-border); }
+.ui-dialog-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--ui-space-3); margin-bottom: var(--ui-space-4); }
+.ui-dialog-header > h2 { flex: 1 1 10rem; min-width: 0; margin: 0; }
+.ui-dialog-header > button { flex-shrink: 0; min-width: 44px; }
+.ui-button { min-width: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; background: var(--ui-surface-muted); }
+:where(a).ui-button { display: inline-flex; align-items: center; justify-content: center; min-height: var(--ui-control-height); padding: .625rem .875rem; border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); color: var(--ui-text); text-decoration: none; }
+.ui-button--primary { background: var(--ui-accent); border-color: var(--ui-accent); color: var(--ui-on-accent); }
+.ui-button--primary:hover:not(:disabled) { background: var(--ui-accent-hover); border-color: var(--ui-accent-hover); }
+.ui-button--danger { color: var(--ui-danger); border-color: var(--ui-danger); }

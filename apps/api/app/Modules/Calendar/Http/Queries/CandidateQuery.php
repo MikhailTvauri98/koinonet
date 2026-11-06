@@ -22,11 +22,14 @@ final class CandidateQuery
                 ->whereHas('ministry', fn (Builder $ministries): Builder => $ministries->whereNull('archived_at'))
                 ->whereHas('roles', fn (Builder $roles): Builder => $roles->whereKey($slot->role_id)));
         } else {
-            if (mb_strlen($search) < 2) {
+            if (mb_strlen($search) === 1) {
                 return new Collection;
             }
             if (! Gate::forUser($viewer)->allows('viewAny', Person::class)) {
                 $query->whereKey($viewer->person_id);
+            }
+            if ($search === '') {
+                return $query->orderBy('last_name')->orderBy('first_name')->orderBy('id')->limit(20)->get();
             }
             $search = mb_strtolower($search);
             // Same complementary trigram measures and ranking as Directory's person search.

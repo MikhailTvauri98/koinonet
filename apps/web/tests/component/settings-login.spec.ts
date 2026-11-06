@@ -1,5 +1,7 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { flushPromises } from '@vue/test-utils'
+import { useAuthStore } from '~/stores/auth'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LoginSettingsPage from '~/pages/settings/login.vue'
@@ -105,4 +107,60 @@ describe('password settings form', () => {
 
     expect(page.find('[data-test="password-error"]').text()).toBe('Слишком много попыток. Подождите минуту.')
   })
+})
+
+
+it('keeps independent password confirmations and a confirmed login across permissions refresh', async () => {
+  patch.mockResolvedValue({ data: {} })
+  const page = await mountSuspended(LoginSettingsPage)
+  const refresh = vi.spyOn(useAuthStore(), 'fetchMe').mockRejectedValue(new Error('refresh unavailable'))
+  await page.get('[data-test=login]').setValue('new@example.test')
+  await page.get('[data-test=login-current-password]').setValue('for-login')
+  await page.get('[data-test=password-current]').setValue('for-password')
+  await page.get('[data-test=login-form]').trigger('submit')
+  await flushPromises()
+  expect(patch).toHaveBeenCalledWith('/me/login', { login: 'new@example.test', current_password: 'for-login' })
+  expect(page.get('[data-test=login-changed]').text()).toContain('Логин изменён')
+  expect((page.get('[data-test=password-current]').element as HTMLInputElement).value).toBe('for-password')
+  expect(page.find('[data-test=login-error]').exists()).toBe(false)
+  refresh.mockRestore()
+})
+
+
+it('ignores security errors after same-account logout/relogin and keeps new input', async () => {
+  let reject!: (reason: unknown) => void
+  patch.mockImplementation(() => new Promise((_, fail) => { reject = fail }))
+  const page = await mountSuspended(LoginSettingsPage)
+  await page.get('[data-test=login-form]').trigger('submit')
+  useAuthStore().sessionVersion++
+  await flushPromises()
+  await page.get('[data-test=login]').setValue('new-session@example.test')
+  reject(new Error('old request failed'))
+  await flushPromises()
+  expect(page.find('[data-test=login-error]').exists()).toBe(false)
+  expect((page.get('[data-test=login]').element as HTMLInputElement).value).toBe('new-session@example.test')
+})
+
+it('keeps the login caption stable while describing field errors separately', async () => {
+  patch.mockRejectedValue({ statusCode: 422, data: { errors: { login: ['Этот логин уже занят.'] } } })
+  const page = await mountSuspended(LoginSettingsPage)
+  await page.get('[data-test=login-form]').trigger('submit')
+  await flushPromises()
+  const input = page.get('[data-test=login]')
+  expect(input.attributes('aria-labelledby')).toBeTruthy()
+  expect(page.get('#' + input.attributes('aria-labelledby')).text()).toBe('Новый логин (телефон или email)')
+})
+
+
+it('does not refresh authentication after an unmounted security form completes', async () => {
+  let resolve!: (value: unknown) => void
+  patch.mockImplementation(() => new Promise(done => { resolve = done }))
+  const page = await mountSuspended(LoginSettingsPage)
+  const refresh = vi.spyOn(useAuthStore(), 'fetchMe')
+  await page.get('[data-test=login-form]').trigger('submit')
+  page.unmount()
+  resolve({ data: {} })
+  await flushPromises()
+  expect(refresh).not.toHaveBeenCalled()
+  refresh.mockRestore()
 })

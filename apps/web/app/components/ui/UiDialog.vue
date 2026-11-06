@@ -50,7 +50,8 @@ onBeforeUnmount(() => {
 
 <template>
   <dialog ref="dialog" :aria-label="label" tabindex="-1" class="ui-dialog" @cancel.prevent="emit('close')" @close="open && emit('close')">
-    <slot />
+    <div class="ui-dialog__content"><slot /></div>
+    <footer v-if="$slots.actions" class="ui-dialog__actions"><slot name="actions" /></footer>
   </dialog>
 </template>
 
@@ -61,16 +62,20 @@ onBeforeUnmount(() => {
   max-height: calc(100dvh - 32px);
   margin: auto;
   padding: min(var(--ui-space-4), 16px);
-  border: 1px solid var(--ui-border-strong);
-  border-radius: var(--ui-radius-lg);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
   box-shadow: var(--ui-shadow);
   overflow: auto;
   overflow-wrap: anywhere;
 }
 .ui-dialog::backdrop { background: #17213399; }
+.ui-dialog__content { min-width: 0; }
+.ui-dialog__content > :deep(*) { min-width: 0; }
+.ui-dialog__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--ui-space-2); margin-top: var(--ui-space-4); padding-top: var(--ui-space-4); border-top: 1px solid var(--ui-border); }
 .ui-dialog :deep(h2:first-child) { margin-top: 0; }
-.ui-dialog :deep(form), .ui-dialog :deep(label) { display: flex; flex-direction: column; gap: var(--ui-space-2); min-width: 0; }
-.ui-dialog :deep(input:not([type='checkbox'], [type='radio'])), .ui-dialog :deep(textarea), .ui-dialog :deep(select) { width: 100%; max-width: 100%; }
+.ui-dialog :deep(form:not(.ui-form)) { display: grid; gap: var(--ui-space-3); min-width: 0; }
+.ui-dialog :deep(label:has(> input:not([type='checkbox'], [type='radio'], [type='file']))), .ui-dialog :deep(label:has(> textarea)), .ui-dialog :deep(label:has(> select)) { display: grid; gap: var(--ui-space-2); min-width: 0; }
+.ui-dialog :deep(input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'])), .ui-dialog :deep(textarea), .ui-dialog :deep(select) { width: 100%; max-width: 100%; }
 .ui-dialog :deep(button) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .ui-dialog :deep(ul) { padding-inline-start: var(--ui-space-4); }
 .ui-dialog :deep(li) { min-width: 0; }

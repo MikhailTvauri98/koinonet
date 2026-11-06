@@ -273,6 +273,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Candidates for an authorized slot. Free slots preview up to twenty active
+         *     visible people in stable name/id order for an empty search; one character
+         *     returns no results, two or more use ranked search. Role slots retain their
+         *     membership list. Person identities and conflict details retain visibility rules
+         */
         get: operations["candidate.index"];
         put?: never;
         post?: never;

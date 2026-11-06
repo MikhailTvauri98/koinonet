@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageHeader from '~/components/ui/PageHeader.vue'
+import FormSection from '~/components/ui/FormSection.vue'
 import type { operations } from '~~/types/api'
 import { fetchChurchTimezone } from '~/composables/useChurchTimezone'
 import { apiErrorMessage } from '~/utils/apiError'
@@ -15,6 +17,8 @@ type AuditEntry = AuditResponse['data'][number]
 // журнала, чем вводить идентификатор руками — так и сделано ниже
 // (filterByActor/filterBySubject).
 const api = useApi()
+const auth = useAuthStore()
+let active = true
 const { can } = useCan()
 const canView = computed(() => can('audit.view'))
 
@@ -73,15 +77,15 @@ async function load(reset: boolean) {
     // Смена фильтра посреди загрузки не должна дописать запоздавший ответ
     // старого фильтра к уже показанному новому списку (решение контроллера,
     // бриф задачи 30).
-    if (version !== requestVersion) return
+    if (!active || version !== requestVersion) return
     entries.value = reset ? response.data : [...entries.value, ...response.data]
     nextCursor.value = response.next_cursor
   } catch (error) {
-    if (version !== requestVersion) return
+    if (!active || version !== requestVersion) return
     failedReset = reset
     loadError.value = apiErrorMessage(error, 'Не удалось загрузить журнал. Попробуйте ещё раз.')
   } finally {
-    if (version === requestVersion) {
+    if (active && version === requestVersion) {
       loading.value = false
       loadingMore.value = false
     }
@@ -132,15 +136,19 @@ function formatCreatedAt(iso: string) {
 }
 
 watch([actionFilter, fromDate, toDate], resetList)
-watch(canView, (allowed) => {
+watch([() => auth.sessionVersion, canView], () => {
+  const allowed = canView.value
+  actorId.value = null; actorName.value = null; subjectId.value = null; subjectType.value = null
+  loadError.value = ''
   requestVersion++
   entries.value = []
   nextCursor.value = null
   loading.value = false
   loadingMore.value = false
   if (allowed) void load(true)
-})
+}, { flush: 'sync' })
 onBeforeUnmount(() => {
+  active = false
   requestVersion++
 })
 
@@ -152,9 +160,10 @@ if (canView.value) {
 
 <template>
   <section class="admin-audit">
-    <h1>Журнал действий</h1>
+    <PageHeader title="Журнал действий" description="Действия пользователей и системы с фильтрами по периоду, автору и объекту." />
     <p v-if="!canView" role="alert">Нет права на просмотр журнала.</p>
     <template v-else>
+      <FormSection title="Фильтры журнала" :description="`Период включительно, часовой пояс церкви: ${settings.timezone}.`">
       <div class="admin-audit__filters">
         <label>
           Действие
@@ -164,21 +173,22 @@ if (canView.value) {
           </select>
         </label>
         <label>
-          С
+          Начало периода
           <input v-model="fromDate" data-test="filter-from" type="date">
         </label>
         <label>
-          По
+          Конец периода
           <input v-model="toDate" data-test="filter-to" type="date">
         </label>
       </div>
+      </FormSection>
       <p v-if="actorId" class="admin-audit__chip" data-test="actor-chip">
         Кто: {{ actorName }}
-        <button type="button" data-test="clear-actor" @click="clearActorFilter">×</button>
+        <button type="button" aria-label="Сбросить фильтр по автору" data-test="clear-actor" @click="clearActorFilter">×</button>
       </p>
       <p v-if="subjectType" class="admin-audit__chip" data-test="subject-chip">
         Объект: {{ auditSubjectLabel(subjectType) }} {{ subjectId }}
-        <button type="button" data-test="clear-subject" @click="clearSubjectFilter">×</button>
+        <button type="button" aria-label="Сбросить фильтр по объекту" data-test="clear-subject" @click="clearSubjectFilter">×</button>
       </p>
 
       <p v-if="loading" role="status">Загрузка…</p>
@@ -197,7 +207,7 @@ if (canView.value) {
                 :data-test="`entry-subject-${entry.id}`" @click="filterBySubject(entry)"
               >{{ auditSubjectLabel(entry.subject_type) }} {{ entry.subject_id }}</button>
             </p>
-            <p class="admin-audit__meta">{{ formatCreatedAt(entry.created_at) }}</p>
+            <p class="admin-audit__meta"><time :datetime="entry.created_at">{{ formatCreatedAt(entry.created_at) }}</time></p>
           </li>
         </ul>
         <p v-if="!entries.length && !loadError">Записей не найдено.</p>
@@ -213,21 +223,17 @@ if (canView.value) {
 </template>
 
 <style scoped>
-.admin-audit__filters { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-6), 20px); box-shadow: var(--ui-shadow); }
-.admin-audit__filters select, .admin-audit__filters input { width: 100%; }
-button { overflow-wrap: anywhere; }
-
-.admin-audit { max-width: 48rem; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
-.admin-audit__filters { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.admin-audit__filters label { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; }
-.admin-audit__chip { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 0.4rem; background: var(--ui-surface-muted); padding: 0.4rem 0.7rem; border-radius: 999px; margin: 0 0.5rem 0.5rem 0; }
-.admin-audit__chip button { border: 0; background: none; cursor: pointer; font: inherit; }
-.admin-audit__list { list-style: none; padding: 0; margin: 0; }
-.admin-audit__list li { padding: 0.75rem 0; border-bottom: 1px solid var(--ui-border); }
-.admin-audit__meta { color: var(--ui-text-muted); }
-.admin-audit__link { border: 0; background: none; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
-input, select, button { font: inherit; padding: 0.55rem; border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); min-width: 0; max-width: 100%; }
-button { cursor: pointer; }
-button:disabled { opacity: 0.6; cursor: wait; }
-[role='alert'] { color: var(--ui-danger); }
+.admin-audit { min-width: 0; color: var(--ui-text); overflow-wrap: anywhere; }
+.admin-audit__filters { display: flex; gap: var(--ui-space-4); flex-wrap: wrap; min-width: 0; }
+.admin-audit__filters label { display: grid; gap: var(--ui-space-2); flex: 1 1 11rem; min-width: 0; max-width: 100%; }
+.admin-audit__filters label:first-child { flex-basis: 18rem; }
+.admin-audit__filters select, .admin-audit__filters input { width: 100%; max-width: 100%; }
+.admin-audit__chip { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: var(--ui-space-2); background: var(--ui-surface-muted); padding: var(--ui-space-2) var(--ui-space-3); border-radius: 14px; margin: var(--ui-space-3) var(--ui-space-2) var(--ui-space-3) 0; }
+.admin-audit__chip button { min-width: 44px; }
+.admin-audit__list { list-style: none; padding: 0; margin: var(--ui-space-6) 0; }
+.admin-audit__list li { padding: var(--ui-space-4); border: 1px solid var(--ui-border); border-radius: 14px; background: var(--ui-surface); margin-bottom: var(--ui-space-3); }
+.admin-audit__list p { margin: 0; }
+.admin-audit__meta { color: var(--ui-text-muted); font-size: .875rem; margin-top: var(--ui-space-2) !important; }
+.admin-audit__link { color: var(--ui-accent); text-decoration: underline; text-underline-offset: .2em; }
+button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 </style>

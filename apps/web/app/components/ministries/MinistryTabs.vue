@@ -41,8 +41,9 @@ const canSeeRoles = computed(() => canIn(props.ministryId, 'roles.manage') || ca
 </template>
 
 <style scoped>
-.ministry-tabs { min-width: 0; display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-block: var(--ui-space-4) var(--ui-space-6); }
-.ministry-tabs a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); max-width: 100%; padding: var(--ui-space-2) var(--ui-space-3); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); text-decoration: none; background: var(--ui-surface); overflow-wrap: anywhere; }
-.ministry-tabs .ministry-tabs__active { font-weight: 650; background: var(--ui-accent-soft); border-color: var(--ui-accent); }
-.ministry-tabs button { max-width: 100%; }
+.ministry-tabs { min-width: 0; display: flex; flex-wrap: wrap; gap: var(--ui-space-2) var(--ui-space-4); margin-block: var(--ui-space-4) var(--ui-space-6); border-bottom: 1px solid var(--ui-border); }
+.ministry-tabs a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); max-width: 100%; padding: var(--ui-space-2) 0; border-bottom: 2px solid transparent; color: var(--ui-text-muted); text-decoration: none; overflow-wrap: anywhere; }
+.ministry-tabs a:hover { color: var(--ui-text); }
+.ministry-tabs a.ministry-tabs__active { color: var(--ui-text); border-bottom-color: var(--ui-accent); }
+.ministry-tabs button { max-width: 100%; overflow-wrap: anywhere; }
 </style>

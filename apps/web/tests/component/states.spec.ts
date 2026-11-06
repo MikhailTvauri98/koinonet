@@ -11,6 +11,8 @@ import AnnouncementList from '~/components/announcements/AnnouncementList.vue'
 import AnnouncementEditor from '~/components/announcements/AnnouncementEditor.vue'
 import ChatList from '~/components/chat/ChatList.vue'
 import EventList from '~/components/calendar/EventList.vue'
+import LoadingState from '~/components/ui/LoadingState.vue'
+import EmptyState from '~/components/ui/EmptyState.vue'
 import NotificationsPage from '~/pages/notifications.vue'
 import ChatsPage from '~/pages/chats/index.vue'
 import { useChatsStore } from '~/stores/chats'
@@ -19,6 +21,18 @@ import { useNotificationsStore } from '~/stores/notifications'
 import { grantPermissions } from '../support/permissions'
 
 const { get } = vi.hoisted(() => ({ get: vi.fn() }))
+
+it('announces loading once and keeps empty-state actions with their explanatory text', async () => {
+  const loading = await mountSuspended(LoadingState, { props: { label: 'Загружаем людей…' } })
+  expect(loading.get('[role="status"]').attributes('aria-live')).toBe('polite')
+  expect(loading.get('[aria-hidden="true"]').text()).toBe('')
+  const empty = await mountSuspended(EmptyState, {
+    props: { title: 'Люди не найдены', description: 'Попробуйте изменить поиск.' },
+    slots: { default: '<button>Очистить поиск</button>' },
+  })
+  expect(empty.get('[role="status"]').text()).toContain('Попробуйте изменить поиск.')
+  expect(empty.get('button').text()).toBe('Очистить поиск')
+})
 mockNuxtImport('useApi', () => () => ({ get }))
 const list = (data: unknown[] = [], page = 1, last = 1) => ({ data, meta: { current_page: page, last_page: last, unread_count: 0 }, next_cursor: null })
 const statePerson: Person = { id: 'p-state', first_name: 'Человек', last_name: 'Прежний', patronymic: null, full_name: 'Прежний человек', status: 'member', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: false, account_disabled: false }
@@ -155,9 +169,9 @@ describe('list feedback', () => {
   it('offers the next available chat step without unauthorized group creation', async () => {
     const page = await mountSuspended(ChatList, { props: { chats: [] } })
     expect(page.text()).toContain('Здесь появятся чаты')
-    expect(page.text()).not.toContain('Создайте группу')
+    expect(page.text()).not.toContain('Новая группа')
     grantPermissions({ global: ['chats.create_groups'] }); await flushPromises()
-    expect(page.text()).toContain('Создайте группу')
+    expect(page.text()).toContain('Новая группа')
   })
   it('keeps a failed chat refresh from claiming that an empty list is a successful result', async () => {
     useChatsStore().unsubscribeUser()

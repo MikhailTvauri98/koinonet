@@ -7,6 +7,7 @@ import SlotList from '~/components/calendar/SlotList.vue'
 import EventPage from '~/pages/events/[id].vue'
 import type { EventItem, EventSlot } from '~/composables/useEvents'
 import type { components } from '~~/types/api'
+import { useAuthStore } from '~/stores/auth'
 import { useSettingsStore } from '~/stores/settings'
 import { grantPermissions } from '../support/permissions'
 
@@ -47,23 +48,25 @@ it('renders hidden identities and intersections without links, times or lookup r
 })
 it('debounces free search at two trimmed characters and clears short searches', async () => {
   const w = await mountSuspended(AssignDialog, { props: { slot: freeSlot() } }); vi.useFakeTimers()
-  expect(get).not.toHaveBeenCalled()
-  await w.get('[data-test="search"]').setValue(' а '); await vi.advanceTimersByTimeAsync(300); expect(get).not.toHaveBeenCalled()
-  await w.get('[data-test="search"]').setValue(' ан '); await vi.advanceTimersByTimeAsync(299); expect(get).not.toHaveBeenCalled()
+  await flushPromises()
+  expect(w.find('[data-test="candidate-p1"]').exists()).toBe(true)
+  expect(get).toHaveBeenCalledWith('/slots/s2/candidates', {})
+  await w.get('[data-test="search"]').setValue(' а '); await vi.advanceTimersByTimeAsync(300); expect(get).toHaveBeenCalledTimes(1)
+  await w.get('[data-test="search"]').setValue(' ан '); await vi.advanceTimersByTimeAsync(299); expect(get).toHaveBeenCalledTimes(1)
   await vi.advanceTimersByTimeAsync(1); expect(get).toHaveBeenCalledWith('/slots/s2/candidates', { search: 'ан' })
   expect(w.find('[data-test="candidate-p1"]').exists()).toBe(true)
   await w.get('[data-test="search"]').setValue('а'); expect(w.find('[data-test="candidate-p1"]').exists()).toBe(false)
 })
 it('ignores slow prior queries and cancels pending searches on unmount', async () => {
   let old!: (value: unknown) => void
-  get.mockImplementationOnce(() => new Promise(resolve => { old = resolve })).mockResolvedValueOnce({ data: [candidate('new', 'Новое имя')] })
+  get.mockResolvedValueOnce({ data: [] }).mockImplementationOnce(() => new Promise(resolve => { old = resolve })).mockResolvedValueOnce({ data: [candidate('new', 'Новое имя')] })
   const w = await mountSuspended(AssignDialog, { props: { slot: freeSlot() } }); vi.useFakeTimers()
   await w.get('[data-test="search"]').setValue('ан'); await vi.advanceTimersByTimeAsync(300)
   await w.get('[data-test="search"]').setValue('но'); await vi.advanceTimersByTimeAsync(300)
   old({ data: [candidate('old', 'Старое имя')] }); await vi.advanceTimersByTimeAsync(0)
   expect(w.text()).toContain('Новое имя'); expect(w.text()).not.toContain('Старое имя')
   await w.get('[data-test="search"]').setValue('ещё'); w.unmount(); await vi.advanceTimersByTimeAsync(300)
-  expect(get).toHaveBeenCalledTimes(2)
+  expect(get).toHaveBeenCalledTimes(3)
 })
 it('assigns once and retains success warnings across a same-slot roster refresh', async () => {
   const warnings = [{ code: 'over_capacity', message: 'Слот заполнен сверх нормы.' }, { code: 'time_conflict', message: 'У человека есть пересечение с другим событием.', event_ids: [] }]
@@ -148,6 +151,29 @@ it('keeps saved warnings and blocks repeat submission when roster refresh fails,
   expect(w.get('[data-test="slot-s1-count"]').text()).toBe('1 из 2'); expect(post).toHaveBeenCalledTimes(1)
   expect(w.get('[data-test="warnings"]').text()).toContain('пересечение')
 })
+it('closes candidate selection on identity permission revocation and ignores a late directory response', async () => {
+  grantPermissions({ global: ['people.view'], ministries: { m1: ['slots.assign'] } })
+  let finish!: (value: unknown) => void
+  get.mockImplementation(async (path: string) => path.includes('candidates') ? new Promise(resolve => { finish = resolve }) : { data: event(roleSlot()) })
+  const w = await mountSuspended(EventPage)
+  await w.get('[data-test="assign-s1"]').trigger('click'); await flushPromises()
+  grantPermissions({ ministries: { m1: ['slots.assign'] } }); await flushPromises()
+  finish({ data: [candidate('secret', 'Скрытое имя')] }); await flushPromises()
+  expect(w.find('[data-test="search"]').exists()).toBe(false)
+  expect(w.text()).not.toContain('Скрытое имя')
+})
+it('retains confirmed warnings across an unrelated permission refresh', async () => {
+  grantPermissions({ global: ['people.view'], ministries: { m1: ['slots.assign'] } })
+  get.mockImplementation(async (path: string) => ({ data: path.includes('candidates') ? [candidate()] : event(roleSlot()) }))
+  const w = await mountSuspended(EventPage)
+  await w.get('[data-test="assign-s1"]').trigger('click'); await flushPromises()
+  post.mockResolvedValue({ data: assignment, warnings: [{ code: 'over_capacity', message: 'Сверх нормы.' }] })
+  await w.get('[data-test="candidate-p1"]').trigger('click'); await flushPromises()
+  grantPermissions({ global: ['people.view', 'announcements.view'], ministries: { m1: ['slots.assign'] } }); await flushPromises()
+  expect(w.get('[data-test="warnings"]').text()).toContain('сверх нормы')
+  expect(w.text()).toContain('Назначение создано')
+  expect(w.get('[data-test="candidate-p1"]').attributes('disabled')).toBeDefined()
+})
 it('ignores a pending free-search response after input becomes too short', async () => {
   let finish!: (value: unknown) => void
   get.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
@@ -184,4 +210,105 @@ it.each([403, 404])('clears an unavailable event after successful removal follow
   expect(w.find('article').exists()).toBe(false); expect(w.find('[data-test="assign-s1"]').exists()).toBe(false)
   expect(w.text()).toContain('Изменение сохранено'); expect(w.text()).toContain('Событие больше недоступно')
   expect(w.find('[data-test="retry-assignments"]').exists()).toBe(false)
+})
+
+it('returns to the preview on clear and ignores the late ranked search', async () => {
+  let finish!: (value: unknown) => void
+  get.mockResolvedValueOnce({ data: [candidate('preview')] })
+    .mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    .mockResolvedValueOnce({ data: [candidate('fresh')] })
+  const w = await mountSuspended(AssignDialog, { props: { slot: freeSlot() } }); await flushPromises(); vi.useFakeTimers()
+  expect(w.find('[data-test="candidate-preview"]').exists()).toBe(true)
+  expect(w.text()).not.toContain('Введите хотя бы два')
+  await w.get('[data-test="search"]').setValue('ан'); await vi.advanceTimersByTimeAsync(300)
+  await w.get('[data-test="search"]').setValue(''); await flushPromises()
+  finish({ data: [candidate('late')] }); await flushPromises()
+  expect(w.find('[data-test="candidate-fresh"]').exists()).toBe(true)
+  expect(w.find('[data-test="candidate-late"]').exists()).toBe(false)
+})
+it('retries the failed initial free preview and marks already assigned people', async () => {
+  get.mockRejectedValueOnce(new Error('offline'))
+  const w = await mountSuspended(AssignDialog, { props: { slot: { ...freeSlot(), assignments: [assignment] } } }); await flushPromises()
+  expect(w.find('[role="alert"]').exists()).toBe(true)
+  await w.get('[role="alert"] button').trigger('click'); await flushPromises()
+  expect(w.get('[data-test="candidate-p1"]').attributes('disabled')).toBeDefined()
+  expect(w.get('[data-test="candidate-p1"]').text()).toContain('уже назначен')
+})
+it.each(['people', 'session', 'fill'])('closes its own lifecycle on %s loss and discards pending success', async (change) => {
+  grantPermissions({ global: ['people.view'] })
+  let finish!: (value: unknown) => void
+  post.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  const w = await mountSuspended(AssignDialog, { props: { slot: roleSlot() } }); await flushPromises()
+  await w.get('[data-test="candidate-p1"]').trigger('click')
+  if (change === 'people') grantPermissions()
+  else if (change === 'session') useAuthStore().sessionVersion++
+  else await w.setProps({ slot: { ...roleSlot(), can_fill: false } })
+  await flushPromises(); finish({ data: assignment, warnings: [] }); await flushPromises()
+  expect(w.emitted('close')).toHaveLength(1)
+  expect(w.emitted('assigned')).toBeUndefined()
+  expect(w.find('[data-test="candidate-p1"]').exists()).toBe(false)
+})
+it('preserves typed input and confirmed result on unrelated permissions updates', async () => {
+  grantPermissions({ global: ['people.view'] })
+  const w = await mountSuspended(AssignDialog, { props: { slot: roleSlot() } }); await flushPromises()
+  await w.get('[data-test="search"]').setValue('Анна')
+  await w.get('[data-test="candidate-p1"]').trigger('click'); await flushPromises()
+  grantPermissions({ global: ['people.view', 'people.manage'] }); await flushPromises()
+  expect(w.get('[data-test="search"]').element).toHaveProperty('value', 'Анна')
+  expect(w.text()).toContain('Назначение создано')
+  expect(w.emitted('close')).toBeUndefined()
+})
+
+it('accepts a pending assignment after the same slot role refresh and uses a safe role warning', async () => {
+  let finish!: (value: unknown) => void
+  post.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  const w = await mountSuspended(AssignDialog, { props: { slot: roleSlot() } }); await flushPromises()
+  await w.get('[data-test="candidate-p1"]').trigger('click')
+  await w.setProps({ slot: { ...roleSlot(), role: { id: 'r2', name: 'Звук', ministry_id: 'm1' } } }); await flushPromises()
+  finish({ data: assignment, warnings: [{ code: 'role_mismatch', message: 'Нет требуемой роли.' }] }); await flushPromises()
+  expect(w.emitted('assigned')).toEqual([[assignment, [{ code: 'role_mismatch', message: 'Нет требуемой роли.' }]]])
+  expect(w.text()).toContain('Назначение создано')
+  expect(w.get('[data-test="warnings"]').text()).toContain('нет требуемой роли')
+  expect(w.get('[data-test="warnings"]').text()).not.toContain('Звук')
+  expect(w.get('[data-test="close-assign"]').attributes('disabled')).toBeUndefined()
+  expect(post).toHaveBeenCalledTimes(1)
+})
+it('shows loading rather than an empty result throughout the debounce', async () => {
+  const w = await mountSuspended(AssignDialog, { props: { slot: freeSlot() } }); await flushPromises(); vi.useFakeTimers()
+  await w.get('[data-test="search"]').setValue('никого')
+  expect(w.text()).toContain('Загружаем')
+  expect(w.text()).not.toContain('Никого не найдено')
+  await vi.advanceTimersByTimeAsync(299)
+  expect(w.text()).toContain('Загружаем')
+})
+
+it('blocks all candidates after a saved assignment with failed roster read until read recovery', async () => {
+  get.mockImplementation(async (path: string) => ({ data: path.includes('candidates') ? [candidate(), candidate('p2', 'Мария')] : event(roleSlot()) }))
+  const w = await mountSuspended(EventPage)
+  await w.get('[data-test="assign-s1"]').trigger('click'); await flushPromises()
+  get.mockRejectedValueOnce(new Error('offline'))
+  post.mockResolvedValueOnce({ data: assignment, warnings: [{ code: 'over_capacity', message: 'Сверх нормы.' }] })
+  await w.get('[data-test="candidate-p1"]').trigger('click'); await flushPromises()
+  expect(w.get('[data-test="candidate-p2"]').attributes('disabled')).toBeDefined()
+  await w.get('[data-test="candidate-p2"]').trigger('click'); await flushPromises()
+  expect(post).toHaveBeenCalledTimes(1)
+  expect(w.text()).toContain('Назначение создано')
+  expect(w.get('[data-test="warnings"]').text()).toContain('сверх нормы')
+  expect(w.text()).toContain('Закройте окно')
+  expect(w.get('[data-test="close-assign"]').attributes('disabled')).toBeUndefined()
+  get.mockResolvedValueOnce({ data: event({ ...roleSlot(), assignments: [assignment], filled_count: 1 }) })
+  await w.get('[data-test="retry-assignments"]').trigger('click'); await flushPromises()
+  expect(w.get('[data-test="candidate-p2"]').attributes('disabled')).toBeUndefined()
+  expect(w.get('[data-test="warnings"]').text()).toContain('сверх нормы')
+  expect(post).toHaveBeenCalledTimes(1)
+})
+it('keeps standalone confirmed warnings and permits closing while temporarily disabled', async () => {
+  const w = await mountSuspended(AssignDialog, { props: { slot: roleSlot() } }); await flushPromises()
+  await w.get('[data-test="candidate-p1"]').trigger('click'); await flushPromises()
+  await w.setProps({ disabled: true })
+  expect(w.get('[data-test="search"]').attributes('disabled')).toBeDefined()
+  expect(w.text()).toContain('Закройте окно')
+  expect(w.text()).toContain('Назначение создано')
+  await w.get('[data-test="close-assign"]').trigger('click')
+  expect(w.emitted('close')).toHaveLength(1)
 })

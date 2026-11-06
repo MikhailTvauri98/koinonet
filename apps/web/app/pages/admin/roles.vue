@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import PageHeader from '~/components/ui/PageHeader.vue'
 import RoleEditor from '~/components/roles/RoleEditor.vue'
 import type { RoleLike } from '~/utils/roles'
 import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
+const auth = useAuthStore()
+let active = true
+onBeforeUnmount(() => { active = false; requestVersion++ })
 const { can } = useCan()
 const canManage = computed(() => can('roles.manage_global'))
 const roles = ref<RoleLike[]>([])
@@ -11,6 +15,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const selectedId = ref<string | null>(null)
 const creating = ref(false)
+const editorBusy = ref(false)
 let requestVersion = 0
 
 async function load() {
@@ -20,22 +25,24 @@ async function load() {
   errorMessage.value = ''
   try {
     const response = await api.get<{ data: RoleLike[] }>('/roles?scope=global')
-    if (version === requestVersion) roles.value = response.data
+    if (active && version === requestVersion) roles.value = response.data
   } catch (error) {
-    if (version === requestVersion) errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить роли. Попробуйте ещё раз.')
+    if (active && version === requestVersion) errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить роли. Попробуйте ещё раз.')
   } finally {
-    if (version === requestVersion) loading.value = false
+    if (active && version === requestVersion) loading.value = false
   }
 }
 
 const selectedRole = computed(() => roles.value.find(role => role.id === selectedId.value) ?? null)
 
 function selectRole(id: string) {
+  if (editorBusy.value) return
   creating.value = false
   selectedId.value = id
 }
 
 function startCreating() {
+  if (editorBusy.value) return
   selectedId.value = null
   creating.value = true
 }
@@ -58,7 +65,12 @@ function onDeleted(roleId: string) {
 // Право снимается посреди сессии тем же приёмом, что и в других списках
 // модуля (people/index.vue, ministries/[id]/members.vue): canManage читается
 // заново при каждом пересчёте (useCan.ts), watch реагирует на его смену.
-watch(canManage, (allowed) => {
+watch([() => auth.sessionVersion, canManage], () => {
+  requestVersion++
+  editorBusy.value = false
+  roles.value = []; selectedId.value = null; creating.value = false
+  loading.value = false; errorMessage.value = ''
+  const allowed = canManage.value
   if (allowed) {
     void load()
   } else {
@@ -66,14 +78,16 @@ watch(canManage, (allowed) => {
     selectedId.value = null
     creating.value = false
   }
-})
+}, { flush: 'sync' })
 
 if (canManage.value) await load()
 </script>
 
 <template>
   <section class="admin-roles">
-    <h1>Глобальные роли</h1>
+    <PageHeader title="Глобальные роли" description="Роли определяют разрешённые действия во всей церкви.">
+      <template v-if="canManage" #actions><button type="button" class="ui-button ui-button--primary" data-test="create-role" :disabled="editorBusy" @click="startCreating">Создать роль</button></template>
+    </PageHeader>
     <p v-if="!canManage" role="alert">Нет права на управление глобальными ролями.</p>
     <template v-else>
       <p v-if="loading" role="status">Загрузка…</p>
@@ -82,20 +96,22 @@ if (canManage.value) await load()
       </p>
       <div v-else class="admin-roles__layout">
         <div class="admin-roles__list">
-          <button type="button" class="primary" data-test="create-role" @click="startCreating">Создать роль</button>
+          <h2>Роли церкви</h2>
+          <p v-if="!roles.length" role="status">Роли ещё не созданы.</p>
           <ul>
             <li v-for="role in roles" :key="role.id">
-              <button type="button" :aria-pressed="selectedId === role.id && !creating" :data-test="`select-role-${role.id}`" @click="selectRole(role.id)">
+              <button type="button" :aria-pressed="selectedId === role.id && !creating" :disabled="editorBusy" :data-test="`select-role-${role.id}`" @click="selectRole(role.id)">
                 {{ role.name }}<span v-if="role.is_system"> (системная)</span>
               </button>
             </li>
           </ul>
         </div>
         <RoleEditor
-          v-if="creating || selectedRole" :key="selectedRole?.id ?? 'new'"
+          v-if="creating || selectedRole" :key="`${auth.sessionVersion}-${selectedRole?.id ?? 'new'}`"
           scope="global" :role="selectedRole"
-          @created="onCreated" @updated="onUpdated" @deleted="onDeleted"
+          @busy="editorBusy = $event" @created="onCreated" @updated="onUpdated" @deleted="onDeleted"
         />
+        <p v-else class="admin-roles__empty">Выберите роль из списка или создайте новую.</p>
       </div>
     </template>
   </section>
@@ -103,10 +119,10 @@ if (canManage.value) await load()
 
 <style scoped>
 button { max-width: 100%; overflow-wrap: anywhere; }
-.primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+.primary { background: var(--ui-accent); color: var(--ui-on-accent); border-color: var(--ui-accent); }
 button[aria-pressed='true'] { background: var(--ui-accent-soft); border-color: var(--ui-accent); color: var(--ui-accent); }
 
-.admin-roles { max-width: 64rem; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+.admin-roles { min-width: 0; color: var(--ui-text); overflow-wrap: anywhere; }
 h1 { margin: 0 0 1rem; }
 /* Телефон: список ролей и редактор друг под другом; с 1024px — рядом.
    minmax(0, …) даёт колонке сжиматься уже содержимого, иначе редактор
@@ -115,6 +131,9 @@ h1 { margin: 0 0 1rem; }
 @media (min-width: 1024px) {
   .admin-roles__layout { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--ui-space-6); }
 }
+.admin-roles__list { padding: var(--ui-space-4); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 14px; min-width: 0; }
+.admin-roles__list h2 { margin: 0; }
+.admin-roles__empty { color: var(--ui-text-muted); }
 .admin-roles__list ul { list-style: none; padding: 0; margin: 0.75rem 0 0; }
 .admin-roles__list button { display: block; width: 100%; text-align: left; margin: 0.3rem 0; }
 input, textarea, button { font: inherit; padding: .625rem min(.875rem, 14px); border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); min-width: 0; }

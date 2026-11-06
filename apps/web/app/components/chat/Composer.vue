@@ -24,21 +24,26 @@ defineExpose({ clear, focus })
 </script>
 <template>
   <form class="composer" @submit.prevent="submit">
-    <div v-if="editing">Изменение сообщения <button type="button" :disabled="busy" @click="$emit('cancel')">Отменить</button></div>
+    <div v-if="editing" class="composer-editing"><strong>Изменение сообщения</strong> <button type="button" :disabled="busy" @click="$emit('cancel')">Отменить</button></div>
     <ReplyPreview v-if="reply" :reply="{ id: reply.id, body_preview: reply.body, sender_name: reply.sender ? reply.sender.person?.full_name || 'Участник' : 'Удалённый человек', deleted: reply.deleted }" removable @cancel="$emit('cancel')" />
     <textarea ref="area" v-model="body" data-test="composer" aria-label="Сообщение" placeholder="Сообщение" maxlength="4000" rows="1" :disabled="busy" @input="resize" @keydown="keyboard" />
     <div class="composer-actions">
       <MediaUploader v-if="!editing" :key="uploaderKey" v-model:media-ids="mediaIds" purpose="message" label="Прикрепить файл" multiple :disabled="busy" @busy="uploading = $event" />
-      <button data-test="send" type="submit" :disabled="busy || uploading || (!body.trim() && !mediaIds.length && !editing?.attachments.length)" @click.prevent="submit">{{ busy ? 'Сохранение…' : editing ? 'Сохранить' : 'Отправить' }}</button>
+      <button class="ui-button ui-button--primary" data-test="send" type="submit" :disabled="busy || uploading || (!body.trim() && !mediaIds.length && !editing?.attachments.length)" @click.prevent="submit">{{ busy ? 'Сохранение…' : editing ? 'Сохранить' : 'Отправить' }}</button>
     </div>
   </form>
 </template>
 <style scoped>
-.composer { border-top: 1px solid var(--ui-border); padding-top: .4rem; }
-textarea { display: block; box-sizing: border-box; width: 100%; padding: .5rem; font: inherit; resize: none; min-height: 44px; max-height: 180px; }
-.composer-actions { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: .4rem; margin-top: .4rem; }
+.composer { border-top: 1px solid var(--ui-border); padding-block: .5rem .25rem; min-width: 0; }
+textarea { display: block; box-sizing: border-box; width: 100%; padding: .625rem .75rem; font: inherit; line-height: 1.5; resize: none; min-height: 44px; max-height: 180px; border-radius: .625rem; background: var(--ui-canvas); }
+.composer-actions { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: .5rem; margin-top: .5rem; }
 .composer-actions > * { min-width: 0; max-width: 100%; }
+.composer-actions > .ui-button { margin-inline-start: auto; }
+.composer-editing { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; padding-bottom: .5rem; font-size: .875rem; }
+.composer-editing strong { color: var(--ui-accent); }
+.composer-editing button { font-size: inherit; min-width: 44px; }
 .composer :deep(.previews:empty) { display: none; }
-.composer :deep(.reply-preview) { flex-wrap: wrap; }
-.composer :deep(.reply-preview span) { min-width: 0; }
+.composer :deep(.previews) { margin-block: .5rem 0; }
+.composer :deep(.previews li) { padding: .5rem; gap: .25rem; border: 1px solid var(--ui-border); border-radius: .625rem; background: var(--ui-surface-muted); font-size: .875rem; }
+.composer :deep(.previews button) { min-width: 44px; min-height: 44px; }
 </style>

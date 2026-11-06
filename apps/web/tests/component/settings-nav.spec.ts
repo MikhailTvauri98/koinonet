@@ -49,3 +49,12 @@ describe('navigation between the three account settings screens', () => {
     expect(page.find('a[href="/settings/login"]').exists()).toBe(true)
   })
 })
+
+
+it('names security clearly and keeps every settings destination', async () => {
+  const page = await mountSuspended(ProfilePage)
+  expect(page.get('a[href="/settings/login"]').text()).toBe('Безопасность')
+  for (const target of ['profile', 'login', 'devices', 'notifications', 'ical', 'appearance']) {
+    expect(page.find(`a[href="/settings/${target}"]`).exists()).toBe(true)
+  }
+})

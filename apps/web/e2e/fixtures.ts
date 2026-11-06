@@ -151,7 +151,10 @@ async function initializeDocument(page: Page, navigate: () => Promise<unknown>, 
     successfulGet(page, '/chats'),
     navigate(),
   ])
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  const heading = /^\/(?:chats\/[^/]+|ministries\/[^/]+\/chat)$/.test(path)
+    ? page.locator('.chat-screen').getByRole('heading', { level: 1 })
+    : page.getByRole('heading', { level: 1 })
+  await expect(heading).toBeVisible()
 }
 
 // На телефоне навигация — панель вкладок, прижатая к нижнему краю экрана.
@@ -326,7 +329,7 @@ export async function takeInviteLink(page: Page): Promise<string> {
   const dialog = page.getByRole('dialog', { name: 'Приглашение' })
   const link = (await dialog.getByTestId('invite-link').innerText()).trim()
   expect(link.startsWith(`${e2e.webOrigin}/invite/`), `ссылка приглашения ведёт в предпросмотр: ${link}`).toBe(true)
-  await dialog.getByRole('button', { name: 'Закрыть' }).click()
+  await dialog.getByRole('button', { name: 'Закрыть', exact: true }).click()
   await expect(dialog).toBeHidden()
   return link
 }
@@ -352,7 +355,7 @@ export async function addMember(page: Page, lastName: string, name: string): Pro
   const [searched] = await Promise.all([
     page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/people'
       && new URL(response.url()).searchParams.get('search') === lastName && response.request().method() === 'GET'),
-    dialog.getByLabel('Поиск по имени и фамилии').fill(lastName),
+    dialog.getByLabel('Найти человека').fill(lastName),
   ])
   expect(searched.status()).toBe(200)
   await Promise.all([

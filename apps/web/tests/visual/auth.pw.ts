@@ -60,6 +60,11 @@ async function screenshot(page: Page, info: TestInfo, name: string) {
   await page.screenshot({ path: info.outputPath(name + '.png'), fullPage: true })
 }
 
+for (const theme of ['dark', 'light'] as const) {
+  test.describe(theme, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem('church.ui.theme', value), theme)
+    })
 for (const [width, fontScale] of [[320, 1], [375, 1], [390, 1], [767, 1], [768, 1], [1024, 1], [1440, 1], [320, 2], [768, 2], [1440, 2]] as const) {
   test('auth forms fit ' + width + 'px with text at ' + fontScale * 100 + '%', async ({ page }, info) => {
     await mockVisualApi(page, true)
@@ -72,11 +77,11 @@ for (const [width, fontScale] of [[320, 1], [375, 1], [390, 1], [767, 1], [768, 
       if (fontScale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important; }' })
       await checkForms(page, width)
       expect((await page.locator('form').boundingBox())!.width).toBeLessThanOrEqual(448 * fontScale)
-      if ([375, 1440].includes(width) || fontScale === 2) await screenshot(page, info, screen.kind ?? 'login')
+      if ([390, 1440].includes(width) || fontScale === 2) await screenshot(page, info, screen.kind ?? 'login')
     }
     await mockVisualApi(page)
     await page.goto('/settings/login')
-    await expect(page.getByRole('heading', { name: 'Вход', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Безопасность', exact: true })).toBeVisible()
     if (fontScale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important; }' })
     await checkForms(page, width)
     for (const field of await page.locator('input[autocomplete=current-password]').all()) {
@@ -84,7 +89,7 @@ for (const [width, fontScale] of [[320, 1], [375, 1], [390, 1], [767, 1], [768, 
     }
     await expect(page.locator('[data-test=password-new]')).toHaveAttribute('minlength', '8')
     await expect(page.locator('[data-test=password-new]')).toHaveAttribute('autocomplete', 'new-password')
-    if ([375, 1440].includes(width) || fontScale === 2) await screenshot(page, info, 'settings')
+    if ([390, 1440].includes(width) || fontScale === 2) await screenshot(page, info, 'settings')
   })
 }
 
@@ -187,3 +192,6 @@ test('login works with the keyboard and preserves current-password autocomplete'
   await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeFocused()
   await screenshot(page, info, 'success-notice')
 })
+
+  })
+}

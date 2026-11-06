@@ -38,11 +38,22 @@ function calendarResponse(page: Page): Promise<Response> {
     && response.request().method() === 'GET' && new URL(response.url()).searchParams.get('scope') === 'church')
 }
 
-// Walk the actual overlapping four-week screens until the full horizon is
+// Walk the actual calendar months until the full horizon is
 // covered. Observe their HTTP responses and verify every rendered civil date.
 async function calendarSnapshot(page: Page, templateId: string, until: string): Promise<CalendarEvent[]> {
   const seen = new Map<string, CalendarEvent>()
   let [response] = await Promise.all([calendarResponse(page), openSection(page, 'Календарь', 'Календарь')])
+  if (await page.getByRole('button', { name: 'Список', exact: true }).getAttribute('aria-pressed') !== 'true') {
+    const date = await page.getByTestId('calendar-date').inputValue(), first = date.slice(0, 7) + '-01'
+    const last = new Date(first + 'T00:00:00Z'); last.setUTCMonth(last.getUTCMonth() + 1); last.setUTCDate(0)
+    const url = new URL(response.url())
+    if (url.searchParams.get('from') === first && url.searchParams.get('to') === last.toISOString().slice(0, 10)) {
+      await page.getByRole('button', { name: 'Список', exact: true }).click()
+    } else {
+      const [listResponse] = await Promise.all([calendarResponse(page), page.getByRole('button', { name: 'Список', exact: true }).click()])
+      response = listResponse
+    }
+  }
   for (let screen = 0; screen < 10; screen++) {
     expect(response.status()).toBe(200)
     const payload = await response.json() as { data: CalendarEvent[], meta: { last_page: number } }
@@ -51,13 +62,13 @@ async function calendarSnapshot(page: Page, templateId: string, until: string): 
     await expect(page.getByRole('link', { name: title, exact: true })).toHaveCount(events.length)
     for (const event of events) {
       expect(event.occurrence_date).not.toBeNull()
-      await expect(page.locator(`.event-list h2 time[datetime="${event.occurrence_date}"]`)).toBeVisible()
-      await expect(page.getByRole('link', { name: title, exact: true }).and(page.locator(`[href="/events/${event.id}"]`))).toBeVisible()
+      await expect(page.locator(`time[datetime="${event.occurrence_date}"]`)).toBeVisible()
+      await expect(page.getByRole('link', { name: title, exact: true }).and(page.locator(`[href^="/events/${event.id}?"]`))).toBeVisible()
       seen.set(event.id, event)
     }
     const rangeTo = new URL(response.url()).searchParams.get('to')!
     if (rangeTo >= until) return [...seen.values()].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-    const [nextResponse] = await Promise.all([calendarResponse(page), page.getByTestId('next-week').click()])
+    const [nextResponse] = await Promise.all([calendarResponse(page), page.getByTestId('next-month').click()])
     response = nextResponse
   }
   throw new Error('Calendar navigation did not reach the full eight-week horizon.')
@@ -130,12 +141,17 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   for (const [person, ministryRole] of [[leader, 'Лидер'], [singer, role]] as const) {
     await addMember(page, person.lastName, fullName(person))
     const row = page.getByTestId('member-row').filter({ hasText: fullName(person) })
-    await row.getByLabel(ministryRole, { exact: true }).check()
+    await row.getByTestId('open-member').click()
+    const memberDialog = page.getByRole('dialog', { name: 'Участник служения', exact: true })
+    await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
+    await memberDialog.getByLabel(ministryRole, { exact: true }).check()
     const saved = page.waitForResponse(response => response.request().method() === 'PUT'
       && new URL(response.url()).pathname.startsWith(`/api/v1${ministryPath}/members/`) && new URL(response.url()).pathname.endsWith('/roles'))
-    await row.getByRole('button', { name: 'Сохранить роли' }).click()
+    await memberDialog.getByRole('button', { name: 'Сохранить роли' }).click()
     expect((await saved).status()).toBe(200)
-    await expect(row.getByRole('list', { name: 'Роли участника', exact: true }).getByText(ministryRole, { exact: true })).toBeVisible()
+    await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
+    await memberDialog.getByTestId('close-member').click()
+    await expect.poll(async () => (await row.locator('.member-row__roles').innerText()).split(' · ').sort()).toEqual(['Участник', ministryRole].sort())
   }
 
   await openSection(page, 'Шаблоны', 'Шаблоны')
@@ -152,7 +168,7 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   await page.getByTestId('slot-0-role').selectOption({ label: role })
   await page.getByTestId('slot-0-count').fill('2')
   const created = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/templates' && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await page.getByTestId('save-template-top').click()
   const createdResponse = await created
   expect(createdResponse.status()).toBe(201)
   const template = ((await createdResponse.json()) as { data: CalendarTemplate }).data
@@ -199,10 +215,11 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   await expectPhoneTabBar(leaderPhone)
   await expectNoHorizontalScroll(leaderPhone, 'календарь')
   const event = first.find(event => new Date(event.ends_at).getTime() > Date.now())!
-  expect(event, 'a future occurrence is available in the first four-week screen').toBeTruthy()
+  expect(event, 'a future materialized occurrence is available').toBeTruthy()
+  await leaderPhone.getByTestId('calendar-date').fill(event.occurrence_date!)
   await Promise.all([
     expectApiResponse(leaderPhone, 'GET', `/events/${event.id}`, 200),
-    leaderPhone.getByRole('link', { name: title, exact: true }).and(leaderPhone.locator(`[href="/events/${event.id}"]`)).click(),
+    leaderPhone.getByRole('link', { name: title, exact: true }).and(leaderPhone.locator(`[href^="/events/${event.id}?"]`)).click(),
   ])
   const slotId = event.slots[0]!.id
   await expect(async () => {

@@ -19,6 +19,12 @@ use Illuminate\Support\Facades\Gate;
 
 final class CandidateController
 {
+    /**
+     * Candidates for an authorized slot. Free slots preview up to twenty active
+     * visible people in stable name/id order for an empty search; one character
+     * returns no results, two or more use ranked search. Role slots retain their
+     * membership list. Person identities and conflict details retain visibility rules.
+     */
     public function index(Request $request, EventSlot $slot, CandidateQuery $query, TimeConflictFinder $finder, EventAccess $access): AnonymousResourceCollection
     {
         abort_if($slot->archived_at !== null || $slot->event->archived_at !== null, 404);

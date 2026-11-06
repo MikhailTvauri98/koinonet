@@ -46,6 +46,8 @@ async function onSubmit() {
       <p v-if="passwordChanged" class="account-notice account-notice--success" role="status">
         Пароль изменён. Войдите с новым паролем.
       </p>
+      <fieldset class="ui-fieldset account-form">
+        <legend>Данные аккаунта</legend>
       <label class="account-field">
         <span>Телефон или email</span>
         <input
@@ -61,6 +63,7 @@ async function onSubmit() {
         <input v-model="remember" type="checkbox">
         Запомнить меня
       </label>
+      </fieldset>
       <p v-if="errorMessage" class="account-notice account-notice--error" role="alert">
         {{ errorMessage }}
       </p>

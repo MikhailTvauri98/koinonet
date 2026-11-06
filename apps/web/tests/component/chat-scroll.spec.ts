@@ -97,3 +97,26 @@ it('keeps an open message menu attached to its original message after a live app
     list.unmount(); vi.unstubAllGlobals()
   }
 })
+
+it('follows decoded image growth at unchanged viewport height without moving an older reader', async () => {
+  vi.stubGlobal('ResizeObserver', undefined)
+  const photo = { ...message('photo'), attachments: [{ id: 'image', kind: 'image', status: 'ready', url: '/photo.jpg', thumb_url: null }] }
+  const list = await mountSuspended(MessageList, { props: { messages: [photo], hasOlder: false, loadingOlder: false, writable: true, moderate: false, pinnedIds: [] } })
+  try {
+    await flushPromises()
+    const scroller = list.get('.message-list').element as HTMLElement
+    let height = 400
+    Object.defineProperty(scroller, 'scrollHeight', { get: () => height })
+    Object.defineProperty(scroller, 'clientHeight', { get: () => 200 })
+    scroller.scrollTop = 200
+    await list.get('.message-list').trigger('scroll')
+    height = 800
+    list.get('img').element.dispatchEvent(new Event('load', { bubbles: false })); await flushPromises()
+    expect(scroller.scrollTop).toBe(800)
+    scroller.scrollTop = 50
+    await list.get('.message-list').trigger('scroll')
+    height = 1000
+    list.get('img').element.dispatchEvent(new Event('load', { bubbles: false })); await flushPromises()
+    expect(scroller.scrollTop).toBe(50)
+  } finally { list.unmount(); vi.unstubAllGlobals() }
+})

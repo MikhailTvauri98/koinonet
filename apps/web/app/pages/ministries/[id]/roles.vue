@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
+import PageHeader from '~/components/ui/PageHeader.vue'
 import RoleEditor from '~/components/roles/RoleEditor.vue'
 import type { Ministry } from '~/utils/ministries'
 import type { RoleLike } from '~/utils/roles'
 import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi()
+const auth = useAuthStore()
+let active = true
+onBeforeUnmount(() => { active = false; requestVersion++ })
 const route = useRoute()
 const { canIn } = useCan()
 const ministryId = computed(() => String(route.params.id))
@@ -23,9 +27,11 @@ const loading = ref(false)
 const errorMessage = ref('')
 const selectedId = ref<string | null>(null)
 const creating = ref(false)
+const editorBusy = ref(false)
 const settingDefaultId = ref<string | null>(null)
 const defaultRoleError = ref('')
 let requestVersion = 0
+let defaultVersion = 0
 
 async function load() {
   if (!canSeeRoles.value) return
@@ -39,25 +45,27 @@ async function load() {
       api.get<{ data: Ministry }>(`/ministries/${encodeURIComponent(ministryId.value)}`),
       api.get<{ data: RoleLike[] }>(`/ministries/${encodeURIComponent(ministryId.value)}/roles`),
     ])
-    if (version !== requestVersion) return
+    if (!active || version !== requestVersion) return
     ministry.value = ministryResponse.data
     roles.value = rolesResponse.data
   } catch (error) {
-    if (version !== requestVersion) return
+    if (!active || version !== requestVersion) return
     errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить роли служения. Попробуйте ещё раз.')
   } finally {
-    if (version === requestVersion) loading.value = false
+    if (active && version === requestVersion) loading.value = false
   }
 }
 
 const selectedRole = computed(() => roles.value.find(role => role.id === selectedId.value) ?? null)
 
 function selectRole(id: string) {
+  if (editorBusy.value) return
   creating.value = false
   selectedId.value = id
 }
 
 function startCreating() {
+  if (editorBusy.value) return
   if (!canManageRoles.value) return
   selectedId.value = null
   creating.value = true
@@ -80,41 +88,44 @@ function onDeleted(roleId: string) {
 
 async function setDefaultRole(roleId: string) {
   if (!canManageRoles.value || settingDefaultId.value || ministry.value?.default_role_id === roleId) return
+  const version = requestVersion
+  const writeVersion = ++defaultVersion
   settingDefaultId.value = roleId
   defaultRoleError.value = ''
   try {
     const response = await api.patch<{ data: Ministry }>(`/ministries/${encodeURIComponent(ministryId.value)}`, {
       default_role_id: roleId,
     })
+    if (!active || version !== requestVersion || writeVersion !== defaultVersion || !canManageRoles.value) return
     ministry.value = response.data
   } catch (error) {
+    if (!active || version !== requestVersion || writeVersion !== defaultVersion || !canManageRoles.value) return
     defaultRoleError.value = apiErrorMessage(error, 'Не удалось изменить роль по умолчанию. Попробуйте ещё раз.')
   } finally {
-    settingDefaultId.value = null
+    if (active && version === requestVersion && writeVersion === defaultVersion) settingDefaultId.value = null
   }
 }
 
-watch(canSeeRoles, (allowed) => {
-  if (allowed) {
-    void load()
-  } else {
-    roles.value = []
-    ministry.value = null
-    selectedId.value = null
-    creating.value = false
-  }
-})
-// Nuxt переиспользует компонент страницы между служениями (тот же приём,
-// что в members.vue) — иначе роли и выбранная роль старого служения
-// остались бы видны под новым route.params.id.
-watch(() => route.params.id, () => { void load() })
+watch([() => auth.sessionVersion, ministryId, canSeeRoles], () => {
+  requestVersion++
+  editorBusy.value = false
+  roles.value = []; ministry.value = null; selectedId.value = null; creating.value = false
+  settingDefaultId.value = null; defaultRoleError.value = ''; loading.value = false; errorMessage.value = ''
+  if (canSeeRoles.value) void load()
+}, { flush: 'sync' })
+watch(canManageRoles, (allowed) => {
+  defaultVersion++
+  if (!allowed) { editorBusy.value = false; selectedId.value = null; creating.value = false; settingDefaultId.value = null; defaultRoleError.value = '' }
+}, { flush: 'sync' })
 await load()
 </script>
 
 <template>
   <section class="roles-tab">
     <MinistryTabs :ministry-id="ministryId" :chat-id="ministry?.chat_id" />
-    <h1>Роли служения</h1>
+    <PageHeader title="Роли служения" :description="ministry?.name">
+      <template v-if="canManageRoles" #actions><button type="button" class="ui-button ui-button--primary" data-test="create-role" :disabled="editorBusy" @click="startCreating">Создать роль</button></template>
+    </PageHeader>
     <p v-if="!canSeeRoles" role="alert">Нет права видеть роли этого служения.</p>
     <template v-else>
       <p v-if="loading" role="status">Загрузка…</p>
@@ -123,10 +134,11 @@ await load()
       </p>
       <div v-else class="roles-tab__layout">
         <div class="roles-tab__list">
-          <button v-if="canManageRoles" type="button" class="primary" data-test="create-role" @click="startCreating">Создать роль</button>
+          <h2>Роли и роль по умолчанию</h2>
+          <p class="ui-hint">Роль по умолчанию выдаётся при добавлении участника.</p>
           <ul>
             <li v-for="role in roles" :key="role.id" class="roles-tab__row">
-              <button v-if="canManageRoles" type="button" :aria-pressed="selectedId === role.id && !creating" :data-test="`select-role-${role.id}`" @click="selectRole(role.id)">
+              <button v-if="canManageRoles" type="button" :aria-pressed="selectedId === role.id && !creating" :disabled="editorBusy" :data-test="`select-role-${role.id}`" @click="selectRole(role.id)">
                 {{ role.name }}<span v-if="role.is_system"> (системная)</span>
               </button>
               <span v-else>{{ role.name }}<template v-if="role.is_system"> (системная)</template></span>
@@ -140,10 +152,11 @@ await load()
           <p v-if="defaultRoleError" role="alert">{{ defaultRoleError }}</p>
         </div>
         <RoleEditor
-          v-if="canManageRoles && (creating || selectedRole)" :key="selectedRole?.id ?? 'new'"
+          v-if="canManageRoles && (creating || selectedRole)" :key="`${auth.sessionVersion}-${ministryId}-${selectedRole?.id ?? 'new'}`"
           scope="ministry" :ministry-id="ministryId" :role="selectedRole"
-          @created="onCreated" @updated="onUpdated" @deleted="onDeleted"
+          @busy="editorBusy = $event" @created="onCreated" @updated="onUpdated" @deleted="onDeleted"
         />
+        <p v-else-if="canManageRoles" class="ui-hint">Выберите роль из списка или создайте новую.</p>
       </div>
     </template>
   </section>
@@ -151,10 +164,10 @@ await load()
 
 <style scoped>
 button { max-width: 100%; overflow-wrap: anywhere; }
-.primary { background: var(--ui-accent); color: var(--ui-surface); border-color: var(--ui-accent); }
+.primary { background: var(--ui-accent); color: var(--ui-on-accent); border-color: var(--ui-accent); }
 button[aria-pressed='true'] { background: var(--ui-accent-soft); border-color: var(--ui-accent); color: var(--ui-accent); }
 
-.roles-tab { max-width: 64rem; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+.roles-tab { min-width: 0; color: var(--ui-text); overflow-wrap: anywhere; }
 h1 { margin: 0 0 1rem; }
 /* Телефон: список ролей и редактор друг под другом; с 1024px — рядом.
    minmax(0, …) даёт колонке сжиматься уже содержимого, иначе редактор
@@ -163,6 +176,8 @@ h1 { margin: 0 0 1rem; }
 @media (min-width: 1024px) {
   .roles-tab__layout { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--ui-space-6); }
 }
+.roles-tab__list { padding: var(--ui-space-4); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 14px; min-width: 0; }
+.roles-tab__list h2 { margin: 0; }
 .roles-tab__list ul { list-style: none; padding: 0; margin: 0.75rem 0 0; }
 .roles-tab__row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.3rem 0; }
 /* Основа 12rem: на узком экране кнопка «Сделать ролью по умолчанию»

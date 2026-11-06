@@ -2,6 +2,7 @@
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAuthStore } from '~/stores/auth'
 import AdminSettings from '~/pages/admin/settings.vue'
 import { grantPermissions } from '../support/permissions'
 
@@ -90,5 +91,45 @@ describe('admin church settings page', () => {
 
     expect(page.text()).toContain('Не удалось сохранить настройки. Попробуйте ещё раз.')
     expect(page.text()).not.toContain('Server Error')
+  })
+})
+
+
+describe('administrative settings redesign', () => {
+  it('groups church identity and regional settings and describes field errors separately', async () => {
+    grantPermissions({ global: ['settings.manage'] })
+    put.mockRejectedValue({ statusCode: 422, data: { errors: { timezone: ['Часовой пояс не найден.'] } } })
+    const page = await mountSuspended(AdminSettings)
+    expect(page.findAll('.ui-form-section h2').map(h => h.text())).toEqual(['О церкви', 'Региональные настройки'])
+    await page.find('form').trigger('submit')
+    await flushPromises()
+    const field = page.get('[data-test="timezone"]')
+    expect(field.attributes('aria-invalid')).toBe('true')
+    expect(page.get(`#${field.attributes('aria-describedby')}`).text()).toBe('Часовой пояс не найден.')
+    expect(page.get(`label[for="${field.attributes('id')}"]`).text()).toBe('Часовой пояс')
+  })
+
+  it('preserves a draft when unrelated permissions refresh', async () => {
+    grantPermissions({ global: ['settings.manage'] })
+    const page = await mountSuspended(AdminSettings)
+    await page.get('[data-test="church-name"]').setValue('Мой черновик')
+    grantPermissions({ global: ['settings.manage', 'audit.view'] })
+    await flushPromises()
+    expect((page.get('[data-test="church-name"]').element as HTMLInputElement).value).toBe('Мой черновик')
+  })
+
+  it('ignores a late save after logout and login to the same account', async () => {
+    grantPermissions({ global: ['settings.manage'] })
+    const page = await mountSuspended(AdminSettings)
+    let finish!: (value: unknown) => void
+    put.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await page.find('form').trigger('submit')
+    useAuthStore().reset()
+    grantPermissions({ global: ['settings.manage'] })
+    await flushPromises()
+    finish({ data: { ...settings, church_name: 'Старый ответ' } })
+    await flushPromises()
+    expect((page.get('[data-test="church-name"]').element as HTMLInputElement).value).toBe('Дом хлеба')
+    expect(page.text()).not.toContain('Сохранено.')
   })
 })

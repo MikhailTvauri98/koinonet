@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import AddMemberDialog from '~/components/ministries/AddMemberDialog.vue'
+import PageHeader from '~/components/ui/PageHeader.vue'
+import MemberDetailsDialog from '~/components/ministries/MemberDetailsDialog.vue'
 import MemberRow from '~/components/ministries/MemberRow.vue'
 import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
 import type { Member, MinistryRole } from '~/utils/ministries'
 import { apiErrorMessage } from '~/utils/apiError'
 
-const api = useApi()
+const api = useApi(), auth = useAuthStore()
 const route = useRoute()
 const { can, canIn } = useCan()
 const ministryId = computed(() => String(route.params.id))
@@ -21,39 +23,50 @@ const members = ref<Member[]>([])
 // если управление доступно: без members.manage чекбоксы всё равно скрыты,
 // а без roles.manage тот же запрос ответил бы 403.
 const roles = ref<{ id: string, name: string }[]>([])
-const rolesError = ref('')
+const rolesError = ref(''), rolesLoading = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const showAddDialog = ref(false)
+const selectedMember = ref<Member | null>(null)
+const search = ref('')
+const filteredMembers = computed(() => {
+  const query = search.value.trim().toLocaleLowerCase('ru')
+  return members.value.filter(member => !query || [member.full_name || '', ...member.roles.map(role => role.name)].join(' ').toLocaleLowerCase('ru').includes(query))
+})
+const canSeePeople = computed(() => can('people.view'))
+let active = true
+onBeforeUnmount(() => { active = false; requestVersion++; rolesRequestVersion++ })
 let requestVersion = 0
 let rolesRequestVersion = 0
 
 async function load() {
-  const version = ++requestVersion
+  const version = ++requestVersion, session = auth.sessionVersion
   loading.value = true
   errorMessage.value = ''
   try {
     const response = await api.get<{ data: Member[] }>(`/ministries/${encodeURIComponent(ministryId.value)}/members`)
-    if (version === requestVersion) members.value = response.data
+    if (active && session === auth.sessionVersion && version === requestVersion) members.value = response.data
   } catch (error) {
-    if (version !== requestVersion) return
+    if (!active || session !== auth.sessionVersion || version !== requestVersion) return
     errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить состав. Попробуйте ещё раз.')
   } finally {
-    if (version === requestVersion) loading.value = false
+    if (active && session === auth.sessionVersion && version === requestVersion) loading.value = false
   }
 }
 
 async function loadRoles() {
   if (!canManage.value) return
-  const version = ++rolesRequestVersion
-  rolesError.value = ''
+  const version = ++rolesRequestVersion, session = auth.sessionVersion
+  rolesError.value = ''; rolesLoading.value = true
   try {
     const response = await api.get<{ data: MinistryRole[] }>(`/ministries/${encodeURIComponent(ministryId.value)}/roles`)
-    if (version === rolesRequestVersion) roles.value = response.data.map(role => ({ id: role.id, name: role.name }))
+    if (active && canManage.value && session === auth.sessionVersion && version === rolesRequestVersion) roles.value = response.data.map(role => ({ id: role.id, name: role.name }))
   } catch (error) {
-    if (version === rolesRequestVersion) {
+    if (active && canManage.value && session === auth.sessionVersion && version === rolesRequestVersion) {
       rolesError.value = apiErrorMessage(error, 'Не удалось загрузить роли служения. Попробуйте ещё раз.')
     }
+  } finally {
+    if (active && session === auth.sessionVersion && version === rolesRequestVersion) rolesLoading.value = false
   }
 }
 
@@ -64,46 +77,47 @@ function onAdded(member: Member) {
 
 function onRemoved(memberId: string) {
   members.value = members.value.filter(member => member.id !== memberId)
+  selectedMember.value = null
 }
 
 function onRolesChanged(updated: Member) {
   members.value = members.value.map(member => member.id === updated.id ? updated : member)
+  selectedMember.value = updated
 }
 
-// Открытый диалог добавления теряет смысл, если members.manage или
-// people.view сняли посреди сессии — сами MemberRow скрывают свои действия
-// реактивно (canIn читается заново при каждом вызове, useCan.ts), здесь
-// достаточно закрыть диалог добавления. Каталог ролей перечитывается, если
-// право появилось посреди сессии, и очищается, если его сняли.
+// Closing editors and invalidating the catalogue follows actual capability loss,
+// not an unrelated refresh of the same account's permissions.
 watch(canManage, (allowed) => {
   if (allowed) {
     void loadRoles()
   } else {
-    roles.value = []
+    rolesRequestVersion++
+    roles.value = []; rolesLoading.value = false; rolesError.value = ''
+    selectedMember.value = null
   }
 })
 watch(canAdd, (allowed) => { if (!allowed) showAddDialog.value = false })
-// Nuxt переиспользует этот компонент страницы между служениями (переход по
-// ссылке между /ministries/{id}/members меняет только route.params.id, не
-// пересоздавая компонент) — открытый диалог добавления, найденный в старом
-// служении, иначе остался бы открытым и добавил бы того человека уже в
-// новое (review round 2, task 28). v-if пересоздаёт AddMemberDialog с нуля
-// при следующем открытии, так что закрытия достаточно и для сброса его
-// внутреннего состояния (поиска и результатов).
-watch(() => route.params.id, () => {
-  showAddDialog.value = false
+function resetContext() {
+  requestVersion++; rolesRequestVersion++
+  showAddDialog.value = false; selectedMember.value = null
+  members.value = []; roles.value = []; rolesLoading.value = false; rolesError.value = ''; search.value = ''
   void Promise.all([load(), loadRoles()])
-})
-await Promise.all([load(), loadRoles()])
+}
+watch([() => route.params.id, () => auth.sessionVersion, () => auth.user?.id], resetContext, { flush: 'sync' })
+// A directory permission change can invalidate previously visible identities.
+watch(canSeePeople, resetContext, { flush: 'sync' })
+void loadRoles()
+await load()
 </script>
 
 <template>
   <section class="members-tab">
+    <PageHeader title="Участники" description="Состав и роли в служении">
+      <template #breadcrumbs><NuxtLink to="/ministries">Служения</NuxtLink><span aria-hidden="true">/</span><NuxtLink :to="`/ministries/${encodeURIComponent(ministryId)}`">Обзор служения</NuxtLink></template>
+      <template #actions><button v-if="canAdd" type="button" class="ui-button ui-button--primary" data-test="add-member" @click="showAddDialog = true">Добавить участника</button></template>
+    </PageHeader>
     <MinistryTabs :ministry-id="ministryId" />
-    <header>
-      <h1>Участники</h1>
-      <button v-if="canAdd" type="button" data-test="add-member" @click="showAddDialog = true">Добавить участника</button>
-    </header>
+    <label class="members-tab__search"><span>Найти участника</span><input v-model="search" type="search" data-test="member-search" placeholder="Имя или роль"></label>
     <p v-if="rolesError" role="alert">
       {{ rolesError }} <button type="button" data-test="retry-roles" @click="loadRoles">Повторить</button>
     </p>
@@ -116,21 +130,23 @@ await Promise.all([load(), loadRoles()])
       {{ errorMessage }} <button type="button" data-test="retry" @click="load">Повторить</button>
     </p>
     <p v-else-if="!members.length" role="status">В служении пока нет участников.</p>
-    <ul v-else class="members-tab__list">
+    <p v-else-if="!filteredMembers.length" role="status">Участники не найдены. Попробуйте другое имя или роль.</p>
+    <ul v-else class="members-tab__list" aria-label="Состав служения">
       <MemberRow
-        v-for="member in members" :key="member.id" :member="member" :ministry-id="ministryId"
-        :roles-catalogue="roles" @removed="onRemoved" @roles-changed="onRolesChanged"
+        v-for="member in filteredMembers" :key="member.id" :member="member" @open="selectedMember = $event"
       />
     </ul>
+    <p v-if="members.length && !loading" class="members-tab__count" role="status">Показано {{ filteredMembers.length }} из {{ members.length }}</p>
+    <MemberDetailsDialog v-if="selectedMember" :key="selectedMember.id" :member="selectedMember" :ministry-id="ministryId" :roles-catalogue="roles" :roles-loading="rolesLoading" :catalogue-error="rolesError" @retry-roles="loadRoles" @close="selectedMember = null" @removed="onRemoved" @roles-changed="onRolesChanged" />
   </section>
 </template>
 
 <style scoped>
+.members-tab { width: 100%; min-width: 0; max-width: var(--ui-content-width); margin-inline: auto; color: var(--ui-text); }
+.members-tab__search { display: grid; gap: var(--ui-space-2); width: min(100%, 24rem); margin-bottom: var(--ui-space-4); font-size: .875rem; color: var(--ui-text-muted); }
+.members-tab__search input { width: 100%; max-width: 100%; }
+.members-tab__list { list-style: none; padding: 0; margin: 0; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); background: var(--ui-surface); overflow: clip; }
+.members-tab__count { color: var(--ui-text-muted); font-size: .875rem; }
 button { max-width: 100%; overflow-wrap: anywhere; }
-.members-tab { max-width: 48rem; margin: 0 auto; color: var(--ui-text); }
-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
-h1 { margin: 0; }
-.members-tab__list { list-style: none; padding: 0; margin: 0; }
-button { font: inherit; padding: .625rem min(.875rem, 14px); cursor: pointer; background: var(--ui-accent); color: white; border: none; border-radius: var(--ui-radius-sm); }
 [role='alert'] { color: var(--ui-danger); }
 </style>

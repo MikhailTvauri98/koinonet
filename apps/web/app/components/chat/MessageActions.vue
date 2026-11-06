@@ -32,14 +32,16 @@ onBeforeUnmount(() => { revision++ })
       <div class="message-actions">
         <button v-if="writable" type="button" :data-test="`reply-${message.id}`" @click="choose('reply')">Ответить</button>
         <button v-if="own && writable" type="button" :data-test="`edit-${message.id}`" @click="choose('edit')">Изменить</button>
-        <button v-if="(own && writable) || moderate" type="button" :data-test="`delete-${message.id}`" @click="choose('delete')">Удалить</button>
+        <button v-if="(own && writable) || moderate" class="ui-button--danger" type="button" :data-test="`delete-${message.id}`" @click="choose('delete')">Удалить</button>
         <button v-if="moderate" type="button" :data-test="`pin-${message.id}`" @click="choose('pin')">{{ pinned ? 'Открепить' : 'Закрепить' }}</button>
-        <button type="button" @click="opened = false">Закрыть</button>
       </div>
+      <template #actions><button type="button" @click="opened = false">Закрыть</button></template>
     </UiDialog>
   </template>
 </template>
 <style scoped>
-.message-actions-trigger { flex: 0 0 auto; padding: .25rem; min-width: 44px; min-height: 44px; font-size: 1.25rem; background: transparent; border-color: transparent; }
-.message-actions { display: flex; flex-direction: column; gap: .4rem; }
+.message-actions-trigger { flex: 0 0 auto; padding: .25rem; min-width: 44px; min-height: 44px; font-size: 1.5rem; line-height: 1; color: var(--ui-text-muted); background: transparent; border-color: transparent; border-radius: .5rem; }
+.message-actions-trigger:hover, .message-actions-trigger[aria-expanded="true"] { color: var(--ui-accent); background: var(--ui-surface); border-color: var(--ui-border); }
+.message-actions { display: flex; flex-direction: column; gap: .5rem; }
+.message-actions button { text-align: start; min-width: 44px; }
 </style>

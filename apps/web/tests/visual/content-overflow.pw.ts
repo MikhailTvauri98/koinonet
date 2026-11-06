@@ -8,7 +8,7 @@ const warning = 'Проверьте данные. ' + ministryName
 const ministry = { id: 'm-overflow', name: ministryName }
 const announcement = {
   id: 'a-overflow', scope: 'ministry', ministry, author: { id: 'u-visual', full_name: 'Анна Петрова' },
-  title, body: '**Важная дата:** 08.11.2026. ' + title, pinned: true, hide_after: '2026-12-31',
+  title, body: '**Важная дата:** 08.11.2026. ' + title + ' [Подробности](https://example.test/' + 'длиннаяссылка'.repeat(25) + ')', pinned: true, hide_after: '2026-12-31',
   notify_on_publish: false, published_at: '2026-11-01T08:00:00Z', archived: false, attachments: [], views_count: 18,
 }
 
@@ -86,7 +86,7 @@ for (const width of [320, 375, 768, 1440]) {
         await page.locator('[data-test=slot-0-count]').fill('50')
         await fits(page)
         await expect(page.getByText('События могут быть и раньше опорной даты.', { exact: false })).toBeVisible()
-        await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+        await page.getByRole('button', { name: 'Сохранить', exact: true }).last().click()
         await expect(page.getByRole('alert').first()).toContainText(warning)
         await expect(page.locator('[data-test=slot-0-label]')).toHaveValue(ministryName)
         await expect(page.locator('[data-test=slot-0-count]')).toHaveValue('50')
@@ -98,18 +98,18 @@ for (const width of [320, 375, 768, 1440]) {
       test('event slot addition and changes keep dates, counts and warnings', async ({ page }, testInfo) => {
         await page.goto('/events/new')
         await page.locator('[data-test=title]').fill(title)
-        await page.locator('[data-test=starts-at]').fill('2026-11-08T10:00')
-        await page.locator('[data-test=ends-at]').fill('2026-11-08T12:00')
+        await page.locator('[data-test=starts-date]').fill('2026-11-08'); await page.locator('[data-test=starts-time]').fill('10:00')
+        await page.locator('[data-test=ends-date]').fill('2026-11-08'); await page.locator('[data-test=ends-time]').fill('12:00')
         await page.getByRole('button', { name: 'Добавить слот' }).click()
         await page.locator('[data-test=slot-0-role]').selectOption('r-overflow')
         await page.locator('[data-test=slot-0-label]').fill(ministryName)
         await page.locator('[data-test=slot-0-count]').fill('50')
         await fits(page)
-        await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+        await page.getByRole('button', { name: 'Создать событие', exact: true }).last().click()
         await expect(page.getByRole('alert').first()).toContainText(warning)
         await expect(page.locator('[data-test=slot-0-count]')).toHaveValue('50')
-        await expect(page.locator('[data-test=starts-at]')).toHaveValue('2026-11-08T10:00')
-        await expect(page.locator('[data-test=ends-at]')).toHaveValue('2026-11-08T12:00')
+        await expect(page.locator('[data-test=starts-date]')).toHaveValue('2026-11-08'); await expect(page.locator('[data-test=starts-time]')).toHaveValue('10:00')
+        await expect(page.locator('[data-test=ends-date]')).toHaveValue('2026-11-08'); await expect(page.locator('[data-test=ends-time]')).toHaveValue('12:00')
         await fits(page)
         await page.getByRole('button', { name: 'Убрать слот' }).click()
         await expect(page.getByRole('group', { name: 'Слот 1' })).toHaveCount(0)

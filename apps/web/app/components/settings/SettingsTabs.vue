@@ -1,12 +1,13 @@
 <script setup lang="ts">
-// Вкладки настроек аккаунта: «Профиль», «Вход», «Устройства» доступны каждому
+// Вкладки настроек аккаунта: «Профиль», «Безопасность», «Устройства» доступны каждому
 // вошедшему без прав (docs/architecture.md, 6.1), поэтому видны всегда.
 </script>
 
 <template>
   <nav aria-label="Разделы настроек" class="settings-tabs">
     <NuxtLink to="/settings/profile" exact-active-class="settings-tabs__active">Профиль</NuxtLink>
-    <NuxtLink to="/settings/login" exact-active-class="settings-tabs__active">Вход</NuxtLink>
+    <NuxtLink to="/settings/login" exact-active-class="settings-tabs__active">Безопасность</NuxtLink>
+    <NuxtLink to="/settings/appearance" exact-active-class="settings-tabs__active">Оформление</NuxtLink>
     <NuxtLink to="/settings/devices" exact-active-class="settings-tabs__active">Устройства</NuxtLink>
     <NuxtLink to="/settings/notifications" exact-active-class="settings-tabs__active">Уведомления</NuxtLink>
     <NuxtLink to="/settings/ical" exact-active-class="settings-tabs__active">Календарь телефона</NuxtLink>

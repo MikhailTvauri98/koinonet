@@ -9,6 +9,7 @@ import RolesTab from '~/pages/ministries/[id]/roles.vue'
 import MinistriesList from '~/pages/ministries/index.vue'
 import MediaUploader from '~/components/MediaUploader.vue'
 import type { Member, Ministry } from '~/utils/ministries'
+import { useAuthStore } from '~/stores/auth'
 import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
@@ -62,6 +63,153 @@ function mockMembersAndRoles(members: unknown[], roles: unknown[] = ministryRole
 }
 
 describe('ministry members tab', () => {
+  it.each(['roles', 'remove'])('keeps details open during %s write so its confirmed result remains visible', async (operation) => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    mockMembersAndRoles([member])
+    let resolve!: (value: { data: Member }) => void
+    if (operation === 'roles') put.mockImplementation(() => new Promise(done => { resolve = done }))
+    else del.mockImplementation(() => new Promise(done => { resolve = done }))
+    const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
+    if (operation === 'roles') await page.get('[data-test="save-roles"]').trigger('click')
+    else {
+      await page.get('[data-test="remove-member"]').trigger('click')
+      await page.get('[data-test="confirm-remove-member"]').trigger('click')
+    }
+    await page.get('dialog').trigger('cancel')
+    expect(page.find('[data-test="save-roles"]').exists()).toBe(true)
+    expect(page.get('[data-test="close-member"]').attributes('disabled')).toBeDefined()
+    resolve({ data: member })
+    await flushPromises()
+    if (operation === 'roles') {
+      expect(page.get('dialog').text()).toContain('Роли сохранены')
+      await page.get('[data-test="close-member"]').trigger('click')
+    } else expect(page.findAll('[data-test="member-row"]')).toHaveLength(0)
+    expect(page.find('dialog').exists()).toBe(false)
+  })
+
+  it('opens readable details while the role catalogue is still loading', async () => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    let resolve!: (value: { data: typeof ministryRoles }) => void
+    get.mockImplementation((path: string) => path.endsWith('/roles') ? new Promise(done => { resolve = done }) : Promise.resolve({ data: [member] }))
+    const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
+    expect(page.get('dialog').text()).toContain('Участник')
+    expect(page.get('dialog').text()).toContain('Загрузка ролей служения')
+    expect(page.get('[data-test="save-roles"]').attributes('disabled')).toBeDefined()
+    resolve({ data: ministryRoles })
+    await flushPromises()
+    expect(page.get('[data-test="save-roles"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('keeps current roles readable when catalogue fails and retries inside details', async () => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    get.mockImplementation((path: string) => path.endsWith('/roles') ? Promise.reject(new Error('offline')) : Promise.resolve({ data: [member] }))
+    const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
+    const dialog = page.get('dialog')
+    expect(dialog.text()).toContain('Участник')
+    expect(dialog.text()).toContain('Не удалось загрузить роли служения')
+    expect(dialog.get('[data-test="save-roles"]').attributes('disabled')).toBeDefined()
+    expect(dialog.find('[data-test="remove-member"]').exists()).toBe(true)
+    mockMembersAndRoles([member])
+    await dialog.get('[data-test="retry-member-roles"]').trigger('click')
+    await flushPromises()
+    expect(dialog.find('[data-test="role-r-member"]').exists()).toBe(true)
+    expect(dialog.get('[data-test="save-roles"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('saves multiple roles from the complete catalogue and preserves server errors for retry', async () => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    mockMembersAndRoles([member], [...ministryRoles, { id: 'r-tech', name: 'Звукорежиссёр' }])
+    put.mockRejectedValueOnce(Object.assign(new Error('failed'), { statusCode: 422, data: { code: 'member.last_role_cannot_be_removed', message: 'Нельзя снять последнюю роль.' } }))
+    const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
+    await page.get('[data-test="role-r-tech"]').setValue(true)
+    await page.get('[data-test="save-roles"]').trigger('click')
+    await flushPromises()
+    expect(page.get('dialog').text()).toContain('Нельзя снять последнюю роль')
+    expect((page.get('[data-test="role-r-tech"]').element as HTMLInputElement).checked).toBe(true)
+    put.mockResolvedValue({ data: { ...member, roles: [...member.roles, { id: 'r-tech', name: 'Звукорежиссёр' }] } })
+    await page.get('[data-test="save-roles"]').trigger('click')
+    await flushPromises()
+    expect(put).toHaveBeenLastCalledWith('/ministries/m1/members/mem1/roles', { role_ids: ['r-member', 'r-tech'] })
+    expect(page.get('[data-test="member-row"]').text()).toContain('Звукорежиссёр')
+    expect(page.get('dialog').text()).toContain('Роли сохранены')
+  })
+
+  it('keeps rows compact and opens all current roles in details', async () => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    mockMembersAndRoles([{ ...member, roles: [...member.roles, { id: 'r-tech', name: 'Звукорежиссёр' }] }], [...ministryRoles, { id: 'r-tech', name: 'Звукорежиссёр' }])
+    const page = await mountSuspended(MembersTab)
+    expect(page.find('[data-test="save-roles"]').exists()).toBe(false)
+    expect(page.get('[data-test="member-row"]').find('input').exists()).toBe(false)
+    await page.get('[data-test="open-member"]').trigger('click')
+    expect((page.get('[data-test="role-r-member"]').element as HTMLInputElement).checked).toBe(true)
+    expect((page.get('[data-test="role-r-tech"]').element as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('searches the loaded hundred members by name and role without fetching again', async () => {
+    mockMembersAndRoles(Array.from({ length: 100 }, (_, index) => ({ ...member, id: `mem-${index}`, full_name: `Человек ${index}`, roles: [{ id: 'r-member', name: index === 99 ? 'Звукорежиссёр' : 'Участник' }] })))
+    const page = await mountSuspended(MembersTab)
+    await flushPromises()
+    const calls = get.mock.calls.length
+    await page.get('[data-test="member-search"]').setValue('звукорежиссёр')
+    expect(page.findAll('[data-test="member-row"]')).toHaveLength(1)
+    expect(page.text()).toContain('Человек 99')
+    expect(get).toHaveBeenCalledTimes(calls)
+    await page.get('[data-test="member-search"]').setValue('Никого')
+    expect(page.text()).toContain('Участники не найдены')
+  })
+
+  it('preserves role drafts on unrelated permissions refresh and closes on actual rights loss', async () => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    mockMembersAndRoles([member], [...ministryRoles, { id: 'r-tech', name: 'Звукорежиссёр' }])
+    const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
+    await page.get('[data-test="role-r-tech"]').setValue(true)
+    grantPermissions({ global: ['events.church.manage'], ministries: { m1: ['members.manage'] } })
+    await flushPromises()
+    expect((page.get('[data-test="role-r-tech"]').element as HTMLInputElement).checked).toBe(true)
+    grantPermissions()
+    await flushPromises()
+    expect(page.find('[data-test="save-roles"]').exists()).toBe(false)
+  })
+
+  it.each(['ministry', 'session'])('closes details and rejects a late role response after %s change', async (change) => {
+    grantPermissions({ ministries: { m1: ['members.manage'], m2: ['members.manage'] } })
+    mockMembersAndRoles([member])
+    let resolve!: (value: { data: Member }) => void
+    put.mockImplementation(() => new Promise(done => { resolve = done }))
+    const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
+    await page.get('[data-test="save-roles"]').trigger('click')
+    if (change === 'ministry') route.params.id = 'm2'
+    else useAuthStore().sessionVersion++
+    await flushPromises()
+    resolve({ data: { ...member, full_name: 'Поздний ответ' } })
+    await flushPromises()
+    expect(page.find('[data-test="save-roles"]').exists()).toBe(false)
+    expect(page.text()).not.toContain('Поздний ответ')
+  })
+
+  it('requires confirmation for removal and keeps the member after cancelling', async () => {
+    grantPermissions({ ministries: { m1: ['members.manage'] } })
+    mockMembersAndRoles([member])
+    del.mockResolvedValue(undefined)
+    const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
+    await page.get('[data-test="remove-member"]').trigger('click')
+    expect(del).not.toHaveBeenCalled()
+    await page.get('[data-test="cancel-remove-member"]').trigger('click')
+    expect(page.findAll('[data-test="member-row"]')).toHaveLength(1)
+    await page.get('[data-test="remove-member"]').trigger('click')
+    await page.get('[data-test="confirm-remove-member"]').trigger('click')
+    await flushPromises()
+    expect(del).toHaveBeenCalledWith('/ministries/m1/members/mem1')
+    expect(page.findAll('[data-test="member-row"]')).toHaveLength(0)
+  })
+
   it('hides member actions without members.manage in that ministry', async () => {
     get.mockResolvedValue({ data: [member] })
 
@@ -90,6 +238,7 @@ describe('ministry members tab', () => {
     await flushPromises()
 
     expect(page.find('[data-test="add-member"]').exists()).toBe(false)
+    await page.get('[data-test="open-member"]').trigger('click')
     expect(page.find('[data-test="remove-member"]').exists()).toBe(true)
     expect(page.find('[data-test="save-roles"]').exists()).toBe(true)
   })
@@ -111,23 +260,15 @@ describe('ministry members tab', () => {
 
   it('shows the default role on a freshly added member', async () => {
     grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'] } })
-    // Дефект плана: исходный текст теста брифа кликал по
-    // `person-option-p1` сразу после открытия диалога, не введя текст
-    // поиска — диалог ищет по `GET /people?search=…` (см. "Фундамент" в
-    // брифе задачи 28), и без текста результатов взяться неоткуда ни при
-    // каком ответе `get`. Добавлены `setValue` и `flushPromises` перед
-    // кликом; `get` разветвлён по пути, чтобы список участников (пустой,
-    // это условие теста) не подменялся результатом поиска и наоборот.
     get.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }] } : { data: [] },
+      path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }], meta: { last_page: 1 } } : { data: [] },
     ))
     post.mockResolvedValue({ data: member })
 
     const page = await mountSuspended(MembersTab)
     await page.find('[data-test="add-member"]').trigger('click')
-    await page.find('[data-test="member-search"]').setValue('Прокопенко')
     await flushPromises()
-    await page.find('[data-test="person-option-p1"]').trigger('click')
+    await page.find('[data-test="option-p1"]').trigger('click')
     await new Promise(resolve => setTimeout(resolve))
 
     expect(page.text()).toContain('Участник')
@@ -142,6 +283,7 @@ describe('ministry members tab', () => {
     }))
 
     const page = await mountSuspended(MembersTab)
+    await page.get('[data-test="open-member"]').trigger('click')
     await page.find('[data-test="role-r-member"]').setValue(false)
     await page.find('[data-test="save-roles"]').trigger('click')
     await new Promise(resolve => setTimeout(resolve))
@@ -163,6 +305,7 @@ describe('ministry members tab', () => {
     const page = await mountSuspended(MembersTab)
     await flushPromises()
 
+    await page.get('[data-test="open-member"]').trigger('click')
     const checkbox = page.find('[data-test="role-r-tech"]')
     expect(checkbox.exists()).toBe(true)
     expect((checkbox.element as HTMLInputElement).checked).toBe(false)
@@ -178,6 +321,10 @@ describe('ministry members tab', () => {
     const page = await mountSuspended(MembersTab)
 
     expect(page.text()).toContain('Имя скрыто')
+    expect(page.get('[data-test="member-row"]').find('img').exists()).toBe(false)
+    await page.get('[data-test="open-member"]').trigger('click')
+    expect(page.get('dialog').get('h2').text()).toBe('Имя скрыто')
+    expect(page.get('dialog').find('img').exists()).toBe(false)
   })
 
   // Review round 2 (task 28, important): Nuxt переиспользует компонент
@@ -188,21 +335,20 @@ describe('ministry members tab', () => {
     grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'], m2: ['members.manage'] } })
     get.mockImplementation((path: string) => Promise.resolve(
       path.endsWith('/roles') ? { data: [] }
-        : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }] }
+        : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }], meta: { last_page: 1 } }
           : { data: [] },
     ))
 
     const page = await mountSuspended(MembersTab)
     await page.find('[data-test="add-member"]').trigger('click')
-    await page.find('[data-test="member-search"]').setValue('Прокопенко')
     await flushPromises()
-    expect(page.find('[data-test="person-option-p1"]').exists()).toBe(true)
+    expect(page.find('[data-test="option-p1"]').exists()).toBe(true)
 
     route.params.id = 'm2'
     await flushPromises()
 
-    expect(page.find('[data-test="member-search"]').exists()).toBe(false)
-    expect(page.find('[data-test="person-option-p1"]').exists()).toBe(false)
+    expect(page.find('[data-test="search"]').exists()).toBe(false)
+    expect(page.find('[data-test="option-p1"]').exists()).toBe(false)
     expect(post).not.toHaveBeenCalled()
   })
 })
@@ -244,6 +390,40 @@ describe('ministry tabs', () => {
 })
 
 describe('ministry card', () => {
+  it('keeps a pending edit when only archive permission is withdrawn', async () => {
+    grantPermissions({ global: ['ministries.create'], ministries: { m1: ['ministry.edit'] } })
+    get.mockResolvedValue({ data: ministry })
+    let resolve!: (value: { data: Ministry }) => void
+    patch.mockImplementation(() => new Promise(done => { resolve = done }))
+    const page = await mountSuspended(MinistryCard)
+    await page.get('[data-test="edit-ministry"]').trigger('click')
+    await page.get('[name="name"]').setValue('Сохранённое название')
+    await page.get('form').trigger('submit')
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    await flushPromises()
+    resolve({ data: { ...ministry, name: 'Сохранённое название' } })
+    await flushPromises()
+    expect(page.get('h1').text()).toBe('Сохранённое название')
+    expect(page.find('form').exists()).toBe(false)
+  })
+
+  it('discards a late edit from the previous ministry', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'], m2: ['ministry.edit'] } })
+    get.mockImplementation((path: string) => Promise.resolve({ data: { ...ministry, id: path.endsWith('m2') ? 'm2' : 'm1', name: path.endsWith('m2') ? 'Новое служение' : ministry.name } }))
+    let resolve!: (value: { data: Ministry }) => void
+    patch.mockImplementation(() => new Promise(done => { resolve = done }))
+    const page = await mountSuspended(MinistryCard)
+    await page.get('[data-test="edit-ministry"]').trigger('click')
+    await page.get('[name="name"]').setValue('Поздний ответ')
+    await page.get('form').trigger('submit')
+    route.params.id = 'm2'
+    await flushPromises()
+    resolve({ data: { ...ministry, name: 'Поздний ответ' } })
+    await flushPromises()
+    expect(page.text()).toContain('Новое служение')
+    expect(page.text()).not.toContain('Поздний ответ')
+  })
+
   it('says the ministry is gone instead of the server text, which names the model class', async () => {
     get.mockRejectedValue(Object.assign(new Error('failed'), {
       statusCode: 404, data: { message: 'No query results for model [App\\Modules\\Ministries\\Models\\Ministry] m1' },
@@ -407,6 +587,43 @@ describe('ministry roles tab', () => {
 })
 
 describe('ministries list', () => {
+  it('keeps confirmed creation successful when refreshing fails and retries only the read', async () => {
+    grantPermissions({ global: ['ministries.create'] })
+    get.mockResolvedValue({ data: [] })
+    post.mockResolvedValue({ data: { ...ministry, id: 'm-new', name: 'Молодёжное' } })
+    const page = await mountSuspended(MinistriesList)
+    await page.get('[data-test="create-ministry"]').trigger('click')
+    await page.get('[data-test="ministry-name"]').setValue('Молодёжное')
+    get.mockRejectedValue(new Error('network'))
+    await page.get('form').trigger('submit')
+    await flushPromises()
+    expect(page.text()).toContain('Служение «Молодёжное» создано')
+    expect(page.find('form').exists()).toBe(false)
+    expect(post).toHaveBeenCalledTimes(1)
+    get.mockResolvedValue({ data: [{ ...ministry, id: 'm-new', name: 'Молодёжное' }] })
+    await page.get('[data-test="retry"]').trigger('click')
+    await flushPromises()
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(page.get('a[href="/ministries/m-new"]').text()).toContain('Молодёжное')
+  })
+
+  it('ignores a failed creation from an old session without restoring the form or error', async () => {
+    grantPermissions({ global: ['ministries.create'] })
+    get.mockResolvedValue({ data: [] })
+    let reject!: (error: Error) => void
+    post.mockImplementation(() => new Promise((_, fail) => { reject = fail }))
+    const page = await mountSuspended(MinistriesList)
+    await page.get('[data-test="create-ministry"]').trigger('click')
+    await page.get('[data-test="ministry-name"]').setValue('Старый ввод')
+    await page.get('form').trigger('submit')
+    useAuthStore().sessionVersion++
+    await flushPromises()
+    reject(new Error('Old failure'))
+    await flushPromises()
+    expect(page.find('form').exists()).toBe(false)
+    expect(page.text()).not.toContain('Не удалось создать')
+  })
+
   it('shows available ministries with their covers', async () => {
     get.mockResolvedValue({
       data: [
@@ -466,4 +683,24 @@ describe('ministries list', () => {
     expect(post).toHaveBeenCalledWith('/ministries', { name: 'Молодёжное', description: null })
     expect(page.text()).toContain('Молодёжное')
   })
+})
+
+
+it('rejects default-role response after manage rights are revoked and restored with member access retained', async () => {
+  grantPermissions({ ministries: { m1: ['roles.manage', 'members.manage'] } })
+  get.mockImplementation((path: string) => Promise.resolve(path.endsWith('/roles')
+    ? { data: [{ id: 'r-member', name: 'Участник', permissions: [] }, { id: 'r-tech', name: 'Звукорежиссёр', permissions: [] }] }
+    : { data: ministry }))
+  let finish!: (value: unknown) => void
+  patch.mockImplementation(() => new Promise(resolve => { finish = resolve }))
+  const page = await mountSuspended(RolesTab)
+  await page.get('[data-test="set-default-r-tech"]').trigger('click')
+  grantPermissions({ ministries: { m1: ['members.manage'] } })
+  await flushPromises()
+  grantPermissions({ ministries: { m1: ['roles.manage', 'members.manage'] } })
+  await flushPromises()
+  finish({ data: { ...ministry, default_role_id: 'r-tech' } })
+  await flushPromises()
+  expect(page.find('[data-test="set-default-r-tech"]').exists()).toBe(true)
+  expect(page.find('[data-test="set-default-r-member"]').exists()).toBe(false)
 })

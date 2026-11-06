@@ -1,6 +1,7 @@
 // @vitest-environment nuxt
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import InstallPrompt from '~/components/InstallPrompt.vue'
 
 function platform(ua: string, standalone = false) {
@@ -10,6 +11,8 @@ function platform(ua: string, standalone = false) {
 
 const IOS_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile Safari/604.1'
 const ANDROID_CHROME = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36'
+
+enableAutoUnmount(afterEach)
 
 beforeEach(() => {
   localStorage.clear()
@@ -44,6 +47,24 @@ describe('install prompt', () => {
 
     await prompt.find('[data-test="install-button"]').trigger('click')
     expect(event.prompt).toHaveBeenCalled()
+  })
+
+  it('keeps a failed native prompt retryable and prevents a duplicate prompt while pending', async () => {
+    platform(ANDROID_CHROME)
+    const wrapper = await mountSuspended(InstallPrompt)
+    let reject!: (error: Error) => void
+    const prompt = vi.fn().mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce(undefined)
+    const event = Object.assign(new Event('beforeinstallprompt'), { prompt })
+    window.dispatchEvent(event)
+    await flushPromises()
+    await wrapper.get('[data-test="install-button"]').trigger('click')
+    expect(wrapper.get('[data-test="install-button"]').attributes('disabled')).toBeDefined()
+    reject(new Error('prompt unavailable'))
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось открыть')
+    await wrapper.get('[data-test="install-button"]').trigger('click')
+    await flushPromises()
+    expect(prompt).toHaveBeenCalledTimes(2)
   })
 
   it('stays hidden after the person dismissed it', async () => {

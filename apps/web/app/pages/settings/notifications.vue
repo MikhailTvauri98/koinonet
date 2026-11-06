@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { components } from '~~/types/api'
+import FormSection from '~/components/ui/FormSection.vue'
 import SettingsTabs from '~/components/settings/SettingsTabs.vue'
 import EnableNotificationsButton from '~/components/notifications/EnableNotificationsButton.vue'
 import { apiErrorMessage } from '~/utils/apiError'
@@ -61,7 +62,10 @@ await load()
   <section class="notification-settings">
     <SettingsTabs />
     <h1>Уведомления</h1>
-    <EnableNotificationsButton />
+    <FormSection title="Пуши на этом устройстве">
+      <EnableNotificationsButton />
+    </FormSection>
+    <FormSection title="Категории уведомлений">
     <p>Выберите категории пушей. Объявления, назначения и напоминания сохраняются в центре уведомлений при выключенной категории.</p>
     <p v-if="loading" role="status">Загрузка…</p>
     <p v-else-if="loadError" role="alert">{{ loadError }} <button type="button" data-test="retry" @click="load">Повторить</button></p>
@@ -72,13 +76,18 @@ await load()
       </label>
       <p v-if="saveError" role="alert">{{ saveError }}</p>
     </template>
+    </FormSection>
   </section>
 </template>
 
 <style scoped>
-.notification-settings { max-width: 40rem; min-width: 0; margin: 0 auto; color: var(--ui-text); overflow-wrap: anywhere; }
+.notification-settings { max-width: 56rem; min-width: 0; color: var(--ui-text); overflow-wrap: anywhere; }
+.notification-settings > :deep(.ui-form-section) { margin-bottom: var(--ui-space-6); }
 label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: min(var(--ui-space-2), 8px); padding: min(var(--ui-space-2), 8px); margin-block: var(--ui-space-3); min-height: var(--ui-control-height); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); background: var(--ui-surface); cursor: pointer; }
 input { width: min(1.125rem, 24px); height: min(1.125rem, 24px); margin: .3em 0 0; }
 button { max-width: 100%; overflow-wrap: anywhere; }
 [role='alert'] { color: var(--ui-danger); }
+@media (max-width: 359px) {
+  .notification-settings > :deep(.ui-form-section) { padding: 8px; }
+}
 </style>

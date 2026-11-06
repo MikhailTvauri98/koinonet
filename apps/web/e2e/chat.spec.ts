@@ -1,6 +1,7 @@
 import type { Page, Request, Response } from '@playwright/test'
+import { writeFile } from 'node:fs/promises'
 import { e2e } from './environment'
-import { addMember, createGlobalRole, createInvitedAccount, createMinistry, expect, expectApiResponse, fullName, loginAsAdmin, openSection, test, visitAuthenticated } from './fixtures'
+import { addMember, createGlobalRole, createInvitedAccount, createMinistry, expect, expectApiResponse, fullName, loginAsAdmin, openSection, reloadAuthenticated, test, visitAuthenticated } from './fixtures'
 
 // Observe the real Reverb transport before opening the chat. No HTTP or Echo mocks.
 function observeChat(page: Page) {
@@ -192,4 +193,97 @@ test('a plain group member cannot delete another sender but the owner can modera
   await expect(member.locator(`[data-message-id="${adminMessage}"]`)).toContainText('Сообщение владельца e2e')
   expect(live.snapshot()).toEqual(before)
   await testInfo.attach('chat-moderation', { body: JSON.stringify({ id, denied: denied.status(), adminMessage, memberMessage, frames: live.frames }, null, 2), contentType: 'application/json' })
+})
+
+test('a new direct message opens an empty chat and reuses the same pair after returning to the list', async ({ page, openPhone }, testInfo) => {
+  test.setTimeout(180_000)
+  await loginAsAdmin(page)
+  const person = { lastName: 'Личныйчатов', firstName: 'Александр', login: 'direct-chat@e2e.test', globalRole: 'Личный чат e2e' }
+  await createGlobalRole(page, person.globalRole, ['Видеть справочник'])
+  await createInvitedAccount(page, openPhone, person)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openSection(page, 'Чаты', 'Чаты')
+  const statuses: number[] = [], ids: string[] = []
+  let muteEvidence: { until: string, requestedUntil: string, persistedUntil: string, unmuted: null } | undefined
+  let backTransitions = 0
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.getByRole('button', { name: 'Новое сообщение', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Новое сообщение', exact: true })
+    await Promise.all([
+      page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/people' && new URL(response.url()).searchParams.get('search') === person.lastName),
+      dialog.getByRole('searchbox', { name: 'Найти человека', exact: true }).fill(person.lastName),
+    ])
+    const created = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/chats' && response.request().method() === 'POST')
+    await dialog.getByRole('button', { name: fullName(person), exact: true }).click()
+    const response = await created
+    statuses.push(response.status())
+    const id = ((await response.json()) as { data: { id: string } }).data.id
+    ids.push(id)
+    await expect(page).toHaveURL(`/chats/${id}`)
+    await expect(page.getByTestId('composer')).toBeEnabled()
+    await expect(page.getByText('Пока нет сообщений', { exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`direct-empty-real-api-${attempt + 1}.png`) })
+    if (attempt === 0) {
+      await page.getByRole('button', { name: 'Меню чата', exact: true }).click()
+      let information = page.getByRole('dialog', { name: 'Сведения о чате', exact: true })
+      await expect(information.getByTestId('members')).toHaveCount(0)
+      await expect(information.getByText('Личный чат', { exact: true })).toBeVisible()
+      const beforeMute = Date.now()
+      const [muted] = await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/chats/${id}/mute` && response.request().method() === 'POST'),
+        information.getByTestId('mute-8h').click(),
+      ])
+      expect(muted.status()).toBe(200)
+      const until = ((await muted.json()) as { data: { muted_until: string } }).data.muted_until
+      const requestedUntil = (muted.request().postDataJSON() as { until: string }).until
+      // ChatMember timestamps persist whole seconds, while the browser sends ms.
+      expect(Date.parse(until)).toBe(Math.floor(Date.parse(requestedUntil) / 1000) * 1000)
+      expect(new Date(until).getTime() - beforeMute).toBeGreaterThanOrEqual(8 * 3_600_000 - 1000)
+      expect(new Date(until).getTime() - Date.now()).toBeLessThanOrEqual(8 * 3_600_000 + 1000)
+      await expect(information.locator('.mute-menu').getByRole('status')).toContainText('Без звука до')
+      await page.waitForLoadState('networkidle')
+      const persisted = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/chats/${id}` && response.request().method() === 'GET')
+      await reloadAuthenticated(page)
+      const persistedResponse = await persisted
+      expect(persistedResponse.status()).toBe(200)
+      const persistedUntil = ((await persistedResponse.json()) as { data: { muted_until: string } }).data.muted_until
+      expect(persistedUntil).toBe(until)
+      await page.getByRole('button', { name: 'Меню чата', exact: true }).click()
+      information = page.getByRole('dialog', { name: 'Сведения о чате', exact: true })
+      await expect(information.getByTestId('members')).toHaveCount(0)
+      await expect(information.locator('.mute-menu').getByRole('status')).toContainText('Без звука до')
+      await page.screenshot({ path: testInfo.outputPath('direct-muted-after-reload-real-api.png') })
+      const [unmuted] = await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/chats/${id}/mute` && response.request().method() === 'DELETE'),
+        information.getByTestId('unmute').click(),
+      ])
+      expect(unmuted.status()).toBe(200)
+      expect(((await unmuted.json()) as { data: { muted_until: null } }).data.muted_until).toBeNull()
+      await expect(information.locator('.mute-menu').getByRole('status')).toHaveText('Звук включён')
+      await information.getByRole('button', { name: 'Закрыть', exact: true }).click()
+      await expect(page.getByRole('button', { name: 'Меню чата', exact: true })).toBeFocused()
+      muteEvidence = { until, requestedUntil, persistedUntil, unmuted: null }
+    }
+    await page.getByTestId('chat-back').click()
+    await expect(page).toHaveURL('/chats')
+    await expect(page.getByRole('button', { name: 'Новое сообщение', exact: true })).toBeVisible()
+    backTransitions++
+    await page.screenshot({ path: testInfo.outputPath(`direct-real-back-${attempt + 1}.png`) })
+    // Back uses the live workspace. Reload separately proves the real list API
+    // still omits this empty chat, without replacing the actual back action.
+    const list = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/chats' && response.request().method() === 'GET')
+    await reloadAuthenticated(page)
+    const listed = await list
+    expect(listed.status()).toBe(200)
+    const listData = ((await listed.json()) as { data: { id: string }[] }).data
+    expect(listData.some(chat => chat.id === id)).toBe(false)
+    await expect(page.locator(`a[href="/chats/${id}"]`)).toHaveCount(0)
+  }
+  expect(statuses).toEqual([201, 200])
+  expect(ids[1]).toBe(ids[0])
+  expect(backTransitions).toBe(2)
+  expect(muteEvidence).toBeDefined()
+  const evidencePath = testInfo.outputPath('direct-chat-idempotency.json')
+  await writeFile(evidencePath, JSON.stringify({ statuses, ids, backTransitions, muteEvidence }, null, 2))
+  await testInfo.attach('direct-chat-idempotency', { path: evidencePath, contentType: 'application/json' })
 })

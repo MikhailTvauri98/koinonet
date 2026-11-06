@@ -86,6 +86,8 @@ async function onSubmit() {
     <template v-else-if="info">
       <form class="account-form" :aria-busy="submitting" @submit.prevent="onSubmit">
         <p class="invite-greeting">Здравствуйте, {{ info.person.first_name }} {{ info.person.last_name }}!</p>
+        <fieldset class="ui-fieldset account-form">
+          <legend>Данные нового аккаунта</legend>
         <label class="account-field">
           <span>Телефон или email</span>
           <input
@@ -107,6 +109,7 @@ async function onSubmit() {
           label="Повторите пароль"
         />
 
+        </fieldset>
         <p v-if="formError" class="account-notice account-notice--error" role="alert">
           {{ formError }}
         </p>

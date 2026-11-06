@@ -23,19 +23,18 @@ async function load() {
 watch(() => auth.sessionVersion, () => { generation++; items.value = []; errorMessage.value = ''; loading.value = false })
 watch(() => settings.timezone, () => { if (settings.loaded) void load() })
 onBeforeUnmount(() => { generation++ })
-await load()
+void load()
 </script>
 
 <template>
-  <section aria-label="Ближайшие мои события">
-    <h2>Ближайшие мои события</h2>
+  <section class="home-section home-section--events" aria-label="Ближайшие мои события">
+    <header class="home-section__header"><h2>Ближайшие мои события</h2><NuxtLink to="/calendar">Календарь</NuxtLink></header>
     <p v-if="loading" role="status">Загружаем события…</p>
     <p v-else-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" @click="load">Повторить</button></p>
     <template v-else>
       <div class="upcoming-events"><EventCard v-for="item in items" :key="item.id" :event="item" /></div>
       <p v-if="!items.length">Ближайших событий пока нет.</p>
     </template>
-    <NuxtLink to="/calendar">Календарь</NuxtLink>
   </section>
 </template>
 

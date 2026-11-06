@@ -1,19 +1,21 @@
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   --ui-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --ui-canvas: #f4f6f9;
-  --ui-surface: #fff;
-  --ui-surface-muted: #edf2f7;
-  --ui-text: #202b3a;
-  --ui-text-muted: #526174;
-  --ui-border: #d7dfe9;
-  --ui-border-strong: #8994a4;
-  --ui-accent: #234e79;
-  --ui-accent-hover: #193d62;
-  --ui-accent-soft: #e8f0f8;
-  --ui-danger: #a32020;
-  --ui-success: #276344;
-  --ui-focus: #2563a6;
+  --ui-canvas: #141719;
+  --ui-navigation: #191d20;
+  --ui-surface: #1d2225;
+  --ui-surface-muted: #252b2f;
+  --ui-text: #f1f3f2;
+  --ui-text-muted: #a8b2b5;
+  --ui-border: #343c40;
+  --ui-border-strong: #738187;
+  --ui-accent: #91b4ff;
+  --ui-on-accent: #14213b;
+  --ui-accent-hover: #afc8ff;
+  --ui-accent-soft: #25334b;
+  --ui-danger: #ffaba6;
+  --ui-success: #9bd9b0;
+  --ui-focus: #91b4ff;
   --ui-space-1: 0.25rem;
   --ui-space-2: 0.5rem;
   --ui-space-3: 0.75rem;
@@ -28,8 +30,28 @@
   --ui-content-width: 72rem;
   --ui-sidebar-width: 14rem;
   --ui-mobile-nav-space: 4.75rem;
-  --ui-shadow: 0 2px 8px rgb(32 43 58 / 3%);
+  --ui-shadow: 0 2px 8px rgb(0 0 0 / 12%);
   /* Совместимость с существующими поверхностями во время перевода модулей. */
   --border-color: var(--ui-border);
   --surface-color: var(--ui-surface);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ui-canvas: #f5f6f9;
+  --ui-navigation: #eceff5;
+  --ui-surface: #ffffff;
+  --ui-surface-muted: #edf1f7;
+  --ui-text: #232c3b;
+  --ui-text-muted: #586579;
+  --ui-border: #d6dce7;
+  --ui-border-strong: #8994a4;
+  --ui-accent: #315fc6;
+  --ui-on-accent: #ffffff;
+  --ui-accent-hover: #284fa8;
+  --ui-accent-soft: #e6edff;
+  --ui-danger: #ad3434;
+  --ui-success: #276344;
+  --ui-focus: #315fc6;
+  --ui-shadow: 0 2px 8px rgb(32 43 58 / 3%);
 }

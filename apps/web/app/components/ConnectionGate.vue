@@ -11,11 +11,17 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const retrying = ref(false)
+const retryError = ref('')
+let active = true
+onBeforeUnmount(() => { active = false })
+watch(() => auth.sessionVersion, () => { retrying.value = false; retryError.value = '' })
 
 const blocking = computed(() => auth.connectionLost && !auth.initialized)
 
 async function retry() {
   if (retrying.value) return
+  const session = auth.sessionVersion
+  retryError.value = ''
   retrying.value = true
   try {
     if (auth.initialized) {
@@ -25,16 +31,19 @@ async function retry() {
       // (auth.global.ts): он спросит сервер и сам решит, вести ли на вход.
       await router.replace({ path: route.path, query: route.query, hash: route.hash, force: true })
     }
+  } catch {
+    if (active && session === auth.sessionVersion) retryError.value = 'Не удалось повторить проверку. Проверьте подключение и попробуйте ещё раз.'
   } finally {
-    retrying.value = false
+    if (active && session === auth.sessionVersion) retrying.value = false
   }
 }
 </script>
 
 <template>
   <div v-if="auth.connectionLost" role="alert" class="connection-lost" :class="{ 'connection-lost--blocking': blocking }">
-    <div><p class="connection-lost__title">Нет связи с сервером.</p><p>{{ blocking ? 'Не удалось проверить аккаунт. Проверьте подключение и повторите попытку.' : 'Не удалось обновить права. Проверьте подключение и повторите проверку.' }}</p></div>
-    <button type="button" data-test="retry-connection" :disabled="retrying" @click="retry">
+    <div class="connection-lost__message"><p class="connection-lost__title">Нет связи с сервером.</p><p>{{ blocking ? 'Не удалось проверить аккаунт. Проверьте подключение и повторите попытку.' : 'Не удалось обновить права. Проверьте подключение и повторите проверку.' }}</p></div>
+    <p v-if="retryError" class="connection-lost__retry-error">{{ retryError }}</p>
+    <button type="button" class="ui-button" data-test="retry-connection" :disabled="retrying" @click="retry">
       {{ retrying ? 'Проверяем…' : 'Повторить' }}
     </button>
     <LoadingState v-if="retrying" label="Проверяем связь с сервером…" />
@@ -43,11 +52,14 @@ async function retry() {
 </template>
 
 <style scoped>
-.connection-lost { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-3); padding: var(--ui-space-4); background: var(--ui-surface-muted); color: var(--ui-danger); border-bottom: 1px solid var(--ui-border); overflow-wrap: anywhere; }
+.connection-lost { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-4); padding: var(--ui-space-4) clamp(16px, 3vw, 32px); background: var(--ui-surface); color: var(--ui-text); border-bottom: 1px solid var(--ui-border); overflow-wrap: anywhere; }
 .connection-lost p { margin: 0; }
+.connection-lost__message { flex: 1 1 24rem; min-width: 0; }
+.connection-lost__message > p + p { margin-top: var(--ui-space-2); color: var(--ui-text-muted); font-size: .875rem; }
 .connection-lost__title { font-weight: 650; }
-.connection-lost--blocking { min-height: 100vh; min-height: 100dvh; flex-direction: column; justify-content: center; align-items: stretch; padding: var(--ui-space-6); text-align: center; background: var(--ui-canvas); color: var(--ui-text); }
-.connection-lost--blocking > * { width: 100%; max-width: 36rem; margin-inline: auto; }
+.connection-lost__title::before { content: '!'; display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; margin-inline-end: .5em; border: 1px solid var(--ui-danger); border-radius: 50%; color: var(--ui-danger); }
+.connection-lost__retry-error { flex-basis: 100%; color: var(--ui-danger); }
+.connection-lost--blocking { min-height: 100vh; min-height: 100dvh; flex-direction: column; justify-content: center; align-items: flex-start; padding: var(--ui-space-6) clamp(16px, 3vw, 32px); background: var(--ui-canvas); border: 0; }
+.connection-lost--blocking > * { width: 100%; max-width: 36rem; margin-inline: auto; flex: initial; }
 .connection-lost--blocking button { width: auto; }
-button { max-width: 100%; }
 </style>

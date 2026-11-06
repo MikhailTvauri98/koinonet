@@ -29,8 +29,10 @@ test('delayed navigation announces loading, preserves the current screen and fin
   await expect(page.locator('#main-content .empty-state')).toContainText('Создайте человека')
 })
 
-for (const [width, scale] of [[320, 200], [375, 100], [1440, 100]] as const) {
-  test(`${width}px text ${scale}%: errors retry, empty next steps and reduced motion remain readable`, async ({ page }, info) => {
+for (const theme of ['dark', 'light'] as const) {
+for (const [width, scale] of [[320, 200], [390, 100], [1440, 100]] as const) {
+  test(`${theme} ${width}px text ${scale}%: errors retry, empty next steps and reduced motion remain readable`, async ({ page }, info) => {
+    await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
     await mockVisualApi(page)
     await page.setViewportSize({ width, height: 900 })
     await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -64,15 +66,18 @@ for (const [width, scale] of [[320, 200], [375, 100], [1440, 100]] as const) {
     await expect(page.getByRole('button', { name: 'Опубликовать объявление', exact: true })).toBeVisible()
     await page.screenshot({ path: info.outputPath('empty.png'), fullPage: true })
     await page.goto('/calendar')
-    await expect(page.locator('#main-content .empty-state')).toContainText('Выберите другой период')
+    await expect(page.locator('#main-content .empty-state')).toContainText('Событий пока нет.')
     await fits(page)
     await page.goto('/chats')
-    await expect(page.locator('#main-content .empty-state')).toContainText('Создайте группу')
+    await expect(page.locator('#main-content .empty-state')).toContainText('Новая группа')
+    await expect(page.getByRole('button', { name: 'Новая группа', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Новое сообщение', exact: true })).toBeVisible()
     await fits(page)
     await page.goto('/notifications')
     await expect(page.locator('#main-content .empty-state')).toContainText('назначения')
     await fits(page)
   })
+}
 }
 
 test('offline session check blocks protected content and retry restores the confirmed session', async ({ page }, info) => {
@@ -102,3 +107,80 @@ test('401 clears the session while 403 refreshes permissions and shows a refusal
   await expect(page.getByRole('heading', { name: 'Вход', exact: true })).toBeVisible()
   await expect(page.locator('.route-loading')).toHaveCount(0)
 })
+
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, height, scale] of [[390, 844, 100], [1440, 1000, 100], [320, 900, 200], [375, 390, 100], [320, 390, 200]] as const) {
+    test(`task18 ${theme} ${width}x${height}px ${scale}%: system connection, installation and push states`, async ({ page }, info) => {
+      await mockVisualApi(page)
+      await page.setViewportSize({ width, height })
+      await page.addInitScript(({ theme, scale }) => {
+        localStorage.setItem('church.ui.theme', theme)
+        document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%`; const style = document.createElement('style'); style.textContent = 'nuxt-devtools-frame { display: none !important }'; document.head.append(style) })
+      }, { theme, scale })
+      let offline = true
+      await page.route('**/api/v1/auth/me', route => offline ? route.abort('internetdisconnected') : route.fallback())
+      await page.goto('/notifications')
+      await expect(page.locator('.connection-lost--blocking')).toContainText('Нет связи с сервером')
+      await expect(page.locator('#main-content')).toHaveCount(0)
+      await fits(page)
+      await page.screenshot({ path: info.outputPath(`connection-${height}h.png`), fullPage: true })
+      offline = false
+      await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Уведомления', exact: true })).toBeVisible()
+      await expect(page.locator('.notifications-page .empty-state')).toContainText('Уведомлений пока нет')
+      await page.screenshot({ path: info.outputPath(`notifications-empty-${height}h.png`), fullPage: true })
+      await page.evaluate(() => {
+        const event = Object.assign(new Event('beforeinstallprompt'), { prompt: () => Promise.resolve(), userChoice: Promise.resolve({ outcome: 'accepted' }) })
+        window.dispatchEvent(event)
+      })
+      await expect(page.locator('[data-test=install-prompt]')).toContainText('домашнем экране')
+      await page.screenshot({ path: info.outputPath(`install-browser-${height}h.png`), fullPage: true })
+      await page.locator('[data-test=install-button]').focus()
+      await page.keyboard.press('Enter')
+      await expect(page.locator('[data-test=install-prompt]')).toHaveCount(0)
+      await page.getByRole('link', { name: 'Настройки уведомлений', exact: true }).click()
+      await expect(page).toHaveURL(/\/settings\/notifications$/)
+      await expect(page.getByRole('link', { name: 'Устройства', exact: true })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Пуши на этом устройстве', exact: true })).toHaveCount(1)
+      await page.screenshot({ path: info.outputPath(`push-settings-${height}h.png`), fullPage: true })
+      // API refusal refreshes /auth/me; a failed refresh preserves the confirmed session.
+      offline = true
+      await page.route('**/api/v1/notifications', route => route.fulfill({ status: 403, json: {} }))
+      await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: /Уведомления/ }).click()
+      await expect(page.locator('.connection-lost')).toContainText('Не удалось обновить права')
+      await expect(page.locator('.connection-lost--blocking')).toHaveCount(0)
+      await expect(page.locator('#main-content')).toBeVisible()
+      await page.screenshot({ path: info.outputPath(`connection-refresh-${height}h.png`), fullPage: true })
+    })
+
+    test(`task18 ${theme} ${width}x${height}px ${scale}%: iOS browser instructions and standalone push failure`, async ({ page }, info) => {
+      await mockVisualApi(page)
+      await page.setViewportSize({ width, height })
+      await page.addInitScript(({ theme, scale }) => {
+        localStorage.setItem('church.ui.theme', theme)
+        Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile Safari/604.1' })
+        Object.defineProperty(navigator, 'standalone', { configurable: true, value: false })
+        document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%`; const style = document.createElement('style'); style.textContent = 'nuxt-devtools-frame { display: none !important }'; document.head.append(style) })
+      }, { theme, scale })
+      await page.goto('/notifications')
+      await expect(page.locator('[data-test=install-prompt]')).toContainText('Поделиться')
+      await expect(page.locator('.enable-notifications')).toContainText('Safari')
+      await fits(page)
+      await page.screenshot({ path: info.outputPath(`install-ios-${height}h.png`), fullPage: true })
+      await page.locator('[data-test=dismiss-install]').click()
+      await expect(page.locator('[data-test=install-prompt]')).toHaveCount(0)
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'standalone', { configurable: true, value: true })
+        Object.defineProperty(navigator.serviceWorker, 'getRegistration', { configurable: true, value: async () => ({ pushManager: { getSubscription: async () => { throw new Error('unavailable') } } }) })
+      })
+      await page.reload()
+      await expect(page.locator('[data-test=install-prompt]')).toHaveCount(0)
+      await expect(page.locator('.push-error')).toContainText('прежнего аккаунта')
+      await expect(page.locator('.enable-notifications')).not.toContainText('откройте его в Safari')
+      await page.getByRole('button', { name: 'Повторить проверку пушей' }).click()
+      await expect(page.locator('.push-error')).toBeVisible()
+      await fits(page)
+      await page.screenshot({ path: info.outputPath(`push-lifecycle-error-${height}h.png`), fullPage: true })
+    })
+  }
+}
