@@ -5,7 +5,7 @@ import UiDialog from '~/components/ui/UiDialog.vue'
 import ChatMembersDialog from './ChatMembersDialog.vue'
 import MuteMenu from './MuteMenu.vue'
 import { apiErrorMessage } from '~/utils/apiError'
-const props = defineProps<{ chat: components['schemas']['ChatResource'], member: boolean, busy: boolean }>()
+const props = withDefaults(defineProps<{ chat: components['schemas']['ChatResource'], member: boolean, busy: boolean, backTo?: string, backLabel?: string }>(), { backTo: '/chats', backLabel: 'К списку чатов' })
 const emit = defineEmits<{ changed: [] }>()
 const api = useApi(), router = useRouter(), auth = useAuthStore(), chats = useChatsStore()
 const menu = ref(false), members = ref(false), rename = ref(false), avatar = ref(false)
@@ -55,11 +55,12 @@ onBeforeUnmount(() => { revision++ })
 </script>
 <template>
   <header class="chat-header">
+    <NuxtLink :to="backTo" :aria-label="backLabel" :title="backLabel" class="chat-header__back" :class="{ 'chat-header__back--list': backTo === '/chats' }" data-test="chat-back"><span aria-hidden="true">←</span></NuxtLink>
     <div class="chat-header__identity">
       <img v-if="chat.avatar_url" :src="chat.avatar_url" alt="" width="44" height="44">
       <div><h1>{{ chat.title }}</h1><details><summary>Участники: {{ chat.members.length }}</summary><ul><li v-for="person in chat.members" :key="person.user_id">{{ person.full_name || 'Участник' }}</li></ul></details></div>
     </div>
-    <button type="button" data-test="menu" aria-haspopup="dialog" :aria-expanded="menu" @click="menu = !menu">Меню чата</button>
+    <button type="button" class="chat-header__menu" data-test="menu" aria-label="Меню чата" title="Меню чата" aria-haspopup="dialog" :aria-expanded="menu" @click="menu = !menu"><span aria-hidden="true">⋯</span></button>
     <UiDialog v-if="menu" :open="true" label="Меню чата" @close="menu = false">
       <h2>Меню чата</h2>
       <div class="chat-menu">
@@ -96,7 +97,11 @@ onBeforeUnmount(() => { revision++ })
 </template>
 <style scoped>
 .chat-header { display: flex; flex-wrap: wrap; align-items: start; gap: .4rem; padding: .25rem 0; border-bottom: 1px solid var(--ui-border); }
-.chat-header__identity { display: flex; flex: 1 1 12rem; min-width: 0; align-items: start; gap: .4rem; }
+.chat-header__back { display: flex; flex: 0 0 44px; min-height: 44px; align-items: center; justify-content: center; border-radius: var(--ui-radius-sm); font-size: 1.25rem; text-decoration: none; }
+.chat-header__menu { min-width: 44px; min-height: 44px; padding-inline: min(.5rem, 8px); font-size: 1.25rem; }
+.chat-header__back:hover { background: var(--ui-surface-muted); }
+@media (min-width: 1024px) { .chat-header__back--list { display: none; } }
+.chat-header__identity { display: flex; flex: 1 1 10rem; min-width: 0; align-items: start; gap: .4rem; }
 .chat-header__identity > div { flex: 1; min-width: 0; }
 h1 { font-size: 1.125rem; margin: 0 0 .2rem; overflow-wrap: anywhere; }
 .chat-header > button { flex: 0 0 auto; max-width: 100%; margin-left: auto; }

@@ -320,3 +320,33 @@ it('message menu exposes exactly author/moderator actions and closes when permis
   expect(screen.find('dialog').exists()).toBe(false)
   expect(screen.find('[data-test="actions-a"]').exists()).toBe(false)
 })
+
+it('provides a safe internal list fallback on direct entry, errors and push URLs', async () => {
+  const screen = await mount('/chats/c1?unread=1')
+  expect(screen.get('[data-test="chat-back"]').attributes('href')).toBe('/chats')
+  mocks.get.mockRejectedValue({ statusCode: 403 })
+  state.lastChange = { id: 'c1', removed: true }; await flushPromises()
+  expect(screen.get('[data-test="chat-back"]').attributes('href')).toBe('/chats')
+})
+it('keeps the ministry return context explicit', async () => {
+  const screen = await mountSuspended(ChatScreen, { props: { chatId: 'c1', backTo: '/ministries/m1', backLabel: 'К служению' }, route: '/ministries/m1/chat' })
+  mounted.push(screen); await flushPromises()
+  expect(screen.get('[data-test="chat-back"]').attributes('href')).toBe('/ministries/m1')
+  expect(screen.get('[data-test="chat-back"]').attributes('aria-label')).toBe('К служению')
+})
+it('switches once without transferring draft, reply, observers or private subscription', async () => {
+  const screen = await mount('/chats/c1')
+  await screen.get('[data-test="composer"]').setValue('Приватный черновик')
+  await screen.get('[data-test="actions-a"]').trigger('click')
+  await screen.get('[data-test="reply-a"]').trigger('click')
+  expect(screen.get('.composer [aria-label="Отменить ответ"]').isVisible()).toBe(true)
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [msg('b', { chat_id: 'c2' })], next_before: null, next_after: null } : { data: card({ id: 'c2', title: 'Другой чат' }) }))
+  await screen.setProps({ chatId: 'c2' }); await flushPromises()
+  expect((screen.get('[data-test="composer"]').element as HTMLTextAreaElement).value).toBe('')
+  expect(screen.find('.composer [aria-label="Отменить ответ"]').exists()).toBe(false)
+  expect(mocks.leave).toHaveBeenCalledExactlyOnceWith('chat.c1')
+  expect(mocks.observers.filter(observer => observer.targets.length && observer.options?.root === null)).toHaveLength(1)
+  expect(mocks.listen.mock.calls.filter(([event]) => event === '.message.sent')).toHaveLength(2)
+  screen.unmount(); mounted.length = 0
+  expect(mocks.leave).toHaveBeenLastCalledWith('chat.c2')
+})

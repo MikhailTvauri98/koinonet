@@ -169,9 +169,9 @@ describe('list feedback', () => {
   it('offers the next available chat step without unauthorized group creation', async () => {
     const page = await mountSuspended(ChatList, { props: { chats: [] } })
     expect(page.text()).toContain('Здесь появятся чаты')
-    expect(page.text()).not.toContain('Создайте группу')
+    expect(page.text()).not.toContain('Новая группа')
     grantPermissions({ global: ['chats.create_groups'] }); await flushPromises()
-    expect(page.text()).toContain('Создайте группу')
+    expect(page.text()).toContain('Новая группа')
   })
   it('keeps a failed chat refresh from claiming that an empty list is a successful result', async () => {
     useChatsStore().unsubscribeUser()

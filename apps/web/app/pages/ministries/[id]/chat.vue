@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ChatWorkspace from '~/components/chat/ChatWorkspace.vue'
 import ChatScreen from '~/components/chat/ChatScreen.vue'
 import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
 import type { Ministry } from '~/utils/ministries'
@@ -29,7 +30,7 @@ await load()
     </div>
     <p v-if="loading" role="status">Загрузка…</p>
     <p v-if="error" role="alert">{{ error }} <button type="button" @click="load">Повторить</button></p>
-    <ChatScreen v-if="ministry?.chat_id" :key="ministry.chat_id" :chat-id="ministry.chat_id" />
+    <ChatWorkspace v-if="ministry?.chat_id" :selected-id="ministry.chat_id"><ChatScreen :key="ministry.chat_id" :chat-id="ministry.chat_id" :back-to="`/ministries/${encodeURIComponent(id)}`" back-label="К служению" /></ChatWorkspace>
     <p v-else-if="ministry" role="status">Чат служения ещё не создан. <button type="button" @click="load">Обновить</button></p>
   </section>
 </template>

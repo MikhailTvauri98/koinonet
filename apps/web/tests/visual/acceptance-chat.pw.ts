@@ -119,7 +119,16 @@ for (const path of ['/chats/c1', '/ministries/m1/chat']) {
     await expect(enlargedSend).toBeFocused()
     await enlargedSend.scrollIntoViewIfNeeded()
     await expect(enlargedSend).toBeInViewport()
-    expect.soft((await enlargedSend.boundingBox())!.y + (await enlargedSend.boundingBox())!.height).toBeLessThanOrEqual((await page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox())!.y + 1)
+    const enlargedNav = page.getByRole('navigation', { name: 'Основная навигация' })
+    const enlargedNavFixed = await enlargedNav.evaluate(element => getComputedStyle(element).position === 'fixed')
+    // Task20a intentionally moves a tall bar into ordinary flow. Only an
+    // overlay reserves the lower edge; flow content uses the viewport edge.
+    expect.soft((await enlargedSend.boundingBox())!.y + (await enlargedSend.boundingBox())!.height).toBeLessThanOrEqual(enlargedNavFixed ? (await enlargedNav.boundingBox())!.y + 1 : 845)
+    const sendHit = await enlargedSend.evaluate(element => {
+      const box = element.getBoundingClientRect()
+      return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest('.app-nav') !== null
+    })
+    expect.soft(sendHit, 'focused send stays clear of both fixed and flow navigation').toBe(false)
     await capture('composer-and-send')
     await takeAcceptanceScreenshot(page, info, '320-text-200-composer')
     const positionsFile = info.outputPath('320-text-200-positions.json')
