@@ -86,7 +86,7 @@ for (const width of [320, 375, 768, 1440]) {
         await page.locator('[data-test=slot-0-count]').fill('50')
         await fits(page)
         await expect(page.getByText('События могут быть и раньше опорной даты.', { exact: false })).toBeVisible()
-        await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+        await page.getByRole('button', { name: 'Сохранить', exact: true }).last().click()
         await expect(page.getByRole('alert').first()).toContainText(warning)
         await expect(page.locator('[data-test=slot-0-label]')).toHaveValue(ministryName)
         await expect(page.locator('[data-test=slot-0-count]')).toHaveValue('50')
