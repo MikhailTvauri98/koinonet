@@ -8,7 +8,7 @@ const warning = 'Проверьте данные. ' + ministryName
 const ministry = { id: 'm-overflow', name: ministryName }
 const announcement = {
   id: 'a-overflow', scope: 'ministry', ministry, author: { id: 'u-visual', full_name: 'Анна Петрова' },
-  title, body: '**Важная дата:** 08.11.2026. ' + title, pinned: true, hide_after: '2026-12-31',
+  title, body: '**Важная дата:** 08.11.2026. ' + title + ' [Подробности](https://example.test/' + 'длиннаяссылка'.repeat(25) + ')', pinned: true, hide_after: '2026-12-31',
   notify_on_publish: false, published_at: '2026-11-01T08:00:00Z', archived: false, attachments: [], views_count: 18,
 }
 

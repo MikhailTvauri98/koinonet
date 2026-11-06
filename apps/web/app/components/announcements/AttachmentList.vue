@@ -15,6 +15,8 @@ defineProps<{ attachments: MediaLike[] }>()
 </template>
 
 <style scoped>
-.attachments { display: flex; flex-wrap: wrap; gap: 1rem; padding: 0; list-style: none; }
-img { max-width: 160px; max-height: 120px; object-fit: contain; }
+.attachments { display: flex; flex-wrap: wrap; gap: var(--ui-space-3); padding: 0; list-style: none; min-width: 0; }
+li { min-width: 0; max-width: 100%; }
+a { display: flex; align-items: center; justify-content: center; min-height: var(--ui-control-height); min-width: var(--ui-control-height); max-width: 100%; padding: var(--ui-space-2); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-sm); background: var(--ui-surface-muted); overflow-wrap: anywhere; }
+img { display: block; max-width: min(160px, 100%); max-height: 120px; object-fit: contain; }
 </style>

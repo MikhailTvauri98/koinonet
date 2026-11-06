@@ -11,6 +11,9 @@ import MediaUploader from '~/components/MediaUploader.vue'
 import AttachmentList from '~/components/announcements/AttachmentList.vue'
 import { grantPermissions } from '../support/permissions'
 import type { Announcement } from '~/utils/announcements'
+import { useAuthStore } from '~/stores/auth'
+import HomePage from '~/pages/index.vue'
+import { useChatsStore } from '~/stores/chats'
 import { useSettingsStore } from '~/stores/settings'
 
 const get = vi.fn(), post = vi.fn(), patch = vi.fn()
@@ -188,4 +191,145 @@ it('renders image thumbnails and generic document links using the media resource
   expect(wrapper.get('img').attributes('src')).toBe('/media/i/thumb')
   expect(wrapper.findAll('a').map(link => link.attributes('href'))).toEqual(['/media/i', '/media/d'])
   expect(wrapper.text()).toContain('Вложение 2')
+})
+
+describe('task17 editorial states', () => {
+  it('gives the home sections a clear order and shared header structure', async () => {
+    get.mockResolvedValue(list())
+    const page = await mountSuspended(HomePage)
+    expect(page.findAll('.home-section__header h2').map(node => node.text())).toEqual(['Ближайшие мои события', 'Закреплённые объявления', 'Непрочитанное'])
+    expect(page.findAll('.home-section__header a').map(node => node.attributes('href'))).toEqual(['/calendar', '/announcements', '/chats'])
+  })
+  it('groups editor fields and connects inline errors to stable captions', async () => {
+    post.mockRejectedValue({ statusCode: 422, data: { errors: { title: ['Ошибка заголовка'] } } })
+    const editor = await mountSuspended(AnnouncementEditor, { props: { scope: 'church' } })
+    expect(editor.findAll('.ui-form-section h2').map(node => node.text())).toEqual(['Публикация', 'Текст', 'Вложения'])
+    await editor.get('[data-test="title"]').setValue('Черновик')
+    await editor.get('[data-test="body"]').setValue('Текст')
+    await editor.get('form').trigger('submit'); await flushPromises()
+    const input = editor.get('[data-test="title"]')
+    expect(input.attributes('aria-invalid')).toBe('true')
+    expect(editor.get('#' + input.attributes('aria-describedby')).text()).toBe('Ошибка заголовка')
+    expect(editor.get('label[for="' + input.attributes('id') + '"]').text()).toBe('Заголовок')
+    expect(input.attributes('disabled')).toBeUndefined()
+  })
+  it('a confirmed publication cannot be sent twice', async () => {
+    post.mockResolvedValue({ data: announcement() })
+    const editor = await mountSuspended(AnnouncementEditor, { props: { scope: 'church' } })
+    await editor.get('[data-test="title"]').setValue('Заголовок')
+    await editor.get('[data-test="body"]').setValue('Текст')
+    await editor.get('form').trigger('submit'); await flushPromises()
+    await editor.get('form').trigger('submit'); await flushPromises()
+    expect(post).toHaveBeenCalledTimes(1)
+  })
+  it.each(['resolve', 'reject'])('discards a late editor %s after session change', async outcome => {
+    let resolve!: (value: unknown) => void, reject!: (value: unknown) => void
+    post.mockReturnValue(new Promise((yes, no) => { resolve = yes; reject = no }))
+    const editor = await mountSuspended(AnnouncementEditor, { props: { scope: 'church' } })
+    await editor.get('[data-test="title"]').setValue('Заголовок')
+    await editor.get('[data-test="body"]').setValue('Текст')
+    await editor.get('form').trigger('submit')
+    useAuthStore().sessionVersion++
+    await flushPromises()
+    if (outcome === 'resolve') resolve({ data: announcement() }); else reject({ statusCode: 500 })
+    await flushPromises()
+    expect(editor.emitted('saved')).toBeUndefined()
+    expect(editor.find('[role="alert"]').exists()).toBe(false)
+    expect((editor.get('[data-test="title"]').element as HTMLInputElement).value).toBe('')
+  })
+  it('keeps confirmed publication and retries only the list read after a failed refresh', async () => {
+    grantPermissions({ global: ['announcements.church.publish'] })
+    get.mockResolvedValueOnce(list()).mockRejectedValueOnce({ statusCode: 500 }).mockResolvedValue(list([announcement()]))
+    post.mockResolvedValue({ data: announcement() })
+    const page = await mountSuspended(AnnouncementsIndex)
+    await page.get('[data-test="publish"]').trigger('click')
+    await page.get('[data-test="title"]').setValue('Заголовок')
+    await page.get('[data-test="body"]').setValue('Текст')
+    await page.get('form').trigger('submit'); await flushPromises()
+    expect(page.text()).toContain('Объявление опубликовано.')
+    expect(page.get('[data-test="published-result"]').attributes('href')).toBe('/announcements/a1')
+    await page.get('[data-test="retry-announcements"]').trigger('click'); await flushPromises()
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(page.text()).toContain('Объявление опубликовано.')
+  })
+  it('unrelated rights refresh preserves the draft', async () => {
+    grantPermissions({ global: ['announcements.church.publish'] }); get.mockResolvedValue(list())
+    const page = await mountSuspended(AnnouncementsIndex)
+    await page.get('[data-test="publish"]').trigger('click')
+    await page.get('[data-test="title"]').setValue('Черновик')
+    grantPermissions({ global: ['announcements.church.publish', 'people.view'] }); await flushPromises()
+    expect((page.get('[data-test="title"]').element as HTMLInputElement).value).toBe('Черновик')
+  })
+})
+
+describe('task17 detail context', () => {
+  it('uses an explicit editor mode without a preceding long body or attachment gallery', async () => {
+    grantPermissions({ global: ['announcements.church.publish'] }); get.mockResolvedValue({ data: announcement() })
+    const page = await mountSuspended(AnnouncementPage)
+    await page.get('[data-test="edit"]').trigger('click'); await flushPromises()
+    expect(page.find('.markdown-body').exists()).toBe(false)
+    expect(page.get('[data-test="editor-heading"]').text()).toBe('Изменить объявление')
+    await page.get('form button[type="button"]:last-child').trigger('click'); await flushPromises()
+    expect(page.find('.markdown-body').exists()).toBe(true)
+  })
+  it('invalidates a pending pin across rights revocation and restoration', async () => {
+    grantPermissions({ global: ['announcements.church.publish'] }); get.mockResolvedValue({ data: announcement() })
+    let resolve!: (value: unknown) => void
+    post.mockReturnValue(new Promise(yes => { resolve = yes }))
+    const page = await mountSuspended(AnnouncementPage)
+    await page.get('[data-test="pin"]').trigger('click')
+    grantPermissions(); await flushPromises()
+    expect(page.find('[data-test="views"]').exists()).toBe(false)
+    grantPermissions({ global: ['announcements.church.publish'] }); await flushPromises()
+    resolve({ data: announcement({ pinned: true }) }); await flushPromises()
+    expect(page.get('[data-test="pin"]').text()).toBe('Закрепить')
+    expect(page.get('[data-test="pin"]').attributes('disabled')).toBeUndefined()
+  })
+  it('clears detail state and ignores the former session pending action', async () => {
+    grantPermissions({ global: ['announcements.church.publish'] }); get.mockResolvedValue({ data: announcement() })
+    let reject!: (value: unknown) => void
+    post.mockReturnValue(new Promise((_, no) => { reject = no }))
+    const page = await mountSuspended(AnnouncementPage)
+    await page.get('[data-test="pin"]').trigger('click')
+    get.mockResolvedValue({ data: announcement({ title: 'Новая сессия' }) })
+    useAuthStore().sessionVersion++; await flushPromises()
+    reject({ statusCode: 500 }); await flushPromises()
+    expect(page.get('h1').text()).toBe('Новая сессия')
+    expect(page.find('[role="alert"]').exists()).toBe(false)
+  })
+})
+
+describe('task17 early review', () => {
+  it('blocks ordinary scope changes while a publication is pending and keeps its confirmed result', async () => {
+    grantPermissions({ global: ['announcements.church.publish'] }); get.mockResolvedValue(list())
+    let resolve!: (value: unknown) => void
+    post.mockReturnValue(new Promise(yes => { resolve = yes }))
+    const page = await mountSuspended(AnnouncementsIndex)
+    await page.get('[data-test="publish"]').trigger('click')
+    await page.get('[data-test="title"]').setValue('Черновик')
+    await page.get('[data-test="body"]').setValue('Текст')
+    await page.get('form').trigger('submit'); await flushPromises()
+    expect(page.get('select').attributes('disabled')).toBeDefined()
+    resolve({ data: announcement() }); await flushPromises()
+    expect(page.text()).toContain('Объявление опубликовано.')
+    expect(page.get('select').attributes('disabled')).toBeUndefined()
+  })
+  it.each(['/announcements', '/events', '/chats'])('renders home without waiting for %s', async path => {
+    const chats = useChatsStore(); chats.loaded = false; chats.loading = false; chats.chats = []
+    const settings = useSettingsStore(); settings.loaded = true
+    let release!: (value: unknown) => void
+    const pending = new Promise(yes => { release = yes })
+    get.mockImplementation((url: string) => url === path ? pending : Promise.resolve(list()))
+    const chatFetch = path === '/chats' ? vi.spyOn(chats, 'fetch').mockImplementation(async () => { chats.loading = true; await pending; chats.loading = false; chats.loaded = true }) : null
+    let resolved = false
+    const mounting = mountSuspended(HomePage).then(page => { resolved = true; return page })
+    try {
+      await flushPromises(); await flushPromises()
+      expect(resolved).toBe(true)
+      const page = await mounting
+      expect(page.find('h1').exists()).toBe(true)
+      expect(page.findAll('.home-section__header')).toHaveLength(3)
+      expect(page.find('[role="status"]').exists()).toBe(true)
+    } finally { release(list()); await mounting; await flushPromises(); chatFetch?.mockRestore() }
+  })
 })

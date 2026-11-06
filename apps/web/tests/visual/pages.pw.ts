@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mockVisualApi } from './support/api'
+import { installAcceptanceApi } from './support/acceptance-api'
+import { takeAcceptanceScreenshot } from './support/acceptance-layout'
 
 const name = 'Константинопольский'.repeat(5) + ' Александр Александрович'
 const title = 'Событие'.repeat(28)
@@ -370,3 +372,106 @@ for (const theme of ['dark', 'light'] as const) {
     })
   }
 }
+
+// Task17 owns home and announcements. Keep other task scenarios untouched.
+test.describe('task17 home and announcements', () => {
+  for (const theme of ['dark', 'light'] as const) {
+    for (const [width, height, scale] of [[390, 844, 100], [1440, 1000, 100], [320, 900, 200], [375, 390, 200]] as const) {
+      test(`task17 ${theme} ${width}x${height} ${scale}%: priorities, empty home and editor focus`, async ({ page }, info) => {
+        const api = await installAcceptanceApi(page)
+        await page.setViewportSize({ width, height })
+        await page.addInitScript(({ theme, scale }) => {
+          localStorage.setItem('church.ui.theme', theme)
+          document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%` })
+        }, { theme, scale })
+        await page.goto('/')
+        await expect(page.locator('.home-section__header h2')).toHaveText(['Ближайшие мои события', 'Закреплённые объявления', 'Непрочитанное'])
+        await expect(page.getByRole('region', { name: 'Закреплённые объявления' }).getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
+        await expect(page.locator('.home-section__header h2').first()).toHaveCSS('font-size', scale === 200 ? '36px' : '18px')
+        await fits(page)
+        await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}x${height}-${scale}-home`)
+        api.respond('GET', '/announcements', () => ({ json: { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } }))
+        api.respond('GET', '/events', () => ({ json: { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } }))
+        api.respond('GET', '/chats', () => ({ json: { data: [], meta: { unread_total: 0 } } }))
+        await page.reload()
+        await expect(page.getByText('Ближайших событий пока нет.', { exact: true })).toBeVisible()
+        await expect(page.getByText('Закреплённых объявлений пока нет.', { exact: true })).toBeVisible()
+        await expect(page.getByText('Непрочитанных сообщений нет.', { exact: true })).toBeVisible()
+        await fits(page)
+        await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}x${height}-${scale}-home-empty`)
+        await page.goto('/announcements/a1')
+        const edit = page.getByRole('button', { name: 'Изменить', exact: true })
+        await edit.click()
+        await expect(page.locator('[data-test=editor-heading]')).toBeFocused()
+        await expect(page.locator('.markdown-body')).toHaveCount(0)
+        api.respond('PATCH', '/announcements/a1', () => ({ status: 422, json: { message: 'Проверьте поля.', errors: { title: ['Уточните заголовок объявления.'] } } }))
+        await page.getByRole('textbox', { name: 'Заголовок', exact: true }).fill('Черновик после ошибки')
+        await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+        const field = page.getByRole('textbox', { name: 'Заголовок', exact: true })
+        await expect(field).toBeFocused()
+        await expect(field).toHaveAttribute('aria-invalid', 'true')
+        await expect(field).toHaveAccessibleDescription('Уточните заголовок объявления.')
+        const bounds = await field.boundingBox()
+        const fixedNav = await page.locator('.app-nav').evaluateAll(nodes => nodes.filter(node => getComputedStyle(node).position === 'fixed').map(node => node.getBoundingClientRect().top))
+        expect(bounds!.y).toBeGreaterThanOrEqual(0)
+        expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(Math.min(height, ...fixedNav))
+        await fits(page)
+        if (width === 1440 && scale === 100) {
+          const publication = (await page.locator('.announcement-editor__publication').boundingBox())!
+          const text = (await page.locator('.announcement-editor__text').boundingBox())!
+          const attachments = (await page.locator('.announcement-editor__attachments').boundingBox())!
+          expect.soft(attachments.x).toBe(publication.x)
+          expect.soft(attachments.x + attachments.width).toBe(text.x + text.width)
+          expect.soft(attachments.y).toBeGreaterThanOrEqual(Math.max(publication.y + publication.height, text.y + text.height) + 16)
+          const rows = page.locator('.selected-attachments > li')
+          const first = (await rows.nth(0).boundingBox())!, second = (await rows.nth(1).boundingBox())!
+          expect.soft(second.y - first.y - first.height).toBe(8)
+        }
+        await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}x${height}-${scale}-editor-error`)
+        await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+        await expect(page.getByRole('heading', { name: api.data.announcement.title, exact: true })).toBeFocused()
+        await expect(page.locator('.markdown-body')).toBeVisible()
+        expect(api.unhandled).toEqual([])
+      })
+    }
+  }
+})
+
+test('task17 home keeps available sections while one request is pending or failed', async ({ page }, info) => {
+  const api = await installAcceptanceApi(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  let release!: () => void
+  const pending = new Promise<void>(resolve => { release = resolve })
+  api.respond('GET', '/announcements', async () => { await pending; return { status: 500, json: { message: 'Private diagnostic' } } })
+  await page.goto('/')
+  try {
+    await expect(page.getByRole('heading', { name: 'Здравствуйте, Анна!' })).toBeVisible()
+    const pins = page.getByRole('region', { name: 'Закреплённые объявления' })
+    await expect(pins.getByRole('status')).toContainText('Загружаем объявления…')
+    await expect(page.getByRole('region', { name: 'Ближайшие мои события' }).getByRole('link', { name: api.data.event.title, exact: true })).toBeVisible()
+    await takeAcceptanceScreenshot(page, info, 'task17-home-pending')
+  } finally { release() }
+  await expect(page.getByRole('region', { name: 'Закреплённые объявления' }).getByRole('alert')).toContainText('Не удалось загрузить закреплённые объявления.')
+  await expect(page.getByRole('region', { name: 'Непрочитанное' }).getByRole('link', { name: /Все чаты/ })).toBeVisible()
+  await fits(page)
+  await takeAcceptanceScreenshot(page, info, 'task17-home-error')
+  expect(api.unhandled).toEqual([])
+})
+
+test('task17 maximum five home events keep pinned announcements and unread chats together', async ({ page }, info) => {
+  const api = await installAcceptanceApi(page)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  api.respond('GET', '/events', () => ({ json: { data: Array.from({ length: 5 }, (_, index) => ({ ...api.data.event, id: `home-event-${index}`, title: `Личное событие ${index + 1}` })), meta: { current_page: 1, last_page: 1, total: 5 } } }))
+  await page.goto('/')
+  const events = page.getByRole('region', { name: 'Ближайшие мои события' })
+  await expect(events.locator('.event-card')).toHaveCount(5)
+  const pins = page.getByRole('region', { name: 'Закреплённые объявления' })
+  const unread = page.getByRole('region', { name: 'Непрочитанное' })
+  await expect(pins.getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
+  await expect(unread.locator('.chat-list')).toBeVisible()
+  const top = (await unread.boundingBox())!.y, bottom = (await pins.boundingBox())!
+  expect(top - bottom.y - bottom.height).toBe(16)
+  await fits(page)
+  await takeAcceptanceScreenshot(page, info, 'task17-five-events-columns')
+  expect(api.unhandled).toEqual([])
+})
