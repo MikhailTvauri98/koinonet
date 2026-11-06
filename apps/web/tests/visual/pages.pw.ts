@@ -95,7 +95,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await page.locator('[data-test=filter-ministry]').selectOption(ministry.id)
       await page.locator('[data-test=filter-archived]').check()
       await expect(page.locator('.person-item')).toContainText('В архиве')
-      await expect(page.locator('.person-item')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+      await expect(page.locator('.person-item')).toHaveCSS('background-color', 'rgb(29, 34, 37)')
       await fits(page)
       await page.getByRole('link', { name, exact: true }).click()
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
@@ -270,6 +270,103 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(page.getByRole('button', { name: 'Сбросить фильтр по автору' })).toBeVisible()
       await fits(page)
       await administrationScreenshot(page, info.outputPath('admin-audit.png'))
+    })
+  }
+}
+
+
+// Task 16: directory and person details; account and person identifiers deliberately differ.
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, height, scale] of [[390, 900, 1], [1440, 900, 1], [320, 900, 2], [390, 390, 2]] as const) {
+    test(`task16 people directory and card in ${theme} ${width}x${height} text ${scale * 100}%`, async ({ page }, info) => {
+      await mockVisualApi(page)
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height })
+      const photo = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="320"><rect width="180" height="320" fill="#607b9b"/><circle cx="90" cy="100" r="52" fill="#eac3a0"/><path d="M0 320v-50a90 90 0 0 1 180 0v50" fill="#25334b"/></svg>')
+      const card = { ...person, full_name: 'Константинопольский Александр Александрович', last_name: 'Константинопольский', photo_url: photo,
+        archived: false, has_account: true, user_id: 'account-other', account_disabled: true,
+        contacts: { phone: '+7 999 123-45-67', email: 'alexander.long-address@example.test', birth_date: '1990-03-15' },
+        note: 'Заметка с разрешёнными сведениями. '.repeat(3),
+        ministries: [{ id: 'm1', name: 'Музыкальное служение' }, { id: 'm2', name: 'Служение помощи людям и семьям' }],
+        global_roles: [{ id: 'r1', name: 'Участник' }, { id: 'r2', name: 'Ответственный за объявления церкви' }],
+      }
+      await page.route('**/api/v1/people**', route => {
+        const path = new URL(route.request().url()).pathname
+        return route.fulfill({ json: path.endsWith('/people') ? { data: [card, { ...card, id: 'other', full_name: 'Иванова Мария', photo_url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="100"><rect width="320" height="100" fill="#4d6685"/><circle cx="160" cy="50" r="45" fill="#ecc4a4"/></svg>'), has_global_roles: false, account_disabled: false }], meta: { current_page: 1, last_page: 1, total: 2 } } : { data: card } })
+      })
+      await page.goto('/people')
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
+      await expect(page.locator('.person-item')).toHaveCount(2)
+      if (width === 1440) expect((await page.locator('.person-item').last().boundingBox())!.height).toBeLessThanOrEqual(100)
+      await fits(page)
+      await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+      await page.screenshot({ path: info.outputPath('people-directory.png'), fullPage: true })
+      await page.getByRole('link', { name: card.full_name, exact: true }).click()
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
+      await expect(page.getByRole('heading', { name: card.full_name, exact: true })).toBeVisible()
+      await expect(page.locator('[data-test=contacts]')).toContainText(card.contacts.email)
+      await expect(page.locator('.person-roles')).toContainText('Ответственный')
+      await expect(page.locator('.person-account')).toContainText('Аккаунт отключён')
+      await expect(page.locator('[data-test=write]')).toHaveCount(0)
+      await expect(page.locator('.person-card__management')).not.toHaveAttribute('open')
+      await fits(page)
+      await page.screenshot({ path: info.outputPath('people-card.png'), fullPage: true })
+      const edit = page.locator('[data-test=edit-person]')
+      await edit.click()
+      await expect(page.locator('[name=last_name]')).toBeFocused()
+      await page.locator('[data-test=cancel-person]').click()
+      await expect(edit).toBeFocused()
+      // The server projection is the only source of hidden personal data.
+      await page.route('**/api/v1/people/p-pages', route => route.fulfill({ json: { data: { ...card, photo_url: null, contacts: undefined, note: undefined } } }))
+      await page.reload()
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
+      await expect(page.getByRole('heading', { name: card.full_name, exact: true })).toBeVisible()
+      await expect(page.locator('[data-test=contacts]')).toHaveCount(0)
+      await expect(page.locator('[data-test=note]')).toHaveCount(0)
+      await expect(page.locator('[data-test=person-photo]')).toHaveCount(0)
+      await fits(page)
+      await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+      await page.screenshot({ path: info.outputPath('people-card-masked.png'), fullPage: true })
+    })
+  }
+}
+
+
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, height, scale] of [[390, 900, 1], [1440, 900, 1], [390, 390, 2]] as const) {
+    test(`task16 invitation dialog in ${theme} ${width}x${height} text ${scale * 100}%`, async ({ page }, info) => {
+      await mockVisualApi(page)
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height })
+      await page.route('**/api/v1/people/p-pages', route => route.fulfill({ json: { data: { ...person, full_name: 'Иванова Анна Петровна', global_roles: [{ id: 'r1', name: 'Участник' }], ministries: [] } } }))
+      let release!: () => void
+      const pending = new Promise<void>(resolve => { release = resolve })
+      await page.route('**/api/v1/people/p-pages/invite', async route => {
+        await pending
+        await route.fulfill({ json: { data: { url: 'https://church.test/invite/one-time-secret', expires_at: '2026-11-13T12:00:00Z' } } })
+      })
+      await page.goto('/people/p-pages')
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
+      const invite = page.locator('[data-test=invite]')
+      await invite.click()
+      await expect(page.locator('[data-test=edit-person]')).toBeDisabled()
+      await expect(page.locator('[data-test=edit-roles]')).toBeDisabled()
+      release()
+      const dialog = page.getByRole('dialog', { name: 'Приглашение', exact: true })
+      await expect(dialog).toBeVisible()
+      await expect(dialog).toHaveClass('ui-dialog')
+      await expect(dialog.locator('[data-test=link-qr]')).toBeVisible()
+      await expect(dialog.locator('[data-test=invite-link]')).toContainText('one-time-secret')
+      await expect(page.locator('[data-test=edit-person]')).toBeDisabled()
+      await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+      await page.screenshot({ path: info.outputPath('people-invitation-viewport.png') })
+      await dialog.locator('[data-test=copy-invite-link]').scrollIntoViewIfNeeded()
+      await expect(dialog.locator('[data-test=copy-invite-link]')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(dialog).toHaveCount(0)
+      await expect(page.locator('[data-test=invite-link]')).toHaveCount(0)
+      await expect(invite).toBeFocused()
+      await expect(page.locator('[data-test=edit-person]')).toBeEnabled()
     })
   }
 }

@@ -4,6 +4,7 @@ import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { components, operations } from '~~/types/api'
+import { useAuthStore } from '~/stores/auth'
 import PeopleIndex from '~/pages/people/index.vue'
 import { grantPermissions } from '../support/permissions'
 
@@ -291,5 +292,61 @@ describe('person creation', () => {
     await page.get('[data-test="cancel-person"]').trigger('click')
     expect(page.find('form').exists()).toBe(false)
     expect(post).not.toHaveBeenCalled()
+  })
+})
+
+describe('directory redesign boundaries', () => {
+  it('makes the whole compact row an accessible person link', async () => {
+    const page = await mountPage()
+    const row = page.get('[data-test="person-item"]')
+    const link = row.get('a')
+    expect(link.classes()).toContain('person-item__open')
+    expect(link.text()).toContain('Член церкви')
+    expect(link.findAll('img, .person-item__placeholder')).toHaveLength(1)
+  })
+  it('rejects an old list response across synchronous revoke and restore', async () => {
+    const page = await mountPage()
+    let finish!: (value: PeopleResponse) => void
+    get.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await page.get('[data-test="filter-status"]').setValue('guest')
+    permit(); permit('people.view'); await flushPromises()
+    finish(result([person({ full_name: 'Запоздавшее имя' })])); await flushPromises()
+    expect(page.text()).not.toContain('Запоздавшее имя')
+  })
+  it('preserves id-only creation confirmation when canonical list read fails', async () => {
+    const page = await openForm()
+    post.mockResolvedValueOnce({ data: { id: 'created-id' }, warnings: [] })
+    get.mockRejectedValueOnce({ statusCode: 503 })
+    await page.get('form').trigger('submit'); await flushPromises()
+    expect(page.text()).toContain('Человек создан')
+    expect(page.find('form').exists()).toBe(false)
+    await page.get('[data-test="retry"]').trigger('click'); await flushPromises()
+    expect(post).toHaveBeenCalledTimes(1)
+  })
+})
+describe('directory filter session scope', () => {
+  it('clears prior filters and search before reading for a new session of the same account', async () => {
+    const page = await mountPage()
+    await page.get('[data-test="filter-status"]').setValue('guest')
+    await page.get('[data-test="filter-ministry"]').setValue(ministryId)
+    await page.get('[data-test="filter-archived"]').setValue(true)
+    await page.get('[data-test="filter-without-roles"]').setValue(true)
+    await page.get('[data-test="search"]').setValue('Старое имя')
+    useAuthStore(testPinia).sessionVersion++
+    await flushPromises()
+    expect((page.get('[data-test="search"]').element as HTMLInputElement).value).toBe('')
+    expect((page.get('[data-test="filter-status"]').element as HTMLSelectElement).value).toBe('')
+    expect((page.get('[data-test="filter-ministry"]').element as HTMLSelectElement).value).toBe('')
+    expect((page.get('[data-test="filter-archived"]').element as HTMLInputElement).checked).toBe(false)
+    expect((page.get('[data-test="filter-without-roles"]').element as HTMLInputElement).checked).toBe(false)
+    expect([...lastQuery().keys()]).toEqual(['page'])
+  })
+  it('preserves filters and search on unrelated rights refresh in the same session', async () => {
+    const page = await mountPage()
+    await page.get('[data-test="filter-status"]').setValue('guest')
+    await page.get('[data-test="search"]').setValue('Мария')
+    permit('people.view', 'audit.view'); await flushPromises()
+    expect((page.get('[data-test="search"]').element as HTMLInputElement).value).toBe('Мария')
+    expect((page.get('[data-test="filter-status"]').element as HTMLSelectElement).value).toBe('guest')
   })
 })

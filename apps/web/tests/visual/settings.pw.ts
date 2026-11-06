@@ -351,3 +351,49 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(opener).toBeFocused()
   })
 }
+
+
+// Task 16 owns only the people form scenarios below.
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, height, scale] of [[390, 900, 1], [1440, 900, 1], [320, 900, 2], [390, 390, 2]] as const) {
+    test(`task16 people form and focus in ${theme} ${width}x${height} text ${scale * 100}%`, async ({ page }, info) => {
+      await fixtures(page)
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height })
+      await page.route('**/api/v1/people', route => route.request().method() === 'POST'
+        ? route.fulfill({ status: 422, json: { errors: { phone: ['Проверьте телефон.'] } } }) : route.fallback())
+      await page.goto('/people')
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
+      const create = page.locator('[data-test=create-person]')
+      await create.click()
+      await expect(page.getByRole('textbox', { name: 'Фамилия', exact: true })).toBeFocused()
+      await page.getByRole('textbox', { name: 'Фамилия', exact: true }).fill('Константинопольский')
+      await page.getByRole('textbox', { name: 'Имя', exact: true }).fill('Александр')
+      await page.locator('[name=birth_date]').fill('1990-03-15')
+      await fit(page, width)
+      if (width === 1440) {
+        const groups = page.locator('.person-form .ui-form-section')
+        expect((await groups.nth(1).boundingBox())!.x).toBeGreaterThan((await groups.nth(0).boundingBox())!.x)
+      }
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+      await screenshot(page, info.outputPath('people-form.png'))
+      const phone = page.getByRole('textbox', { name: 'Телефон', exact: true })
+      await phone.fill('wrong')
+      await page.locator('[data-test=save-person]').click()
+      await expect(phone).toBeFocused()
+      await expect(phone).toBeEnabled()
+      await expect(phone).toHaveAccessibleName('Телефон')
+      await expect(phone).toHaveAccessibleDescription('Проверьте телефон.')
+      const bounds = (await phone.boundingBox())!
+      const nav = page.getByRole('navigation', { name: 'Основная навигация' })
+      if (await nav.evaluate(el => getComputedStyle(el).position === 'fixed')) expect(bounds.y + bounds.height).toBeLessThanOrEqual((await nav.boundingBox())!.y)
+      else { expect(bounds.y).toBeGreaterThanOrEqual(0); expect(bounds.y + bounds.height).toBeLessThanOrEqual(height) }
+      await page.screenshot({ path: info.outputPath('people-field-error-viewport.png') })
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+      await screenshot(page, info.outputPath('people-field-error.png'))
+      await page.locator('[data-test=cancel-person]').click()
+      await expect(create).toBeFocused()
+      await fit(page, width)
+    })
+  }
+}
