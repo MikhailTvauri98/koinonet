@@ -684,3 +684,23 @@ describe('ministries list', () => {
     expect(page.text()).toContain('Молодёжное')
   })
 })
+
+
+it('rejects default-role response after manage rights are revoked and restored with member access retained', async () => {
+  grantPermissions({ ministries: { m1: ['roles.manage', 'members.manage'] } })
+  get.mockImplementation((path: string) => Promise.resolve(path.endsWith('/roles')
+    ? { data: [{ id: 'r-member', name: 'Участник', permissions: [] }, { id: 'r-tech', name: 'Звукорежиссёр', permissions: [] }] }
+    : { data: ministry }))
+  let finish!: (value: unknown) => void
+  patch.mockImplementation(() => new Promise(resolve => { finish = resolve }))
+  const page = await mountSuspended(RolesTab)
+  await page.get('[data-test="set-default-r-tech"]').trigger('click')
+  grantPermissions({ ministries: { m1: ['members.manage'] } })
+  await flushPromises()
+  grantPermissions({ ministries: { m1: ['roles.manage', 'members.manage'] } })
+  await flushPromises()
+  finish({ data: { ...ministry, default_role_id: 'r-tech' } })
+  await flushPromises()
+  expect(page.find('[data-test="set-default-r-tech"]').exists()).toBe(true)
+  expect(page.find('[data-test="set-default-r-member"]').exists()).toBe(false)
+})

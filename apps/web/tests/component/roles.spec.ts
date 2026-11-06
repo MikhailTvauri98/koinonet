@@ -5,17 +5,21 @@
 // остального проекта), остальные *.spec.ts с этими же импортами начинаются
 // с неё же (tests/component/people.spec.ts, person-card.spec.ts).
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // Дефект плана: `~/app/components/roles/RoleEditor.vue` не существует в
 // Nuxt 4 — `~` уже указывает на `app/` (docs/architecture.md, раздел 10;
 // nuxt.config.ts), правильный путь без второго `app/`.
 import RoleEditor from '~/components/roles/RoleEditor.vue'
 
+enableAutoUnmount(afterEach)
+
 const get = vi.fn()
 const post = vi.fn()
 const del = vi.fn()
+const patch = vi.fn()
 
-mockNuxtImport('useApi', () => () => ({ get, post, delete: del }))
+mockNuxtImport('useApi', () => () => ({ get, post, patch, delete: del }))
 
 const catalogue = [
   { key: 'people.view', scope: 'global', label: 'Видеть справочник', description: '...' },
@@ -25,7 +29,7 @@ const catalogue = [
 ]
 
 beforeEach(() => {
-  [get, post, del].forEach(fn => fn.mockReset())
+  [get, post, patch, del].forEach(fn => fn.mockReset())
   get.mockResolvedValue({ data: catalogue })
 })
 
@@ -104,4 +108,38 @@ describe('role editor', () => {
     expect(editor.text()).toContain('Роль по умолчанию')
     expect(editor.find('[data-test="confirm-delete"]').exists()).toBe(false)
   })
+})
+
+
+describe('role form groups', () => {
+  it('presents role details and permissions as named sections with readable descriptions', async () => {
+    const editor = await mountSuspended(RoleEditor, { props: { scope: 'global', role: null } })
+    expect(editor.findAll('.ui-form-section h2').map(h => h.text())).toEqual(['О роли', 'Права роли'])
+    const permission = editor.get('[data-test="permission-people.view"]')
+    expect(permission.attributes('aria-describedby')).toBeTruthy()
+    expect(editor.get(`[id="${permission.attributes('aria-describedby')}"]`).text()).toBe('...')
+  })
+
+  it('uses the common dialog for deletion and exposes a close action after usage failure', async () => {
+    get.mockImplementation((url: string) => url.endsWith('/usage') ? Promise.reject({ statusCode: 503 }) : Promise.resolve({ data: catalogue }))
+    const editor = await mountSuspended(RoleEditor, { props: { scope: 'global', role: { id: 'r1', name: 'Роль', permissions: [] } } })
+    await editor.get('[data-test="delete-role"]').trigger('click')
+    await flushPromises()
+    expect(editor.find('dialog.ui-dialog').exists()).toBe(true)
+    expect(editor.find('dialog [data-test="close-usage"]').exists()).toBe(true)
+  })
+})
+
+
+it('keeps a saved role editable after the parent applies the confirmed response', async () => {
+  const original = { id: 'r1', name: 'Роль', permissions: [] as string[] }
+  const updated = { ...original, name: 'Новое название' }
+  patch.mockResolvedValue({ data: updated })
+  const editor = await mountSuspended(RoleEditor, { props: { scope: 'global', role: original } })
+  await editor.get('[data-test="role-name"]').setValue(updated.name)
+  await editor.get('form').trigger('submit')
+  await flushPromises()
+  await editor.setProps({ role: updated })
+  expect(editor.get('[data-test="save-role"]').attributes('disabled')).toBeUndefined()
+  expect(editor.text()).toContain('Роль сохранена.')
 })

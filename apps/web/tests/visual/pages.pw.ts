@@ -234,3 +234,45 @@ test.describe('task18 notification center', () => {
   }
 
 })
+
+async function administrationScreenshot(page: Page, path: string) {
+  await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important; }' })
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
+  await page.screenshot({ path, fullPage: true })
+}
+
+// Task 19: journal scenarios are separate from unrelated page acceptance.
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, scale] of [[390, 1], [1440, 1], [390, 2]] as const) {
+    test(`administration audit in ${theme} ${width}px text ${scale * 100}%`, async ({ page }, info) => {
+      await mockVisualApi(page)
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height: 900 })
+      let failMore = true
+      await page.route('**/api/v1/audit?*', route => {
+        const cursor = new URL(route.request().url()).searchParams.get('cursor')
+        if (cursor && failMore) return route.fulfill({ status: 503, json: {} })
+        return route.fulfill({ json: { data: [{ id: cursor ? 'a2' : 'a1', action: 'role.updated', actor: { id: 'u1', name }, subject_type: 'role', subject_id: '01'.repeat(13), created_at: '2026-11-06T07:30:00Z', payload: null, ip: null }], next_cursor: cursor ? null : 'next' } })
+      })
+      await page.goto('/admin/audit')
+      await expect(page.getByRole('heading', { name: 'Фильтры журнала', exact: true })).toBeVisible()
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important }' })
+      await expect(page.locator('main')).toContainText('Europe/Moscow')
+      await page.getByLabel('Начало периода', { exact: true }).fill('2026-11-06')
+      await expect(page.locator('main time').first()).toHaveAttribute('datetime', '2026-11-06T07:30:00Z')
+      await page.locator('[data-test=load-more]').click()
+      await expect(page.locator('[role=alert]')).toContainText('Не удалось загрузить журнал')
+      await expect(page.locator('.admin-audit__list li')).toHaveCount(1)
+      await fits(page)
+      await administrationScreenshot(page, info.outputPath('admin-audit-error.png'))
+      failMore = false
+      await page.locator('[data-test=retry]').click()
+      await expect(page.locator('.admin-audit__list li')).toHaveCount(2)
+      await page.locator('[data-test=entry-actor-a1]').click()
+      await expect(page.getByRole('button', { name: 'Сбросить фильтр по автору' })).toBeVisible()
+      await fits(page)
+      await administrationScreenshot(page, info.outputPath('admin-audit.png'))
+    })
+  }
+}

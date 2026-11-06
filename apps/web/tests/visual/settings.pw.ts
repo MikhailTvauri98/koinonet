@@ -263,3 +263,91 @@ for (const theme of ['dark', 'light'] as const) {
     })
   }
 }
+
+
+async function administrationScreenshot(page: Page, path: string) {
+  await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important; }' })
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
+  await page.screenshot({ path, fullPage: true })
+}
+
+// Task 19 owns only the administrative scenarios below.
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, scale] of [[390, 1], [1440, 1], [390, 2]] as const) {
+    test(`administration forms in ${theme} ${width}px text ${scale * 100}%`, async ({ page }, info) => {
+      await fixtures(page)
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height: 900 })
+      for (const path of ['/admin/settings', '/admin/roles', '/ministries/m-settings/roles']) {
+        await page.goto(path)
+        await expect(page.locator('main h1')).toBeVisible()
+        if (scale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important }' })
+        if (path.endsWith('/roles')) await page.locator('[data-test=select-role-long]').click()
+        await expect(page.locator('.ui-form-section').first()).toBeVisible()
+        await fit(page, width)
+        for (const button of await page.locator('main .ui-button--primary').all()) {
+          expect(await button.evaluate(el => getComputedStyle(el).color)).toBe(theme === 'dark' ? 'rgb(20, 33, 59)' : 'rgb(255, 255, 255)')
+        }
+        await administrationScreenshot(page, info.outputPath(path.slice(1).replaceAll('/', '-') + '.png'))
+      }
+      await page.goto('/admin/roles')
+      await page.locator('[data-test=select-role-system]').click()
+      await expect(page.locator('[data-test=role-name]')).toBeDisabled()
+      await expect(page.locator('[data-test=save-role]')).toHaveCount(0)
+      await administrationScreenshot(page, info.outputPath('system-role.png'))
+    })
+  }
+
+  test(`administration errors and deletion dialog in ${theme}`, async ({ page }, info) => {
+    await fixtures(page)
+    await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+    await page.setViewportSize({ width: 390, height: 640 })
+    await page.route('**/api/v1/settings', route => route.request().method() === 'PUT'
+      ? route.fulfill({ status: 422, json: { errors: { timezone: ['Часовой пояс не найден.'] } } }) : route.fallback())
+    await page.goto('/admin/settings')
+    await page.addStyleTag({ content: 'html { font-size: 32px !important }' })
+    const timezone = page.getByRole('textbox', { name: 'Часовой пояс', exact: true })
+    await timezone.fill('Mars/Olympus')
+    await page.locator('[data-test=save-settings]').click()
+    await expect(timezone).toBeFocused()
+    await expect(timezone).toHaveAccessibleName('Часовой пояс')
+    await expect(timezone).toHaveAccessibleDescription('Часовой пояс не найден.')
+    const field = (await timezone.boundingBox())!, nav = (await page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox())!
+    expect(field.y + field.height).toBeLessThanOrEqual(nav.y)
+    await administrationScreenshot(page, info.outputPath('settings-field-error-200.png'))
+    let failUsage = true
+    await page.route('**/api/v1/roles/long/usage', route => failUsage
+      ? route.fulfill({ status: 503, json: {} })
+      : route.fulfill({ json: { data: { carriers: 3, blockers: [{ type: 'default_role', id: 'm-settings', title: 'Роль по умолчанию' }] } } }))
+    await page.goto('/admin/roles')
+    await page.addStyleTag({ content: 'html { font-size: 32px !important }' })
+    await page.locator('[data-test=select-role-long]').click()
+    await page.route('**/api/v1/roles/long', route => route.request().method() === 'PATCH'
+      ? route.fulfill({ status: 422, json: { errors: { name: ['Это название уже занято.'] } } }) : route.fallback())
+    const roleName = page.getByRole('textbox', { name: 'Название', exact: true })
+    await roleName.fill('Новое название')
+    await page.locator('[data-test=save-role]').click()
+    await expect(roleName).toBeFocused()
+    await expect(roleName).toHaveAccessibleName('Название')
+    await expect(roleName).toHaveAccessibleDescription('Это название уже занято.')
+    await administrationScreenshot(page, info.outputPath('role-field-error-200.png'))
+    const opener = page.locator('[data-test=delete-role]')
+    await opener.click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toHaveClass('ui-dialog')
+    await expect(dialog.locator('h2')).toBeInViewport({ ratio: 1 })
+    await page.screenshot({ path: info.outputPath('role-usage-viewport.png') })
+    await expect(dialog.locator('[data-test=close-usage]')).toBeVisible()
+    await administrationScreenshot(page, info.outputPath('role-usage-error-200.png'))
+    failUsage = false
+    await dialog.locator('[data-test=retry-usage]').click()
+    await expect(dialog).toContainText('Роль по умолчанию')
+    await expect(dialog.locator('[data-test=confirm-delete]')).toHaveCount(0)
+    await fit(page, 390)
+    await administrationScreenshot(page, info.outputPath('role-usage-blocked-200.png'))
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await expect(opener).toBeFocused()
+  })
+}
