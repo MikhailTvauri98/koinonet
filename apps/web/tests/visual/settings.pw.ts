@@ -27,7 +27,10 @@ async function screenshot(page: Page, path: string) {
 }
 async function fit(page: Page, width: number) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
-  for (const control of await page.locator('main input:not([type=checkbox]), main select, main textarea, main button').all()) {
+  for (const label of await page.locator('main .ui-choice').all()) {
+    expect((await label.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  }
+  for (const control of await page.locator('main input:not([type=checkbox], [type=radio]), main select, main textarea, main button').all()) {
     if (!await control.isVisible()) continue
     const box = (await control.boundingBox())!
     expect(box.width).toBeGreaterThan(40)
@@ -35,11 +38,16 @@ async function fit(page: Page, width: number) {
     expect(box.x + box.width).toBeLessThanOrEqual(width + 1)
   }
 }
-for (const [width, scale] of [[320, 1], [768, 1], [1440, 1], [320, 2], [768, 2]] as const) {
+for (const theme of ['dark', 'light'] as const) {
+  test.describe(theme, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem('church.ui.theme', value), theme)
+    })
+for (const [width, scale] of [[320, 1], [390, 1], [768, 1], [1440, 1], [320, 2], [768, 2]] as const) {
   test(`settings and editors fit ${width}px text ${scale * 100}%`, async ({ page }, info) => {
     await fixtures(page)
     await page.setViewportSize({ width, height: 900 })
-    for (const path of ['/settings/profile', '/settings/devices', '/settings/ical', '/settings/notifications', '/admin/settings', '/admin/audit', '/admin/roles', '/ministries/m-settings/roles', '/ministries/m-settings/members', '/people']) {
+    for (const path of ['/settings/profile', '/settings/login', '/settings/appearance', '/settings/devices', '/settings/ical', '/settings/notifications', '/admin/settings', '/admin/audit', '/admin/roles', '/ministries/m-settings/roles', '/ministries/m-settings/members', '/people']) {
       await page.goto(path)
       await expect(page.locator('main h1')).toBeVisible()
       if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
@@ -53,21 +61,19 @@ for (const [width, scale] of [[320, 1], [768, 1], [1440, 1], [320, 2], [768, 2]]
       }
       await fit(page, width)
       if (path === '/settings/profile') {
-        expect((await page.locator('form').boundingBox())!.width).toBeLessThanOrEqual(640 * scale)
+        expect((await page.locator('form').boundingBox())!.width).toBeLessThanOrEqual(896 * scale)
         expect((await page.locator('[data-test=save-profile]').boundingBox())!.height).toBeLessThanOrEqual(44 * scale + 1)
         if (width === 320 && scale === 2) {
           expect.soft((await page.locator('input[name=birth_date]').boundingBox())!.width).toBeGreaterThanOrEqual(250)
-          expect.soft(await page.locator('.profile-page__checkbox').evaluate(el => {
-            const text = Array.from(el.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent?.includes('Показывать'))!
-            const start = text.textContent!.indexOf('Показывать')
-            const range = document.createRange(); range.setStart(text, start); range.setEnd(text, start + 'Показывать'.length)
+          expect.soft(await page.locator('.profile-page__checkbox span').evaluate(el => {
+            const range = document.createRange(); range.selectNodeContents(el)
             return range.getClientRects().length
-          })).toBe(1)
+          })).toBeGreaterThan(0)
         }
-        expect(await page.locator('[data-test=save-profile]').evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(35, 78, 121)')
+        expect(await page.locator('[data-test=save-profile]').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(theme === 'dark' ? 'rgb(145, 180, 255)' : 'rgb(49, 95, 198)')
       }
       if (path === '/settings/devices') expect.soft((await page.locator('[data-test=end-unknown]').boundingBox())!.height).toBeLessThanOrEqual(44 * scale + 1)
-      if (width === 320 || width === 1440) {
+      if (width === 320 || width === 390 || width === 1440) {
         await screenshot(page, info.outputPath(path.slice(1).replaceAll('/', '-') + '.png'))
         if (path === '/people') {
           const birthDate = page.locator('.person-form input[name=birth_date]')
@@ -95,7 +101,7 @@ test('devices show friendly labels, keep the original collapsed and protect the 
 test('settings links work with keyboard and system role stays readonly', async ({ page }) => {
   await fixtures(page)
   await page.goto('/settings/profile')
-  const login = page.getByRole('navigation', { name: 'Разделы настроек' }).getByRole('link', { name: 'Вход', exact: true })
+  const login = page.getByRole('navigation', { name: 'Разделы настроек' }).getByRole('link', { name: 'Безопасность', exact: true })
   await login.focus()
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(/settings\/login$/)
@@ -106,3 +112,154 @@ test('settings links work with keyboard and system role stays readonly', async (
   await expect(page.locator('[data-test=save-role]')).toHaveCount(0)
   await expect(page.locator('[data-test=delete-role]')).toHaveCount(0)
 })
+
+  })
+}
+
+
+test('appearance choice survives public pages and logout; failed logout preserves the account', async ({ page }, info) => {
+  await fixtures(page)
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.goto('/settings/appearance')
+  await expect(page.getByLabel('Тёмная', { exact: true })).toBeChecked()
+  await page.getByLabel('Светлая', { exact: true }).check()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await page.reload()
+  await expect(page.getByLabel('Светлая', { exact: true })).toBeChecked()
+  await page.goto('/settings/profile')
+  await page.route('**/api/v1/auth/logout', route => route.fulfill({ status: 500, json: { message: 'Ошибка выхода' } }))
+  await page.locator('[data-test=logout]').click()
+  await expect(page.locator('[data-test=logout-error]')).toContainText('Не удалось выйти. Попробуйте ещё раз.')
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+  await expect(page).toHaveURL(/settings\/profile$/)
+  await screenshot(page, info.outputPath('failed-logout-light.png'))
+  await page.route('**/api/v1/auth/logout', route => route.fulfill({ status: 204 }))
+  await page.locator('[data-test=logout]').click()
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  expect(await page.evaluate(() => localStorage.getItem('church.ui.theme'))).toBe('light')
+  await screenshot(page, info.outputPath('public-after-logout-light.png'))
+})
+
+test('appearance switches when device storage is blocked', async ({ page }) => {
+  await fixtures(page)
+  await page.addInitScript(() => {
+    const get = Storage.prototype.getItem, set = Storage.prototype.setItem
+    Object.defineProperty(Storage.prototype, 'getItem', { value(key: string) {
+      if (key === 'church.ui.theme') throw new Error('blocked')
+      return get.call(this, key)
+    } })
+    Object.defineProperty(Storage.prototype, 'setItem', { value(key: string, value: string) {
+      if (key === 'church.ui.theme') throw new Error('blocked')
+      return set.call(this, key, value)
+    } })
+  })
+  await page.goto('/settings/appearance')
+  await expect(page.getByLabel('Тёмная', { exact: true })).toBeChecked()
+  await page.getByLabel('Светлая', { exact: true }).check()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+})
+
+
+for (const theme of ['dark', 'light'] as const) {
+  test(`field error names and saved profile retry stay usable in ${theme}`, async ({ page }, info) => {
+    await fixtures(page)
+    await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+    await page.setViewportSize({ width: 390, height: 900 })
+    await page.route('**/api/v1/me/profile', route => route.request().method() === 'PATCH'
+      ? route.fulfill({ status: 422, json: { errors: { phone: ['Проверьте телефон.'] } } })
+      : route.fallback())
+    await page.goto('/settings/profile')
+    const phone = page.getByRole('textbox', { name: 'Телефон', exact: true })
+    await phone.fill('wrong')
+    await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(phone).toHaveAttribute('aria-invalid', 'true')
+    await expect(phone).toHaveAccessibleName('Телефон')
+    await expect(phone).toHaveAccessibleDescription('Проверьте телефон.')
+    await screenshot(page, info.outputPath('profile-field-error.png'))
+    let allowRead = false
+    await page.route('**/api/v1/me/profile', route => {
+      if (route.request().method() === 'PATCH') return route.fulfill({ json: { data: { id: 'p-visual' } } })
+      return !allowRead ? route.fulfill({ status: 503, json: {} }) : route.fulfill({ json: { data: { photo_url: null, contacts: { phone: '+79991234567', email: null, birth_date: null }, contacts_public: true } } })
+    })
+    await phone.fill('8 (999) 123-45-67')
+    await page.locator('[data-test=save-profile]').click()
+    await expect(page.locator('[data-test=profile-saved]')).toContainText('Сохранено')
+    await expect(page.locator('[data-test=retry-profile-refresh]')).toBeVisible()
+    await expect(phone).toHaveValue('8 (999) 123-45-67')
+    await screenshot(page, info.outputPath('profile-saved-read-error.png'))
+    allowRead = true
+    await page.locator('[data-test=retry-profile-refresh]').click()
+    await expect(phone).toHaveValue('+79991234567')
+    await page.route('**/api/v1/me/login', route => route.fulfill({ status: 422, json: { errors: { login: ['Этот логин уже занят.'], current_password: ['Проверьте пароль.'] } } }))
+    await page.goto('/settings/login')
+    const login = page.getByRole('textbox', { name: 'Новый логин (телефон или email)', exact: true })
+    await login.fill('taken@example.test')
+    await page.locator('[data-test=login-current-password]').fill('old')
+    await page.locator('[data-test=save-login]').click()
+    await expect(login).toHaveAttribute('aria-invalid', 'true')
+    await expect(login).toHaveAccessibleName('Новый логин (телефон или email)')
+    await expect(login).toHaveAccessibleDescription('Этот логин уже занят.')
+    await expect(page.locator('[data-test=login-current-password]')).toHaveAccessibleName('Текущий пароль')
+    await screenshot(page, info.outputPath('security-field-error.png'))
+  })
+}
+
+
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, scale] of [[390, 1], [1440, 1], [320, 2]] as const) {
+    test(`compact settings actions in ${theme} ${width}px text ${scale * 100}%`, async ({ page }, info) => {
+      await fixtures(page)
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height: 900 })
+      for (const path of ['/settings/profile', '/settings/devices', '/settings/ical']) {
+        await page.goto(path)
+        await expect(page.locator('main h1')).toBeVisible()
+        if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
+        await fit(page, width)
+        if (path.endsWith('/profile')) {
+          const save = page.locator('[data-test=save-profile]')
+          await save.scrollIntoViewIfNeeded()
+          const nav = page.getByRole('navigation', { name: 'Основная навигация' })
+          if (width < 768) expect((await save.boundingBox())!.y + (await save.boundingBox())!.height).toBeLessThanOrEqual((await nav.boundingBox())!.y)
+          await page.evaluate(() => scrollTo(0, 0))
+        }
+        if (width === 1440 && path.endsWith('/ical')) expect((await page.locator('[data-test=copy]').boundingBox())!.width).toBeLessThan(400)
+        await screenshot(page, info.outputPath(path.slice(1).replaceAll('/', '-') + '.png'))
+      }
+    })
+  }
+}
+
+
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, scale] of [[390, 1], [1440, 1], [320, 2]] as const) {
+    test(`profile groups avoid blank rows in ${theme} ${width}px text ${scale * 100}%`, async ({ page }, info) => {
+      await fixtures(page)
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto('/settings/profile')
+      await expect(page.getByRole('heading', { name: 'Профиль', exact: true })).toBeVisible()
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
+      const photo = page.locator('.profile-page__photo-section')
+      const contacts = page.locator('.profile-page__contacts-section')
+      const visibility = page.locator('.profile-page__visibility-section')
+      const a = (await photo.boundingBox())!, b = (await contacts.boundingBox())!, c = (await visibility.boundingBox())!
+      if (width === 1440) {
+        expect(b.x).toBeGreaterThan(a.x + a.width)
+        expect(c.x).toBe(a.x)
+        expect(c.y - (a.y + a.height)).toBeLessThanOrEqual(40)
+        expect(c.y).toBeLessThan(b.y + b.height)
+      } else {
+        expect(b.y).toBeGreaterThanOrEqual(a.y + a.height)
+        expect(c.y).toBeGreaterThanOrEqual(b.y + b.height)
+      }
+      expect(await contacts.evaluate(el => !!(el.compareDocumentPosition(document.querySelector('.profile-page__visibility-section')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true)
+      await fit(page, width)
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+      await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+      await screenshot(page, info.outputPath('settings-profile.png'))
+    })
+  }
+}

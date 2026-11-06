@@ -88,6 +88,8 @@ async function onSubmit() {
     <template v-else-if="info">
       <form class="account-form" :aria-busy="submitting" @submit.prevent="onSubmit">
         <p class="reset-greeting">Здравствуйте, {{ info.person.first_name }} {{ info.person.last_name }}!</p>
+        <fieldset class="ui-fieldset account-form">
+          <legend>Новый пароль</legend>
         <div>
           <PasswordField v-model="password" data-test="password" label="Пароль" aria-describedby="reset-password-hint" />
           <p id="reset-password-hint" class="account-form__hint">Не менее 8 символов.</p>
@@ -98,6 +100,7 @@ async function onSubmit() {
           label="Повторите пароль"
         />
 
+        </fieldset>
         <p v-if="formError" class="account-notice account-notice--error" role="alert">
           {{ formError }}
         </p>
