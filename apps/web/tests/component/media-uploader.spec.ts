@@ -35,6 +35,23 @@ function deferred<T>() {
 
 const file = () => new File(['bytes'], 'photo.jpg', { type: 'image/jpeg' })
 
+it('connects a failed file selection to its error and clears the association on retry', async () => {
+  post.mockResolvedValueOnce({ data: { id: 'failed', status: 'failed' } })
+  const uploader = await mountSuspended(MediaUploader, { props: { purpose: 'event', label: 'Прикрепить медиафайлы' } })
+  await uploader.vm.upload(file())
+  const error = uploader.get('[role="alert"]')
+  expect(error.text()).toContain('обработать')
+  expect(error.attributes('id')).toBeTruthy()
+  for (const control of [uploader.get('button[data-test="choose-file"]'), uploader.get('input[type="file"]')]) {
+    expect(control.attributes('aria-describedby')).toBe(error.attributes('id'))
+    expect(control.attributes('aria-invalid')).toBe('true')
+  }
+  post.mockResolvedValueOnce({ data: { id: 'ready', status: 'ready' } })
+  await uploader.vm.upload(file())
+  expect(uploader.find('[role="alert"]').exists()).toBe(false)
+  expect(uploader.get('button[data-test="choose-file"]').attributes('aria-describedby')).toBeUndefined()
+})
+
 describe('media uploader polling', () => {
   it('previews message attachments before sending and removes ready IDs without attaching directly', async () => {
     const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')

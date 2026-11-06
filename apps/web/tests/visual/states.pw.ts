@@ -29,8 +29,10 @@ test('delayed navigation announces loading, preserves the current screen and fin
   await expect(page.locator('#main-content .empty-state')).toContainText('Создайте человека')
 })
 
-for (const [width, scale] of [[320, 200], [375, 100], [1440, 100]] as const) {
-  test(`${width}px text ${scale}%: errors retry, empty next steps and reduced motion remain readable`, async ({ page }, info) => {
+for (const theme of ['dark', 'light'] as const) {
+for (const [width, scale] of [[320, 200], [390, 100], [1440, 100]] as const) {
+  test(`${theme} ${width}px text ${scale}%: errors retry, empty next steps and reduced motion remain readable`, async ({ page }, info) => {
+    await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
     await mockVisualApi(page)
     await page.setViewportSize({ width, height: 900 })
     await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -73,6 +75,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [1440, 100]] as const) {
     await expect(page.locator('#main-content .empty-state')).toContainText('назначения')
     await fits(page)
   })
+}
 }
 
 test('offline session check blocks protected content and retry restores the confirmed session', async ({ page }, info) => {

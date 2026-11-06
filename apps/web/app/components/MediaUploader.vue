@@ -40,6 +40,7 @@ const auth = useAuthStore()
 const fileInput = ref<HTMLInputElement>()
 const phase = ref<Phase>('idle')
 const errorMessage = ref('')
+const errorId = useId()
 // Номер текущего запуска загрузки. Новый выбор файла, отказ, истечение
 // срока и уход с экрана увеличивают его, и все ответы старого запуска —
 // опрос статуса, привязка — дальше ничего не делают: файл не привязывается
@@ -206,12 +207,13 @@ defineExpose({ upload })
   <div class="media-uploader">
     <button
       type="button" data-test="choose-file" class="media-uploader__button" :disabled="busy || disabled" :aria-busy="busy"
+      :aria-invalid="errorMessage ? 'true' : undefined" :aria-describedby="errorMessage ? errorId : undefined"
       :title="disabled ? disabledReason : undefined" @click="fileInput?.click()"
     >
       <span aria-live="polite">{{ statusLabel }}</span>
     </button>
-    <input ref="fileInput" hidden type="file" :accept="(purpose === 'announcement' || purpose === 'event' || purpose === 'message') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event' || purpose === 'message')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
-    <p v-if="errorMessage" role="alert" data-test="media-error">{{ errorMessage }}</p>
+    <input ref="fileInput" hidden type="file" :aria-invalid="errorMessage ? 'true' : undefined" :aria-describedby="errorMessage ? errorId : undefined" :accept="(purpose === 'announcement' || purpose === 'event' || purpose === 'message') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event' || purpose === 'message')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
+    <p v-if="errorMessage" :id="errorId" role="alert" class="ui-field-error" data-test="media-error">{{ errorMessage }}</p>
     <ul v-if="purpose === 'message'" class="previews" aria-label="Выбранные вложения">
       <li v-for="(file, index) in previews" :key="index">
         <img v-if="file.url" :src="file.url" :alt="file.name" width="72" height="72">
@@ -223,13 +225,12 @@ defineExpose({ upload })
 </template>
 
 <style scoped>
+.media-uploader { min-width: 0; }
 .media-uploader__button {
   display: inline-block;
   max-width: 100%;
   overflow-wrap: anywhere;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--ui-border-strong);
-  border-radius: 0.4rem;
+  white-space: normal;
   cursor: pointer;
 }
 [role='alert'] { color: var(--ui-danger); }
