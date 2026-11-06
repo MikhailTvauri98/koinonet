@@ -252,3 +252,79 @@ test('dialog does not steal Tab from another native modal', async ({ page }) => 
   await expect(dialog).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Новая группа', exact: true })).toBeFocused()
 })
+
+// Task 9: actual production dialogs with permitted Directory responses.
+for (const mode of ['people', 'accounts'] as const) {
+  for (const theme of ['dark', 'light'] as const) {
+    for (const [width, height, scale] of [[390, 844, 1], [1440, 900, 1], [320, 390, 2]] as const) {
+      test(`people picker ${mode} ${theme} ${width}px text ${scale * 100}%`, async ({ page }, info) => {
+        await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+        await page.setViewportSize({ width, height })
+        await mockVisualApi(page)
+        const queries: URLSearchParams[] = []
+        const person = (id: string, over = {}) => ({ id, first_name: 'Александра', last_name: 'Константинопольская', patronymic: 'Александровна', full_name: 'Константинопольская Александра Александровна', status: 'member', archived: false, photo_url: null, has_account: true, user_id: 'account-' + id, has_global_roles: true, account_disabled: false, ...over })
+        await page.route('**/api/v1/people?*', route => {
+          const query = new URL(route.request().url()).searchParams
+          queries.push(query)
+          const data = query.get('page') === '2'
+            ? [person('photo', { photo_url: '/picker-photo.jpg' }), person('later', { full_name: 'Иванова Елена' })]
+            : [person('photo', { photo_url: '/picker-photo.jpg' }), person('initials', { full_name: 'Смирнов Михаил' }), person('disabled', { account_disabled: true }), person('archived', { archived: true })]
+          return route.fulfill({ json: { data, meta: { current_page: Number(query.get('page')), last_page: 2, total: 5 } } })
+        })
+        await page.route('**/picker-photo.jpg', route => route.fulfill({ path: 'tests/visual/fixtures/photo-portrait.jpg', contentType: 'image/jpeg' }))
+        await page.route('**/api/v1/ministries/m1', route => route.fulfill({ json: { data: { id: 'm1', name: 'Музыкальное служение', archived_at: null, chat_id: null, cover_url: null, default_role_id: 'r1' } } }))
+        await page.route('**/api/v1/ministries/m1/members', route => route.fulfill(route.request().method() === 'POST'
+          ? { status: 503, json: {} } : { json: { data: [] } }))
+        await page.goto(mode === 'accounts' ? '/chats' : '/ministries/m1/members')
+        if (scale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important; }' })
+        const trigger = page.getByRole('button', { name: mode === 'accounts' ? 'Новая группа' : 'Добавить участника', exact: true })
+        await trigger.click()
+        const dialog = page.getByRole('dialog', { name: mode === 'accounts' ? 'Новая группа' : 'Добавить участника', exact: true })
+        await expect(dialog.locator('[data-test="option-photo"]')).toBeVisible()
+        expect(queries[0]!.has('search')).toBe(false)
+        expect(queries[0]!.get('per_page')).toBe('20')
+        expect(queries[0]!.get('has_account')).toBe(mode === 'accounts' ? '1' : null)
+        await expect(dialog.locator('[data-test="option-photo"] img')).toBeVisible()
+        await expect(dialog.locator('[data-test="option-initials"] .people-picker__avatar')).toHaveText('СМ')
+        await expect(dialog.locator('[data-test="option-archived"]')).toHaveCount(0)
+        if (mode === 'accounts') await expect(dialog.locator('[data-test="option-disabled"]')).toHaveCount(0)
+        await expectContained(page)
+        for (const control of await dialog.locator('input, button').all()) {
+          const box = await control.boundingBox()
+          if (box) expect(box.height).toBeGreaterThanOrEqual(44)
+        }
+        if (scale === 2) await expect(dialog.getByRole('searchbox')).toHaveCSS('font-size', '32px')
+        if (scale === 2) {
+          const list = await dialog.locator('.people-picker__list').evaluate(el => ({ content: el.scrollHeight, visible: el.clientHeight }))
+          expect(list.content).toBeLessThanOrEqual(list.visible)
+        }
+        await dialog.evaluate(el => { el.scrollTop = 0 })
+        await page.screenshot({ path: info.outputPath(`picker-${mode}-${theme}-${width}-preview.png`) })
+        const option = dialog.locator('[data-test="option-photo"]')
+        await option.focus()
+        if (scale === 2) await option.evaluate(el => el.scrollIntoView({ block: 'start' }))
+        if (scale === 2) await page.screenshot({ path: info.outputPath(`picker-${mode}-${theme}-${width}-rows.png`) })
+        await page.keyboard.press('Enter')
+        if (mode === 'accounts') {
+          await expect(dialog.getByRole('list', { name: 'Выбранные участники' })).toContainText('Константинопольская Александра Александровна')
+          await expect(option).toHaveCount(0)
+          await dialog.getByLabel('Название', { exact: true }).fill('Подготовка общего выезда')
+          await expect(dialog.locator('footer').getByRole('button', { name: 'Создать', exact: true })).toBeEnabled()
+        } else {
+          await expect(dialog.getByRole('alert')).toContainText('Не удалось добавить участника')
+        }
+        const more = dialog.getByRole('button', { name: 'Показать ещё', exact: true })
+        await more.click()
+        await expect(dialog.locator('[data-test="option-later"]')).toBeVisible()
+        await expect(dialog.locator('[data-test="option-photo"]')).toHaveCount(mode === 'accounts' ? 0 : 1)
+        await expectContained(page)
+        const cancel = dialog.locator('footer').getByRole('button', { name: 'Отмена', exact: true })
+        await cancel.scrollIntoViewIfNeeded(); await expect(cancel).toBeInViewport()
+        await page.screenshot({ path: info.outputPath(`picker-${mode}-${theme}-${width}-actions.png`) })
+        await page.keyboard.press('Escape')
+        await expect(dialog).toHaveCount(0)
+        await expect(trigger).toBeFocused()
+      })
+    }
+  }
+}

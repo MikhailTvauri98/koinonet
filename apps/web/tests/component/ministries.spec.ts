@@ -111,23 +111,15 @@ describe('ministry members tab', () => {
 
   it('shows the default role on a freshly added member', async () => {
     grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'] } })
-    // Дефект плана: исходный текст теста брифа кликал по
-    // `person-option-p1` сразу после открытия диалога, не введя текст
-    // поиска — диалог ищет по `GET /people?search=…` (см. "Фундамент" в
-    // брифе задачи 28), и без текста результатов взяться неоткуда ни при
-    // каком ответе `get`. Добавлены `setValue` и `flushPromises` перед
-    // кликом; `get` разветвлён по пути, чтобы список участников (пустой,
-    // это условие теста) не подменялся результатом поиска и наоборот.
     get.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }] } : { data: [] },
+      path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }], meta: { last_page: 1 } } : { data: [] },
     ))
     post.mockResolvedValue({ data: member })
 
     const page = await mountSuspended(MembersTab)
     await page.find('[data-test="add-member"]').trigger('click')
-    await page.find('[data-test="member-search"]').setValue('Прокопенко')
     await flushPromises()
-    await page.find('[data-test="person-option-p1"]').trigger('click')
+    await page.find('[data-test="option-p1"]').trigger('click')
     await new Promise(resolve => setTimeout(resolve))
 
     expect(page.text()).toContain('Участник')
@@ -188,21 +180,20 @@ describe('ministry members tab', () => {
     grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'], m2: ['members.manage'] } })
     get.mockImplementation((path: string) => Promise.resolve(
       path.endsWith('/roles') ? { data: [] }
-        : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }] }
+        : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }], meta: { last_page: 1 } }
           : { data: [] },
     ))
 
     const page = await mountSuspended(MembersTab)
     await page.find('[data-test="add-member"]').trigger('click')
-    await page.find('[data-test="member-search"]').setValue('Прокопенко')
     await flushPromises()
-    expect(page.find('[data-test="person-option-p1"]').exists()).toBe(true)
+    expect(page.find('[data-test="option-p1"]').exists()).toBe(true)
 
     route.params.id = 'm2'
     await flushPromises()
 
-    expect(page.find('[data-test="member-search"]').exists()).toBe(false)
-    expect(page.find('[data-test="person-option-p1"]').exists()).toBe(false)
+    expect(page.find('[data-test="search"]').exists()).toBe(false)
+    expect(page.find('[data-test="option-p1"]').exists()).toBe(false)
     expect(post).not.toHaveBeenCalled()
   })
 })

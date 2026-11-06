@@ -189,10 +189,10 @@
 **Файлы:** новые `app/composables/usePeoplePicker.ts`, `app/components/people/PeoplePicker.vue`, `tests/component/people-picker.spec.ts`; `app/components/ministries/AddMemberDialog.vue`, `app/components/chat/AccountPicker.vue`, `NewGroupDialog.vue`; `tests/component/ministries.spec.ts`, `chat-groups.spec.ts`, `tests/visual/dialogs.pw.ts`.
 **Интерфейс:** `PeoplePicker {mode:'people'|'accounts', excludedIds?:string[], disabled?:boolean}; select(person:Person)`. `excludedIds` всегда person ID; адаптер AccountPicker переводит account/user ID на своей границе. Компонент выдаёт одного человека за действие, групповой накопленный выбор остаётся у вызывающего. Запрос `/people` без `search` для начального списка, `per_page:20`, `has_account:1` только для accounts; существующая пагинация.
 
-- [ ] RED: запрос при открытии, поиск с задержкой 300 мс, очистка восстанавливает список; пустая страница после исключения выбранных не скрывает «Показать ещё»; отказ в правах не запускает запрос; старый ответ не проходит смену сессии/служения.
-- [ ] Реализовать composable с поколением запросов, состояния и общий список; сохранить различие person/user ID и право `people.view`.
-- [ ] GREEN: people-picker/ministries/chat-groups и visual dialogs; клавиатурный выбор, фото/инициалы, длинное имя, отключённый/архивный аккаунт, дубли между страницами.
-- [ ] Общие проверки, документы, саморевью, коммит.
+- [x] RED: запрос при открытии, поиск с задержкой 300 мс, очистка восстанавливает список; пустая страница после исключения выбранных не скрывает «Показать ещё»; отказ в правах не запускает запрос; старый ответ не проходит смену сессии/служения.
+- [x] Реализовать composable с поколением запросов, состояния и общий список; сохранить различие person/user ID и право `people.view`.
+- [x] GREEN: people-picker/ministries/chat-groups и visual dialogs; клавиатурный выбор, фото/инициалы, длинное имя, отключённый/архивный аккаунт, дубли между страницами.
+- [x] Общие проверки, документы, саморевью, коммит.
 
 **Критерий готовности:** оба существующих сценария используют единое поведение без лишних отступов и без новой серверной выдачи персональных данных.
 
