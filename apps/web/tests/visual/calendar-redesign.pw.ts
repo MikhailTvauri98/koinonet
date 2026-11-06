@@ -223,3 +223,139 @@ test('ministry calendar preserves its fixed scope and return context', async ({ 
   await page.screenshot({ path: resolve(screenshots, 'ministry-calendar-1440-dark.png'), fullPage: true })
   expect(api.unhandled).toEqual([])
 })
+
+const detailScreenshots = resolve('../../.superpowers/sdd/phase-7/task-6-screenshots')
+for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
+  test(`${theme} event detail has one roster and an explicit editor at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    const api = await installAcceptanceApi(page)
+    const context = '/calendar?date=2026-12-31&view=month&scope=mine'
+    await page.goto('/events/e1?return=' + encodeURIComponent(context))
+    await expect(page.locator('[data-test=my-participation]')).toContainText('Вы назначены')
+    await expect(page.locator('.slot')).toHaveCount(1)
+    await expect(page.locator('[data-test=edit-slot-s1]')).toHaveCount(1)
+    await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 3')
+    expect(await page.locator('[data-test=calendar-return]').getAttribute('href')).toBe(context)
+    const participation = (await page.locator('[data-test=my-participation]').boundingBox())!
+    const information = (await page.getByRole('region', { name: 'О событии', exact: true }).boundingBox())!
+    expect(participation.y + participation.height).toBeLessThan(information.y)
+    await page.addStyleTag({ content: 'nuxt-devtools-frame{display:none!important}' })
+    await mkdir(detailScreenshots, { recursive: true })
+    await page.screenshot({ path: resolve(detailScreenshots, `detail-${width}-${theme}.png`), fullPage: true })
+    await page.locator('[data-test=edit-event]').click()
+    await expect(page.getByRole('heading', { name: 'Редактирование события', exact: true })).toBeVisible()
+    await expect(page.locator('[data-test=title]')).toBeFocused()
+    await expect(page.locator('.event-card')).toHaveCount(0)
+    await page.locator('[data-test=title]').fill('Изменённое событие')
+    await page.locator('[data-test=cancel-edit]').click()
+    await expect(page.getByRole('dialog', { name: 'Выйти без сохранения?' })).toBeVisible()
+    await page.locator('[data-test=keep-editing]').click()
+    await expect(page.locator('[data-test=title]')).toHaveValue('Изменённое событие')
+    await page.locator('[data-test=cancel-edit]').click()
+    await page.locator('[data-test=discard-edit]').click()
+    await expect(page.locator('[data-test=edit-event]')).toBeFocused()
+    await page.locator('[data-test=edit-slot-s1]').click()
+    await expect(page.getByRole('dialog', { name: 'Изменить слот', exact: true })).toBeVisible()
+    await page.locator('[data-test=slot-0-count]').fill('4')
+    await page.screenshot({ path: resolve(detailScreenshots, `slot-${width}-${theme}.png`), fullPage: true })
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-test=edit-slot-s1]')).toBeFocused()
+    await page.locator('[data-test=cancel-event]').click()
+    await expect(page.getByRole('dialog', { name: 'Отменить событие?' })).toBeVisible()
+    await page.locator('[data-test=reason]').fill('Ремонт зала')
+    await page.screenshot({ path: resolve(detailScreenshots, `cancel-${width}-${theme}.png`), fullPage: true })
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-test=cancel-event]')).toBeFocused()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    expect(api.unhandled).toEqual([])
+  })
+}
+
+test('saved slot stays saved when rereading fails and retry never repeats the write', async ({ page }) => {
+  const api = await installAcceptanceApi(page)
+  let writes = 0, failRead = false
+  api.respond('PATCH', '/slots/s1', request => { writes++; api.data.event.slots[0]!.required_count = request.postDataJSON().required_count; failRead = true; return {} })
+  api.respond('GET', '/events/e1', () => failRead ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: api.data.event } })
+  await page.goto('/events/e1')
+  await page.locator('[data-test=edit-slot-s1]').click()
+  await page.locator('[data-test=slot-0-count]').fill('4')
+  await page.locator('[data-test=save-slot]').click()
+  await expect(page.getByRole('status').filter({ hasText: 'Изменение сохранено.' })).toBeVisible()
+  await expect(page.locator('[data-test=save-slot]')).toHaveCount(0)
+  await expect(page.locator('[data-test=edit-slot-s1]')).toBeDisabled()
+  failRead = false
+  await page.locator('[data-test=retry-assignments]').click()
+  await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 4')
+  expect(writes).toBe(1)
+  expect(api.unhandled).toEqual([])
+})
+
+for (const theme of ['dark', 'light']) test(`${theme} narrow detail with long identities and 200% text retains all slot actions`, async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 })
+  await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+  const api = await installAcceptanceApi(page)
+  api.data.event.title = 'Событие с очень длинным названием для всех участников служения'
+  api.data.event.slots[0]!.label = 'ПодготовкаКСобытию'.repeat(5)
+  api.data.event.slots[0]!.assignments.push({ id: 'hidden', person: { id: 'p-hidden', full_name: null, photo_thumb_url: null }, created_at: null })
+  api.data.event.slots[0]!.filled_count = 4
+  await page.goto('/events/e1')
+  await expect(page.locator('[data-test=my-participation]')).toBeVisible()
+  await page.addStyleTag({ content: 'html{font-size:200%!important} nuxt-devtools-frame{display:none!important}' })
+  await expect(page.locator('.slot__state')).toContainText('Сверх нормы: 1')
+  await expect(page.locator('.assignees')).toContainText('Имя скрыто')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+  await mkdir(detailScreenshots, { recursive: true })
+  await page.screenshot({ path: resolve(detailScreenshots, `detail-320-text-200-${theme}.png`), fullPage: true })
+  await page.locator('[data-test=remove-assignment-as1]').click()
+  const dialog = page.getByRole('dialog', { name: 'Подтверждение снятия назначения' })
+  await expect(dialog).toBeVisible()
+  await page.screenshot({ path: resolve(detailScreenshots, `remove-320-text-200-${theme}.png`) })
+  await page.locator('[data-test=cancel-remove-assignment]').click()
+  await page.locator('[data-test=edit-slot-s1]').click()
+  await page.locator('[data-test=save-slot]').scrollIntoViewIfNeeded()
+  await expect(page.locator('[data-test=save-slot]')).toBeInViewport()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+  await page.screenshot({ path: resolve(detailScreenshots, `slot-320-text-200-${theme}.png`) })
+  expect(api.unhandled).toEqual([])
+})
+
+test('event detail distinguishes full, empty, hidden and cancelled states without management', async ({ page }) => {
+  const api = await installAcceptanceApi(page)
+  api.data.event.can_manage = false
+  api.data.event.slots[0]!.can_fill = false
+  api.data.event.slots[0]!.required_count = 1
+  await page.goto('/events/e1')
+  await expect(page.locator('.slot__state')).toContainText('Заполнен')
+  await expect(page.locator('[data-test=edit-event], [data-test=assign-s1], [data-test=edit-slot-s1]')).toHaveCount(0)
+  api.data.event.slots = []
+  await page.reload()
+  await expect(page.getByText('Слотов пока нет.', { exact: true })).toBeVisible()
+  api.data.event.status = 'cancelled'; api.data.event.cancel_reason = 'Ремонт зала'
+  await page.reload()
+  await expect(page.locator('[data-test=cancelled-e1]')).toContainText('Ремонт зала')
+  await expect(page.locator('[data-test=cancel-event]')).toHaveCount(0)
+  await expect(page.locator('[data-test=calendar-return]')).toHaveAttribute('href', '/calendar')
+  expect(api.unhandled).toEqual([])
+})
+
+test('saved detail restores focus while the follow-up GET is pending and calendar return has a 44px target', async ({ page }) => {
+  const api = await installAcceptanceApi(page)
+  let finishRead!: () => void
+  api.respond('PATCH', '/events/e1', request => {
+    api.data.event.title = request.postDataJSON().title
+    api.respond('GET', '/events/e1', async () => { await new Promise<void>(resolve => { finishRead = resolve }); return { json: { data: api.data.event } } })
+    return { json: { data: api.data.event } }
+  })
+  await page.goto('/events/e1')
+  await page.locator('[data-test=edit-event]').click()
+  await page.locator('[data-test=title]').fill('Сохранённое название события')
+  await page.locator('[data-test=save-event-top]').click()
+  await expect(page.getByRole('heading', { name: 'Сохранённое название события', exact: true })).toBeVisible()
+  await expect(page.locator('[data-test=edit-event]')).toBeDisabled()
+  await expect(page.locator('.event-card .page-header')).toBeFocused()
+  finishRead()
+  await expect(page.locator('[data-test=edit-event]')).toBeEnabled()
+  expect((await page.locator('[data-test=calendar-return]').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  expect(api.unhandled).toEqual([])
+})

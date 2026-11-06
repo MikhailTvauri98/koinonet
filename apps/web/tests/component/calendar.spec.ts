@@ -7,6 +7,7 @@ import EventPage from '~/pages/events/[id].vue'
 import UpcomingEvents from '~/components/calendar/UpcomingEvents.vue'
 import EventCard from '~/components/calendar/EventCard.vue'
 import SlotList from '~/components/calendar/SlotList.vue'
+import CancelEventDialog from '~/components/calendar/CancelEventDialog.vue'
 import type { EventItem } from '~/composables/useEvents'
 import { useSettingsStore } from '~/stores/settings'
 import { useAuthStore } from '~/stores/auth'
@@ -14,8 +15,9 @@ import { grantPermissions } from '../support/permissions'
 import { useRouter } from '#app'
 
 const get = vi.fn()
+const patch = vi.fn(), post = vi.fn()
 const { routeQuery, replace } = vi.hoisted(() => ({ routeQuery: {} as Record<string, string>, replace: vi.fn().mockResolvedValue(undefined) }))
-mockNuxtImport('useApi', () => () => ({ get }))
+mockNuxtImport('useApi', () => () => ({ get, patch, post }))
 mockNuxtImport('useRoute', () => () => ({ params: { id: 'e1' }, path: '/calendar', query: routeQuery }))
 enableAutoUnmount(afterEach)
 const event = (over: Partial<EventItem> = {}): EventItem => ({
@@ -27,7 +29,7 @@ const event = (over: Partial<EventItem> = {}): EventItem => ({
 })
 const list = (items: EventItem[]) => ({ data: items, meta: { current_page: 1, last_page: 1, total: items.length } })
 beforeEach(() => {
-  get.mockReset(); replace.mockClear(); Object.keys(routeQuery).forEach(key => Reflect.deleteProperty(routeQuery, key)); grantPermissions()
+  get.mockReset(); post.mockReset(); patch.mockReset(); replace.mockClear(); Object.keys(routeQuery).forEach(key => Reflect.deleteProperty(routeQuery, key)); grantPermissions()
   vi.spyOn(useRouter(), 'replace').mockImplementation(replace)
   useSettingsStore().apply({ church_name: 'Церковь', timezone: 'Asia/Vladivostok' } as never)
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-08T20:30:00Z'))
@@ -114,6 +116,119 @@ describe('calendar page', () => {
   })
 })
 describe('event detail and display hooks', () => {
+  it('keeps a confirmed event edit after GET fails and retries only the read', async () => {
+    grantPermissions({ global: ['calendar.church.manage'] })
+    const original = event({ can_manage: true })
+    get.mockResolvedValue({ data: original })
+    const page = await mountSuspended(EventPage)
+    await page.get('[data-test="edit-event"]').trigger('click'); await flushPromises()
+    await page.get('[data-test="title"]').setValue('Сохранённое название')
+    patch.mockResolvedValue({ data: { ...original, title: 'Сохранённое название' } })
+    get.mockRejectedValueOnce(new Error('offline'))
+    await page.get('[data-test="save-event-top"]').trigger('submit'); await flushPromises()
+    expect(page.get('h1').text()).toBe('Сохранённое название')
+    expect(page.find('.event-editor').exists()).toBe(false)
+    expect(page.text()).toContain('Изменение сохранено')
+    expect(page.get('[data-test="edit-event"]').attributes('disabled')).toBeDefined()
+    get.mockResolvedValueOnce({ data: { ...original, title: 'Сохранённое название' } })
+    await page.get('[data-test="retry-assignments"]').trigger('click'); await flushPromises()
+    expect(page.get('[data-test="edit-event"]').attributes('disabled')).toBeUndefined()
+    expect(patch).toHaveBeenCalledTimes(1)
+  })
+  it('preserves editor input across a permitted rights refresh and masks the roster on revocation', async () => {
+    grantPermissions({ global: ['calendar.church.manage', 'people.view'] })
+    const original = event({ can_manage: true })
+    original.slots[0]!.assignments = [{ id: 'a1', person: { id: 'other', full_name: 'Чужое имя', photo_thumb_url: '/photo' }, created_at: null }]
+    get.mockResolvedValue({ data: original })
+    const page = await mountSuspended(EventPage)
+    await page.get('[data-test="edit-event"]').trigger('click'); await flushPromises()
+    await page.get('[data-test="title"]').setValue('Мой ввод')
+    grantPermissions({ global: ['calendar.church.manage', 'people.view', 'ministries.view_all'] }); await flushPromises()
+    expect(page.get('[data-test="title"]').element).toHaveProperty('value', 'Мой ввод')
+    let finish!: (value: unknown) => void
+    get.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    grantPermissions(); await flushPromises()
+    expect(page.get('[data-test="save-event-top"]').element.closest('fieldset')!.disabled).toBe(true)
+    finish({ data: { ...original, can_manage: false, slots: original.slots.map(s => ({ ...s, can_fill: false, assignments: [] })) } }); await flushPromises()
+    expect(page.text()).not.toContain('Чужое имя')
+    expect(page.get('[data-test="title"]').element).toHaveProperty('value', 'Мой ввод')
+  })
+  it('does not reopen a saved slot editor or repeat its PATCH after refresh failure', async () => {
+    grantPermissions({ global: ['calendar.church.manage'] })
+    const original = event({ can_manage: true })
+    get.mockImplementation(async path => ({ data: path === '/calendar/slot-choices' ? [] : original }))
+    const page = await mountSuspended(EventPage)
+    await page.get('[data-test="edit-slot-s1"]').trigger('click'); await flushPromises()
+    await page.get('[data-test="slot-0-count"]').setValue('4')
+    patch.mockResolvedValue({})
+    get.mockRejectedValueOnce(new Error('offline'))
+    await page.get('[data-test="save-slot"]').trigger('click'); await flushPromises()
+    expect(page.find('[data-test="save-slot"]').exists()).toBe(false)
+    expect(page.text()).toContain('Изменение сохранено')
+    expect(page.get('[data-test="edit-slot-s1"]').attributes('disabled')).toBeDefined()
+    get.mockResolvedValueOnce({ data: { ...original, slots: original.slots.map(s => ({ ...s, required_count: 4 })) } })
+    await page.get('[data-test="retry-assignments"]').trigger('click'); await flushPromises()
+    expect(page.get('[data-test="slot-s1-count"]').text()).toBe('3 из 4')
+    expect(patch).toHaveBeenCalledTimes(1)
+  })
+  it('confirms event cancellation in its own dialog and does not allow a repeated successful cancellation', async () => {
+    post.mockResolvedValue({})
+    const dialog = await mountSuspended(CancelEventDialog, { props: { eventId: 'e1' } })
+    expect(dialog.get('dialog').attributes('aria-label')).toBe('Отменить событие?')
+    await dialog.get('[data-test="reason"]').setValue(' Ремонт ')
+    expect(post).not.toHaveBeenCalled()
+    await dialog.get('[data-test="confirm-cancel"]').trigger('click'); await flushPromises()
+    expect(post).toHaveBeenCalledWith('/events/e1/cancel', { reason: 'Ремонт' })
+    await dialog.get('[data-test="confirm-cancel"]').trigger('click'); await flushPromises()
+    expect(post).toHaveBeenCalledTimes(1)
+  })
+  it('ignores a cancellation response from a previous session', async () => {
+    let finish!: () => void
+    post.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve }))
+    const dialog = await mountSuspended(CancelEventDialog, { props: { eventId: 'e1' } })
+    await dialog.get('[data-test="confirm-cancel"]').trigger('click')
+    useAuthStore().sessionVersion++; await flushPromises(); finish(); await flushPromises()
+    expect(dialog.emitted('saved')).toBeUndefined()
+    expect(dialog.find('[data-test="confirm-cancel"]').exists()).toBe(false)
+  })
+  it('shows my assignment before event information and offers structural actions in the single roster', async () => {
+    const item = event({ can_manage: true })
+    item.slots[0]!.assignments = [{ id: 'mine', person: { id: useAuthStore().person!.id, full_name: null, photo_thumb_url: '/private' }, created_at: null }]
+    get.mockResolvedValue({ data: item })
+    const page = await mountSuspended(EventPage)
+    expect(page.get('[data-test="my-participation"]').text()).toContain('Вы назначены')
+    expect(page.get('[data-test="my-participation"]').text()).toContain('Вокалист')
+    expect(page.findAll('[data-test="edit-slot-s1"]')).toHaveLength(1)
+    expect(page.findAll('.slot')).toHaveLength(1)
+    expect(page.text().split('Вокалист')).toHaveLength(3) // participation + single roster
+    expect(page.find('img').exists()).toBe(false)
+  })
+  it('replaces the detail with an explicit editor and retains its own cancel confirmation', async () => {
+    grantPermissions({ global: ['calendar.church.manage'] })
+    get.mockResolvedValue({ data: event({ can_manage: true }) })
+    const page = await mountSuspended(EventPage, { attachTo: document.body })
+    await page.get('[data-test="edit-event"]').trigger('click'); await flushPromises()
+    expect(page.get('h1').text()).toContain('Редактирование события')
+    expect(page.find('.event-card').exists()).toBe(false)
+    expect(page.find('.slot').exists()).toBe(false)
+    expect(document.activeElement).toBe(page.get('[data-test="title"]').element)
+    await page.get('[data-test="title"]').setValue('Новый заголовок')
+    await page.get('[data-test="cancel-edit"]').trigger('click')
+    expect(page.find('[data-test="discard-edit"]').exists()).toBe(true)
+    expect(page.find('.event-editor').exists()).toBe(true)
+    await page.get('[data-test="keep-editing"]').trigger('click')
+    expect(page.get('[data-test="title"]').element).toHaveProperty('value', 'Новый заголовок')
+    await page.get('[data-test="cancel-edit"]').trigger('click')
+    await page.get('[data-test="discard-edit"]').trigger('click'); await flushPromises()
+    expect(page.find('.event-editor').exists()).toBe(false)
+    expect(page.find('[data-test="edit-event"]').exists()).toBe(true)
+  })
+  it.each([['/calendar?date=2026-12-31&view=month&scope=mine', '/calendar?date=2026-12-31&view=month&scope=mine'], ['https://evil.test', '/calendar'], ['', '/calendar']])('keeps a safe return context %s', async (context, expected) => {
+    routeQuery.return = context
+    get.mockResolvedValue({ data: event() })
+    const page = await mountSuspended(EventPage)
+    expect(page.findAll('a').find(link => link.text() === 'Календарь')?.attributes('href')).toBe(expected)
+  })
   it('shows the next civil end date at midnight without adding a second calendar day', async () => {
     const card = await mountSuspended(EventCard, { props: { compact: true, day: '2026-11-08', event: event({ starts_at: '2026-11-08T07:00:00Z', ends_at: '2026-11-08T14:00:00Z' }) } })
     expect(card.text()).toContain('9 нояб.')

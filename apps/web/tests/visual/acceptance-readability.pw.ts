@@ -123,7 +123,7 @@ test('detail controls keep visible spacing and image attachments keep list seman
     const controls = path === '/announcements/a1'
       ? page.locator('.announcement-page__actions button')
       : path === '/events/e1'
-        ? page.locator('section[aria-label="Управление слотами"] li button')
+        ? page.locator('.slot__actions button')
         : path === '/notifications'
           ? page.locator('.notifications-page > a, .notifications-page [data-test=mark-all-read]')
           : page.locator('[data-test=edit-template], [data-test=toggle-active]')

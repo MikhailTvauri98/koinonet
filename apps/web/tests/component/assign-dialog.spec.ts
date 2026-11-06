@@ -148,6 +148,29 @@ it('keeps saved warnings and blocks repeat submission when roster refresh fails,
   expect(w.get('[data-test="slot-s1-count"]').text()).toBe('1 из 2'); expect(post).toHaveBeenCalledTimes(1)
   expect(w.get('[data-test="warnings"]').text()).toContain('пересечение')
 })
+it('closes candidate selection on identity permission revocation and ignores a late directory response', async () => {
+  grantPermissions({ global: ['people.view'], ministries: { m1: ['slots.assign'] } })
+  let finish!: (value: unknown) => void
+  get.mockImplementation(async (path: string) => path.includes('candidates') ? new Promise(resolve => { finish = resolve }) : { data: event(roleSlot()) })
+  const w = await mountSuspended(EventPage)
+  await w.get('[data-test="assign-s1"]').trigger('click'); await flushPromises()
+  grantPermissions({ ministries: { m1: ['slots.assign'] } }); await flushPromises()
+  finish({ data: [candidate('secret', 'Скрытое имя')] }); await flushPromises()
+  expect(w.find('[data-test="search"]').exists()).toBe(false)
+  expect(w.text()).not.toContain('Скрытое имя')
+})
+it('retains confirmed warnings across an unrelated permission refresh', async () => {
+  grantPermissions({ global: ['people.view'], ministries: { m1: ['slots.assign'] } })
+  get.mockImplementation(async (path: string) => ({ data: path.includes('candidates') ? [candidate()] : event(roleSlot()) }))
+  const w = await mountSuspended(EventPage)
+  await w.get('[data-test="assign-s1"]').trigger('click'); await flushPromises()
+  post.mockResolvedValue({ data: assignment, warnings: [{ code: 'over_capacity', message: 'Сверх нормы.' }] })
+  await w.get('[data-test="candidate-p1"]').trigger('click'); await flushPromises()
+  grantPermissions({ global: ['people.view', 'announcements.view'], ministries: { m1: ['slots.assign'] } }); await flushPromises()
+  expect(w.get('[data-test="warnings"]').text()).toContain('сверх нормы')
+  expect(w.text()).toContain('Назначение создано')
+  expect(w.get('[data-test="candidate-p1"]').attributes('disabled')).toBeDefined()
+})
 it('ignores a pending free-search response after input becomes too short', async () => {
   let finish!: (value: unknown) => void
   get.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
