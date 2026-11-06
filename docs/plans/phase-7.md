@@ -293,7 +293,7 @@
 ## Задача 17. Главная и объявления (2–3 часа)
 
 **Цель:** ясная главная и удобные публикации/редакторы.
-**Зависимости:** 3, 6, 14.
+**Зависимости:** 3, 6, 12. `UnreadChats` использует `ChatList` из задачи 12; компоненты сообщений задачи 14 не используются. Задачи 14 и 17 изменяют только свои сценарии чата и объявлений в `acceptance-media.pw.ts`; общие фикстуры согласуются с координатором.
 **Файлы:** `app/pages/index.vue`, `app/pages/announcements/index.vue`, `[id].vue`, `app/pages/ministries/[id]/announcements.vue`, `app/components/announcements/AnnouncementCard.vue`, `AnnouncementList.vue`, `AnnouncementEditor.vue`, `PinnedAnnouncements.vue`, `AttachmentList.vue`, `MarkdownBody.vue`, `app/components/calendar/UpcomingEvents.vue`, `app/components/chat/UnreadChats.vue`; `tests/component/announcements.spec.ts`, `tests/visual/pages.pw.ts`, `acceptance-media.pw.ts`, `content-overflow.pw.ts`.
 
 - [ ] RED: разделы главной имеют приоритет и одинаковые заголовки; описание и вложения не поглощают первый экран; блоки редактора и ошибки различимы; реальные закрепления/просмотры/права не меняются.
@@ -306,7 +306,7 @@
 ## Задача 18. Центр уведомлений и общие состояния подключения (1–3 часа)
 
 **Цель:** компактная лента с ясными непрочитанными и устойчивыми действиями.
-**Зависимости:** 3, 15, 17.
+**Зависимости:** 3, 15. От задачи 17 новых интерфейсов нет: лента читает существующий store уведомлений и использует общие состояния. В `pages.pw.ts` меняются только сценарии уведомлений; согласованность переходов в объявления проверяется в задаче 20.
 **Файлы:** `app/pages/notifications.vue`, `app/components/notifications/NotificationList.vue`, `EnableNotificationsButton.vue`, `PushLifecycleError.vue`, `app/components/ConnectionGate.vue`, `InstallPrompt.vue`; `tests/component/notifications.spec.ts`, `enable-notifications.spec.ts`, `connection-gate.spec.ts`, `install-prompt.spec.ts`, `tests/visual/states.pw.ts`, `pages.pw.ts`.
 
 - [ ] RED: общая левая ось, группировка по датам церкви, непрочитанное отличается не только цветом; ошибка «прочитать всё» не показывает ложный успех; новые элементы не исчезают при запоздавшей загрузке.
@@ -319,7 +319,7 @@
 ## Задача 19. Роли, настройки церкви и журнал (2–3 часа)
 
 **Цель:** завершить перенос административных экранов и сложных форм.
-**Зависимости:** 3, 10, 16.
+**Зависимости:** 3, 10. Экран ролей служения использует `MinistryTabs` из задачи 10; компоненты карточки человека задачи 16 не используются. В `settings.pw.ts` и `pages.pw.ts` меняются только административные сценарии; общий результат с карточкой человека проверяется в задаче 20.
 **Файлы:** `app/pages/admin/roles.vue`, `settings.vue`, `audit.vue`, `app/pages/ministries/[id]/roles.vue`, `app/components/roles/RoleEditor.vue`, `PermissionGroup.vue`, `RoleUsageDialog.vue`; `tests/component/admin-roles.spec.ts`, `admin-settings.spec.ts`, `admin-audit.spec.ts`, `roles.spec.ts`; `tests/visual/settings.pw.ts`, `pages.pw.ts`.
 
 - [ ] RED: права сгруппированы читаемо, системная роль только для чтения; длинные названия не ломают список; доступность действий по ключам прав; дата/фильтры журнала понятны.
