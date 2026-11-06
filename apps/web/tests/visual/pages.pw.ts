@@ -38,7 +38,7 @@ async function fits(page: Page) {
   }
 }
 async function wholeHeadingWords(page: Page) {
-  const brokenWords = await page.locator('.home-page h1, .home-page section > h2').evaluateAll(headings => headings.flatMap(heading => {
+  const brokenWords = await page.locator('.home-page h1, .home-page .home-section__header h2').evaluateAll(headings => headings.flatMap(heading => {
     const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT)
     const broken: string[] = []
     while (walker.nextNode()) {
@@ -69,22 +69,29 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       }, scale)
     })
     test('calendar has discoverable action, compact dated period, and readable cancelled cards', async ({ page }, info) => {
-      await page.goto('/calendar')
+      const queries: URL[] = []
+      page.on('request', request => { if (new URL(request.url()).pathname === '/api/v1/events') queries.push(new URL(request.url())) })
+      await page.goto('/calendar?date=2026-11-08&view=list&scope=church')
       await expect(page.getByRole('heading', { name: 'Календарь', exact: true })).toBeVisible()
       const action = page.getByRole('link', { name: 'Создать событие', exact: true })
-      await expect(action).toHaveCSS('background-color', 'rgb(35, 78, 121)')
+      await expect(action).toHaveCSS('background-color', 'rgb(145, 180, 255)')
       const period = page.getByRole('group', { name: 'Период календаря' })
-      await expect(period.locator('time')).toHaveCount(2)
-      await expect(period).toContainText('Europe/Moscow')
-      await expect(period.locator('time').first()).toHaveAttribute('datetime', '2026-10-26')
-      await expect(period.locator('time').last()).toHaveAttribute('datetime', '2026-11-22')
-      await expect(period.locator('time').first()).toHaveText('26.10.2026')
-      await expect(period.locator('time').last()).toHaveText('22.11.2026')
-      await expect(page.locator('.event-card')).toContainText('Отменено')
-      await expect(page.locator('.event-card time').first()).toHaveAttribute('datetime', event.starts_at)
+      await expect(period.getByRole('heading', { name: 'ноябрь 2026 г.', exact: true })).toBeVisible()
+      await expect(period.getByRole('button', { name: 'Предыдущий месяц', exact: true })).toBeVisible()
+      await expect(period.getByRole('button', { name: 'Следующий месяц', exact: true })).toBeVisible()
+      await expect(page.locator('[data-test=calendar-date]')).toHaveValue('2026-11-08')
+      await expect(page.locator('.calendar-zone')).toContainText('Europe/Moscow')
+      expect(queries.at(-1)!.searchParams.get('from')).toBe('2026-11-01')
+      expect(queries.at(-1)!.searchParams.get('to')).toBe('2026-11-30')
+      // The same multi-day event is readable on both occupied civil dates.
+      const rows = page.locator('.event-row')
+      await expect(rows).toHaveCount(2)
+      await expect(rows.first()).toContainText('Отменено')
+      await expect(rows.first().locator('time')).toHaveAttribute('datetime', event.starts_at)
       await fits(page)
-      await page.getByRole('link', { name: title, exact: true }).click()
-      await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
+      await page.locator('[data-test=selected-day]').getByRole('link', { name: title, exact: true }).click()
+      await expect(page).toHaveURL(/\/events\/e-pages\?return=/)
+      await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible()
       await expect(page.locator('.event-card')).toContainText('8 нояб.')
       await expect(page.locator('.event-card')).toContainText('9 нояб.')
       await expect(page.locator('[data-test=edit-event]')).toHaveCount(0)
@@ -153,7 +160,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await expect(page.getByRole('heading', { name: 'Здравствуйте, Анна!' })).toBeVisible()
       const section = page.getByRole('region', { name: 'Ближайшие мои события' })
       await expect(section).toContainText('Ближайших событий пока нет.')
-      await expect(section).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+      await expect(section).toHaveCSS('background-color', 'rgb(29, 34, 37)')
       await wholeHeadingWords(page)
       await fits(page)
       await page.screenshot({ path: info.outputPath('home-empty.png'), fullPage: true })

@@ -32,7 +32,7 @@ for (const width of [320, 390, 767, 768, 1024, 1440, 1920]) {
     await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
     await mockVisualApi(page)
     await page.setViewportSize({ width, height: 900 })
-    for (const [path, heading] of [['/people', 'Люди'], ['/calendar', 'Календарь'], ['/settings/login', 'Вход'], ['/events/new', 'Создать событие']] as const) {
+    for (const [path, heading] of [['/people', 'Люди'], ['/calendar', 'Календарь'], ['/settings/login', 'Безопасность'], ['/events/new', 'Новое событие']] as const) {
       await page.goto(path)
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible()
       const content = page.locator('.app-layout__inner')

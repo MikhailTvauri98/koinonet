@@ -52,14 +52,19 @@ test('a leader manages members of their own ministry only', async ({ page, openP
   await openMembersFromNav(page, 'Прославление')
   await addMember(page, leader.lastName, fullName(leader))
   const leaderRow = memberRow(page, fullName(leader))
-  await expect(leaderRow.getByRole('list', { name: 'Роли участника', exact: true })).toHaveText('Участник')
-  await leaderRow.getByLabel('Лидер', { exact: true }).check()
+  await expect(leaderRow.locator('.member-row__roles')).toHaveText('Участник')
+  await leaderRow.getByTestId('open-member').click()
+  const memberDialog = page.getByRole('dialog', { name: 'Участник служения', exact: true })
+  await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
+  await memberDialog.getByLabel('Лидер', { exact: true }).check()
   const rolesSaved = page.waitForResponse(response => response.request().method() === 'PUT'
     && new URL(response.url()).pathname.startsWith(`/api/v1${new URL(page.url()).pathname}/`)
     && new URL(response.url()).pathname.endsWith('/roles'))
-  await leaderRow.getByRole('button', { name: 'Сохранить роли' }).click()
+  await memberDialog.getByRole('button', { name: 'Сохранить роли' }).click()
   expect((await rolesSaved).status()).toBe(200)
-  await expect(leaderRow.getByRole('list', { name: 'Роли участника', exact: true }).getByText('Лидер', { exact: true })).toBeVisible()
+  await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
+  await memberDialog.getByTestId('close-member').click()
+  await expect.poll(async () => (await leaderRow.locator('.member-row__roles').innerText()).split(' · ').sort()).toEqual(['Лидер', 'Участник'].sort())
 
   // Права лидера пересчитывает слушатель в очереди (MemberAdded и
   // MemberRolesChanged → BumpMembershipPermissionCache), а экран читает их

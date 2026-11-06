@@ -151,7 +151,7 @@ for (const theme of ['dark', 'light'] as const) for (const [path, heading, guest
     }
     const focusedControl = await focusReachableAction(page, controls[path])
     await writeFile(info.outputPath('focused-control.json'), JSON.stringify({ theme, path, focusedControl }, null, 2))
-    await page.screenshot({ path: info.outputPath('320x390-text-200-focused-action.png') })
+    await takeAcceptanceScreenshot(page, info, '320x390-text-200-focused-action', false)
     await textStyle.evaluate(element => element.parentNode?.removeChild(element))
     await page.setViewportSize({ width: 375, height: 390 })
     await settleLayout(page)
@@ -185,7 +185,7 @@ for (const theme of ['dark', 'light'] as const) {
     await page.goto('/calendar')
     await expect(page.locator('.empty-state')).toContainText('Событий пока нет.')
     await expect(page.locator('.event-row')).toHaveCount(0)
-    await expect(page.locator('[data-test=create-event]')).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Создать событие', exact: true })).toHaveCount(0)
     await checkDocumentWidth(page)
     await takeAcceptanceScreenshot(page, info, 'empty-without-management')
     api.data.me.permissions.administrator = true

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { expectControlInViewport } from './support/acceptance-layout'
 import { mockVisualApi } from './support/api'
 
 const ministry = { id: 'm-members', name: 'Музыкальное служение', description: 'Готовимся к событиям и служим вместе', cover_url: null, default_role_id: 'r-member', chat_id: null, archived_at: null }
@@ -143,10 +144,7 @@ test('ministry form focuses invalid names above navigation and restores actual f
   await page.getByRole('button', { name: 'Создать', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Заполните название')
   await expect(name).toBeFocused()
-  const box = (await name.boundingBox())!
-  const navigation = (await page.getByRole('navigation', { name: 'Основная навигация' }).last().boundingBox())
-  expect(box.y).toBeGreaterThanOrEqual(0)
-  expect(box.y + box.height).toBeLessThan(navigation?.y ?? 480)
+  await expectControlInViewport(page, name)
   await fits(page)
   await page.screenshot({ path: info.outputPath('ministry-invalid-320-200.png') })
   await page.getByRole('button', { name: 'Отмена', exact: true }).click()

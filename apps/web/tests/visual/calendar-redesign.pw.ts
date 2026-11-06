@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { installAcceptanceApi } from './support/acceptance-api'
+import { expectControlInViewport } from './support/acceptance-layout'
 
 const editorScreenshots = resolve('../../.superpowers/sdd/phase-7/task-5-screenshots')
 test.use({ timezoneId: 'America/Los_Angeles' })
@@ -581,16 +582,18 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow template creation p
   await expect(page.locator('[data-test=title]')).toBeFocused()
   await expect(page.locator('[data-test=title]')).toHaveAttribute('aria-invalid', 'true')
   await expect(page.locator('[data-test=anchor]')).toHaveValue('2026-11-07')
-  const focusedBounds = await page.locator('[data-test=title]').boundingBox()
-  const navBounds = await page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox()
-  expect(focusedBounds!.y + focusedBounds!.height).toBeLessThanOrEqual(navBounds!.y)
+  // The automatic invalid-field focus above must succeed before any explicit
+  // scrolling/focus. Flow navigation has no fixed overlay boundary.
+  await expectControlInViewport(page, page.locator('[data-test=title]'))
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
   await mkdir(templateScreenshots, { recursive: true })
   await page.screenshot({ path: resolve(templateScreenshots, `narrow-errors-320-${theme}-200.png`), fullPage: true })
   await page.screenshot({ path: resolve(templateScreenshots, `narrow-error-viewport-320-${theme}-200.png`) })
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-  const saveBounds = await page.getByRole('button', { name: 'Сохранить', exact: true }).last().boundingBox()
-  expect(saveBounds!.y + saveBounds!.height).toBeLessThanOrEqual(navBounds!.y)
+  const save = page.getByRole('button', { name: 'Сохранить', exact: true }).last()
+  await save.focus()
+  await expect(save).toBeFocused()
+  await save.evaluate(element => element.scrollIntoView({ block: 'center' }))
+  await expectControlInViewport(page, save)
   await page.screenshot({ path: resolve(templateScreenshots, `narrow-actions-viewport-320-${theme}-200.png`) })
 })
 

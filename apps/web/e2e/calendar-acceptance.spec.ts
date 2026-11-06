@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { writeFile } from 'node:fs/promises'
 import type { components } from '../types/api'
 import { church, credentials } from './environment'
 import { createMinistry, expect, expectApiResponse, expectNoHorizontalScroll, fullName, loginAsAdmin, openSection, test, visitAuthenticated } from './fixtures'
@@ -116,7 +117,11 @@ for (const theme of ['dark', 'light'] as const) {
     await Promise.all([expectApiResponse(page, 'GET', `/slots/${secondSlot}/candidates`, 200), dialog.getByTestId('search').fill(fullName(credentials.admin))])
     const candidate = dialog.locator('.candidates button').filter({ hasText: fullName(credentials.admin) })
     await expect(candidate).toContainText(first.title)
-    await expect(candidate.locator('time')).toHaveCount(2)
+    const conflict = candidate.getByTestId('conflict').filter({ hasText: first.title })
+    await expect(conflict).toHaveCount(1)
+    await expect(conflict.locator('time')).toHaveCount(2)
+    await expect(conflict.locator('time').nth(0)).toHaveAttribute('datetime', first.starts_at)
+    await expect(conflict.locator('time').nth(1)).toHaveAttribute('datetime', first.ends_at)
     await page.screenshot({ path: info.outputPath(`${theme}-390-real-conflict.png`) })
     let failedRead = true, assignmentWrites = 0, failedReadResponses = 0
     page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === `/api/v1/slots/${secondSlot}/assignments`) assignmentWrites++ })
@@ -168,6 +173,8 @@ for (const theme of ['dark', 'light'] as const) {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.addStyleTag({ content: 'html { font-size: 100% !important; }' })
     await page.screenshot({ path: info.outputPath(`${theme}-1440-real-participation.png`), fullPage: true })
-    await info.attach('calendar-audit-real-api', { body: JSON.stringify({ theme, deviceTimezone: 'America/Los_Angeles', churchTimezone: church.timezone, auditScenarios: [1, 2, 3, 4, 5, 6, 7, 8, 9], first, second, assignment: assignedBody, assignmentWrites, failedReadResponses, failureInjection: 'one503 create; event reads503 until explicit retry; successful operations use real API' }, null, 2), contentType: 'application/json' })
+    const evidencePath = info.outputPath('calendar-audit-real-api.json')
+    await writeFile(evidencePath, JSON.stringify({ theme, deviceTimezone: 'America/Los_Angeles', churchTimezone: church.timezone, auditScenarios: [1, 2, 3, 4, 5, 6, 7, 8, 9], first, second, assignment: assignedBody, assignmentWrites, failedReadResponses, failureInjection: 'one503 create; event reads503 until explicit retry; successful operations use real API' }, null, 2))
+    await info.attach('calendar-audit-real-api', { path: evidencePath, contentType: 'application/json' })
   })
 }

@@ -57,7 +57,8 @@ test('an administrator installs, creates a role, a person and invites them', asy
   await reloadAuthenticated(page)
   await expect(page.getByText('Аккаунт включён.')).toBeVisible()
   await expect(invite).toBeDisabled()
-  await expect(page.getByText('У человека уже есть аккаунт.')).toBeVisible()
+  await expect(invite).toHaveAttribute('title', 'У человека уже есть аккаунт.')
+  await expect(page.getByRole('button', { name: 'Ссылка сброса пароля', exact: true })).toBeEnabled()
 
   // Обычный вход тем же аккаунтом со второго телефона, и оттуда же —
   // завершение остальных устройств.
@@ -72,8 +73,15 @@ test('an administrator installs, creates a role, a person and invites them', asy
   await expect(anotherPhone.getByRole('button', { name: 'Завершить', exact: true })).toHaveCount(2)
   await Promise.all([
     expectApiResponse(anotherPhone, 'POST', '/auth/sessions/logout-others', 204),
-    expectApiResponse(anotherPhone, 'GET', '/auth/sessions', 200),
     anotherPhone.getByRole('button', { name: 'Завершить остальные устройства' }).click(),
+  ])
+  await expect(anotherPhone.getByRole('status').filter({ hasText: 'Остальные устройства завершены.' })).toBeVisible()
+  await expect(anotherPhone.getByRole('button', { name: 'Завершить', exact: true })).toHaveCount(1)
+  await expect(anotherPhone.getByText('(текущее устройство)')).toBeVisible()
+  // The confirmed action updates the local list. Reload proves persistence.
+  await Promise.all([
+    expectApiResponse(anotherPhone, 'GET', '/auth/sessions', 200),
+    reloadAuthenticated(anotherPhone),
   ])
   await expect(anotherPhone.getByRole('button', { name: 'Завершить', exact: true })).toHaveCount(1)
   await expect(anotherPhone.getByText('(текущее устройство)')).toBeVisible()

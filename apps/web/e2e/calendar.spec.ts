@@ -141,12 +141,17 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   for (const [person, ministryRole] of [[leader, 'Лидер'], [singer, role]] as const) {
     await addMember(page, person.lastName, fullName(person))
     const row = page.getByTestId('member-row').filter({ hasText: fullName(person) })
-    await row.getByLabel(ministryRole, { exact: true }).check()
+    await row.getByTestId('open-member').click()
+    const memberDialog = page.getByRole('dialog', { name: 'Участник служения', exact: true })
+    await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
+    await memberDialog.getByLabel(ministryRole, { exact: true }).check()
     const saved = page.waitForResponse(response => response.request().method() === 'PUT'
       && new URL(response.url()).pathname.startsWith(`/api/v1${ministryPath}/members/`) && new URL(response.url()).pathname.endsWith('/roles'))
-    await row.getByRole('button', { name: 'Сохранить роли' }).click()
+    await memberDialog.getByRole('button', { name: 'Сохранить роли' }).click()
     expect((await saved).status()).toBe(200)
-    await expect(row.getByRole('list', { name: 'Роли участника', exact: true }).getByText(ministryRole, { exact: true })).toBeVisible()
+    await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
+    await memberDialog.getByTestId('close-member').click()
+    await expect.poll(async () => (await row.locator('.member-row__roles').innerText()).split(' · ').sort()).toEqual(['Участник', ministryRole].sort())
   }
 
   await openSection(page, 'Шаблоны', 'Шаблоны')
@@ -163,7 +168,7 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   await page.getByTestId('slot-0-role').selectOption({ label: role })
   await page.getByTestId('slot-0-count').fill('2')
   const created = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/templates' && response.request().method() === 'POST')
-  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await page.getByTestId('save-template-top').click()
   const createdResponse = await created
   expect(createdResponse.status()).toBe(201)
   const template = ((await createdResponse.json()) as { data: CalendarTemplate }).data

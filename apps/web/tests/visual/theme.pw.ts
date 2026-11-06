@@ -5,10 +5,17 @@ import { mockVisualApi } from './support/api'
 
 // Prerequisite: npm run generate. First-frame tests intentionally read the
 // current .output/public build; regenerate after any source/config change.
-for (const theme of ['dark', 'light'] as const) {
-  test(`generated first styled frame is ${theme} before application startup`, async ({ page }) => {
+for (const scenario of ['dark', 'light', 'invalid saved value', 'blocked storage'] as const) {
+  const theme = scenario === 'light' ? 'light' : 'dark'
+  test(`generated first styled frame is ${theme} with ${scenario} before application startup`, async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
     await page.emulateMedia({ colorScheme: 'light' })
     if (theme === 'light') await page.addInitScript(() => localStorage.setItem('church.ui.theme', 'light'))
+    if (scenario === 'invalid saved value') await page.addInitScript(() => localStorage.setItem('church.ui.theme', 'system'))
+    if (scenario === 'blocked storage') await page.addInitScript(() => {
+      Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('Storage unavailable', 'SecurityError') } })
+    })
     // Serve actual generated HTML/CSS: dev CSS is injected by application JS,
     // which cannot prove the appearance before that JS is allowed to start.
     await page.route('**/*', async (route) => {
@@ -19,6 +26,8 @@ for (const theme of ['dark', 'light'] as const) {
       return route.fulfill({ body, contentType: file.endsWith('.html') ? 'text/html' : file.endsWith('.css') ? 'text/css' : 'text/javascript' })
     })
     await page.goto('/login', { waitUntil: 'load' })
+    if (scenario === 'blocked storage') expect(await page.evaluate(() => { try { void window.localStorage; return false } catch { return true } })).toBe(true)
+    if (scenario === 'invalid saved value') expect(await page.evaluate(() => localStorage.getItem('church.ui.theme'))).toBe('system')
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
     await expect(page.locator('html')).toHaveCSS('background-color', theme === 'dark' ? 'rgb(20, 23, 25)' : 'rgb(245, 246, 249)')
     await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', theme === 'dark' ? '#141719' : '#f5f6f9')
@@ -28,6 +37,7 @@ for (const theme of ['dark', 'light'] as const) {
       return Boolean(script.compareDocumentPosition(css) & Node.DOCUMENT_POSITION_FOLLOWING)
         && !(script as HTMLScriptElement).defer && !(script as HTMLScriptElement).async
     })).toBe(true)
+    expect(errors, 'the initializer handles device storage without an uncaught exception').toEqual([])
   })
 }
 
