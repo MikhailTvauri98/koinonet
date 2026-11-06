@@ -21,8 +21,19 @@ for (const width of [320, 390, 767, 768, 1024, 1440, 1920]) {
         }
         await expect.poll(async () => {
           const box = (await nav.boundingBox())!
-          return page.locator('main').evaluate((el, height) => parseFloat(getComputedStyle(el).paddingBottom) >= height, box.height)
+          const fixed = await nav.evaluate(el => getComputedStyle(el).position === 'fixed')
+          return page.locator('#main-content').evaluate((el, { height, fixed }) => {
+            const style = getComputedStyle(el)
+            return fixed ? parseFloat(style.paddingBottom) >= height : parseFloat(style.getPropertyValue('--app-nav-height')) === 0
+          }, { height: box.height, fixed })
         }).toBe(true)
+        if (await nav.evaluate(el => getComputedStyle(el).position === 'static')) {
+          const heading = page.locator('#main-content h1')
+          await heading.scrollIntoViewIfNeeded()
+          await expect(heading).toBeInViewport({ ratio: 1 })
+        }
+        await nav.getByRole('link', { name: 'Главная', exact: true }).focus()
+        await expect(nav.getByRole('link', { name: 'Главная', exact: true })).toBeInViewport({ ratio: 1 })
         await page.screenshot({ path: testInfo.outputPath(`navigation-${width}-${scale}.png`), fullPage: false })
         await nav.getByRole('button', { name: 'Ещё', exact: true }).click()
         const dialog = page.getByRole('dialog', { name: 'Ещё', exact: true })

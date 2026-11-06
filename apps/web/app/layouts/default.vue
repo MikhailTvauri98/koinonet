@@ -1,13 +1,14 @@
 <script setup lang="ts">
 const navigationHeight = ref<number>()
+const navigationInFlow = ref(false)
 const route = useRoute()
 const chatLayout = computed(() => route.meta.chatLayout === true)
 </script>
 
 <template>
-  <div class="app-layout" :class="{ 'app-layout--chat': chatLayout }" :style="navigationHeight === undefined ? undefined : { '--app-nav-height': navigationHeight + 'px' }">
+  <div class="app-layout" :class="{ 'app-layout--chat': chatLayout, 'app-layout--nav-flow': navigationInFlow }" :style="navigationHeight === undefined ? undefined : { '--app-nav-height': navigationHeight + 'px' }">
     <a class="app-layout__skip" href="#main-content">К содержимому</a>
-    <AppNav @resize="navigationHeight = $event" />
+    <AppNav @resize="navigationHeight = $event" @flow="navigationInFlow = $event" />
     <main id="main-content" class="app-layout__content" tabindex="-1">
       <div class="app-layout__inner">
         <slot />
@@ -72,6 +73,11 @@ const chatLayout = computed(() => route.meta.chatLayout === true)
 .app-layout--chat { height: 100dvh; min-height: 0; }
 .app-layout--chat .app-layout__content { display: flex; min-height: 0; padding: 8px; padding-bottom: calc(var(--app-nav-height) + 8px); }
 .app-layout--chat .app-layout__inner { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+/* A tall mobile bar joins document flow; chat content needs its own useful
+   viewport-sized surface rather than competing with it inside a fixed shell. */
+.app-layout--chat.app-layout--nav-flow { height: auto; min-height: 100dvh; }
+.app-layout--chat.app-layout--nav-flow .app-layout__content { flex: none; min-height: 100dvh; }
+.app-layout--chat.app-layout--nav-flow .app-layout__inner { overflow-y: visible; }
 @media (min-width: 768px) {
   .app-layout--chat .app-layout__content { padding: 16px; }
 }

@@ -216,17 +216,14 @@ test.describe('task18 notification center', () => {
         const position = await older.boundingBox()
         const navigation = width < 768 ? await page.locator('.app-nav').boundingBox() : null
         // A long row may exceed the viewport; its focused top must remain above navigation.
-        const navTop = navigation?.y ?? height
+        const fixedNavigation = await page.locator('.app-nav').evaluate(element => getComputedStyle(element).position === 'fixed')
+        const navTop = fixedNavigation ? navigation!.y : height
         expect(position!.y).toBeGreaterThanOrEqual(0)
         expect(position!.y).toBeLessThan(navTop)
         if (position!.height < navTop - 32) expect(position!.y + position!.height).toBeLessThanOrEqual(navTop)
-        // Combined 320x390/200% is diagnostic only: the existing fixed navigation
-        // occupies almost the full viewport. The coordinator has this separate finding.
-        if (height > 390 || scale === 100) {
-          const title = await older.locator('strong').boundingBox()
-          expect(title!.y).toBeGreaterThanOrEqual(0)
-          expect(title!.y + title!.height).toBeLessThanOrEqual(navTop)
-        }
+        const title = await older.locator('strong').boundingBox()
+        expect(title!.y).toBeGreaterThanOrEqual(0)
+        expect(title!.y + title!.height).toBeLessThanOrEqual(navTop)
         await page.screenshot({ path: info.outputPath(`notifications-keyboard-${height}h.png`), fullPage: false })
         await fits(page)
       })

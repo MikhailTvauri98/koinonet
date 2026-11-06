@@ -2,9 +2,10 @@
 import { hasCalendarManagement } from '~/utils/templates'
 const auth = useAuthStore()
 const route = useRoute()
-const emit = defineEmits<{ resize: [height: number] }>()
+const emit = defineEmits<{ resize: [height: number], flow: [enabled: boolean] }>()
 const navigation = ref<HTMLElement>()
 const moreOpen = ref(false)
+const inFlow = ref(false)
 const settings = useSettingsStore()
 const canManageCalendar = computed(() => hasCalendarManagement(auth.permissions))
 const { can } = useCan()
@@ -92,25 +93,37 @@ function isActive(to: string) {
 const moreActive = computed(() => [...secondaryItems.value, ...adminItems.value].some(item => isActive(item.to)))
 watch([() => route.fullPath, () => auth.sessionVersion, () => JSON.stringify(auth.permissions)], () => { moreOpen.value = false })
 
-// The layout reserves the rendered height, including wrapped text and safe-area.
+// Position changes preserve width/height, so observing the border box cannot
+// oscillate between modes. The layout reserves only an overlapping mobile bar.
 let observer: ResizeObserver | undefined
 let desktop: MediaQueryList | undefined
 function measureNavigation() {
   if (desktop?.matches) moreOpen.value = false
-  emit('resize', desktop?.matches ? 0 : Math.ceil(navigation.value?.getBoundingClientRect().height ?? 0))
+  const height = Math.ceil(navigation.value?.getBoundingClientRect().height ?? 0)
+  const availableHeight = window.visualViewport?.height ?? window.innerHeight
+  inFlow.value = !desktop?.matches && height > availableHeight * 0.4
+  emit('flow', inFlow.value)
+  emit('resize', desktop?.matches || inFlow.value ? 0 : height)
 }
 onMounted(() => {
   desktop = window.matchMedia('(min-width: 768px)')
   desktop.addEventListener('change', measureNavigation)
+  window.addEventListener('resize', measureNavigation)
+  window.visualViewport?.addEventListener('resize', measureNavigation)
   observer = new ResizeObserver(measureNavigation)
   if (navigation.value) observer.observe(navigation.value, { box: 'border-box' })
   measureNavigation()
 })
-onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('change', measureNavigation) })
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  desktop?.removeEventListener('change', measureNavigation)
+  window.removeEventListener('resize', measureNavigation)
+  window.visualViewport?.removeEventListener('resize', measureNavigation)
+})
 </script>
 
 <template>
-  <nav ref="navigation" class="app-nav" :class="{ 'app-nav--unread': chats.unreadTotal || notifications.unreadCount }" aria-label="Основная навигация">
+  <nav ref="navigation" class="app-nav" :class="{ 'app-nav--flow': inFlow, 'app-nav--unread': chats.unreadTotal || notifications.unreadCount }" aria-label="Основная навигация">
     <div class="app-nav__brand">
       <span class="app-nav__mark" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -232,6 +245,7 @@ onBeforeUnmount(() => { observer?.disconnect(); desktop?.removeEventListener('ch
     padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--ui-border);
   }
+  .app-nav--flow { position: static; }
   .app-nav__brand, .app-nav__secondary, .app-nav__admin { display: none; }
   .app-nav__item {
     position: relative;
