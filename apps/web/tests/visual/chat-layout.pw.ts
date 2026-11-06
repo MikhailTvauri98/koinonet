@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 import { mockVisualApi } from './support/api'
 
@@ -221,7 +222,41 @@ for (const theme of ['dark', 'light']) for (const width of [320, 375]) test(`wor
   await expect(composer).toHaveValue('Черновик при повороте')
   await send.focus()
   await send.scrollIntoViewIfNeeded()
+  await writeFile(info.outputPath('rotation-controls.json'), JSON.stringify(await send.evaluate(element => {
+    const rows = []; let current: Element | null = element
+    while (current) { rows.push({ tag: current.tagName, class: current.className, box: current.getBoundingClientRect().toJSON(), clientWidth: current.clientWidth, scrollWidth: current.scrollWidth, overflow: getComputedStyle(current).overflow }); current = current.parentElement }
+    return rows
+  }), null, 2))
   await expect(send).toBeInViewport({ ratio: 1 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(844)
   await page.screenshot({ path: info.outputPath(`${theme}-${width}-rotated-200.png`) })
+})
+
+for (const theme of ['dark', 'light']) test(`message menu footer remains reachable ${theme} 375x390 text200`, async ({ page }, info) => {
+  await fixtures(page)
+  await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+  await page.setViewportSize({ width: 375, height: 390 })
+  await page.goto('/chats/c-layout')
+  await page.addStyleTag({ content: 'html { font-size: 200% !important; }' })
+  const trigger = page.locator('[data-test=actions-msg-24]')
+  await trigger.scrollIntoViewIfNeeded()
+  await trigger.focus()
+  await page.keyboard.press('Enter')
+  const dialog = page.getByRole('dialog', { name: 'Действия сообщения', exact: true })
+  await expect(dialog).toBeVisible()
+  for (const action of ['Ответить', 'Изменить', 'Удалить', 'Закрепить']) {
+    const button = dialog.getByRole('button', { name: action, exact: true })
+    await button.focus()
+    await button.scrollIntoViewIfNeeded()
+    await expect(button).toBeInViewport({ ratio: 1 })
+  }
+  const close = dialog.locator('.ui-dialog__actions').getByRole('button', { name: 'Закрыть', exact: true })
+  await close.focus()
+  await close.scrollIntoViewIfNeeded()
+  await expect(close).toBeInViewport({ ratio: 1 })
+  expect(await dialog.evaluate(element => getComputedStyle(element).overflowY)).toBe('auto')
+  await page.screenshot({ path: info.outputPath(`${theme}-375x390-200-message-menu-footer.png`) })
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(trigger).toBeFocused()
 })

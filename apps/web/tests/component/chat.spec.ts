@@ -108,7 +108,7 @@ it('refreshes pinned preview from hydrated edits for a read-only nonmember', asy
 })
 it('renders hidden and erased senders distinctly and hydrates ID-only live signals', async () => {
   const screen = await mount()
-  expect(screen.text()).toContain('Участник')
+  expect(screen.get('[data-message-id=a]').attributes('aria-label')).toBe('Ваше сообщение')
   const handlers = Object.fromEntries(mocks.listen.mock.calls) as Record<string, (p: unknown) => void>
   handlers['.message.sent']!({ message_id: 'live' }); await flushPromises()
   expect(mocks.get).toHaveBeenCalledWith('/messages/live')
@@ -349,4 +349,30 @@ it('switches once without transferring draft, reply, observers or private subscr
   expect(mocks.listen.mock.calls.filter(([event]) => event === '.message.sent')).toHaveLength(2)
   screen.unmount(); mounted.length = 0
   expect(mocks.leave).toHaveBeenLastCalledWith('chat.c2')
+})
+
+it('distinguishes own messages without repeating the author while preserving incoming sender privacy', async () => {
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [
+    msg('mine', { sender: { id: 'me', person: { id: 'p-me', full_name: 'Анна Петрова', photo_thumb_url: null } } }),
+    msg('incoming', { sender: { id: 'other', person: { id: 'p-other', full_name: 'Михаил Орлов', photo_thumb_url: null } } }),
+    msg('hidden', { sender: { id: 'hidden', person: { id: 'p-hidden', full_name: null, photo_thumb_url: null } } }),
+    msg('erased', { sender: null }),
+  ], next_before: null, next_after: null } : { data: card() }))
+  const screen = await mount()
+  const mine = screen.get('[data-message-id=mine]')
+  expect(mine.classes()).toContain('own')
+  expect(mine.attributes('aria-label')).toBe('Ваше сообщение')
+  expect(mine.text()).not.toContain('Анна Петрова')
+  expect(screen.get('[data-message-id=incoming]').text()).toContain('Михаил Орлов')
+  expect(screen.get('[data-message-id=hidden]').text()).toContain('Участник')
+  expect(screen.get('[data-message-id=erased]').text()).toContain('Удалённый человек')
+})
+
+
+it('keeps the message-menu close action in the shared dialog footer', async () => {
+  const screen = await mount()
+  await screen.get('[data-test=actions-a]').trigger('click')
+  expect(screen.find('dialog .ui-dialog__actions button').exists()).toBe(true)
+  await screen.get('dialog .ui-dialog__actions button').trigger('click')
+  expect(screen.find('dialog').exists()).toBe(false)
 })

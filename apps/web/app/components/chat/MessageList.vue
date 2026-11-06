@@ -93,7 +93,8 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
     <p v-if="!messages.length">Пока нет сообщений</p>
     <!-- Stable keyed rows retain an open action menu when a newer row arrives.
          A former last row must not clear the newly assigned latest ref. -->
-    <div v-for="message in messages" :key="message.id"
+    <div
+      v-for="message in messages" :key="message.id"
       :ref="el => { if (!messages.length || message.id === messages.at(-1)?.id) latest = (el as HTMLElement | null) ?? undefined }"
       :data-test="message.id === messages.at(-1)?.id ? 'latest-message' : undefined">
       <MessageItem :message="message" :own="message.sender?.id === userId" :writable="writable" :moderate="moderate" :pinned="pinnedIds.includes(message.id)" @reply="emit('reply', $event)" @edit="emit('edit', $event)" @delete="emit('delete', $event)" @pin="emit('pin', $event)" />
