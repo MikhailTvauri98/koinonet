@@ -250,14 +250,18 @@
 
 **Цель:** меню соответствует виду чата и не перегружает заголовок.
 **Зависимости:** 3, 12.
-**Файлы:** `app/components/chat/ChatHeader.vue`, `ChatMembersDialog.vue`, `MuteMenu.vue`; новый `app/components/chat/ChatInfoDialog.vue`; `tests/component/chat-groups.spec.ts`, `chat.spec.ts`, `tests/visual/dialogs.pw.ts`, `acceptance-chat.pw.ts`.
+**Файлы:** `app/components/chat/ChatHeader.vue`, `ChatMembersDialog.vue`, `MuteMenu.vue`; новый `app/components/chat/ChatInfoDialog.vue`; `app/components/chat/MessageList.vue`; `tests/component/chat-groups.spec.ts`, `chat.spec.ts`, `chat-scroll.spec.ts`, `tests/visual/dialogs.pw.ts`, `acceptance-chat.pw.ts`, `chat-layout.pw.ts`.
 
-- [ ] RED: direct не показывает участников/состав; group/ministry/event показывают доступный состав отдельно; все четыре состояния звука имеют раздельные строки; действия группы ограничены типом и серверными флагами.
-- [ ] Заменить native details в заголовке на отдельное окно сведений; сохранить автоматический состав служений/событий, владельца группы, управление фото и архив; привести mute к макету без изменения сроков API.
-- [ ] GREEN: chat-groups/chat и visual dialogs/acceptance-chat; открытие следующего окна после закрытия предыдущего, Escape/фокус, таймер истечения mute, readonly/архив, скрытые имена.
-- [ ] Общие проверки, документы, саморевью, коммит.
+**Уточнение по проверке:** компактный заголовок меняет высоту истории; обнаруженная загрузка реальных фото увеличивала `scrollHeight` без изменения `clientHeight`. Минимальный обработчик загрузки в MessageList сохраняет следование за последним сообщением только при прежнем `atBottom`, не двигая читающего историю; отдельный RED/GREEN `chat-scroll` и существующий real-photo сценарий доказывают это.
+
+- [x] RED: direct не показывает участников/состав; group/ministry/event показывают доступный состав отдельно; все четыре состояния звука имеют раздельные строки; действия группы ограничены типом и серверными флагами.
+- [x] Заменить native details в заголовке на отдельное окно сведений; сохранить автоматический состав служений/событий, владельца группы, управление фото и архив; привести mute к макету без изменения сроков API.
+- [x] GREEN: chat-groups/chat и visual dialogs/acceptance-chat; открытие следующего окна после закрытия предыдущего, Escape/фокус, таймер истечения mute, readonly/архив, скрытые имена.
+- [x] Общие проверки, документы, саморевью, коммит.
 
 **Критерий готовности:** «Участники: 2» отсутствует в личном чате, настройка звука читается и выбирается без склеенных кнопок.
+
+**Проверка 06.11.2026:** RED/GREEN нового поведения и замечаний ревью; итоговые 783/783 web-теста, lint (0 ошибок, прежнее предупреждение `MessageList.vue:96`), typecheck/generate/verify-sw — exit 0. Edge: dialogs/acceptance-chat/chat-layout 67/67; после последней правки области действий состава и подписи «Без звука» профильные восемь вариантов обеих тем/390/1440/320–375 с текстом 200% — 8/8. 24 актуальных PNG сохранены в `.superpowers/sdd/phase-7/task-13-screenshots`; выполнено визуальное ревью. API не менялся, Docker не использовался. Подробные команды и ограничения — `.superpowers/sdd/phase-7/task-13-report.md`.
 
 ## Задача 14. Сообщения, вложения и поле ввода (2–3 часа)
 

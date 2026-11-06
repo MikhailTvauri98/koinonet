@@ -66,7 +66,7 @@ test('message actions are explicit, keyboard reachable and return focus at 375x5
   await page.keyboard.press('Escape')
   await expect(trigger).toBeFocused()
   await page.locator('[data-test=menu]').click()
-  await expect(page.getByRole('dialog', { name: 'Меню чата' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Сведения о чате' })).toBeVisible()
   await page.screenshot({ path: info.outputPath('chat-menu.png'), fullPage: true })
   await page.keyboard.press('Escape')
   await fits(page)

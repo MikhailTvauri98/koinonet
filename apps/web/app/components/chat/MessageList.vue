@@ -22,6 +22,11 @@ function loadOlder() {
   if (anchor?.dataset.messageId) restore = { id: anchor.dataset.messageId, offset: anchor.getBoundingClientRect().top - rootTop }
   emit('older')
 }
+// Image decoding changes content height without resizing this scroll box.
+// Follow only when the reader was already at the newest message.
+function imageLoaded() {
+  if (scroll.value && atBottom && !restore) scroll.value.scrollTop = scroll.value.scrollHeight
+}
 function measure() {
   const el = scroll.value
   // A resized viewport can dispatch scroll before ResizeObserver. Keep the
@@ -83,7 +88,7 @@ onMounted(() => {
 onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.disconnect(); viewportObserver?.disconnect() })
 </script>
 <template>
-  <div ref="scroll" class="message-list" aria-label="История сообщений" @scroll="measure">
+  <div ref="scroll" class="message-list" aria-label="История сообщений" @scroll="measure" @load.capture="imageLoaded">
     <div ref="top"><button v-if="hasOlder" type="button" :disabled="loadingOlder" @click="loadOlder">{{ loadingOlder ? 'Загрузка…' : 'Ранее' }}</button></div>
     <p v-if="!messages.length">Пока нет сообщений</p>
     <!-- Stable keyed rows retain an open action menu when a newer row arrives.

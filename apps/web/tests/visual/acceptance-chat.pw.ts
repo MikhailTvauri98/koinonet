@@ -62,7 +62,7 @@ for (const path of ['/chats/c1', '/ministries/m1/chat']) {
     }
     await page.setViewportSize({ width: 375, height: 500 })
     await page.getByRole('button', { name: 'Меню чата', exact: true }).click()
-    const dialog = page.getByRole('dialog', { name: 'Меню чата', exact: true })
+    const dialog = page.getByRole('dialog', { name: 'Сведения о чате', exact: true })
     await expect(dialog).toBeVisible()
     await settleLayout(page)
     await checkDocumentWidth(page)
@@ -238,3 +238,37 @@ test('message author and ordinary body words remain readable at 320px text 200%'
   await info.attach('message-word-geometry', { path: file, contentType: 'application/json' })
   expect(api.unhandled).toEqual([])
 })
+
+for (const type of ['direct', 'ministry', 'event'] as const) {
+  test(`chat information preserves draft and exposes only available ${type} composition`, async ({ page }) => {
+    const api = await installAcceptanceApi(page)
+    api.data.chat.type = type
+    api.data.chat.members.push({ ...api.data.chat.members[0]!, user_id: 'hidden', full_name: null, is_owner: false })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/chats/c1')
+    const composer = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+    await composer.fill('Черновик до просмотра сведений')
+    expect(await page.locator('.chat-header details').count()).toBe(0)
+    const trigger = page.getByRole('button', { name: 'Меню чата', exact: true })
+    await trigger.click()
+    const dialog = page.getByRole('dialog', { name: 'Сведения о чате', exact: true })
+    await expect(dialog).toBeVisible()
+    for (const action of ['rename', 'avatar', 'leave', 'archive']) await expect(dialog.locator(`[data-test="${action}"]`)).toHaveCount(0)
+    if (type === 'direct') {
+      await expect(dialog.locator('[data-test="members"]')).toHaveCount(0)
+      await expect(dialog).not.toContainText('Участники')
+      await page.keyboard.press('Escape')
+    } else {
+      await dialog.locator('[data-test="members"]').click()
+      const members = page.getByRole('dialog', { name: type === 'ministry' ? 'Состав чата служения' : 'Состав чата события', exact: true })
+      await expect(dialog).toHaveCount(0)
+      await expect(members).toContainText('автоматически')
+      await expect(members).toContainText('Участник')
+      await expect(members.locator('[data-test="add-members"]')).toHaveCount(0)
+      await page.keyboard.press('Escape')
+    }
+    await expect(trigger).toBeFocused()
+    await expect(composer).toHaveValue('Черновик до просмотра сведений')
+    expect(api.unhandled).toEqual([])
+  })
+}

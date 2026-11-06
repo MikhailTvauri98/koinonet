@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mockVisualApi } from './support/api'
+import { measureWordWrapping } from './support/word-wrapping'
 
 async function sharedForms(page: Page) {
   await mockVisualApi(page)
@@ -326,5 +327,69 @@ for (const mode of ['people', 'accounts'] as const) {
         await expect(trigger).toBeFocused()
       })
     }
+  }
+}
+
+for (const theme of ['dark', 'light'] as const) {
+  for (const [width, height, scale] of [[390, 844, 1], [1440, 900, 1], [320, 390, 2], [375, 390, 2]] as const) {
+    test(`chat information sound and composition ${theme} ${width}px text ${scale * 100}%`, async ({ page }, info) => {
+      await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+      await page.setViewportSize({ width, height })
+      await mockVisualApi(page)
+      const chat = { id: 'chat-info', title: 'Подготовка воскресного события и совместного обеда', type: 'group', avatar_url: null, archived: false, muted_until: null, members: [{ user_id: 'u-visual', full_name: 'Петрова Анна Сергеевна', is_owner: true }, { user_id: 'other', full_name: 'Константинопольская Александра Александровна', is_owner: false }, { user_id: 'hidden', full_name: null, is_owner: false }], pinned_messages: [], can_write: true, can_moderate: true, can_manage_members: true, is_owner: true }
+      await page.route('**/api/v1/chats/chat-info', route => route.fulfill({ json: { data: chat } }))
+      await page.route('**/api/v1/chats/chat-info/messages*', route => route.fulfill({ json: { data: [], next_before: null, next_after: null } }))
+      await page.goto('/chats/chat-info')
+      const composer = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+      await composer.fill('Сохранённый черновик')
+      if (scale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important; }' })
+      const trigger = page.getByRole('button', { name: 'Меню чата', exact: true })
+      await trigger.focus(); await page.keyboard.press('Enter')
+      const dialog = page.getByRole('dialog', { name: 'Сведения о чате', exact: true })
+      await expect(dialog).toBeVisible()
+      await expect(page.locator('dialog[open]')).toHaveCount(1)
+      await expectContained(page)
+      const rows = dialog.locator('.mute-menu__options button')
+      await expect(rows).toHaveCount(4)
+      let previousBottom = 0
+      for (const row of await rows.all()) {
+        const bounds = (await row.boundingBox())!
+        expect(bounds.height).toBeGreaterThanOrEqual(44)
+        expect(bounds.y).toBeGreaterThanOrEqual(previousBottom)
+        previousBottom = bounds.y + bounds.height
+      }
+      if (scale === 2) {
+        const wrapping = await dialog.locator('.chat-info__actions button').evaluateAll(measureWordWrapping, null)
+        expect(wrapping.flatMap(item => item.broken), 'fixed group action words stay whole').toEqual([])
+      }
+      await expect(dialog.locator('[data-test="unmute"]')).toHaveAttribute('aria-pressed', 'true')
+      await dialog.evaluate(el => { el.scrollTop = 0 })
+      await page.screenshot({ path: info.outputPath(`chat-info-${theme}-${width}.png`) })
+      await dialog.locator('[data-test="mute-forever"]').scrollIntoViewIfNeeded()
+      await page.screenshot({ path: info.outputPath(`chat-sound-${theme}-${width}.png`) })
+      await dialog.locator('[data-test="members"]').click()
+      const members = page.getByRole('dialog', { name: 'Участники группы', exact: true })
+      await expect(members).toBeVisible()
+      await expect(dialog).toHaveCount(0)
+      await expect(page.locator('dialog[open]')).toHaveCount(1)
+      await expectContained(page)
+      await expect(members).toContainText('Участник')
+      await expect(members).toContainText('(владелец)')
+      await members.evaluate(el => { el.scrollTop = 0 })
+      await page.screenshot({ path: info.outputPath(`chat-members-${theme}-${width}.png`) })
+      for (let i = 0; i < 8; i++) {
+        await page.keyboard.press(i < 4 ? 'Tab' : 'Shift+Tab')
+        expect(await members.evaluate(el => el.contains(document.activeElement))).toBe(true)
+      }
+      await page.keyboard.press('Escape')
+      await expect(members).toHaveCount(0)
+      await expect(trigger).toBeFocused()
+      await expect(composer).toHaveValue('Сохранённый черновик')
+      await page.keyboard.press('Enter')
+      await dialog.locator('[data-test="rename"]').click()
+      await expect(page.getByRole('textbox', { name: 'Название', exact: true })).toBeFocused()
+      await page.keyboard.press('Escape')
+      await expect(trigger).toBeFocused()
+    })
   }
 }
