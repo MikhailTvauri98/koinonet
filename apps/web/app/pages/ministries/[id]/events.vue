@@ -41,9 +41,9 @@ await load()
 </script>
 <template>
   <main class="ministry-events">
-    <PageHeader :title="ministry ? `События служения «${ministry.name}»` : 'События служения'"><template #actions><button v-if="canCreate && !creating" type="button" class="ui-button ui-button--primary" data-test="create-event" @click="creating = true">Создать событие</button></template></PageHeader>
+    <PageHeader :title="creating ? 'Новое событие' : ministry ? `События служения «${ministry.name}»` : 'События служения'" :description="creating ? `Служение: ${ministry?.name ?? ''}` : undefined"><template #actions><button v-if="canCreate && !creating" type="button" class="ui-button ui-button--primary" data-test="create-event" @click="creating = true">Создать событие</button></template></PageHeader>
     <MinistryTabs :ministry-id="id" :chat-id="ministry?.chat_id" />
-    <EventEditor v-if="creating && canCreate" :key="`${id}:${auth.sessionVersion}`" :default-owner="{ type: 'ministry', ministryId: id }" @saved="saved" @cancel="creating = false" />
+    <EventEditor v-if="creating && canCreate" :key="`${id}:${auth.sessionVersion}`" :initial-date="state?.date" :default-owner="{ type: 'ministry', ministryId: id }" @saved="saved" @cancel="creating = false" />
     <template v-else>
       <p v-if="ministry?.archived_at">Служение архивировано. События доступны для чтения.</p>
       <CalendarBrowser v-if="state && range" :events="events" :state="state" :range="range" :return-context="returnContext" :ministry-id="id" :loading="loading" :error="errorMessage" @update="update" @today="today" @move="move" @retry="load" />

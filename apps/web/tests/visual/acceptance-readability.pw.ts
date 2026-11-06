@@ -71,7 +71,7 @@ test('event slot actions and ordinary card text remain readable without nested g
   await openEnlarged(page, '/events/e1')
   await evidence(page, info, 'event-slots', await wholeWords(page.locator('.slot button, .event-card h1'), 12))
   await openEnlarged(page, '/calendar')
-  await evidence(page, info, 'cancelled-event', await wholeWords(page.locator('.cancelled'), 12))
+  await evidence(page, info, 'cancelled-event', await wholeWords(page.locator('.cancelled, .event-row__cancelled'), 12))
   expect(api.unhandled).toEqual([])
 })
 
@@ -83,7 +83,7 @@ test('populated native event datetime controls retain editable dates and seconds
   await expect(page.locator('.datetime-readout')).toHaveCount(0)
   await page.locator('[data-test=title]').fill('Проверка выбранного времени')
   const measurements: unknown[] = []
-  for (const [name, value] of [['starts-at', '2026-11-08T10:00:37'], ['ends-at', '2026-11-08T12:15:42']] as const) {
+  for (const [name, value] of [['starts-date', '2026-11-08'], ['starts-time', '10:00:37'], ['ends-date', '2026-11-08'], ['ends-time', '12:15:42']] as const) {
     const field = page.locator('[data-test=' + name + ']')
     await field.fill(value)
     await expect(field).toHaveValue(value)
@@ -98,14 +98,14 @@ test('populated native event datetime controls retain editable dates and seconds
   await evidence(page, info, 'event-datetimes', measurements)
   await expect(page.getByText('08.11.2026, 10:00:37', { exact: true })).toBeVisible()
   await expect(page.getByText('08.11.2026, 12:15:42', { exact: true })).toBeVisible()
-  const start = page.locator('[data-test=starts-at]')
-  await start.fill('2026-11-09T10:00:37')
+  const start = page.locator('[data-test=starts-date]')
+  await start.fill('2026-11-09')
   await expect(page.getByText('09.11.2026, 10:00:37', { exact: true })).toBeVisible()
-  await start.fill('2026-11-08T10:00:37')
+  await start.fill('2026-11-08')
   const descriptionId = await start.getAttribute('aria-describedby')
   expect(descriptionId).toBeTruthy()
   await expect(page.locator('[id="' + descriptionId + '"]')).toHaveText('08.11.2026, 10:00:37')
-  await page.locator('button[type=submit]').click()
+  await page.locator('button[type=submit]').last().click()
   await expect.poll(() => sent).toBeDefined()
   expect(sent).toEqual({ title: 'Проверка выбранного времени', description: null, location: null, visibility: 'church', media_ids: [],
     starts_at: '2026-11-08T07:00:37.000Z', ends_at: '2026-11-08T09:15:42.000Z', owner_type: 'church', slots: [], notify: 'none' })

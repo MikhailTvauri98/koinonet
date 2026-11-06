@@ -3,6 +3,132 @@ import { mkdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { installAcceptanceApi } from './support/acceptance-api'
 
+const editorScreenshots = resolve('../../.superpowers/sdd/phase-7/task-5-screenshots')
+test.use({ timezoneId: 'America/Los_Angeles' })
+for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
+  test(`${theme} event editor has selected date and reachable actions at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    const api = await installAcceptanceApi(page)
+    let sent: Record<string, unknown> | undefined
+    api.respond('POST', '/events', request => { sent = request.postDataJSON(); return { status: 201, json: { data: api.data.event } } })
+    const context = '/calendar?date=2026-12-31&view=month&scope=mine'
+    await page.goto('/events/new?date=2026-12-31&ministry=m1&return=' + encodeURIComponent(context))
+    await expect(page.locator('[data-test=starts-date]')).toHaveValue('2026-12-31')
+    await expect(page.locator('[data-test=ends-date]')).toHaveValue('2026-12-31')
+    await expect(page.locator('[data-test=starts-time]')).toHaveValue('')
+    await expect(page.locator('[data-test=owner]')).toHaveValue('m1')
+    await page.locator('[data-test=title]').fill('Встреча в новом году')
+    await page.locator('[data-test=location]').fill('Малый зал')
+    await page.locator('[data-test=starts-time]').fill('23:00:23')
+    await page.locator('[data-test=ends-date]').fill('2027-01-01')
+    await page.locator('[data-test=ends-time]').fill('01:30:23')
+    await expect(page.locator('[data-test=duration]')).toHaveText('Длительность: 2 ч 30 мин')
+    await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none!important }' })
+    await mkdir(editorScreenshots, { recursive: true })
+    await page.screenshot({ path: resolve(editorScreenshots, `editor-${width}-${theme}.png`), fullPage: true })
+    const submit = page.getByRole('button', { name: 'Создать событие', exact: true }).last()
+    await submit.scrollIntoViewIfNeeded(); await expect(submit).toBeInViewport()
+    const bounds = (await submit.boundingBox())!
+    const nav = width < 1024 ? await page.locator('.app-nav').boundingBox() : null
+    if (nav) expect(bounds.y + bounds.height).toBeLessThanOrEqual(nav.y)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await submit.click()
+    await expect(page).toHaveURL(/\/events\/e1\?return=/)
+    expect(sent).toMatchObject({ owner_type: 'ministry', ministry_id: 'm1', starts_at: '2026-12-31T20:00:23.000Z', ends_at: '2026-12-31T22:30:23.000Z', notify: 'none' })
+    expect(new URL(page.url()).searchParams.get('return')).toBe(context)
+    await page.getByRole('link', { name: 'Календарь', exact: true }).last().click()
+    await expect(page.locator('[data-test=calendar-date]')).toHaveValue('2026-12-31')
+    await expect(page.locator('[data-test=scope-mine]')).toHaveAttribute('aria-pressed', 'true')
+    expect(api.unhandled).toEqual([])
+  })
+}
+
+test('editor field names remain stable when inline errors appear', async ({ page }) => {
+  await installAcceptanceApi(page)
+  await page.goto('/events/new?date=2026-11-08')
+  await page.getByRole('button', { name: 'Добавить слот', exact: true }).click()
+  await page.getByRole('button', { name: 'Создать событие', exact: true }).last().click()
+  await expect(page.getByRole('textbox', { name: 'Название события', exact: true })).toBeFocused()
+  await expect(page.getByRole('textbox', { name: 'Подпись', exact: true })).toHaveAttribute('aria-invalid', 'true')
+})
+
+test('editor confirms route leave and preserves slot input when owner change is dismissed at 200% text', async ({ page }) => {
+  const api = await installAcceptanceApi(page)
+  await page.setViewportSize({ width: 320, height: 700 })
+  await page.goto('/events/new?date=2026-11-08&return=' + encodeURIComponent('/calendar?date=2026-11-08&view=list&scope=church'))
+  await expect(page.locator('[data-test=starts-date]')).toHaveValue('2026-11-08')
+  await page.addStyleTag({ content: 'html{font-size:200%!important} nuxt-devtools-frame{display:none!important}' })
+  await page.locator('[data-test=title]').fill('Длинное название встречи с участниками служения')
+  await page.locator('[data-test=starts-time]').fill('10:00:37')
+  await page.locator('[data-test=ends-time]').fill('12:15:42')
+  await page.locator('[data-test=add-slot]').click()
+  await page.locator('[data-test=slot-0-label]').fill('Подготовка встречи')
+  await page.locator('[data-test=owner]').selectOption('m1')
+  await expect(page.getByRole('dialog', { name: 'Сменить владельца события?' })).toBeVisible()
+  await page.locator('[data-test=keep-owner]').click()
+  await expect(page.locator('[data-test=slot-0-label]')).toHaveValue('Подготовка встречи')
+  await expect(page.locator('[data-test=owner]')).toHaveValue('church')
+  await page.getByRole('link', { name: 'К календарю', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Выйти без сохранения?' })).toBeVisible()
+  await page.locator('[data-test=keep-editing]').click()
+  await expect(page).toHaveURL(/events\/new/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+  await page.locator('[data-test=starts-time]').evaluate(element => window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top - 16))
+  await page.screenshot({ path: resolve(editorScreenshots, 'editor-320-text-200-time.png') })
+  await page.locator('[data-test=cancel-edit]').click()
+  await page.screenshot({ path: resolve(editorScreenshots, 'editor-320-text-200-discard.png') })
+  await page.locator('[data-test=discard-edit]').click()
+  await expect(page).toHaveURL(/\/calendar\?date=2026-11-08/)
+  expect(api.unhandled).toEqual([])
+})
+
+test('ministry inline creation takes selected date and safely cancels back to its calendar', async ({ page }) => {
+  const api = await installAcceptanceApi(page)
+  await page.goto('/ministries/m1/events?date=2026-12-31&view=month&scope=ministry%3Am1')
+  await page.locator('[data-test=create-event]').click()
+  await expect(page.getByRole('heading', { name: 'Новое событие', exact: true })).toBeVisible()
+  await expect(page.locator('[data-test=title]')).toBeFocused()
+  await expect(page.locator('[data-test=starts-date]')).toHaveValue('2026-12-31')
+  await expect(page.locator('[data-test=owner]')).toHaveValue('m1')
+  await page.locator('[data-test=cancel-edit]').click()
+  await expect(page.locator('[data-test=calendar-date]')).toHaveValue('2026-12-31')
+  expect(api.unhandled).toEqual([])
+})
+
+test('real attachment upload blocks both saves and a successful create is submitted once', async ({ page }) => {
+  const api = await installAcceptanceApi(page)
+  let finishUpload!: () => void, finishSave!: () => void, saves = 0
+  api.respond('POST', '/media', async () => {
+    await new Promise<void>(resolve => { finishUpload = resolve })
+    return { status: 201, json: { data: { id: 'uploaded', status: 'ready', kind: 'file', url: '/uploaded.txt', thumb_url: null } } }
+  })
+  api.respond('POST', '/events', async request => {
+    saves++
+    expect(request.postDataJSON().media_ids).toEqual(['uploaded'])
+    await new Promise<void>(resolve => { finishSave = resolve })
+    return { status: 201, json: { data: api.data.event } }
+  })
+  await page.goto('/events/new?date=2026-11-08')
+  await page.locator('[data-test=title]').fill('Встреча с вложением')
+  await page.locator('[data-test=starts-time]').fill('10:00')
+  await page.locator('[data-test=ends-time]').fill('12:00')
+  await page.locator('[data-test=file-input]').setInputFiles({ name: 'план.txt', mimeType: 'text/plain', buffer: Buffer.from('План встречи') })
+  await expect(page.getByText('Дождитесь загрузки вложений перед сохранением.')).toBeVisible()
+  for (const button of await page.locator('button[type=submit]').all()) await expect(button).toBeDisabled()
+  await page.locator('form.event-editor').evaluate(element => (element as HTMLFormElement).requestSubmit())
+  expect(saves).toBe(0)
+  finishUpload()
+  await expect(page.locator('[data-test=save-event-top]')).toBeEnabled()
+  await page.locator('[data-test=save-event-top]').click()
+  await expect.poll(() => saves).toBe(1)
+  await page.locator('form.event-editor').evaluate(element => (element as HTMLFormElement).requestSubmit())
+  expect(saves).toBe(1)
+  finishSave()
+  await expect(page).toHaveURL(/\/events\/e1/)
+  expect(api.unhandled).toEqual([])
+})
+
 const screenshots = resolve('../../.superpowers/sdd/phase-7/task-4-screenshots')
 for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
   test(`${theme} calendar navigation and return context at ${width}`, async ({ page }) => {
