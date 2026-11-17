@@ -52,7 +52,7 @@ const dayTime = computed(() => {
       <p class="event-head__when"><time :datetime="event.starts_at">{{ formatEventWhen(event.starts_at, event.ends_at) }}</time><template v-if="singleDay"> · {{ formatDuration(event.starts_at, event.ends_at) }}</template></p>
       <p v-if="zoneDiffers" class="event-head__zone">Время церкви · {{ settings.timezone }}</p>
       <p v-if="event.location" class="event-head__place">{{ event.location }}</p>
-      <p v-if="!ownAssignment && (calendarLink || event.chat_id)" class="event-head__links"><NuxtLink v-if="event.chat_id" class="ui-button ui-button--quiet" data-test="open-chat" :to="chatHref">Чат события</NuxtLink><a v-if="calendarLink" class="ui-button ui-button--quiet" data-test="add-to-calendar" :href="icsUrl" download>В календарь</a></p>
+      <p v-if="!ownAssignment && (calendarLink || (event.chat_id && event.can_manage))" class="event-head__links"><NuxtLink v-if="event.chat_id && event.can_manage" class="ui-button ui-button--quiet" data-test="open-chat" :to="chatHref">Чат события</NuxtLink><a v-if="calendarLink" class="ui-button ui-button--quiet" data-test="add-to-calendar" :href="icsUrl" download>В календарь</a></p>
     </header>
     <section v-if="ownAssignment" data-test="my-participation" aria-label="Моё участие" class="event-participation ui-surface-accent">
       <p class="event-participation__text"><strong>Вы служите:</strong> {{ mySlots.map(slot => slot.label).join(', ') }}<template v-if="event.status === 'cancelled'"> · событие отменено</template></p>

@@ -531,6 +531,13 @@ describe('event card header and my participation', () => {
     expect(page.find('[data-test="open-chat"]').exists()).toBe(false)
     expect(page.find('[data-test="my-participation"] [data-test="add-to-calendar"]').exists()).toBe(true)
   })
+  it('offers the event chat to an unassigned viewer only when they manage the event', async () => {
+    const manager = await mount(event({ chat_id: 'c7', can_manage: true }))
+    expect(manager.get('.event-head [data-test="open-chat"]').attributes('href')).toBe('/chats/c7')
+    const plain = await mount(event({ chat_id: 'c7' }))
+    expect(plain.find('[data-test="open-chat"]').exists()).toBe(false)
+    expect(plain.find('.event-head [data-test="add-to-calendar"]').exists()).toBe(true)
+  })
   it('puts the calendar link under the date for a viewer who is not assigned', async () => {
     const page = await mount(event())
     expect(page.find('[data-test="my-participation"]').exists()).toBe(false)
