@@ -73,7 +73,7 @@ await load()
       <p>{{ notifications.error }}</p>
       <button type="button" class="ui-button" data-test="retry" :disabled="notifications.loading" @click="load(failedReset)">Повторить</button>
     </div>
-    <EmptyState v-else-if="!notifications.loading && !notifications.items.length" title="Уведомлений пока нет" description="Здесь появятся объявления, назначения и напоминания. Категории можно выбрать в настройках уведомлений." />
+    <EmptyState v-else-if="!notifications.loading && !notifications.items.length && !notifications.connectionError" title="Уведомлений пока нет" description="Здесь появятся объявления, назначения и напоминания. Категории можно выбрать в настройках уведомлений." />
     <button v-if="notifications.nextCursor" type="button" class="ui-button notifications-page__more" data-test="load-more" :disabled="notifications.loading" @click="load(false)">Показать ещё</button>
   </section>
 </template>

@@ -45,8 +45,11 @@ describe('notification center', () => {
   it('shows errors with retry, preserves the list after a failed read and can mark all', async () => {
     get.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(response)
     const page = await mountSuspended(NotificationsPage)
-    expect(page.text()).toContain('Не удалось загрузить уведомления')
-    await page.find('[data-test="retry"]').trigger('click')
+    expect(page.find('[data-test="retry"]').exists()).toBe(false)
+    expect(page.text()).not.toContain('Не удалось загрузить уведомления')
+    expect(page.text()).not.toContain('Уведомлений пока нет')
+    expect(useNotificationsStore().connectionError).not.toBe('')
+    await useNotificationsStore().fetch(true)
     await flushPromises()
     post.mockRejectedValueOnce(new Error('offline'))
     await page.find('[data-test="notification-n1"]').trigger('click')
@@ -108,7 +111,9 @@ describe('notification center', () => {
     await flushPromises()
     expect(page.get('[data-test="notification-live"]').text()).toContain('Новое назначение')
     expect(store.unreadCount).toBe(2)
-    expect(page.text()).toContain('Не удалось загрузить уведомления')
+    expect(page.find('[data-test="notification-live"]').exists()).toBe(true)
+    expect(page.find('[role=alert]').exists()).toBe(false)
+    expect(store.connectionError).toContain('Не удалось загрузить уведомления')
   })
 
   it('distinguishes a confirmed read from failed navigation without sending the read twice', async () => {

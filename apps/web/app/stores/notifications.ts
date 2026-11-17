@@ -1,6 +1,6 @@
 import type { operations } from '~~/types/api'
 import type Echo from 'laravel-echo'
-import { apiErrorMessage } from '~/utils/apiError'
+import { apiErrorMessage, apiErrorStatus } from '~/utils/apiError'
 
 type NotificationPage = operations['notificationCenter.index']['responses'][200]['content']['application/json']
 export type AppNotification = NotificationPage['data'][number]
@@ -14,6 +14,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const loading = ref(false)
   const marking = ref(false)
   const error = ref('')
+  const subscribeError = ref('')
+  const fetchError = ref('')
+  const connectionError = computed(() => subscribeError.value || fetchError.value)
   let account: string | undefined
   let echo: Echo<'reverb'> | undefined
   let generation = 0
@@ -52,9 +55,13 @@ export const useNotificationsStore = defineStore('notifications', () => {
       unreadCount.value = response.meta.unread_count
       nextCursor.value = response.next_cursor
       loaded.value = true
+      fetchError.value = ''
     } catch (failure) {
       if (session === generation && version === requestVersion) {
-        error.value = apiErrorMessage(failure, 'Не удалось загрузить уведомления. Попробуйте ещё раз.')
+        // No HTTP status: the request never reached the server, which the
+        // connection indicator reports; the list keeps its last data.
+        if (apiErrorStatus(failure) === undefined) fetchError.value = 'Не удалось загрузить уведомления. Попробуйте ещё раз.'
+        else error.value = apiErrorMessage(failure, 'Не удалось загрузить уведомления. Попробуйте ещё раз.')
       }
     } finally {
       if (session === generation && version === requestVersion) loading.value = false
@@ -130,6 +137,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
     settlePendingRead = undefined
     readSettled = undefined
     error.value = ''
+    subscribeError.value = ''
+    fetchError.value = ''
     liveVersion = 0
   }
 
@@ -156,10 +165,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
           if (reconnect && session === generation) await useAuthStore().fetchMe()
         })
         await fetch(true)
-      } catch (failure) {
+      } catch {
         if (session === generation) {
           account = undefined // A later auth refresh may retry setup.
-          error.value = apiErrorMessage(failure, 'Не удалось подключить уведомления. Попробуйте ещё раз.')
+          subscribeError.value = 'Не удалось подключить уведомления. Попробуйте ещё раз.'
         }
       } finally {
         if (session === generation) subscribing = undefined
@@ -168,5 +177,5 @@ export const useNotificationsStore = defineStore('notifications', () => {
     return subscribing
   }
 
-  return { items, unreadCount, nextCursor, loaded, loading, marking, error, fetch, markRead: (ids: string[]) => read({ ids }), markAllRead: () => read({ all: true }), subscribe, unsubscribe, push }
+  return { items, unreadCount, nextCursor, loaded, loading, marking, error, connectionError, fetch, markRead: (ids: string[]) => read({ ids }), markAllRead: () => read({ all: true }), subscribe, unsubscribe, push }
 })

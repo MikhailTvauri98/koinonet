@@ -25,7 +25,7 @@ onMounted(() => { void chats.fetch() })
         </div>
         <label class="chat-workspace__search">Найти чат<input v-model="search" type="search" placeholder="Название чата"></label>
         <LoadingState v-if="chats.loading" :label="chats.chats.length ? 'Обновляем чаты…' : 'Загружаем чаты…'" />
-        <p v-if="chats.error || chats.connectionError" role="alert">{{ chats.error || chats.connectionError }} <button type="button" :disabled="chats.loading" @click="chats.retry()">Повторить</button></p>
+        <p v-if="chats.error" role="alert">{{ chats.error }} <button type="button" :disabled="chats.loading" @click="chats.retry()">Повторить</button></p>
       </div>
       <ChatList v-if="chats.loaded || chats.chats.length" :chats="filtered" :selected-id="selectedId" :show-empty="!search.trim() && !chats.loading && !chats.error && !chats.connectionError" />
       <p v-if="search.trim() && !filtered.length && chats.loaded && !chats.loading && !chats.error && !chats.connectionError" class="chat-workspace__no-match" role="status">Чаты не найдены</p>

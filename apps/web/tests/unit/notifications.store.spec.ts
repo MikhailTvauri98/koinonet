@@ -205,7 +205,8 @@ describe('notification center store', () => {
     expect(store.items[0]!.read_at).not.toBeNull()
     expect(store.unreadCount).toBe(1)
     expect(store.nextCursor).toBe('c2')
-    expect(store.error).toContain('Не удалось загрузить уведомления')
+    expect(store.connectionError).toContain('Не удалось загрузить уведомления')
+    expect(store.error).toBe('')
     expect(store.loading).toBe(false)
     get.mockResolvedValueOnce(page(['b'], 1, 'c3'))
     await store.fetch()
@@ -213,7 +214,7 @@ describe('notification center store', () => {
     expect(store.items.map(n => n.id)).toEqual(['a', 'b'])
     expect(store.items[0]!.read_at).not.toBeNull()
     expect(store.nextCursor).toBe('c3')
-    expect(store.error).toBe('')
+    expect(store.connectionError).toBe('')
   })
 
   it('releases a snapshot waiting for a read on logout and ignores its old mutation', async () => {

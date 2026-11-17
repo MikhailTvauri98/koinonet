@@ -179,7 +179,8 @@ describe('list feedback', () => {
     expect(page.text()).toContain('Чатов пока нет')
     get.mockRejectedValueOnce(new Error('offline'))
     await useChatsStore().fetch(); await flushPromises()
-    expect(page.text()).toContain('Не удалось загрузить чаты')
+    expect(useChatsStore().connectionError).toContain('Не удалось загрузить чаты')
+    expect(page.find('[role=alert]').exists()).toBe(false)
     expect(page.text()).not.toContain('Чатов пока нет')
   })
   it('does not navigate from a pending notification read after the account changes', async () => {
