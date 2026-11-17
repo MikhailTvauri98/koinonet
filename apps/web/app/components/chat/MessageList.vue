@@ -127,7 +127,9 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
 .message-row--first { margin-top: .75rem; }
 .message-row__avatar { flex: none; width: 32px; margin-top: .25rem; }
 .message-row > :last-child { min-width: 0; max-width: 100%; }
-.message-row.own { justify-content: flex-end; }
+/* Свои сообщения справа: даже длинный пузырь на телефоне отступает от левого края
+   дальше колонки аватара чужих сообщений (32 px и промежуток). */
+.message-row.own { justify-content: flex-end; padding-inline-start: 48px; }
 /* Hidden actions appear with the pointer on the row or focus inside it. The
    button is out of reach (no pointer events) while invisible, but stays in the Tab order. */
 @media (hover: hover) and (pointer: fine) {

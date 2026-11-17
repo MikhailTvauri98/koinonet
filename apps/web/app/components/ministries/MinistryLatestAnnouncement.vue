@@ -45,7 +45,9 @@ void load()
 
 <style scoped>
 .latest-announcement h3 { margin: 0; font-size: 1rem; }
-.latest-announcement h3 a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); }
+/* Заголовок-ссылка в сводке без подчёркивания, как в списках; подчёркивание — при наведении. */
+.latest-announcement h3 a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); color: inherit; text-decoration: none; }
+.latest-announcement h3 a:hover { text-decoration: underline; }
 .latest-announcement p { margin: 0; }
 .latest-announcement__text { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .latest-announcement__meta { color: var(--ui-text-muted); font-size: .875rem; margin-top: var(--ui-space-1) !important; }

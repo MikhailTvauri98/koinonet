@@ -86,6 +86,8 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(page.locator('[data-test=composition-member]')).toHaveCount(12)
       await expect(page.locator('[data-test=composition-roles]')).toHaveText(`${roles[1]!.name} 2`)
       await expect(page.locator('[data-test=announcement-preview]')).toContainText('Приходим к десяти утра, берём ноты и воду.')
+      // Заголовок-ссылка в списке без подчёркивания (спецификация фазы 8, «Рамки и поверхности»).
+      expect(await page.locator('.latest-announcement h3 a').evaluate(element => getComputedStyle(element).textDecorationLine)).toBe('none')
       await expect(page.getByRole('link', { name: 'Перейти в чат', exact: true })).toBeVisible()
       for (const hidden of ['Изменить название и описание', 'Обложка', 'Архивировать']) await expect(page.getByRole('button', { name: hidden, exact: true })).toHaveCount(0)
       for (const link of await page.locator('.overview-grid a').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44)

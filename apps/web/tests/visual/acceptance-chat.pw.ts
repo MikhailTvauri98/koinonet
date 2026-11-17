@@ -294,6 +294,10 @@ for (const theme of ['dark', 'light']) for (const width of [390, 1440]) test(`me
   }
   await expect(page.getByRole('button', { name: 'Отправить', exact: true })).toHaveClass(/ui-button--primary/)
   await own.scrollIntoViewIfNeeded()
+  // Свои сообщения справа (спецификация фазы 8, чат): даже длинный свой пузырь
+  // на телефоне начинается правее чужих, а не во всю ширину ленты.
+  const ownBox = (await own.boundingBox())!, incomingBox = (await incoming.boundingBox())!
+  expect(ownBox.x).toBeGreaterThan(incomingBox.x)
   await checkDocumentWidth(page)
   await takeAcceptanceScreenshot(page, info, `${theme}-${width}-messages`)
   await page.locator('[data-message-id=msg4]').scrollIntoViewIfNeeded()
