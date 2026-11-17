@@ -10,6 +10,7 @@ use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionScope;
 use App\Modules\Access\RoleScope;
 use App\Modules\Ministries\Events\MinistryCreated;
+use App\Modules\Ministries\MinistryColor;
 use App\Modules\Ministries\Models\Ministry;
 use App\Support\DomainRuleException;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ final readonly class CreateMinistry
         private AuditLogger $audit,
     ) {}
 
-    public function handle(string $name, ?string $description = null): Ministry
+    public function handle(string $name, MinistryColor $color, ?string $description = null): Ministry
     {
         $taken = Ministry::query()
             ->whereNull('archived_at')
@@ -32,8 +33,8 @@ final readonly class CreateMinistry
             throw DomainRuleException::because('ministry.name_taken', 'Служение с таким названием уже есть.');
         }
 
-        $ministry = DB::transaction(function () use ($name, $description): Ministry {
-            $ministry = Ministry::query()->create(['name' => $name, 'description' => $description]);
+        $ministry = DB::transaction(function () use ($name, $color, $description): Ministry {
+            $ministry = Ministry::query()->create(['name' => $name, 'color' => $color, 'description' => $description]);
 
             $this->createRole->handle(
                 RoleScope::Ministry,

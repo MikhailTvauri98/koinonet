@@ -265,7 +265,7 @@ describe('event detail and display hooks', () => {
     expect(page.find('a[href*="private"]').exists()).toBe(false)
   })
   it('only links a ministry accessible in the existing permission snapshot', async () => {
-    const item = event({ owner_type: 'ministry', ministry: { id: 'm1', name: 'Хор' } })
+    const item = event({ owner_type: 'ministry', ministry: { id: 'm1', name: 'Хор', color: 'violet' } })
     const card = await mountSuspended(EventCard, { props: { event: item } })
     expect(card.text()).toContain('Хор'); expect(card.find('a[href="/ministries/m1"]').exists()).toBe(false)
     useAuthStore().permissions = { administrator: false, global: [], ministries: { m1: [] } }

@@ -33,7 +33,7 @@ function createData(long: boolean) {
   const ministry: Schema<'MinistryResource'> = {
     id: 'm1', name: long ? 'Служение'.repeat(12) + 'Хоры' : 'Музыкальное служение',
     description: 'Вместе готовимся к событиям церкви и репетициям.',
-    cover_url: mediaUrl('photo-landscape.jpg'), default_role_id: 'rm1', chat_id: 'c1', archived_at: null,
+    cover_url: mediaUrl('photo-landscape.jpg'), color: 'violet', members_count: 1, default_role_id: 'rm1', chat_id: 'c1', archived_at: null,
   }
   const person: Schema<'PersonResource'> = {
     id: 'p1', first_name: 'Анна', last_name: 'Петрова-Константинопольская', patronymic: 'Сергеевна',
@@ -140,14 +140,14 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
   const events = (request: Request): Success<'event.index'> => {
     const scope = new URL(request.url()).searchParams.get('scope')
     const event: Schema<'EventResource'> = scope === 'ministry:m1'
-      ? { ...data.event, owner_type: 'ministry', ministry: { id: 'm1', name: data.ministry.name } }
+      ? { ...data.event, owner_type: 'ministry', ministry: { id: 'm1', name: data.ministry.name, color: data.ministry.color } }
       : data.event
     return paginated(selected([event, { ...event, id: 'e2', title: 'Отменённая репетиция', status: 'cancelled', cancelled_at: now, cancel_reason: 'Изменилось расписание' }]))
   }
   const announcements = (request: Request): Success<'announcement.index'> => {
     const ministry = new URL(request.url()).searchParams.get('scope') === 'ministry'
     const item: Schema<'AnnouncementResource'> = ministry
-      ? { ...data.announcement, scope: 'ministry', ministry: { id: 'm1', name: data.ministry.name } }
+      ? { ...data.announcement, scope: 'ministry', ministry: { id: 'm1', name: data.ministry.name, color: data.ministry.color } }
       : data.announcement
     return paginated(selected([item]))
   }

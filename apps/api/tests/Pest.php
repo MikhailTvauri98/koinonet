@@ -8,6 +8,7 @@ use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Modules\Ministries\Actions\AddMember;
 use App\Modules\Ministries\Actions\CreateMinistry;
+use App\Modules\Ministries\MinistryColor;
 use App\Modules\Ministries\Models\Ministry;
 use App\Modules\Ministries\Models\MinistryMember;
 use Tests\TestCase;
@@ -47,7 +48,7 @@ function actingAsAdministrator(): User
 
 function ministryWithRoles(string $name = 'Прославление'): Ministry
 {
-    return app(CreateMinistry::class)->handle($name, null);
+    return app(CreateMinistry::class)->handle($name, MinistryColor::Violet);
 }
 
 /**

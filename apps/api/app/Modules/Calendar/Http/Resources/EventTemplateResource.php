@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Gate;
 /** @mixin EventTemplate */
 final class EventTemplateResource extends JsonResource
 {
-    /** @return array{id: string, owner_type: EventOwnerType, ministry: array{id: string, name: string}|null, title: string, description: string|null, location: string|null, visibility: EventVisibility, start_time: string, duration_minutes: int, recurrence: array{type: string, weekday: int, nth?: int, anchor_date?: string}|null, active: bool, generated_until: string|null, archived: bool, can_manage: bool, slots: AnonymousResourceCollection} */
+    /** @return array{id: string, owner_type: EventOwnerType, ministry: array{id: string, name: string, color: string|null}|null, title: string, description: string|null, location: string|null, visibility: EventVisibility, start_time: string, duration_minutes: int, recurrence: array{type: string, weekday: int, nth?: int, anchor_date?: string}|null, active: bool, generated_until: string|null, archived: bool, can_manage: bool, slots: AnonymousResourceCollection} */
     public function toArray(Request $request): array
     {
         $template = $this->resource;
@@ -26,7 +26,7 @@ final class EventTemplateResource extends JsonResource
         return [
             'id' => $template->id,
             'owner_type' => $template->owner_type,
-            'ministry' => $ministry === null ? null : ['id' => $ministry->id, 'name' => $ministry->name],
+            'ministry' => $ministry === null ? null : ['id' => $ministry->id, 'name' => $ministry->name, 'color' => $ministry->color?->value],
             'title' => $template->title,
             'description' => $template->description,
             'location' => $template->location,

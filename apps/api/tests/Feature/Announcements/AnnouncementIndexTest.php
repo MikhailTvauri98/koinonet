@@ -133,3 +133,14 @@ it('validates pagination and filter input', function (array $query, string $fiel
     [['scope' => 'invalid'], 'scope'],
     [['ministry' => 'invalid'], 'ministry'],
 ]);
+
+it('exposes the owner ministry color in announcements', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesViewAll]);
+    Announcement::factory()->ministry($ministry)->create(['published_at' => now()->subDay()]);
+    Announcement::factory()->create(['published_at' => now()->subDays(2)]);
+
+    $this->getJson('/api/v1/announcements')->assertOk()
+        ->assertJsonPath('data.0.ministry', ['id' => $ministry->id, 'name' => $ministry->name, 'color' => 'violet'])
+        ->assertJsonPath('data.1.ministry', null);
+});

@@ -6570,11 +6570,18 @@
                             },
                             "name": {
                                 "type": "string"
+                            },
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
-                            "name"
+                            "name",
+                            "color"
                         ]
                     },
                     "author": {
@@ -7214,11 +7221,18 @@
                             },
                             "name": {
                                 "type": "string"
+                            },
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
-                            "name"
+                            "name",
+                            "color"
                         ]
                     },
                     "template_id": {
@@ -7412,11 +7426,18 @@
                             },
                             "name": {
                                 "type": "string"
+                            },
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
-                            "name"
+                            "name",
+                            "color"
                         ]
                     },
                     "title": {
@@ -8011,12 +8032,27 @@
                 ],
                 "title": "MessageResource"
             },
+            "MinistryColor": {
+                "type": "string",
+                "enum": [
+                    "violet",
+                    "teal",
+                    "rose",
+                    "amber",
+                    "sky",
+                    "green"
+                ],
+                "title": "MinistryColor"
+            },
             "MinistryRequest": {
                 "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
                         "maxLength": 100
+                    },
+                    "color": {
+                        "$ref": "#/components/schemas/MinistryColor"
                     },
                     "description": {
                         "type": [
@@ -8029,7 +8065,8 @@
                     }
                 },
                 "required": [
-                    "name"
+                    "name",
+                    "color"
                 ],
                 "title": "MinistryRequest"
             },
@@ -8043,6 +8080,12 @@
                         "type": "string"
                     },
                     "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "color": {
                         "type": [
                             "string",
                             "null"
@@ -8067,6 +8110,9 @@
                             "null"
                         ]
                     },
+                    "members_count": {
+                        "type": "integer"
+                    },
                     "archived_at": {
                         "type": [
                             "string",
@@ -8078,9 +8124,11 @@
                     "id",
                     "name",
                     "description",
+                    "color",
                     "cover_url",
                     "default_role_id",
                     "chat_id",
+                    "members_count",
                     "archived_at"
                 ],
                 "title": "MinistryResource"

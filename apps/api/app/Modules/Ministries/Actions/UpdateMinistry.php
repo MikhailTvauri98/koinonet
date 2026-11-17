@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Ministries\Actions;
 
 use App\Modules\Access\Models\Role;
+use App\Modules\Ministries\MinistryColor;
 use App\Modules\Ministries\Models\Ministry;
 use App\Support\DomainRuleException;
 
 final class UpdateMinistry
 {
-    /** @param array{name?: string, description?: string|null, default_role_id?: string} $attributes */
+    /** @param array{name?: string, description?: string|null, default_role_id?: string, color?: MinistryColor} $attributes */
     public function handle(Ministry $ministry, array $attributes): Ministry
     {
         $ministry->ensureNotArchived();

@@ -22,7 +22,7 @@ final class EventResource extends JsonResource
 {
     /**
      * @return array{
-     * id: string, owner_type: EventOwnerType, ministry: array{id: string, name: string}|null,
+     * id: string, owner_type: EventOwnerType, ministry: array{id: string, name: string, color: string|null}|null,
      * template_id: string|null, occurrence_date: string|null, title: string, description: string|null,
      * location: string|null, starts_at: string, ends_at: string, visibility: EventVisibility, status: EventStatus,
      * cancelled_at: string|null, cancel_reason: string|null, can_manage: bool, slots: AnonymousResourceCollection,
@@ -51,7 +51,7 @@ final class EventResource extends JsonResource
             'id' => $event->id,
             'chat_id' => $chatId === null ? null : (string) $chatId,
             'owner_type' => $event->owner_type,
-            'ministry' => $ministry === null ? null : ['id' => $ministry->id, 'name' => $ministry->name],
+            'ministry' => $ministry === null ? null : ['id' => $ministry->id, 'name' => $ministry->name, 'color' => $ministry->color?->value],
             'template_id' => $event->template_id,
             /** @format date */
             'occurrence_date' => $event->occurrence_date?->toDateString(),

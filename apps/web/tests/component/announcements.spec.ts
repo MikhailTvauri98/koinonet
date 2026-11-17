@@ -133,7 +133,7 @@ describe('announcement detail', () => {
   })
   it('allows ministry publishers and keeps pin errors visible', async () => {
     grantPermissions({ ministries: { m1: ['announcements.publish'] } })
-    get.mockResolvedValue({ data: announcement({ scope: 'ministry', ministry: { id: 'm1', name: 'Хор' }, author: null }) })
+    get.mockResolvedValue({ data: announcement({ scope: 'ministry', ministry: { id: 'm1', name: 'Хор', color: 'violet' }, author: null }) })
     post.mockRejectedValue({ statusCode: 403 })
     const page = await mountSuspended(AnnouncementPage)
     await page.get('[data-test="pin"]').trigger('click'); await flushPromises()

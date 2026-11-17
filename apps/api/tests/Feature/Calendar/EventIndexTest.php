@@ -120,3 +120,15 @@ it('eager loads active event cards without per-event relationship queries and re
         ->and($queries->filter(fn (array $query): bool => str_starts_with($query['query'], 'select * from "event_assignments"'))->count())->toBe(1)
         ->and($queries->filter(fn (array $query): bool => str_starts_with($query['query'], 'select * from "events"'))->count())->toBe(1);
 });
+
+it('exposes the owner ministry color in events', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesViewAll]);
+    $utc = fn (string $time): CarbonImmutable => CarbonImmutable::parse($time, 'UTC');
+    Event::factory()->ministry($ministry)->between($utc('2026-11-09 10:00'), $utc('2026-11-09 11:00'))->create();
+    Event::factory()->between($utc('2026-11-09 12:00'), $utc('2026-11-09 13:00'))->create();
+
+    $this->getJson('/api/v1/events?from=2026-11-09&to=2026-11-09')->assertOk()
+        ->assertJsonPath('data.0.ministry', ['id' => $ministry->id, 'name' => $ministry->name, 'color' => 'violet'])
+        ->assertJsonPath('data.1.ministry', null);
+});

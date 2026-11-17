@@ -8,6 +8,7 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Media\MediaAccess;
 use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Actions\SetMinistryCover;
+use App\Modules\Ministries\MinistryColor;
 use App\Support\DomainRuleException;
 use Database\Factories\MinistryFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -21,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $name
  * @property string|null $description
+ * @property MinistryColor|null $color
  * @property string|null $cover_media_id
  * @property string|null $default_role_id
  * @property Carbon|null $archived_at
@@ -44,6 +46,7 @@ final class Ministry extends Model
     protected function casts(): array
     {
         return [
+            'color' => MinistryColor::class,
             'archived_at' => 'datetime',
         ];
     }

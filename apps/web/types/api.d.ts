@@ -1317,6 +1317,7 @@ export interface components {
             ministry: {
                 id: string;
                 name: string;
+                color: string | null;
             } | null;
             author: {
                 id: string;
@@ -1478,6 +1479,7 @@ export interface components {
             ministry: {
                 id: string;
                 name: string;
+                color: string | null;
             } | null;
             template_id: string | null;
             /** Format: date */
@@ -1526,6 +1528,7 @@ export interface components {
             ministry: {
                 id: string;
                 name: string;
+                color: string | null;
             } | null;
             title: string;
             description: string | null;
@@ -1669,9 +1672,15 @@ export interface components {
             created_at: string;
             cursor: string;
         };
+        /**
+         * MinistryColor
+         * @enum {string}
+         */
+        MinistryColor: "violet" | "teal" | "rose" | "amber" | "sky" | "green";
         /** MinistryRequest */
         MinistryRequest: {
             name: string;
+            color: components["schemas"]["MinistryColor"];
             description?: string | null;
             default_role_id?: string;
         };
@@ -1680,6 +1689,7 @@ export interface components {
             id: string;
             name: string;
             description: string | null;
+            color: string | null;
             /**
              * @description `large` (1080px), not `thumb` (320px, architecture 7.8 defines
              *     both sizes but not which screen uses which): unlike a
@@ -1690,6 +1700,7 @@ export interface components {
             cover_url: string | null;
             default_role_id: string | null;
             chat_id: string | null;
+            members_count: number;
             archived_at: string | null;
         };
         /** MuteRequest */
