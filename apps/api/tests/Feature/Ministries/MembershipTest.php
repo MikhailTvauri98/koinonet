@@ -174,7 +174,7 @@ it('includes a members full name in the roster for a viewer who can see that per
     $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
         ->firstWhere('person_id', $person->id);
 
-    expect($row['full_name'])->toBe('Прокопенко Мария');
+    expect($row['full_name'])->toBe('Прокопенко Мария')->and($row['short_name'])->toBe('Мария Прокопенко');
 });
 
 it('hides a members full name from a fellow member without people.view', function () {
@@ -187,7 +187,7 @@ it('hides a members full name from a fellow member without people.view', functio
     $row = collect($this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data'))
         ->firstWhere('person_id', $person->id);
 
-    expect($row['full_name'])->toBeNull();
+    expect($row['full_name'])->toBeNull()->and($row['short_name'])->toBeNull();
 });
 
 it('shows a member their own full name without people.view', function () {

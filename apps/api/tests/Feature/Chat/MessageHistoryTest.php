@@ -98,13 +98,28 @@ it('applies person visibility to sender and reply sender names and photos', func
     $data = collect($this->getJson("/api/v1/chats/{$chat->id}/messages")->assertOk()->json('data'))->keyBy('id');
     expect($data[$reply->id]['sender']['person']['id'])->toBe($sender->person_id)
         ->and($data[$reply->id]['sender']['person']['full_name'])->toBeNull()
+        ->and($data[$reply->id]['sender']['person']['short_name'])->toBeNull()
         ->and($data[$reply->id]['sender']['person']['photo_thumb_url'])->toBeNull()
         ->and($data[$reply->id]['reply_to']['sender_name'])->toBeNull();
     $this->actingAs($sender);
     $data = collect($this->getJson("/api/v1/chats/{$chat->id}/messages")->assertOk()->json('data'))->keyBy('id');
     expect($data[$reply->id]['sender']['person']['full_name'])->toBe($sender->person->fullName())
         ->and($data[$reply->id]['sender']['person']['photo_thumb_url'])->not->toBeNull()
-        ->and($data[$reply->id]['reply_to']['sender_name'])->toBe($sender->person->fullName());
+        ->and($data[$reply->id]['sender']['person']['short_name'])->toBe($sender->person->shortName())
+        ->and($data[$reply->id]['reply_to']['sender_name'])->toBe($sender->person->shortName());
+});
+
+it('uses the short name in reply previews', function () {
+    $viewer = actingAsUserWith([Permission::PeopleView]);
+    $sender = User::factory()->create();
+    $sender->person->update(['last_name' => 'Кузнецова', 'first_name' => 'Мария', 'patronymic' => 'Игоревна']);
+    $chat = Chat::factory()->withMembers($viewer, $sender)->create();
+    $original = Message::factory()->for($chat)->from($sender)->create();
+    $reply = Message::factory()->for($chat)->from($viewer)->replyTo($original)->create();
+    $data = collect($this->getJson("/api/v1/chats/{$chat->id}/messages")->assertOk()->json('data'))->keyBy('id');
+    expect($data[$reply->id]['reply_to']['sender_name'])->toBe('Мария Кузнецова')
+        ->and($data[$original->id]['sender']['person']['full_name'])->toBe('Кузнецова Мария Игоревна')
+        ->and($data[$original->id]['sender']['person']['short_name'])->toBe('Мария Кузнецова');
 });
 
 it('allows read-only ministry readers and archived members to read history', function () {

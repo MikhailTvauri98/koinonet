@@ -21,7 +21,7 @@ mockNuxtImport('useApi', () => () => ({ get, post, patch }))
 mockNuxtImport('useRoute', () => () => ({ params: { id: 'a1' } }))
 enableAutoUnmount(afterEach)
 const announcement = (over: Partial<Announcement> = {}): Announcement => ({
-  id: 'a1', scope: 'church', ministry: null, author: { id: 'other', full_name: 'Иван Иванов' },
+  id: 'a1', scope: 'church', ministry: null, author: { id: 'other', full_name: 'Иван Иванов' , short_name: 'Иван Иванов'},
   title: 'Собрание', body: 'В **10:00**', pinned: false, hide_after: null, notify_on_publish: true,
   published_at: '2026-10-01T07:00:00Z', archived: false, attachments: [], ...over,
 })
@@ -103,7 +103,7 @@ describe('announcement detail', () => {
     expect(page.find('[data-test="views"]').exists()).toBe(false)
   })
   it('compares the account author ID and confirms archive', async () => {
-    get.mockResolvedValue({ data: announcement({ author: { id: 'u-signed-in', full_name: 'Автор' }, views_count: 12 }) })
+    get.mockResolvedValue({ data: announcement({ author: { id: 'u-signed-in', full_name: 'Автор' , short_name: 'Автор'}, views_count: 12 }) })
     post.mockResolvedValue({ data: announcement({ archived: true }) })
     const page = await mountSuspended(AnnouncementPage)
     expect(page.get('[data-test="views"]').text()).toContain('12')

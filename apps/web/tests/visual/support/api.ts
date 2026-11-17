@@ -20,8 +20,8 @@ export async function mockVisualApi(page: Page, guest = false) {
       body = { data: { church_name: 'Наша церковь', timezone: 'Europe/Moscow', phone_region: 'RU', reverb_key: 'visual', vapid_public_key: '' } }
     } else if (path === '/people') {
       const data: components['schemas']['PersonResource'][] = [
-        { id: 'p-visual', first_name: 'Анна', last_name: 'Петрова', patronymic: 'Сергеевна', full_name: 'Петрова Анна Сергеевна', status: 'member', archived: false, photo_url: null, has_account: true, user_id: 'u-visual', has_global_roles: true, account_disabled: false },
-        { id: 'p-other', first_name: 'Михаил', last_name: 'Иванов', patronymic: null, full_name: 'Иванов Михаил', status: 'attendee', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: false, account_disabled: false },
+        { id: 'p-visual', first_name: 'Анна', last_name: 'Петрова', patronymic: 'Сергеевна', full_name: 'Петрова Анна Сергеевна', short_name: 'Петрова Анна Сергеевна', status: 'member', archived: false, photo_url: null, has_account: true, user_id: 'u-visual', has_global_roles: true, account_disabled: false },
+        { id: 'p-other', first_name: 'Михаил', last_name: 'Иванов', patronymic: null, full_name: 'Иванов Михаил', short_name: 'Иванов Михаил', status: 'attendee', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: false, account_disabled: false },
       ]
       body = { data, meta: { current_page: 1, last_page: 1, total: data.length } }
     }

@@ -48,6 +48,24 @@ it('lists members holding the required role with their conflicts', function () {
         ->and($data->firstWhere('person.id', $free->id)['conflicts'])->toBe([]);
 });
 
+it('masks short_name together with full_name in candidates', function () {
+    $person = Person::factory()->create(['last_name' => 'Кузнецова', 'first_name' => 'Мария', 'patronymic' => 'Игоревна']);
+    $slot = EventSlot::factory()->create();
+
+    actingAsUserWith([Permission::CalendarChurchManage, Permission::PeopleView]);
+    $row = collect($this->getJson("/api/v1/slots/{$slot->id}/candidates?search=кузн")->assertOk()->json('data'))->firstWhere('person.id', $person->id);
+    expect($row['person']['full_name'])->toBe('Кузнецова Мария Игоревна')->and($row['person']['short_name'])->toBe('Мария Кузнецова');
+});
+
+it('does not list people the viewer cannot see, so no name can leak', function () {
+    $person = Person::factory()->create(['last_name' => 'Кузнецова', 'first_name' => 'Мария']);
+    $slot = EventSlot::factory()->create();
+
+    actingAsUserWith([Permission::CalendarChurchManage]);
+    $rows = collect($this->getJson("/api/v1/slots/{$slot->id}/candidates")->assertOk()->json('data'));
+    expect($rows->firstWhere('person.id', $person->id))->toBeNull();
+});
+
 it('searches active people for a free slot', function () {
     actingAsUserWith([Permission::CalendarChurchManage, Permission::PeopleView]);
     Person::factory()->create(['last_name' => 'Прокопенко', 'first_name' => 'Мария']);

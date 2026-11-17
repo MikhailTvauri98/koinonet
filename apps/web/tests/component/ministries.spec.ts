@@ -46,7 +46,7 @@ const ministry: Ministry = {
   id: 'm1', name: 'Прославление', description: null, cover_url: null, color: 'violet', members_count: 1, default_role_id: 'r-member', chat_id: null, archived_at: null,
 }
 const member: Member = {
-  id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: 'Прокопенко Мария', joined_at: '2026-09-01T10:00:00Z',
+  id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: 'Прокопенко Мария', short_name: 'Прокопенко Мария', joined_at: '2026-09-01T10:00:00Z',
   photo_url: null, roles: [{ id: 'r-member', name: 'Участник' }],
 }
 // Каталог ролей служения (GET /ministries/{id}/roles, доступен носителю

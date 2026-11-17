@@ -6595,11 +6595,15 @@
                             },
                             "full_name": {
                                 "type": "string"
+                            },
+                            "short_name": {
+                                "type": "string"
                             }
                         },
                         "required": [
                             "id",
-                            "full_name"
+                            "full_name",
+                            "short_name"
                         ]
                     },
                     "title": {
@@ -6710,6 +6714,12 @@
                                     "null"
                                 ]
                             },
+                            "short_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
                             "photo_thumb_url": {
                                 "type": [
                                     "string",
@@ -6720,6 +6730,7 @@
                         "required": [
                             "id",
                             "full_name",
+                            "short_name",
                             "photo_thumb_url"
                         ]
                     },
@@ -6892,6 +6903,12 @@
                             "null"
                         ]
                     },
+                    "short_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "photo_url": {
                         "type": [
                             "string",
@@ -6910,6 +6927,7 @@
                     "user_id",
                     "person_id",
                     "full_name",
+                    "short_name",
                     "photo_url",
                     "is_owner",
                     "joined_at"
@@ -7159,6 +7177,12 @@
                                     "null"
                                 ]
                             },
+                            "short_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
                             "photo_thumb_url": {
                                 "type": [
                                     "string",
@@ -7169,6 +7193,7 @@
                         "required": [
                             "id",
                             "full_name",
+                            "short_name",
                             "photo_thumb_url"
                         ]
                     },
@@ -7865,6 +7890,12 @@
                             "null"
                         ]
                     },
+                    "short_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "joined_at": {
                         "type": [
                             "string",
@@ -7901,6 +7932,7 @@
                     "ministry_id",
                     "person_id",
                     "full_name",
+                    "short_name",
                     "joined_at",
                     "photo_url",
                     "roles"
@@ -7937,6 +7969,12 @@
                                             "null"
                                         ]
                                     },
+                                    "short_name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
                                     "photo_thumb_url": {
                                         "type": [
                                             "string",
@@ -7947,6 +7985,7 @@
                                 "required": [
                                     "id",
                                     "full_name",
+                                    "short_name",
                                     "photo_thumb_url"
                                 ]
                             }
@@ -8351,6 +8390,9 @@
                     "full_name": {
                         "type": "string"
                     },
+                    "short_name": {
+                        "type": "string"
+                    },
                     "status": {
                         "type": "string"
                     },
@@ -8456,6 +8498,7 @@
                     "first_name",
                     "patronymic",
                     "full_name",
+                    "short_name",
                     "status",
                     "archived",
                     "photo_url",

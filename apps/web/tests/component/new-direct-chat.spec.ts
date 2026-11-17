@@ -12,8 +12,8 @@ import { grantPermissions } from '../support/permissions'
 
 const m = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
 mockNuxtImport('useApi', () => () => m)
-const person = (id = 'p1', over = {}): Person => ({ id, first_name: 'Анна', last_name: 'Петрова', patronymic: null, full_name: 'Петрова Анна', photo_url: null, status: 'member', archived: false, has_account: true, user_id: 'account-' + id, account_disabled: false, has_global_roles: true, ...over })
-const member = { id: 'membership-1', ministry_id: 'm1', person_id: 'p1', joined_at: '', full_name: 'Петрова Анна', photo_url: null, roles: [{ id: 'r1', name: 'Участник' }] }
+const person = (id = 'p1', over = {}): Person => ({ id, first_name: 'Анна', last_name: 'Петрова', patronymic: null, full_name: 'Петрова Анна', short_name: 'Петрова Анна', photo_url: null, status: 'member', archived: false, has_account: true, user_id: 'account-' + id, account_disabled: false, has_global_roles: true, ...over })
+const member = { id: 'membership-1', ministry_id: 'm1', person_id: 'p1', joined_at: '', full_name: 'Петрова Анна', short_name: 'Петрова Анна', photo_url: null, roles: [{ id: 'r1', name: 'Участник' }] }
 let people: Person[], push: ReturnType<typeof vi.spyOn>
 const rights = (...global: string[]) => grantPermissions({ global })
 async function choose() {

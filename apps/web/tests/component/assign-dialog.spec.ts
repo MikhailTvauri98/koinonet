@@ -17,7 +17,7 @@ mockNuxtImport('useRoute', () => () => ({ params: { id: 'e1' }, query: {} }))
 enableAutoUnmount(afterEach)
 afterEach(() => vi.useRealTimers())
 type Candidate = components['schemas']['CandidateResource']
-const candidate = (id = 'p1', name: string | null = 'Анна'): Candidate => ({ person: { id, full_name: name, photo_thumb_url: null }, has_role: true, conflicts: [] })
+const candidate = (id = 'p1', name: string | null = 'Анна'): Candidate => ({ person: { id, full_name: name, short_name: name, photo_thumb_url: null }, has_role: true, conflicts: [] })
 const roleSlot = (): EventSlot => ({ id: 's1', label: 'Вокалист', resource_type: 'person', role: { id: 'r1', name: 'Вокалист', ministry_id: 'm1' }, required_count: 2, filled_count: 0, sort_order: 0, can_fill: true, assignments: [] })
 const freeSlot = (): EventSlot => ({ ...roleSlot(), id: 's2', role: null, label: 'Встречающий' })
 const assignment = { id: 'a1', person: candidate().person, created_at: '2026-11-08T07:00:00Z' }

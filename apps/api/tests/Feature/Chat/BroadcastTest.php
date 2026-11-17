@@ -107,7 +107,7 @@ it('uses recipient policy instead of global authentication for direct titles at 
     $update = new ChatUpdatedBroadcast($chat->id, $other->id);
     expect(deliverChatBroadcast($update)[0]['payload']['chat']['title'])->toBe('Личный чат');
     $privilegedUpdate = unserialize(serialize(new ChatUpdatedBroadcast($chat->id, $privileged->id)));
-    expect(deliverChatBroadcast($privilegedUpdate)[0]['payload']['chat']['title'])->toBe($other->person->fullName());
+    expect(deliverChatBroadcast($privilegedUpdate)[0]['payload']['chat']['title'])->toBe($other->person->shortName());
     $privileged->person->globalRoles()->detach();
     app(PermissionCache::class)->bump($privileged->id);
     expect(deliverChatBroadcast($privilegedUpdate)[0]['payload']['chat']['title'])->toBe('Личный чат');
@@ -216,7 +216,7 @@ it('hydrates identities for the current viewer and enforces reader and disabled 
     $viewer->person->globalRoles()->attach($role);
     app(PermissionCache::class)->bump($viewer->id);
     $this->getJson($url)->assertOk()->assertJsonPath('data.sender.person.full_name', $sender->person->fullName())
-        ->assertJsonPath('data.reply_to.sender_name', $sender->person->fullName());
+        ->assertJsonPath('data.reply_to.sender_name', $sender->person->shortName());
     app('auth')->forgetGuards();
     $this->actingAs($sender)->getJson($url)->assertOk()->assertJsonPath('data.sender.person.full_name', $sender->person->fullName());
     $ministry = ministryWithRoles();

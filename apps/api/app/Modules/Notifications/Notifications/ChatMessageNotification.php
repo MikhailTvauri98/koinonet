@@ -82,7 +82,7 @@ final class ChatMessageNotification extends AppNotification
         $chat = Chat::query()->find($this->chatId);
         $sender = $message?->sender;
         $visible = $recipient !== null && $sender !== null && Gate::forUser($recipient)->allows('view', $sender->person);
-        $name = $sender === null ? 'Удалённый человек' : ($visible ? $sender->person->fullName() : 'Участник');
+        $name = $sender === null ? 'Удалённый человек' : ($visible ? $sender->person->shortName() : 'Участник');
         $title = $chat !== null && $recipient !== null ? app(ChatTitle::class)->for($chat, $recipient) : $this->title();
         if ($chat?->type === ChatType::Direct && $sender === null) {
             $title = 'Удалённый человек';

@@ -11,7 +11,7 @@ import { grantPermissions } from '../support/permissions'
 
 const m = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
 mockNuxtImport('useApi', () => () => m)
-const person = (id = 'p1', over = {}): Person => ({ id, first_name: 'Анна', last_name: 'Петрова', patronymic: null, full_name: 'Петрова Анна', photo_url: null, status: 'member', archived: false, has_account: true, user_id: 'u-' + id, account_disabled: false, has_global_roles: true, ...over })
+const person = (id = 'p1', over = {}): Person => ({ id, first_name: 'Анна', last_name: 'Петрова', patronymic: null, full_name: 'Петрова Анна', short_name: 'Петрова Анна', photo_url: null, status: 'member', archived: false, has_account: true, user_id: 'u-' + id, account_disabled: false, has_global_roles: true, ...over })
 const response = (data: Person[], last = 1) => ({ data, meta: { current_page: 1, last_page: last, total: data.length } })
 enableAutoUnmount(afterEach)
 beforeEach(() => { vi.resetAllMocks(); grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'], m2: ['members.manage'] } }); m.get.mockResolvedValue(response([person()])) })

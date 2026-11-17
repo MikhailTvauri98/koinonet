@@ -37,7 +37,7 @@ function createData(long: boolean) {
   }
   const person: Schema<'PersonResource'> = {
     id: 'p1', first_name: 'Анна', last_name: 'Петрова-Константинопольская', patronymic: 'Сергеевна',
-    full_name: 'Петрова-Константинопольская Анна Сергеевна', status: 'member', archived: false,
+    full_name: 'Петрова-Константинопольская Анна Сергеевна', short_name: 'Петрова-Константинопольская Анна Сергеевна', status: 'member', archived: false,
     photo_url: mediaUrl('photo-square.jpg'), has_account: true, user_id: 'u1', has_global_roles: true, account_disabled: false,
     global_roles: [{ id: 'r1', name: 'Координатор' }], ministries: [{ id: ministry.id, name: ministry.name }],
     contacts: { phone: '+79991234567', email: 'anna@example.test', birth_date: '1990-04-12' },
@@ -77,7 +77,7 @@ function createData(long: boolean) {
     visibility: 'church', status: 'scheduled', cancelled_at: null, cancel_reason: null, can_manage: true, attachments: media,
     slots: [{ id: 's1', label: 'Помощь в подготовке зала', resource_type: 'person', role: null,
       required_count: 3, filled_count: 1, sort_order: 0, can_fill: true,
-      assignments: [{ id: 'as1', person: { id: person.id, full_name: person.full_name, photo_thumb_url: person.photo_url }, created_at: now }] }],
+      assignments: [{ id: 'as1', person: { id: person.id, full_name: person.full_name, short_name: person.full_name, photo_thumb_url: person.photo_url }, created_at: now }] }],
   }
   const template: Schema<'EventTemplateResource'> = {
     id: 't1', owner_type: 'church', ministry: null, title: 'Воскресное событие', description: 'Еженедельное событие для всей церкви',
@@ -86,13 +86,13 @@ function createData(long: boolean) {
     slots: [{ id: 'ts1', label: 'Подготовка', role: null, required_count: 3, sort_order: 0 }],
   }
   const announcement: Schema<'AnnouncementResource'> = {
-    id: 'a1', scope: 'church', ministry: null, author: { id: 'u1', full_name: person.full_name },
+    id: 'a1', scope: 'church', ministry: null, author: { id: 'u1', full_name: person.full_name , short_name: person.full_name},
     title: long ? 'Объявление'.repeat(20) : 'Подготовка к воскресенью',
     body: '## Приглашаем всех\nВстречаемся в **10:00**. После события будет совместный обед.\n\n- Помогите подготовить зал\n- Возьмите ноты\n\n[Подробности](https://example.test/' + 'long-link'.repeat(20) + ')',
     pinned: true, hide_after: null, notify_on_publish: true, published_at: now, archived: false, views_count: 18, attachments: media,
   }
   const messages: Schema<'MessageResource'>[] = Array.from({ length: 8 }, (_, i) => ({
-    id: 'msg' + i, chat_id: 'c1', sender: { id: i % 2 ? 'u2' : 'u1', person: { id: i % 2 ? 'p2' : 'p1', full_name: i % 2 ? 'Михаил Орлов' : person.full_name, photo_thumb_url: person.photo_url } },
+    id: 'msg' + i, chat_id: 'c1', sender: { id: i % 2 ? 'u2' : 'u1', person: { id: i % 2 ? 'p2' : 'p1', full_name: i % 2 ? 'Михаил Орлов' : person.full_name, short_name: i % 2 ? 'Михаил Орлов' : person.full_name, photo_thumb_url: person.photo_url } },
     body: i % 2 ? 'Спасибо! Приду пораньше и помогу подготовить зал.' : 'Всем добрый день! Репетиция в субботу в 18:00. Возьмите ноты и проверьте расписание.',
     reply_to: i === 6 ? { id: 'msg5', sender_name: 'Михаил Орлов', body_preview: 'Спасибо! Приду пораньше.', deleted: false } : null,
     attachments: i === 4 ? media : [], edited_at: null, deleted: false, created_at: now, cursor: 'cursor' + i,
@@ -102,11 +102,11 @@ function createData(long: boolean) {
     archived: false, last_message_at: now, last_message: { id: 'msg7', body_preview: messages[7]!.body!, created_at: now, deleted: false },
     unread_count: 3, muted_until: null, is_owner: true,
     members: [
-      { user_id: 'u1', person_id: 'p1', full_name: person.full_name, photo_url: person.photo_url, is_owner: true, joined_at: now },
-      { user_id: 'u2', person_id: 'p2', full_name: 'Михаил Орлов', photo_url: null, is_owner: false, joined_at: now },
+      { user_id: 'u1', person_id: 'p1', full_name: person.full_name, short_name: person.full_name, photo_url: person.photo_url, is_owner: true, joined_at: now },
+      { user_id: 'u2', person_id: 'p2', full_name: 'Михаил Орлов', short_name: 'Михаил Орлов', photo_url: null, is_owner: false, joined_at: now },
     ], pinned_messages: [], can_write: true, can_moderate: true, can_manage_members: true,
   }
-  const member: Schema<'MemberResource'> = { id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: person.full_name, joined_at: now, photo_url: person.photo_url, roles: [{ id: 'rm1', name: ministryRole.name }] }
+  const member: Schema<'MemberResource'> = { id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: person.full_name, short_name: person.full_name, joined_at: now, photo_url: person.photo_url, roles: [{ id: 'rm1', name: ministryRole.name }] }
   const notifications: Success<'notificationCenter.index'> = {
     data: [{ id: 'n1', category: 'assignments', title: 'Вы назначены на событие', body: event.title, url: '/events/e1', read_at: null, created_at: now }],
     next_cursor: null, meta: { unread_count: 1 },
@@ -191,7 +191,7 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
     '/chats': chats,
     '/chats/c1': () => ({ data: data.chat }),
     '/chats/c1/messages': history,
-    '/slots/s1/candidates': () => ({ data: [{ person: { id: 'p1', full_name: data.person.full_name, photo_thumb_url: data.person.photo_url }, has_role: true, conflicts: [] } satisfies Schema<'CandidateResource'>] }),
+    '/slots/s1/candidates': () => ({ data: [{ person: { id: 'p1', full_name: data.person.full_name, short_name: data.person.full_name, photo_thumb_url: data.person.photo_url }, has_role: true, conflicts: [] } satisfies Schema<'CandidateResource'>] }),
     '/notifications': () => options.empty ? { data: [], next_cursor: null, meta: { unread_count: 0 } } : data.notifications,
     '/notification-settings': () => ({ data: data.categories }),
     '/auth/sessions': () => ({ data: data.sessions }),

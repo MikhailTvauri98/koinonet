@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 /** @mixin Message */
 final class MessageResource extends JsonResource
 {
-    /** @return array{id: string, chat_id: string, sender: array{id: string, person: array{id: string, full_name: string|null, photo_thumb_url: string|null}}|null, body: string|null, reply_to: array{id: string, sender_name: string|null, body_preview: string|null, deleted: bool}|null, attachments: AnonymousResourceCollection, edited_at: string|null, deleted: bool, created_at: string, cursor: string} */
+    /** @return array{id: string, chat_id: string, sender: array{id: string, person: array{id: string, full_name: string|null, short_name: string|null, photo_thumb_url: string|null}}|null, body: string|null, reply_to: array{id: string, sender_name: string|null, body_preview: string|null, deleted: bool}|null, attachments: AnonymousResourceCollection, edited_at: string|null, deleted: bool, created_at: string, cursor: string} */
     public function toArray(Request $request): array
     {
         $message = $this->resource;
@@ -38,12 +38,13 @@ final class MessageResource extends JsonResource
             'sender' => $sender !== null && $person !== null ? [
                 'id' => $sender->id,
                 'person' => ['id' => (string) $person->id, 'full_name' => $visible ? $person->fullName() : null,
+                    'short_name' => $visible ? $person->shortName() : null,
                     'photo_thumb_url' => $visible ? SignedMediaUrl::variant($person->photo, 'thumb') : null],
             ] : null,
             'body' => $message->isDeleted() ? null : $message->body,
             'reply_to' => $reply !== null ? [
                 'id' => $reply->id,
-                'sender_name' => $replyVisible ? $replyPerson->fullName() : null,
+                'sender_name' => $replyVisible ? $replyPerson->shortName() : null,
                 'body_preview' => $reply->isDeleted() ? null : Str::limit($reply->body ?? '', 150),
                 'deleted' => (bool) $reply->isDeleted(),
             ] : null,

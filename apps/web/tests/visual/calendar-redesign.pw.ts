@@ -298,7 +298,7 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow detail with long id
   const api = await installAcceptanceApi(page)
   api.data.event.title = 'Событие с очень длинным названием для всех участников служения'
   api.data.event.slots[0]!.label = 'ПодготовкаКСобытию'.repeat(5)
-  api.data.event.slots[0]!.assignments.push({ id: 'hidden', person: { id: 'p-hidden', full_name: null, photo_thumb_url: null }, created_at: null })
+  api.data.event.slots[0]!.assignments.push({ id: 'hidden', person: { id: 'p-hidden', full_name: null, short_name: null, photo_thumb_url: null }, created_at: null })
   api.data.event.slots[0]!.filled_count = 4
   await page.goto('/events/e1')
   await expect(page.locator('[data-test=my-participation]')).toBeVisible()
@@ -367,7 +367,7 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await page.setViewportSize({ width, height: 900 })
     await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
     const api = await installAcceptanceApi(page)
-    const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
+    const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', short_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
     const conflicts = [{ event_id: 'visible', title: 'Репетиция музыкального служения', starts_at: '2026-11-08T08:00:00Z', ends_at: '2026-11-08T09:00:00Z' }, { event_id: null, title: 'Пересечение с недоступным событием', starts_at: null, ends_at: null }]
     const requests: string[] = []
     let writes = 0, failRead = false
@@ -431,7 +431,7 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow candidate preview a
   await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
   const api = await installAcceptanceApi(page)
   let fail = true
-  const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
+  const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', short_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
   api.respond('GET', '/slots/s1/candidates', () => fail ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: [{ person, has_role: false, conflicts: [{ event_id: null, title: 'Пересечение с недоступным событием', starts_at: null, ends_at: null }] }] } })
   api.respond('POST', '/slots/s1/assignments', () => ({ status: 201, json: { data: { id: 'as2', person, created_at: null }, warnings: [{ code: 'time_conflict', message: 'Есть пересечение.', event_ids: [] }] } }))
   await page.goto('/events/e1')
@@ -463,8 +463,8 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow candidate preview a
 
 test('candidate dialog blocks a second write after failed roster read and recovers through reading', async ({ page }) => {
   const api = await installAcceptanceApi(page)
-  const person = { id: 'p2', full_name: 'Мария Орлова', photo_thumb_url: null }
-  const other = { id: 'p3', full_name: 'Михаил Орлов', photo_thumb_url: null }
+  const person = { id: 'p2', full_name: 'Мария Орлова', short_name: 'Мария Орлова', photo_thumb_url: null }
+  const other = { id: 'p3', full_name: 'Михаил Орлов', short_name: 'Михаил Орлов', photo_thumb_url: null }
   let failRead = false, writes = 0
   api.respond('GET', '/slots/s1/candidates', () => ({ json: { data: [person, other].map(person => ({ person, has_role: false, conflicts: [] })) } }))
   api.respond('POST', '/slots/s1/assignments', () => {

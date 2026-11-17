@@ -1322,6 +1322,7 @@ export interface components {
             author: {
                 id: string;
                 full_name: string;
+                short_name: string;
             } | null;
             title: string;
             body: string;
@@ -1353,6 +1354,7 @@ export interface components {
             person: {
                 id: string;
                 full_name: string | null;
+                short_name: string | null;
                 photo_thumb_url: string | null;
             };
             has_role: boolean;
@@ -1394,6 +1396,7 @@ export interface components {
             user_id: string;
             person_id: string;
             full_name: string | null;
+            short_name: string | null;
             photo_url: string | null;
             is_owner: boolean;
             /** Format: date-time */
@@ -1461,6 +1464,7 @@ export interface components {
             person: {
                 id: string;
                 full_name: string | null;
+                short_name: string | null;
                 photo_thumb_url: string | null;
             };
             /** Format: date-time */
@@ -1638,6 +1642,7 @@ export interface components {
             ministry_id: string;
             person_id: string;
             full_name: string | null;
+            short_name: string | null;
             joined_at: string | null;
             photo_url: string | null;
             roles: {
@@ -1654,6 +1659,7 @@ export interface components {
                 person: {
                     id: string;
                     full_name: string | null;
+                    short_name: string | null;
                     photo_thumb_url: string | null;
                 };
             } | null;
@@ -1749,6 +1755,7 @@ export interface components {
             first_name: string;
             patronymic: string | null;
             full_name: string;
+            short_name: string;
             status: string;
             archived: boolean;
             /**

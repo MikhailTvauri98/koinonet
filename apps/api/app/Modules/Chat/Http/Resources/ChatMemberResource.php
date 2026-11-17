@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Gate;
 /** @mixin ChatMember */
 final class ChatMemberResource extends JsonResource
 {
-    /** @return array{user_id: string, person_id: string, full_name: string|null, photo_url: string|null, is_owner: bool, joined_at: string} */
+    /** @return array{user_id: string, person_id: string, full_name: string|null, short_name: string|null, photo_url: string|null, is_owner: bool, joined_at: string} */
     public function toArray(Request $request): array
     {
         $member = $this->resource;
@@ -28,6 +28,7 @@ final class ChatMemberResource extends JsonResource
             'user_id' => $member->user_id,
             'person_id' => $person->id,
             'full_name' => $visible ? $person->fullName() : null,
+            'short_name' => $visible ? $person->shortName() : null,
             'photo_url' => $visible ? SignedMediaUrl::variant($person->photo, 'thumb') : null,
             'is_owner' => $member->is_owner,
             /** @format date-time */

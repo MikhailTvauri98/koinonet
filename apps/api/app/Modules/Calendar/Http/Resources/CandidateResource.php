@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Gate;
 /** @mixin SlotCandidate */
 final class CandidateResource extends JsonResource
 {
-    /** @return array{person: array{id: string, full_name: string|null, photo_thumb_url: string|null}, has_role: bool, conflicts: list<array{event_id: string|null, title: string, starts_at: string|null, ends_at: string|null}>} */
+    /** @return array{person: array{id: string, full_name: string|null, short_name: string|null, photo_thumb_url: string|null}, has_role: bool, conflicts: list<array{event_id: string|null, title: string, starts_at: string|null, ends_at: string|null}>} */
     public function toArray(Request $request): array
     {
         $candidate = $this->resource;
@@ -26,6 +26,7 @@ final class CandidateResource extends JsonResource
 
         return [
             'person' => ['id' => $person->id, 'full_name' => $canViewPerson ? $person->fullName() : null,
+                'short_name' => $canViewPerson ? $person->shortName() : null,
                 'photo_thumb_url' => $canViewPerson ? SignedMediaUrl::variant($person->photo, 'thumb') : null],
             'has_role' => $candidate->hasRole,
             'conflicts' => $candidate->conflicts,

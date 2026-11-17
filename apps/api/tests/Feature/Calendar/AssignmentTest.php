@@ -227,5 +227,13 @@ it('validates person identifiers and redacts assignment identity without people 
     $slot = EventSlot::factory()->create();
     $this->postJson("/api/v1/slots/{$slot->id}/assignments", [])->assertUnprocessable()->assertJsonValidationErrors('person_id');
     $this->postJson("/api/v1/slots/{$slot->id}/assignments", ['person_id' => 'bad'])->assertUnprocessable()->assertJsonValidationErrors('person_id');
-    $this->postJson("/api/v1/slots/{$slot->id}/assignments", ['person_id' => Person::factory()->create()->id])->assertCreated()->assertJsonPath('data.person.full_name', null)->assertJsonPath('data.person.photo_thumb_url', null);
+    $this->postJson("/api/v1/slots/{$slot->id}/assignments", ['person_id' => Person::factory()->create()->id])->assertCreated()->assertJsonPath('data.person.full_name', null)->assertJsonPath('data.person.short_name', null)->assertJsonPath('data.person.photo_thumb_url', null);
+});
+
+it('masks short_name together with full_name in assignments', function () {
+    actingAsUserWith([Permission::CalendarChurchManage, Permission::PeopleView]);
+    $slot = EventSlot::factory()->create();
+    $person = Person::factory()->create(['last_name' => 'Кузнецова', 'first_name' => 'Мария', 'patronymic' => 'Игоревна']);
+    $this->postJson("/api/v1/slots/{$slot->id}/assignments", ['person_id' => $person->id])->assertCreated()
+        ->assertJsonPath('data.person.full_name', 'Кузнецова Мария Игоревна')->assertJsonPath('data.person.short_name', 'Мария Кузнецова');
 });

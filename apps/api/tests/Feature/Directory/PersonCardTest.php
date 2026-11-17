@@ -22,6 +22,14 @@ it('includes global role summaries without exposing their permissions', function
         ->assertJsonMissingPath('data.note');
 });
 
+it('returns the short name next to the full name', function () {
+    actingAsUserWith([Permission::PeopleView]);
+    $person = Person::factory()->create(['last_name' => 'Кузнецова', 'first_name' => 'Мария', 'patronymic' => 'Игоревна']);
+
+    $this->getJson("/api/v1/people/{$person->id}")->assertOk()
+        ->assertJsonPath('data.full_name', 'Кузнецова Мария Игоревна')->assertJsonPath('data.short_name', 'Мария Кузнецова');
+});
+
 it('shows only active ministries the viewer can see', function () {
     $viewer = actingAsUserWith([Permission::PeopleView]);
     $person = Person::factory()->create();

@@ -35,7 +35,7 @@ it('announces loading once and keeps empty-state actions with their explanatory 
 })
 mockNuxtImport('useApi', () => () => ({ get }))
 const list = (data: unknown[] = [], page = 1, last = 1) => ({ data, meta: { current_page: page, last_page: last, unread_count: 0 }, next_cursor: null })
-const statePerson: Person = { id: 'p-state', first_name: 'Человек', last_name: 'Прежний', patronymic: null, full_name: 'Прежний человек', status: 'member', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: false, account_disabled: false }
+const statePerson: Person = { id: 'p-state', first_name: 'Человек', last_name: 'Прежний', patronymic: null, full_name: 'Прежний человек', short_name: 'Прежний человек', status: 'member', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: false, account_disabled: false }
 const announcement = { id: 'a-state', scope: 'church', ministry: null, author: null, title: 'Сохранённое объявление', body: 'Текст', pinned: false, hide_after: null, notify_on_publish: true, published_at: '2026-11-01T07:00:00Z', archived: false, attachments: [] }
 enableAutoUnmount(afterEach)
 beforeEach(() => {

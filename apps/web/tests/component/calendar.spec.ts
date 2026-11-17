@@ -138,7 +138,7 @@ describe('event detail and display hooks', () => {
   it('preserves editor input across a permitted rights refresh and masks the roster on revocation', async () => {
     grantPermissions({ global: ['calendar.church.manage', 'people.view'] })
     const original = event({ can_manage: true })
-    original.slots[0]!.assignments = [{ id: 'a1', person: { id: 'other', full_name: 'Чужое имя', photo_thumb_url: '/photo' }, created_at: null }]
+    original.slots[0]!.assignments = [{ id: 'a1', person: { id: 'other', full_name: 'Чужое имя', short_name: 'Чужое имя', photo_thumb_url: '/photo' }, created_at: null }]
     get.mockResolvedValue({ data: original })
     const page = await mountSuspended(EventPage)
     await page.get('[data-test="edit-event"]').trigger('click'); await flushPromises()
@@ -193,7 +193,7 @@ describe('event detail and display hooks', () => {
   })
   it('shows my assignment before event information and offers structural actions in the single roster', async () => {
     const item = event({ can_manage: true })
-    item.slots[0]!.assignments = [{ id: 'mine', person: { id: useAuthStore().person!.id, full_name: null, photo_thumb_url: '/private' }, created_at: null }]
+    item.slots[0]!.assignments = [{ id: 'mine', person: { id: useAuthStore().person!.id, full_name: null, short_name: null, photo_thumb_url: '/private' }, created_at: null }]
     get.mockResolvedValue({ data: item })
     const page = await mountSuspended(EventPage)
     expect(page.get('[data-test="my-participation"]').text()).toContain('Вы назначены')
@@ -258,7 +258,7 @@ describe('event detail and display hooks', () => {
     expect(slots.emitted('assign')?.[0]?.[0]).toMatchObject({ id: 's1' })
   })
   it('renders hidden identity neutrally without image or person link', async () => {
-    const item = event(); item.slots[0]!.assignments = [{ id: 'a1', person: { id: 'private', full_name: null, photo_thumb_url: null }, created_at: null }]
+    const item = event(); item.slots[0]!.assignments = [{ id: 'a1', person: { id: 'private', full_name: null, short_name: null, photo_thumb_url: null }, created_at: null }]
     get.mockResolvedValue({ data: item })
     const page = await mountSuspended(EventPage)
     expect(page.text()).toContain('Имя скрыто'); expect(page.find('img').exists()).toBe(false)

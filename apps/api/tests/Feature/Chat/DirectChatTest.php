@@ -26,7 +26,7 @@ it('returns the same pair from either side without resetting member settings', f
     $other = User::factory()->create();
     $other->person->update(['last_name' => 'Петрова', 'first_name' => 'Анна', 'patronymic' => null]);
     $other->person->globalRoles()->attach(Role::factory()->global()->withPermissions([Permission::ChatsDm])->create());
-    $id = $this->postJson('/api/v1/chats', ['type' => 'direct', 'user_id' => $other->id])->assertCreated()->assertJsonPath('data.title', 'Петрова Анна')->json('data.id');
+    $id = $this->postJson('/api/v1/chats', ['type' => 'direct', 'user_id' => $other->id])->assertCreated()->assertJsonPath('data.title', 'Анна Петрова')->json('data.id');
     $chat = Chat::query()->findOrFail($id);
     $read = Message::factory()->for($chat)->create(['sender_user_id' => $other->id, 'created_at' => now()->subMinute()]);
     Message::factory()->for($chat)->create(['sender_user_id' => $other->id]);
