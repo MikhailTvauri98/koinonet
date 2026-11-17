@@ -40,7 +40,7 @@ test('an invitation heading keeps its complete UI word at 320px text 200%', asyn
 test('list rows retain readable text beside images and unread badges', async ({ page }, info) => {
   const api = await installAcceptanceApi(page)
   for (const [path, selector, maxWord] of [
-    ['/', '.chat-item__content strong, .chat-item__preview', 12],
+    ['/', '.home-chat__text strong, .home-chat__preview', 12],
     ['/chats', '.chat-item__content strong, .chat-item__preview', 12],
     ['/ministries', '.ministries-page__item p', 12],
     ['/people', '.person-item strong', 10],
