@@ -45,7 +45,7 @@ onBeforeUnmount(() => { revision++ })
 .message-actions-trigger { position: absolute; top: .125rem; inset-inline-end: .125rem; padding: .25rem; min-width: 44px; min-height: 44px; font-size: 1.5rem; line-height: 1; color: var(--ui-text-muted); background: var(--ui-surface); border-color: var(--ui-border); border-radius: .5rem; }
 .message-actions-trigger:hover, .message-actions-trigger[aria-expanded="true"] { color: var(--ui-accent); }
 /* Hidden at rest but kept in the tab order and the accessibility tree. */
-@media (hover: hover) and (pointer: fine) { .message-actions-trigger { opacity: 0; } .message-actions-trigger:focus-visible, .message-actions-trigger[aria-expanded="true"] { opacity: 1; } }
+@media (hover: hover) and (pointer: fine) { .message-actions-trigger { opacity: 0; pointer-events: none; } .message-actions-trigger:focus-visible, .message-actions-trigger[aria-expanded="true"] { opacity: 1; pointer-events: auto; } }
 @media (hover: none), (pointer: coarse) {
   .message-actions-trigger:not(:focus-visible):not([aria-expanded="true"]) { width: 1px; height: 1px; min-width: 0; min-height: 0; padding: 0; overflow: hidden; clip-path: inset(50%); border: 0; white-space: nowrap; }
 }

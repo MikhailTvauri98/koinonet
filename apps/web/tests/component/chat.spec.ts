@@ -391,11 +391,11 @@ it('shows the short name and avatar once per group and only the time in each mes
     msg('m3', { sender: person('me', 'Анна Петровна Иванова', 'Анна Иванова'), created_at: at('09:22:00'), cursor: 'm3' }),
   ])
   const screen = await mount()
-  const groups = screen.findAll('.message-group')
-  expect(groups).toHaveLength(2)
-  expect(groups[0]!.findAll('.ui-avatar')).toHaveLength(1)
-  expect(groups[0]!.findAll('[data-message-id] strong')).toHaveLength(1)
-  expect(groups[0]!.text()).toContain('Михаил Орлов')
+  expect(screen.findAll('.message-row--first')).toHaveLength(2)
+  expect(screen.findAll('.message-row .ui-avatar')).toHaveLength(1)
+  expect(screen.findAll('.message-sender')).toHaveLength(1)
+  expect(screen.get('[data-message-id=m1]').text()).toContain('Михаил Орлов')
+  expect(screen.get('[data-message-id=m2]').find('.message-sender').exists()).toBe(false)
   expect(screen.text()).not.toContain('Сергеевич')
   expect(screen.get('[data-message-id=m1] time').text()).toBe('09:20')
   expect(screen.get('[data-message-id=m1] time').attributes('datetime')).toBe(at('09:20:00'))
@@ -406,18 +406,18 @@ it('shows the short name and avatar once per group and only the time in each mes
 it('puts own messages in a right-aligned group without a name or avatar', async () => {
   feed([msg('mine', { sender: person('me', 'Анна Петровна Иванова', 'Анна Иванова') })])
   const screen = await mount()
-  const group = screen.get('.message-group')
-  expect(group.classes()).toContain('own')
-  expect(group.find('.ui-avatar').exists()).toBe(false)
-  expect(group.text()).not.toContain('Анна Иванова')
+  const row = screen.get('.message-row')
+  expect(row.classes()).toContain('own')
+  expect(row.find('.ui-avatar').exists()).toBe(false)
+  expect(row.text()).not.toContain('Анна Иванова')
 })
 
 it('hides a masked sender behind the neutral name but still groups by id', async () => {
   const hidden = person('hidden', null, null)
   feed([msg('h1', { sender: hidden, created_at: at('09:20:00') }), msg('h2', { sender: hidden, created_at: at('09:21:00') })])
   const screen = await mount()
-  expect(screen.findAll('.message-group')).toHaveLength(1)
-  expect(screen.get('.message-group').text()).toContain('Участник')
+  expect(screen.findAll('.message-row--first')).toHaveLength(1)
+  expect(screen.get('.message-row').text()).toContain('Участник')
 })
 
 it('separates days by the church calendar: Today, Yesterday, weekday and date', async () => {

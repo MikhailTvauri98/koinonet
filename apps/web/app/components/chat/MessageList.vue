@@ -9,6 +9,10 @@ const settings = useSettingsStore()
 const { formatChatDay } = useChurchDate()
 // Day separators and groups follow the church calendar, not the device's.
 const items = computed(() => groupMessages(props.messages, settings.timezone, 5, props.userId))
+type Row = { kind: 'day', key: string, day: string } | { kind: 'message', key: string, message: ChatMessage, own: boolean, first: boolean, senderId: string | null }
+const rows = computed(() => items.value.flatMap<Row>(item => item.kind === 'day'
+  ? [{ kind: 'day' as const, key: `day-${item.day}`, day: item.day }]
+  : item.messages.map((message, index) => ({ kind: 'message' as const, key: message.id, message, own: item.own, first: index === 0, senderId: item.senderId }))))
 const scroll = ref<HTMLElement>()
 const top = ref<HTMLElement>()
 const latest = ref<HTMLElement>()
@@ -99,18 +103,19 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
     <p v-if="!messages.length">Пока нет сообщений</p>
     <!-- Stable keyed rows retain an open action menu when a newer row arrives.
          A former last row must not clear the newly assigned latest ref. -->
-    <template v-for="item in items" :key="item.kind === 'day' ? `day-${item.day}` : item.messages[0]!.id">
-      <p v-if="item.kind === 'day'" class="message-day">{{ formatChatDay(item.day) }}</p>
-      <div v-else class="message-group" :class="{ own: item.own }">
-        <UiAvatar v-if="!item.own" :id="item.messages[0]!.sender?.person?.id ?? item.senderId ?? 'deleted-person'" :name="item.messages[0]!.sender?.person?.short_name ?? null" class="message-group__avatar" size="sm" decorative />
-        <div class="message-group__messages">
-          <div
-            v-for="(message, index) in item.messages" :key="message.id"
-            :ref="el => { if (!messages.length || message.id === messages.at(-1)?.id) latest = (el as HTMLElement | null) ?? undefined }"
-            :data-test="message.id === messages.at(-1)?.id ? 'latest-message' : undefined">
-            <MessageItem :message="message" :own="item.own" :first="index === 0" :sender-name="senderLabel(message.sender)" :writable="writable" :moderate="moderate" :pinned="pinnedIds.includes(message.id)" @reply="emit('reply', $event)" @edit="emit('edit', $event)" @delete="emit('delete', $event)" @pin="emit('pin', $event)" />
-          </div>
-        </div>
+    <!-- Flat rows keyed by message id: a group that gains older messages keeps
+         every existing MessageItem mounted, so the scroll anchor and open menus survive. -->
+    <template v-for="row in rows" :key="row.key">
+      <p v-if="row.kind === 'day'" class="message-day">{{ formatChatDay(row.day) }}</p>
+      <div
+        v-else :ref="el => { if (!messages.length || row.message.id === messages.at(-1)?.id) latest = (el as HTMLElement | null) ?? undefined }" class="message-row"
+        :class="{ own: row.own, 'message-row--first': row.first }"
+        :data-test="row.message.id === messages.at(-1)?.id ? 'latest-message' : undefined">
+        <template v-if="!row.own">
+          <UiAvatar v-if="row.first" :id="row.message.sender?.person?.id ?? row.senderId ?? 'deleted-person'" :name="row.message.sender?.person?.short_name ?? null" class="message-row__avatar" size="sm" decorative />
+          <span v-else class="message-row__avatar" aria-hidden="true" />
+        </template>
+        <MessageItem :message="row.message" :own="row.own" :first="row.first" :sender-name="senderLabel(row.message.sender)" :writable="writable" :moderate="moderate" :pinned="pinnedIds.includes(row.message.id)" @reply="emit('reply', $event)" @edit="emit('edit', $event)" @delete="emit('delete', $event)" @pin="emit('pin', $event)" />
       </div>
     </template>
   </div>
@@ -118,11 +123,22 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
 <style scoped>
 /* History content must not set the grid's intrinsic minimum height. */
 .message-day { margin: 1rem 0 .25rem; text-align: center; color: var(--ui-text-muted); font-size: .875rem; font-weight: 600; }
-.message-group { display: flex; align-items: flex-start; gap: .5rem; margin: .75rem 0; min-width: 0; }
-.message-group__avatar { margin-top: .25rem; }
-.message-group__messages { display: flex; flex-direction: column; align-items: flex-start; gap: .125rem; flex: 1 1 0; min-width: 0; }
-.message-group__messages > * { max-width: 100%; min-width: 0; }
-.message-group.own { justify-content: flex-end; }
-.message-group.own .message-group__messages { align-items: flex-end; }
+.message-row { display: flex; align-items: flex-start; gap: .5rem; margin: .125rem 0; min-width: 0; }
+.message-row--first { margin-top: .75rem; }
+.message-row__avatar { flex: none; width: 32px; margin-top: .25rem; }
+.message-row > :last-child { min-width: 0; max-width: 100%; }
+.message-row.own { justify-content: flex-end; }
+/* Hidden actions appear with the pointer on the row or focus inside it. The
+   button is out of reach (no pointer events) while invisible, but stays in the Tab order. */
+@media (hover: hover) and (pointer: fine) {
+  .message-row:hover :deep(.message-actions-trigger), .message-row:focus-within :deep(.message-actions-trigger) { opacity: 1; pointer-events: auto; }
+}
+/* Wide screens: the button sits beside the bubble in space reserved for it, never over the text. */
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  .message-row { padding-inline-end: 3rem; }
+  .message-row.own { padding-inline-end: 0; padding-inline-start: 3rem; }
+  .message-row :deep(.message-actions-trigger) { inset-inline-end: auto; inset-inline-start: calc(100% + .25rem); top: 0; }
+  .message-row.own :deep(.message-actions-trigger) { inset-inline-start: auto; inset-inline-end: calc(100% + .25rem); }
+}
 .message-list { contain: size; flex: 1 1 0; overflow-y: auto; min-height: 0; min-width: 0; overscroll-behavior: contain; padding: .4rem; }
 </style>

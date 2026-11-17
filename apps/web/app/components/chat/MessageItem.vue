@@ -17,6 +17,7 @@ let suppressMenu = false
 function cancelPress() { if (pressTimer) clearTimeout(pressTimer); pressTimer = undefined }
 function pressStart(event: PointerEvent) {
   cancelPress()
+  suppressMenu = false
   if (event.pointerType !== 'touch' || (event.target as Element | null)?.closest('a, button')) return
   pressed = { x: event.clientX, y: event.clientY }
   pressTimer = setTimeout(() => { pressTimer = undefined; suppressMenu = true; actions.value?.open() }, LONG_PRESS_MS)
@@ -56,10 +57,6 @@ onBeforeUnmount(cancelPress)
 .message-sender { display: block; min-width: 0; color: var(--ui-accent); font-size: .875rem; font-weight: 600; }
 .message-content { min-width: 0; }
 .own { background: var(--ui-accent-soft); border-radius: .875rem .875rem .25rem .875rem; }
-/* Actions stay out of sight until the pointer or keyboard focus is on the message. */
-@media (hover: hover) and (pointer: fine) {
-  .message:hover :deep(.message-actions-trigger), .message:focus-within :deep(.message-actions-trigger) { opacity: 1; }
-}
 .body, .message-deleted { white-space: pre-wrap; overflow-wrap: anywhere; margin: .25rem 0; }
 .message-deleted { color: var(--ui-text-muted); }
 .message-metadata { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .25rem .5rem; margin-top: .25rem; color: var(--ui-text-muted); font-size: .875rem; line-height: 1.5; }
