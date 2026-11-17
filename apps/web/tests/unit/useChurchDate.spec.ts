@@ -82,6 +82,10 @@ describe('human dates', () => {
         expect(f.formatDuration('2026-11-22T08:00:00Z', '2026-11-22T08:45:00Z')).toBe('45 мин')
       })
 
+      it('formats the short weekday in the church zone', () => {
+        expect(f.formatWeekdayShort('2026-11-22T08:00:00Z')).toBe('вс')
+      })
+
       it('formats day headings', () => {
         expect(f.formatDayHeading('2026-11-17')).toBe('Сегодня · вторник')
         expect(f.formatDayHeading('2026-11-18')).toBe('Завтра · среда, 18 ноября')

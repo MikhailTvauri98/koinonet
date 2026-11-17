@@ -53,12 +53,17 @@ describe('announcement lists', () => {
     expect(get).toHaveBeenCalledWith('/announcements', expect.objectContaining({ scope: 'ministry', ministry: 'a1' }))
     expect(page.find('[data-test="publish"]').exists()).toBe(true)
   })
-  it('home only renders actual pinned church records, up to three', async () => {
-    get.mockResolvedValue(list([announcement(), ...[1, 2, 3, 4].map(id => announcement({ id: String(id), pinned: true }))]))
+  it('home lists pinned church announcements first with plain-text previews, up to four', async () => {
+    get.mockResolvedValue(list([announcement({ id: 'n1', title: 'Свежее', body: '## Заголовок\n**жирный** [ссылка](https://x.test)' }), ...[1, 2, 3, 4].map(id => announcement({ id: String(id), pinned: true })), announcement({ id: 'old', archived: true })]))
     const page = await mountSuspended(PinnedAnnouncements)
-    expect(page.findAll('article')).toHaveLength(3)
-    expect(page.find('[data-test="pinned-a1"]').exists()).toBe(false)
+    expect(page.findAll('li')).toHaveLength(4)
+    expect(page.findAll('li').map(node => node.find('a').attributes('href'))).toEqual(['/announcements/1', '/announcements/2', '/announcements/3', '/announcements/4'])
+    expect(page.find('[data-test="pinned-1"]').text()).toContain('Закреплено')
     expect(get).toHaveBeenCalledWith('/announcements', expect.objectContaining({ scope: 'church' }))
+    get.mockResolvedValue(list([announcement({ id: 'n1', title: 'Свежее', body: '## Заголовок\n**жирный** [ссылка](https://x.test)' })]))
+    const fresh = await mountSuspended(PinnedAnnouncements)
+    expect(fresh.find('[data-test="pinned-n1"]').exists()).toBe(false)
+    expect(fresh.find('.home-announcement__text').text()).toBe('Заголовок жирный ссылка')
   })
 })
 describe('announcement detail', () => {
@@ -198,7 +203,7 @@ describe('task17 editorial states', () => {
   it('gives the home sections a clear order and shared header structure', async () => {
     get.mockResolvedValue(list())
     const page = await mountSuspended(HomePage)
-    expect(page.findAll('.home-section__header h2').map(node => node.text())).toEqual(['Ближайшие мои события', 'Закреплённые объявления', 'Непрочитанное'])
+    expect(page.findAll('.home-section__header h2').map(node => node.text())).toEqual(['На этой неделе', 'Объявления', 'Сообщения'])
     expect(page.findAll('.home-section__header a').map(node => node.attributes('href'))).toEqual(['/calendar', '/announcements', '/chats'])
   })
   it('groups editor fields and connects inline errors to stable captions', async () => {

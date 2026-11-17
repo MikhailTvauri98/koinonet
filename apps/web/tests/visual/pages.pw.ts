@@ -147,7 +147,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
     })
     test('home populated events retain cancellation and dates', async ({ page }, info) => {
       await page.goto('/')
-      const section = page.getByRole('region', { name: 'Ближайшие мои события' })
+      const section = page.getByRole('region', { name: 'На этой неделе' })
       await expect(section.getByRole('link', { name: title, exact: true })).toBeVisible()
       await expect(section).toContainText('Отменено')
       await expect(section.locator('time').first()).toHaveAttribute('datetime', event.starts_at)
@@ -158,8 +158,8 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await fixtures(page, true)
       await page.goto('/')
       await expect(page.getByRole('heading', { name: 'Здравствуйте, Анна!' })).toBeVisible()
-      const section = page.getByRole('region', { name: 'Ближайшие мои события' })
-      await expect(section).toContainText('Ближайших событий пока нет.')
+      const section = page.getByRole('region', { name: 'На этой неделе' })
+      await expect(section).toContainText('На этой неделе событий нет')
       await expect(section).toHaveCSS('background-color', 'rgb(29, 34, 37)')
       await wholeHeadingWords(page)
       await fits(page)
@@ -381,6 +381,25 @@ for (const theme of ['dark', 'light'] as const) {
   }
 }
 
+// Компьютер: две колонки без пустой левой; телефон: одна колонка в порядке назначение, неделя, объявления, сообщения.
+async function expectHomeLayout(page: Page, width: number) {
+  const box = async (name: string) => (await page.getByRole('region', { name, exact: true }).boundingBox())!
+  const serving = await box('Вы служите'), week = await box('На этой неделе'), pins = await box('Объявления'), unread = await box('Сообщения')
+  if (width >= 1200) {
+    expect(week.x).toBe(serving.x)
+    expect(unread.x).toBe(pins.x)
+    expect(pins.x).toBeGreaterThanOrEqual(serving.x + serving.width)
+    expect(pins.y).toBe(serving.y)
+    expect(week.y).toBeGreaterThanOrEqual(serving.y + serving.height)
+    expect(unread.y).toBeGreaterThanOrEqual(pins.y + pins.height)
+  } else {
+    for (const other of [week, pins, unread]) expect(other.x).toBe(serving.x)
+    expect(week.y).toBeGreaterThanOrEqual(serving.y + serving.height)
+    expect(pins.y).toBeGreaterThanOrEqual(week.y + week.height)
+    expect(unread.y).toBeGreaterThanOrEqual(pins.y + pins.height)
+  }
+}
+
 // Task17 owns home and announcements. Keep other task scenarios untouched.
 test.describe('task17 home and announcements', () => {
   for (const theme of ['dark', 'light'] as const) {
@@ -393,8 +412,9 @@ test.describe('task17 home and announcements', () => {
           document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%` })
         }, { theme, scale })
         await page.goto('/')
-        await expect(page.locator('.home-section__header h2')).toHaveText(['Ближайшие мои события', 'Закреплённые объявления', 'Непрочитанное'])
-        await expect(page.getByRole('region', { name: 'Закреплённые объявления' }).getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
+        await expect(page.locator('.home-section__header h2')).toHaveText(['Вы служите', 'На этой неделе', 'Объявления', 'Сообщения'])
+        await expect(page.getByRole('region', { name: 'Объявления' }).getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
+        await expectHomeLayout(page, width)
         await expect(page.locator('.home-section__header h2').first()).toHaveCSS('font-size', scale === 200 ? '36px' : '18px')
         await fits(page)
         await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}x${height}-${scale}-home`)
@@ -402,8 +422,8 @@ test.describe('task17 home and announcements', () => {
         api.respond('GET', '/events', () => ({ json: { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } }))
         api.respond('GET', '/chats', () => ({ json: { data: [], meta: { unread_total: 0 } } }))
         await page.reload()
-        await expect(page.getByText('Ближайших событий пока нет.', { exact: true })).toBeVisible()
-        await expect(page.getByText('Закреплённых объявлений пока нет.', { exact: true })).toBeVisible()
+        await expect(page.getByText('На этой неделе событий нет', { exact: true })).toBeVisible()
+        await expect(page.getByText('Объявлений пока нет.', { exact: true })).toBeVisible()
         await expect(page.getByText('Непрочитанных сообщений нет.', { exact: true })).toBeVisible()
         await fits(page)
         await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}x${height}-${scale}-home-empty`)
@@ -454,32 +474,33 @@ test('task17 home keeps available sections while one request is pending or faile
   await page.goto('/')
   try {
     await expect(page.getByRole('heading', { name: 'Здравствуйте, Анна!' })).toBeVisible()
-    const pins = page.getByRole('region', { name: 'Закреплённые объявления' })
+    const pins = page.getByRole('region', { name: 'Объявления' })
     await expect(pins.getByRole('status')).toContainText('Загружаем объявления…')
-    await expect(page.getByRole('region', { name: 'Ближайшие мои события' }).getByRole('link', { name: api.data.event.title, exact: true })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Вы служите' }).getByRole('link', { name: api.data.event.title, exact: true }).first()).toBeVisible()
     await takeAcceptanceScreenshot(page, info, 'task17-home-pending')
   } finally { release() }
-  await expect(page.getByRole('region', { name: 'Закреплённые объявления' }).getByRole('alert')).toContainText('Не удалось загрузить закреплённые объявления.')
-  await expect(page.getByRole('region', { name: 'Непрочитанное' }).getByRole('link', { name: /Все чаты/ })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Объявления' }).getByRole('alert')).toContainText('Не удалось загрузить объявления.')
+  await expect(page.getByRole('region', { name: 'Сообщения' }).getByRole('link', { name: /Все чаты/ })).toBeVisible()
   await fits(page)
   await takeAcceptanceScreenshot(page, info, 'task17-home-error')
   expect(api.unhandled).toEqual([])
 })
 
-test('task17 maximum five home events keep pinned announcements and unread chats together', async ({ page }, info) => {
+test('task17 a long week keeps pinned announcements and unread chats together in the right column', async ({ page }, info) => {
   const api = await installAcceptanceApi(page)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  api.respond('GET', '/events', () => ({ json: { data: Array.from({ length: 5 }, (_, index) => ({ ...api.data.event, id: `home-event-${index}`, title: `Личное событие ${index + 1}` })), meta: { current_page: 1, last_page: 1, total: 5 } } }))
+  api.respond('GET', '/events', () => ({ json: { data: Array.from({ length: 8 }, (_, index) => ({ ...api.data.event, id: `home-event-${index}`, title: `Событие недели ${index + 1}`, starts_at: `2026-11-0${index % 7 + 1}T07:00:00Z`, ends_at: `2026-11-0${index % 7 + 1}T09:00:00Z` })), meta: { current_page: 1, last_page: 1, total: 8 } } }))
   await page.goto('/')
-  const events = page.getByRole('region', { name: 'Ближайшие мои события' })
-  await expect(events.locator('.event-card')).toHaveCount(5)
-  const pins = page.getByRole('region', { name: 'Закреплённые объявления' })
-  const unread = page.getByRole('region', { name: 'Непрочитанное' })
+  const week = page.getByRole('region', { name: 'На этой неделе', exact: true })
+  await expect(week.locator('.week-row')).toHaveCount(8)
+  const pins = page.getByRole('region', { name: 'Объявления', exact: true })
+  const unread = page.getByRole('region', { name: 'Сообщения', exact: true })
   await expect(pins.getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
-  await expect(unread.locator('.chat-list')).toBeVisible()
+  await expect(unread.locator('.home-chats')).toBeVisible()
   const top = (await unread.boundingBox())!.y, bottom = (await pins.boundingBox())!
   expect(top - bottom.y - bottom.height).toBe(16)
+  await expectHomeLayout(page, 1440)
   await fits(page)
-  await takeAcceptanceScreenshot(page, info, 'task17-five-events-columns')
+  await takeAcceptanceScreenshot(page, info, 'task17-long-week-columns')
   expect(api.unhandled).toEqual([])
 })

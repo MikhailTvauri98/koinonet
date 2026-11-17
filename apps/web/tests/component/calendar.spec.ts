@@ -4,7 +4,6 @@ import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CalendarPage from '~/pages/calendar.vue'
 import EventPage from '~/pages/events/[id].vue'
-import UpcomingEvents from '~/components/calendar/UpcomingEvents.vue'
 import EventCard from '~/components/calendar/EventCard.vue'
 import SlotList from '~/components/calendar/SlotList.vue'
 import CancelEventDialog from '~/components/calendar/CancelEventDialog.vue'
@@ -270,32 +269,5 @@ describe('event detail and display hooks', () => {
     expect(card.text()).toContain('Хор'); expect(card.find('a[href="/ministries/m1"]').exists()).toBe(false)
     useAuthStore().permissions = { administrator: false, global: [], ministries: { m1: [] } }
     await card.vm.$nextTick(); expect(card.find('a[href="/ministries/m1"]').exists()).toBe(true)
-  })
-})
-describe('home upcoming events', () => {
-  it('waits for initial settings and makes one upcoming request using the confirmed timezone', async () => {
-    useSettingsStore().reset()
-    get.mockImplementation(async (path: string) => path === '/settings'
-      ? { data: { church_name: 'Церковь', timezone: 'Asia/Vladivostok' } }
-      : list([]))
-    await mountSuspended(UpcomingEvents)
-    await flushPromises()
-    const eventRequests = get.mock.calls.filter(call => call[0] === '/events')
-    expect(eventRequests).toHaveLength(1)
-    expect(eventRequests[0]![1]).toMatchObject({ from: '2026-11-09', to: '2026-11-22' })
-  })
-  it('loads mine for fourteen church dates, filters already started events and caps at five', async () => {
-    get.mockResolvedValue(list([event({ id: 'past' }), ...Array.from({ length: 7 }, (_, n) => event({ id: `future${n}`, starts_at: `2026-11-${String(9 + n).padStart(2, '0')}T07:00:00Z`, status: n === 0 ? 'cancelled' : 'scheduled' }))]))
-    const page = await mountSuspended(UpcomingEvents)
-    expect(get).toHaveBeenCalledWith('/events', expect.objectContaining({ scope: 'mine', from: '2026-11-09', to: '2026-11-22' }))
-    expect(page.findAll('article')).toHaveLength(5); expect(page.find('[data-test="cancelled-future0"]').exists()).toBe(true)
-    expect(page.find('a[href="/events/past"]').exists()).toBe(false)
-  })
-  it('keeps a local error and retry when upcoming events fail', async () => {
-    get.mockRejectedValueOnce(new Error('offline'))
-    const page = await mountSuspended(UpcomingEvents)
-    expect(page.find('[role="alert"]').exists()).toBe(true)
-    get.mockResolvedValue(list([])); await page.get('button').trigger('click'); await flushPromises()
-    expect(page.text()).toContain('Ближайших событий пока нет')
   })
 })

@@ -138,7 +138,17 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
   const selected = <T>(items: T[]) => options.empty ? [] : items
   const people = (): Success<'person.index'> => paginated(selected([data.person, { ...data.person, id: 'p2', first_name: 'Михаил', last_name: 'Орлов', patronymic: null, full_name: 'Орлов Михаил', user_id: 'u2' }]))
   const events = (request: Request): Success<'event.index'> => {
-    const scope = new URL(request.url()).searchParams.get('scope')
+    const query = new URL(request.url()).searchParams
+    const scope = query.get('scope')
+    // Главная просит ровно семь церковных дней (from…from+6): отдаём неделю с событием церкви, служением, отменой и «Вы».
+    const days = (Date.parse(query.get('to') + 'T00:00:00Z') - Date.parse(query.get('from') + 'T00:00:00Z')) / 86_400_000
+    if (scope === 'church' && days === 6) {
+      const church = { ...data.event, id: 'w1', title: 'Воскресное событие', slots: [] }
+      const rehearsal = { ...data.event, id: 'w2', title: 'Репетиция хора', owner_type: 'ministry' as const, ministry: { id: 'm1', name: data.ministry.name, color: data.ministry.color }, location: 'Малый зал', starts_at: '2026-11-04T16:00:00Z', ends_at: '2026-11-04T18:00:00Z', slots: [] }
+      const mine = { ...data.event, id: 'w3', title: 'Подготовка зала', starts_at: '2026-11-06T15:00:00Z', ends_at: '2026-11-06T17:00:00Z' }
+      const cancelled = { ...rehearsal, id: 'w4', title: 'Встреча молодёжи', ministry: null, owner_type: 'church' as const, status: 'cancelled' as const, cancelled_at: now, cancel_reason: 'Изменилось расписание', starts_at: '2026-11-05T15:00:00Z', ends_at: '2026-11-05T17:00:00Z' }
+      return paginated(selected([{ ...church, starts_at: '2026-11-01T09:00:00Z', ends_at: '2026-11-01T11:00:00Z' }, rehearsal, cancelled, mine]))
+    }
     const event: Schema<'EventResource'> = scope === 'ministry:m1'
       ? { ...data.event, owner_type: 'ministry', ministry: { id: 'm1', name: data.ministry.name, color: data.ministry.color } }
       : data.event

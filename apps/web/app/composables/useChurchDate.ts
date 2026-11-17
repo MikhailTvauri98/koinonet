@@ -108,6 +108,7 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     formatEventWhen,
     formatDuration,
     formatDayHeading,
+    formatWeekdayShort: (value: string) => weekdayShort.format(new Date(value)),
     deviceZoneDiffers,
   }
 }
@@ -127,6 +128,7 @@ export function useChurchDate() {
     formatEventWhen: (startIso: string, endIso: string) => formatter.value.formatEventWhen(startIso, endIso),
     formatDuration: (startIso: string, endIso: string) => formatter.value.formatDuration(startIso, endIso),
     formatDayHeading: (dateOnly: string) => formatter.value.formatDayHeading(dateOnly),
+    formatWeekdayShort: (iso: string) => formatter.value.formatWeekdayShort(iso),
     deviceZoneDiffers: (iso: string) => formatter.value.deviceZoneDiffers(iso),
   }
 }

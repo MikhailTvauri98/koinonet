@@ -119,7 +119,7 @@ for (const theme of ['dark', 'light'] as const) for (const [path, heading, guest
       '/login': page.locator('button[type=submit]'),
       '/invite/acceptance-invite': page.locator('button[type=submit]'),
       '/password-reset/acceptance-reset': page.locator('button[type=submit]'),
-      '/': page.locator('.upcoming-events a[href^="/events/"]').first(),
+      '/': page.locator('.home-section--serving a.ui-button--primary'),
       '/people': page.getByRole('button', { name: 'Создать человека', exact: true }),
       '/people/p1': page.locator('[data-test=edit-person]'),
       '/ministries': page.getByRole('button', { name: 'Создать служение', exact: true }),
