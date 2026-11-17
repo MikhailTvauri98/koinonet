@@ -44,7 +44,7 @@ function open(event: EventItem) { void router.push({ path: `/events/${encodeURIC
     <div class="calendar-toolbar">
       <div class="calendar-toolbar__month" role="group" aria-label="Период календаря">
         <button class="ui-button" type="button" aria-label="Предыдущий месяц" data-test="previous-month" @click="$emit('move', -1)">‹</button>
-        <h2><button class="calendar-toolbar__title" type="button" data-test="calendar-month-button" title="Перейти к дате" :aria-label="`${monthLabel}, перейти к дате`" @click="pickDate">{{ monthLabel }}<span aria-hidden="true"> ▾</span></button></h2>
+        <h2 :aria-label="monthLabel"><button class="calendar-toolbar__title" type="button" data-test="calendar-month-button" title="Перейти к дате" :aria-label="`${monthLabel}, перейти к дате`" @click="pickDate">{{ monthLabel }}<span aria-hidden="true"> ▾</span></button></h2>
         <button class="ui-button" type="button" aria-label="Следующий месяц" data-test="next-month" @click="$emit('move', 1)">›</button>
         <label class="calendar-toolbar__date" aria-hidden="true"><span class="visually-hidden">Перейти к дате</span><input ref="dateInput" type="date" data-test="calendar-date" tabindex="-1" :value="state.date" @change="select(($event.target as HTMLInputElement).value)"></label>
       </div>
