@@ -1,6 +1,6 @@
 import type { components, operations } from '~~/types/api'
 import type { Channel } from 'laravel-echo'
-import { apiErrorMessage, apiErrorStatus } from '~/utils/apiError'
+import { apiErrorMessage, isConnectionFailure } from '~/utils/apiError'
 
 export type ChatListItem = components['schemas']['ChatListItemResource']
 type ChatPage = operations['chat.index']['responses'][200]['content']['application/json']
@@ -82,10 +82,13 @@ export const useChatsStore = defineStore('chats', () => {
       changes.forEach((change, id) => { if (change.version <= live) changes.delete(id) })
     } catch (failure) {
       if (session === generation && request === requestVersion) {
-        // A missing HTTP status means the request never reached the server:
-        // that is the connection indicator's concern, not a red list error.
-        if (apiErrorStatus(failure) === undefined) fetchError.value = 'Не удалось загрузить чаты. Попробуйте ещё раз.'
-        else error.value = apiErrorMessage(failure, 'Не удалось загрузить чаты. Попробуйте ещё раз.')
+        // No answer, or a gateway failure: the connection indicator's concern,
+        // not a red list error. Any other answer proves the server is reachable.
+        if (isConnectionFailure(failure)) fetchError.value = 'Не удалось загрузить чаты. Попробуйте ещё раз.'
+        else {
+          fetchError.value = ''
+          error.value = apiErrorMessage(failure, 'Не удалось загрузить чаты. Попробуйте ещё раз.')
+        }
       }
     } finally {
       if (session === generation && request === requestVersion) loading.value = false

@@ -19,6 +19,7 @@ onMounted(() => { void chats.fetch() })
     <aside class="chat-workspace__list" aria-label="Список чатов">
       <div class="chat-workspace__tools">
         <h1>Чаты</h1>
+        <ConnectionStatus v-if="!props.selectedId" />
         <div class="chats-actions">
           <button v-if="can('people.view') && can('chats.dm')" type="button" class="ui-button ui-button--primary" data-test="new-message" @click="startingDirect = true">Новое сообщение</button>
           <button v-if="can('chats.create_groups')" type="button" class="ui-button ui-button--secondary" data-test="new-group" @click="creating = true">Новая группа</button>

@@ -11,7 +11,7 @@ const chatLayout = computed(() => route.meta.chatLayout === true)
     <AppNav @resize="navigationHeight = $event" @flow="navigationInFlow = $event" />
     <main id="main-content" class="app-layout__content" tabindex="-1">
       <div class="app-layout__inner">
-        <ConnectionStatus />
+        <ConnectionStatus v-if="!chatLayout" />
         <slot />
       </div>
     </main>
@@ -73,7 +73,6 @@ const chatLayout = computed(() => route.meta.chatLayout === true)
    Navigation supplies its measured border-box height, including safe areas. */
 .app-layout--chat { height: 100dvh; min-height: 0; }
 .app-layout--chat .app-layout__content { display: flex; min-height: 0; padding: 8px; padding-bottom: calc(var(--app-nav-height) + 8px); }
-.app-layout--chat .app-layout__inner > :deep(.connection-status) { flex: none; margin-bottom: var(--ui-space-2); }
 .app-layout--chat .app-layout__inner { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
 /* A tall mobile bar joins document flow; chat content needs its own useful
    viewport-sized surface rather than competing with it inside a fixed shell. */

@@ -217,6 +217,18 @@ describe('notification center store', () => {
     expect(store.connectionError).toBe('')
   })
 
+  it('treats a gateway failure as a lost connection and drops it once the server answers with an error', async () => {
+    const store = useNotificationsStore()
+    get.mockRejectedValueOnce({ statusCode: 502 })
+    await store.fetch(true)
+    expect(store.connectionError).not.toBe('')
+    expect(store.error).toBe('')
+    get.mockRejectedValueOnce({ statusCode: 500 })
+    await store.fetch(true)
+    expect(store.connectionError).toBe('')
+    expect(store.error).toContain('Не удалось загрузить уведомления')
+  })
+
   it('releases a snapshot waiting for a read on logout and ignores its old mutation', async () => {
     const store = useNotificationsStore()
     await store.subscribe('u1')

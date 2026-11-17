@@ -1,6 +1,6 @@
 import type { operations } from '~~/types/api'
 import type Echo from 'laravel-echo'
-import { apiErrorMessage, apiErrorStatus } from '~/utils/apiError'
+import { apiErrorMessage, isConnectionFailure } from '~/utils/apiError'
 
 type NotificationPage = operations['notificationCenter.index']['responses'][200]['content']['application/json']
 export type AppNotification = NotificationPage['data'][number]
@@ -58,10 +58,13 @@ export const useNotificationsStore = defineStore('notifications', () => {
       fetchError.value = ''
     } catch (failure) {
       if (session === generation && version === requestVersion) {
-        // No HTTP status: the request never reached the server, which the
-        // connection indicator reports; the list keeps its last data.
-        if (apiErrorStatus(failure) === undefined) fetchError.value = 'Не удалось загрузить уведомления. Попробуйте ещё раз.'
-        else error.value = apiErrorMessage(failure, 'Не удалось загрузить уведомления. Попробуйте ещё раз.')
+        // No answer or a gateway failure goes to the connection indicator and
+        // the list keeps its last data; any other answer proves reachability.
+        if (isConnectionFailure(failure)) fetchError.value = 'Не удалось загрузить уведомления. Попробуйте ещё раз.'
+        else {
+          fetchError.value = ''
+          error.value = apiErrorMessage(failure, 'Не удалось загрузить уведомления. Попробуйте ещё раз.')
+        }
       }
     } finally {
       if (session === generation && version === requestVersion) loading.value = false

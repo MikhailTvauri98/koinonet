@@ -43,6 +43,9 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(page.locator('.chat-header h1')).toHaveText('Подготовка воскресного служения')
       await expect(page.getByRole('status').filter({ hasText: 'Нет связи' })).toHaveCount(1)
       await expect(page.getByText('Встречаемся в воскресенье.')).toBeVisible()
+      const header = await page.locator('.chat-header').boundingBox()
+      const bar = await page.getByRole('status').filter({ hasText: 'Нет связи' }).boundingBox()
+      expect(bar!.y).toBeGreaterThanOrEqual(header!.y + header!.height - 1)
       await expect(page.locator('[data-test=send]')).toBeVisible()
       await page.screenshot({ path: info.outputPath('chat-offline.png') })
 

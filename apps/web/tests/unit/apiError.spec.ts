@@ -1,6 +1,6 @@
 // @vitest-environment nuxt
 import { describe, expect, it } from 'vitest'
-import { apiErrorMessage, apiFieldErrors } from '~/utils/apiError'
+import { apiErrorMessage, apiFieldErrors, isConnectionFailure } from '~/utils/apiError'
 
 // Ошибка ofetch несёт и `statusCode`, и `status`; сетевой сбой — ни того, ни
 // другого.
@@ -57,5 +57,14 @@ describe('apiFieldErrors', () => {
   it('returns nothing for other failures', () => {
     expect(apiFieldErrors(failure(500, { errors: { timezone: ['x'] } }))).toEqual({})
     expect(apiFieldErrors(failure(undefined))).toEqual({})
+  })
+})
+
+describe('isConnectionFailure', () => {
+  it.each([undefined, 408, 502, 503, 504])('treats %s as a lost connection', (status) => {
+    expect(isConnectionFailure(status === undefined ? new Error('offline') : { statusCode: status })).toBe(true)
+  })
+  it.each([400, 401, 403, 404, 422, 429, 500])('treats %s as an answer of the application', (status) => {
+    expect(isConnectionFailure({ statusCode: status })).toBe(false)
   })
 })
