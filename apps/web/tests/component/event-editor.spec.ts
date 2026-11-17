@@ -1,6 +1,6 @@
 // @vitest-environment nuxt
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { flushPromises, enableAutoUnmount } from '@vue/test-utils'
+import { flushPromises, enableAutoUnmount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import EventEditor from '~/components/calendar/EventEditor.vue'
 import CancelEventDialog from '~/components/calendar/CancelEventDialog.vue'
@@ -114,16 +114,86 @@ it('retains a repeated-hour event instant and its real duration on unrelated PAT
   await w.get('form').trigger('submit'); await flushPromises()
   expect(patch).toHaveBeenCalledWith('/events/e1', { location: 'Зал' })
 })
-it('offers the same pending save action at the beginning and end of a long editor', async () => {
+it('has one primary save action with the create labels and a pending state', async () => {
   const w = await mountSuspended(EventEditor, { props: { initialDate: '2026-12-31' } })
   await w.get('[data-test="title"]').setValue('Встреча')
   await w.get('[data-test="starts-time"]').setValue('18:00')
   await w.get('[data-test="ends-time"]').setValue('19:00')
-  expect(w.get('[data-test="save-event-top"]').text()).toBe('Создать событие')
+  expect(w.findAll('button[type="submit"]').map(button => button.text())).toEqual(['Создать событие'])
+  expect(w.findAll('.ui-button--primary').map(button => button.text())).toEqual(['Создать событие'])
+  expect(w.get('[data-test="cancel-edit"]').text()).toBe('Отмена')
+  expect(w.text()).not.toContain('Отменить редактирование')
   post.mockImplementation(() => new Promise(() => {}))
   await w.get('form').trigger('submit')
-  expect(w.findAll('button[type="submit"]').map(button => button.text())).toEqual(['Сохраняется…', 'Сохраняется…'])
+  expect(w.findAll('button[type="submit"]').map(button => button.text())).toEqual(['Сохраняется…'])
   expect(w.get('fieldset').attributes('disabled')).toBeDefined()
+})
+const editable = { id: 'e1', owner_type: 'church', ministry: null, title: 'Встреча', description: null, location: null, starts_at: '2026-07-07T16:00:00Z', ends_at: '2026-07-07T17:00:00Z', visibility: 'church', status: 'scheduled', can_manage: true, attachments: [], slots: [] }
+it('has «Сохранить» and «Отменить редактирование» when editing', async () => {
+  const w = await mountSuspended(EventEditor, { props: { event: editable as never } })
+  expect(w.findAll('button[type="submit"]').map(button => button.text())).toEqual(['Сохранить'])
+  expect(w.get('[data-test="cancel-edit"]').text()).toBe('Отменить редактирование')
+})
+it('shows time without seconds unless the stored boundary has seconds, which stay and keep the original instant', async () => {
+  const create = await mountSuspended(EventEditor, { props: { initialDate: '2026-12-31' } })
+  for (const name of ['starts-time', 'ends-time']) expect(create.get(`[data-test="${name}"]`).attributes('step')).toBe('60')
+  create.unmount()
+  const plain = await mountSuspended(EventEditor, { props: { event: editable as never } })
+  for (const name of ['starts-time', 'ends-time']) expect(plain.get(`[data-test="${name}"]`).attributes('step')).toBe('60')
+  expect(plain.get('[data-test="starts-time"]').element).toHaveProperty('value', '18:00')
+  plain.unmount()
+  const event = { ...editable, starts_at: '2026-07-07T16:00:23Z' }
+  const w = await mountSuspended(EventEditor, { props: { event: event as never } })
+  expect(w.get('[data-test="starts-time"]').attributes('step')).toBe('1')
+  expect(w.get('[data-test="starts-time"]').element).toHaveProperty('value', '18:00:23')
+  expect(w.get('[data-test="ends-time"]').attributes('step')).toBe('60')
+  await w.get('[data-test="ends-time"]').setValue('20:00')
+  await w.get('form').trigger('submit'); await flushPromises()
+  expect(patch).toHaveBeenCalledWith('/events/e1', { ends_at: '2026-07-07T18:00:00.000Z' })
+})
+const chips = (w: { findAll: VueWrapper['findAll'] }) => w.findAll('[data-test^="duration-"]').filter(b => b.element.tagName === 'BUTTON')
+it('sets the end from a duration chip across midnight and releases the chip on manual edit', async () => {
+  const w = await mountSuspended(EventEditor, { props: { initialDate: '2026-12-31' } })
+  expect(w.get('[role="group"]').attributes('aria-label')).toBe('Длительность')
+  expect(chips(w).map(b => b.text())).toEqual(['1 ч', '1,5 ч', '2 ч', '3 ч'])
+  expect(chips(w).every(b => b.attributes('disabled') !== undefined)).toBe(true)
+  await w.get('[data-test="starts-time"]').setValue('23:00')
+  expect(chips(w).every(b => b.attributes('aria-pressed') === 'false' && b.attributes('disabled') === undefined)).toBe(true)
+  await w.get('[data-test="duration-90"]').trigger('click')
+  expect(w.get('[data-test="ends-date"]').element).toHaveProperty('value', '2027-01-01')
+  expect(w.get('[data-test="ends-time"]').element).toHaveProperty('value', '00:30')
+  expect(w.get('[data-test="duration-90"]').attributes('aria-pressed')).toBe('true')
+  expect(chips(w).filter(b => b.attributes('aria-pressed') === 'true')).toHaveLength(1)
+  await w.get('[data-test="ends-time"]').setValue('00:30')
+  expect(w.get('[data-test="duration-90"]').attributes('aria-pressed')).toBe('false')
+  await w.get('[data-test="title"]').setValue('Встреча')
+  await w.get('[data-test="duration-120"]').trigger('click')
+  await w.get('form').trigger('submit'); await flushPromises()
+  expect(post).toHaveBeenCalledWith('/events', expect.objectContaining({ starts_at: '2026-12-31T22:00:00.000Z', ends_at: '2027-01-01T00:00:00.000Z' }))
+})
+it('presses a chip on load only when the stored difference matches exactly', async () => {
+  const exact = await mountSuspended(EventEditor, { props: { event: editable as never } })
+  expect(chips(exact).filter(b => b.attributes('aria-pressed') === 'true').map(b => b.text())).toEqual(['1 ч'])
+  exact.unmount()
+  const off = await mountSuspended(EventEditor, { props: { event: { ...editable, ends_at: '2026-07-07T17:00:27Z' } as never } })
+  expect(chips(off).some(b => b.attributes('aria-pressed') === 'true')).toBe(false)
+  off.unmount()
+  const cancelledEvent = await mountSuspended(EventEditor, { props: { event: { ...editable, status: 'cancelled' } as never } })
+  expect(chips(cancelledEvent).every(b => b.attributes('disabled') !== undefined)).toBe(true)
+})
+it('explains a repeated hour only for an ambiguous time and never in Moscow', async () => {
+  const w = await mountSuspended(EventEditor, { props: { initialDate: '2026-10-25' } })
+  await w.get('[data-test="starts-time"]').setValue('01:30')
+  expect(w.text()).not.toContain('При повторе часа')
+  await w.get('[data-test="starts-time"]').setValue('02:30')
+  expect(w.get('[data-test="starts-ambiguous"]').text()).toContain('При повторе часа используется первый момент')
+  expect(w.find('[data-test="ends-ambiguous"]').exists()).toBe(false)
+  expect(w.get('[data-test="starts-time"]').attributes('aria-describedby')).toContain('starts-ambiguous')
+  w.unmount()
+  useSettingsStore().apply({ church_name: 'Церковь', timezone: 'Europe/Moscow' } as never)
+  const moscow = await mountSuspended(EventEditor, { props: { initialDate: '2026-10-25' } })
+  for (const time of ['01:30', '02:30', '03:30']) { await moscow.get('[data-test="starts-time"]').setValue(time); await moscow.get('[data-test="ends-time"]').setValue(time) }
+  expect(moscow.text()).not.toContain('При повторе часа')
 })
 it('rejects a daylight-saving gap and a timezone unavailable to the device', async () => {
   const w = await mountSuspended(EventEditor, { props: { initialDate: '2026-03-29' } })

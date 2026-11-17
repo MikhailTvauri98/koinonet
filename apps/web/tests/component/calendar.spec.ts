@@ -342,7 +342,7 @@ describe('event detail and display hooks', () => {
     await page.get('[data-test="title"]').setValue('Сохранённое название')
     patch.mockResolvedValue({ data: { ...original, title: 'Сохранённое название' } })
     get.mockRejectedValueOnce(new Error('offline'))
-    await page.get('[data-test="save-event-top"]').trigger('submit'); await flushPromises()
+    await page.get('[data-test="save-event"]').trigger('submit'); await flushPromises()
     expect(page.get('h1').text()).toBe('Сохранённое название')
     expect(page.find('.event-editor').exists()).toBe(false)
     expect(page.text()).toContain('Изменение сохранено')
@@ -365,7 +365,7 @@ describe('event detail and display hooks', () => {
     let finish!: (value: unknown) => void
     get.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
     grantPermissions(); await flushPromises()
-    expect(page.get('[data-test="save-event-top"]').element.closest('fieldset')!.disabled).toBe(true)
+    expect(page.get('[data-test="save-event"]').element.closest('fieldset')!.disabled).toBe(true)
     finish({ data: { ...original, can_manage: false, slots: original.slots.map(s => ({ ...s, can_fill: false, assignments: [] })) } }); await flushPromises()
     expect(page.text()).not.toContain('Чужое имя')
     expect(page.get('[data-test="title"]').element).toHaveProperty('value', 'Мой ввод')
