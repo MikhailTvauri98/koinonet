@@ -35,7 +35,10 @@ describe('chat list', () => {
     expect(page.text()).toContain('Архив')
     expect(page.find('time').attributes('datetime')).toBe(entry.last_message_at)
     expect(page.find('a[href="/chats/a"]').exists()).toBe(true)
-    expect(page.find('[data-test="new-group"]').exists()).toBe(false)
+    // Без прав кнопка «Написать» и её пункты не показываются.
+    expect(page.find('[data-test="write"]').exists()).toBe(false)
+    expect(page.find('[data-test="write-group"]').exists()).toBe(false)
+    expect(page.find('[data-test="write-direct"]').exists()).toBe(false)
     const nav = await mountSuspended(AppNav)
     expect(nav.find('[data-test="chat-badge"]').text()).toBe('3')
     useChatsStore().setUnreadTotal(5)

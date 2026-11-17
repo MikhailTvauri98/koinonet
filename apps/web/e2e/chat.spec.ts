@@ -159,7 +159,8 @@ test('a plain group member cannot delete another sender but the owner can modera
   const member = await createInvitedAccount(page, openPhone, person)
   const live = observeChat(member)
   await openSection(page, 'Чаты', 'Чаты')
-  await page.getByTestId('new-group').click()
+  await page.getByTestId('write').click()
+  await page.getByTestId('write-group').click()
   await page.getByTestId('title').fill('Модерация e2e')
   await page.getByTestId('search').fill(person.lastName)
   await page.getByTestId(/^option-/).filter({ hasText: fullName(person) }).click()
@@ -207,7 +208,8 @@ test('a new direct message opens an empty chat and reuses the same pair after re
   let muteEvidence: { until: string, requestedUntil: string, persistedUntil: string, unmuted: null } | undefined
   let backTransitions = 0
   for (let attempt = 0; attempt < 2; attempt++) {
-    await page.getByRole('button', { name: 'Новое сообщение', exact: true }).click()
+    await page.getByTestId('write').click()
+    await page.getByTestId('write-direct').click()
     const dialog = page.getByRole('dialog', { name: 'Новое сообщение', exact: true })
     await Promise.all([
       page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/people' && new URL(response.url()).searchParams.get('search') === person.lastName),
@@ -266,7 +268,7 @@ test('a new direct message opens an empty chat and reuses the same pair after re
     }
     await page.getByTestId('chat-back').click()
     await expect(page).toHaveURL('/chats')
-    await expect(page.getByRole('button', { name: 'Новое сообщение', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Написать', exact: true })).toBeVisible()
     backTransitions++
     await page.screenshot({ path: testInfo.outputPath(`direct-real-back-${attempt + 1}.png`) })
     // Back uses the live workspace. Reload separately proves the real list API

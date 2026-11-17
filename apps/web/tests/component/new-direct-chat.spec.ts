@@ -177,7 +177,7 @@ it('with both rights one button opens a menu with both entries and each opens it
   rights('people.view', 'chats.dm', 'chats.create_groups')
   const page = await mountSuspended(ChatsIndex)
   expect(page.get('[data-test="write"]').text()).toBe('Написать')
-  expect(page.find('[data-test="new-group"]').exists()).toBe(false)
+  expect(page.find('[data-test="write-group"]').exists()).toBe(false)
   expect(page.find('[data-test="write-direct"]').exists()).toBe(false)
   await page.get('[data-test="write"]').trigger('click'); await flushPromises()
   expect(page.get('[data-test="write-direct"]').text()).toBe('Личное сообщение')
