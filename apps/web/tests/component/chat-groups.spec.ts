@@ -143,8 +143,8 @@ it('opens a direct chat only for eligible accounts and chats.dm', async () => {
 it('creates event chat for managers and exposes existing chat link', async () => {
   const event = { id: 'x1', title: 'Т', status: 'scheduled', can_manage: true, chat_id: null, slots: [], attachments: [], starts_at: '2026-12-01T10:00:00Z', ends_at: '2026-12-01T11:00:00Z' }
   m.get.mockResolvedValue({ data: event })
-  const page = await mountSuspended(EventPage)
-  await page.get('[data-test="create-chat"]').trigger('click'); await flushPromises()
+  const page = await mountSuspended(EventPage, { attachTo: document.body })
+  await page.get('[data-test="event-menu"]').trigger('click'); await page.get('[data-test="create-chat"]').trigger('click'); await flushPromises()
   expect(m.post).toHaveBeenCalledWith('/events/x1/chat', {})
   expect(m.push).toHaveBeenCalledWith('/chats/c9')
   m.get.mockResolvedValue({ data: { ...event, can_manage: false, chat_id: 'c7' } })

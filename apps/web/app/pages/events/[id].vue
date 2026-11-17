@@ -88,7 +88,7 @@ watch(() => auth.permissions, () => {
   // refresh keeps the editor instance and its permitted input and saved notices.
   applyItem({ ...value, can_manage: value.can_manage && manages, slots: value.slots.map(slot => ({ ...slot,
     can_fill: slot.can_fill && (manages || !!slot.role?.ministry_id && canIn(slot.role.ministry_id, 'slots.assign')),
-    assignments: slot.assignments.map(assignment => can('people.view') || assignment.person.id === auth.person?.id ? assignment : { ...assignment, person: { ...assignment.person, full_name: null, photo_thumb_url: null } }),
+    assignments: slot.assignments.map(assignment => can('people.view') || assignment.person.id === auth.person?.id ? assignment : { ...assignment, person: { ...assignment.person, full_name: null, short_name: null, photo_thumb_url: null } }),
   })) })
   if (selectedSlot.value && !selectedSlot.value.can_fill) selectedSlot.value = null
   void refreshEvent()
@@ -111,13 +111,8 @@ await load()
       <PageHeader title="Редактирование события" :description="item.title" />
       <EventEditor :event="item" @saved="savedEvent" @cancel="closeEditor" />
     </template>
-    <EventCard v-else-if="item" :event="item" detail :disabled="blocked" @edit="requestAction('edit')" @cancel="requestAction('cancel')" @assign="requestAssignment" @assignments-changed="changed" @manage-slot="manageSlot">
-      <template #actions>
-        <NuxtLink v-if="item.chat_id" class="ui-button" data-test="open-chat" :to="`/chats/${encodeURIComponent(item.chat_id)}`">Открыть чат</NuxtLink>
-        <button v-else-if="item.can_manage" type="button" class="ui-button" data-test="create-chat" :disabled="chatBusy || blocked" @click="createChat">Создать чат</button>
-        <p v-if="chatError" role="alert">{{ chatError }}</p>
-      </template>
-    </EventCard>
+    <EventCard v-else-if="item" :event="item" detail :disabled="blocked" :chat-busy="chatBusy" @edit="requestAction('edit')" @cancel="requestAction('cancel')" @assign="requestAssignment" @assignments-changed="changed" @create-chat="createChat" @manage-slot="manageSlot" />
+    <p v-if="chatError" role="alert">{{ chatError }}</p>
     <AssignDialog v-if="item && selectedSlot" :key="`${item.id}-${selectedSlot.id}`" v-bind="{ slot: selectedSlot }" :event-id="item.id" :disabled="blocked" @assigned="changed" @close="selectedSlot = null" />
     <CancelEventDialog v-if="item && action === 'cancel'" :event-id="item.id" @saved="cancelledEvent" @cancel="action = null" />
     <EventSlotManager v-if="item && slotAction" v-bind="{ slot: slotAction.slot }" :event="item" :mode="slotAction.mode" @saved="savedSlot" @close="slotAction = null" />

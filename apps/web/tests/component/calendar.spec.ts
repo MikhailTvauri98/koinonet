@@ -413,7 +413,7 @@ describe('event detail and display hooks', () => {
     item.slots[0]!.assignments = [{ id: 'mine', person: { id: useAuthStore().person!.id, full_name: null, short_name: null, photo_thumb_url: '/private' }, created_at: null }]
     get.mockResolvedValue({ data: item })
     const page = await mountSuspended(EventPage)
-    expect(page.get('[data-test="my-participation"]').text()).toContain('Вы назначены')
+    expect(page.get('[data-test="my-participation"]').text()).toContain('Вы служите')
     expect(page.get('[data-test="my-participation"]').text()).toContain('Вокалист')
     expect(page.findAll('[data-test="edit-slot-s1"]')).toHaveLength(1)
     expect(page.findAll('.slot')).toHaveLength(1)
@@ -467,8 +467,8 @@ describe('event detail and display hooks', () => {
   })
   it('emits allowed management and fill hooks without making mutations', async () => {
     const item = event({ can_manage: true })
-    const card = await mountSuspended(EventCard, { props: { event: item, detail: true } })
-    await card.get('[data-test="edit-event"]').trigger('click'); await card.get('[data-test="cancel-event"]').trigger('click')
+    const card = await mountSuspended(EventCard, { props: { event: item, detail: true }, attachTo: document.body })
+    await card.get('[data-test="edit-event"]').trigger('click'); await card.get('[data-test="event-menu"]').trigger('click'); await card.get('[data-test="cancel-event"]').trigger('click'); await flushPromises()
     expect(card.emitted('edit')?.[0]).toEqual([item]); expect(card.emitted('cancel')?.[0]).toEqual([item])
     const slots = await mountSuspended(SlotList, { props: { slots: [{ ...item.slots[0]!, can_fill: true }] } })
     await slots.get('[data-test="assign-s1"]').trigger('click')
@@ -487,5 +487,90 @@ describe('event detail and display hooks', () => {
     expect(card.text()).toContain('Хор'); expect(card.find('a[href="/ministries/m1"]').exists()).toBe(false)
     useAuthStore().permissions = { administrator: false, global: [], ministries: { m1: [] } }
     await card.vm.$nextTick(); expect(card.find('a[href="/ministries/m1"]').exists()).toBe(true)
+  })
+})
+describe('event card header and my participation', () => {
+  const me = () => useAuthStore().person!.id
+  const assigned = (over: Partial<EventItem> = {}) => {
+    const item = event({ chat_id: 'c7', ...over })
+    item.slots[0]!.assignments = [{ id: 'mine', person: { id: me(), full_name: 'Я', short_name: 'Я', photo_thumb_url: null }, created_at: null }]
+    return item
+  }
+  const mount = async (item: EventItem, options: Record<string, unknown> = {}) => { get.mockResolvedValue({ data: item }); return mountSuspended(EventPage, options) }
+  it('answers what, when, where and who in the header without technical labels', async () => {
+    const page = await mount(event({ ministry: { id: 'm1', name: 'Хор', color: 'teal' }, owner_type: 'ministry' }))
+    const header = page.get('.event-head')
+    expect(header.get('.ministry-mark').text()).toBe('Хор')
+    expect(header.get('h1').text()).toBe('Воскресное служение')
+    expect(header.get('.event-head__when').text()).toBe('Вс, 8 ноября · 17:00–19:00 · 2 ч')
+    expect(header.get('.event-head__place').text()).toBe('Зал')
+    for (const text of ['Владелец события', 'Вложений нет', 'Видимость', 'Вся церковь']) expect(page.text()).not.toContain(text)
+    expect(page.text()).not.toContain('8 нояб. 2026 г.')
+  })
+  it('names the church owner and shows visibility only when it is not the whole church', async () => {
+    expect((await mount(event())).get('.event-head .ministry-mark').text()).toBe('Церковь')
+    const page = await mount(event({ visibility: 'assigned' as never }))
+    expect(page.text()).toContain('Видимость'); expect(page.text()).toContain('Только назначенные')
+  })
+  it('shows attachments only when there are some', async () => {
+    expect((await mount(event())).text()).not.toContain('Вложения')
+    const page = await mount(event({ attachments: [{ id: 'file', url: '/file', kind: 'document', thumb_url: null } as never] }))
+    expect(page.text()).toContain('Вложения'); expect(page.find('a[href="/file"]').exists()).toBe(true)
+  })
+  it('tells an assigned viewer where they serve and offers the event chat and the calendar file', async () => {
+    const page = await mount(assigned())
+    const mine = page.get('[data-test="my-participation"]')
+    expect(mine.text()).toContain('Вы служите: Вокалист')
+    expect(mine.get('[data-test="open-chat"]').text()).toBe('Чат события'); expect(mine.get('[data-test="open-chat"]').attributes('href')).toBe('/chats/c7')
+    const calendar = mine.get('[data-test="add-to-calendar"]')
+    expect(calendar.text()).toBe('В календарь'); expect(calendar.attributes('href')).toBe('/api/v1/events/e1/ics'); expect(calendar.attributes('download')).toBeDefined()
+    expect(page.find('.event-head [data-test="add-to-calendar"]').exists()).toBe(false)
+  })
+  it('hides the chat button of an assigned viewer when the event has no chat', async () => {
+    const page = await mount(assigned({ chat_id: null }))
+    expect(page.find('[data-test="open-chat"]').exists()).toBe(false)
+    expect(page.find('[data-test="my-participation"] [data-test="add-to-calendar"]').exists()).toBe(true)
+  })
+  it('puts the calendar link under the date for a viewer who is not assigned', async () => {
+    const page = await mount(event())
+    expect(page.find('[data-test="my-participation"]').exists()).toBe(false)
+    expect(page.get('.event-head [data-test="add-to-calendar"]').attributes('href')).toBe('/api/v1/events/e1/ics')
+  })
+  it('shows the cancellation reason on top and no calendar button for a cancelled event', async () => {
+    for (const item of [event({ status: 'cancelled', cancel_reason: 'Ремонт' }), assigned({ status: 'cancelled', cancel_reason: 'Ремонт' })]) {
+      const page = await mount(item)
+      expect(page.find('[data-test="add-to-calendar"]').exists()).toBe(false)
+      expect(page.get('.event-head [data-test="cancelled-e1"]').text()).toContain('Ремонт')
+    }
+  })
+  it('keeps cancelling and chat creation in the menu, by permission, with no danger button on the screen', async () => {
+    const page = await mount(event({ can_manage: true }), { attachTo: document.body })
+    expect(page.find('.event-card > .event-head .ui-button--danger').exists()).toBe(false) // slot removal in the roster is reworked in task 11
+    expect(page.findAll('.ui-button--danger').map(button => button.text())).not.toContain('Отменить событие')
+    expect(page.find('[data-test="cancel-event"]').exists()).toBe(false); expect(page.find('[data-test="create-chat"]').exists()).toBe(false)
+    const trigger = page.get('[data-test="event-menu"]')
+    expect(trigger.attributes('aria-label')).toBe('Действия с событием')
+    await trigger.trigger('click')
+    expect(page.get('[data-test="create-chat"]').text()).toBe('Создать чат события')
+    await page.get('[data-test="cancel-event"]').trigger('click'); await flushPromises()
+    expect(page.find('[data-test="reason"]').exists()).toBe(true)
+    expect(post).not.toHaveBeenCalled()
+  })
+  it('offers neither menu item without the right or when there is nothing to do', async () => {
+    expect((await mount(event())).find('[data-test="event-menu"]').exists()).toBe(false)
+    const page = await mount(event({ can_manage: true, chat_id: 'c7' }), { attachTo: document.body })
+    await page.get('[data-test="event-menu"]').trigger('click')
+    expect(page.find('[data-test="create-chat"]').exists()).toBe(false); expect(page.find('[data-test="cancel-event"]').exists()).toBe(true)
+    expect((await mount(event({ can_manage: true, chat_id: 'c7', status: 'cancelled' }))).find('[data-test="event-menu"]').exists()).toBe(false)
+  })
+  it('hides both names of another person together when people.view is revoked', async () => {
+    grantPermissions({ global: ['people.view'] })
+    const item = event()
+    item.slots[0]!.assignments = [{ id: 'a1', person: { id: 'other', full_name: 'Пётр Иванов', short_name: 'Пётр И.', photo_thumb_url: '/photo' }, created_at: null }]
+    const page = await mount(item)
+    expect(page.text()).toContain('Пётр')
+    get.mockImplementationOnce(() => new Promise(() => {})) // the re-read stays pending: only the local mask is visible
+    grantPermissions(); await flushPromises()
+    expect(page.text()).not.toContain('Пётр'); expect(page.html()).not.toContain('Иванов')
   })
 })
