@@ -215,7 +215,7 @@ defineExpose({ upload })
     <input ref="fileInput" hidden type="file" :aria-invalid="errorMessage ? 'true' : undefined" :aria-describedby="errorMessage ? errorId : undefined" :accept="(purpose === 'announcement' || purpose === 'event' || purpose === 'message') ? undefined : 'image/*'" :multiple="multiple && (purpose === 'announcement' || purpose === 'event' || purpose === 'message')" data-test="file-input" :disabled="busy || disabled" @change="onFileChange">
     <p v-if="errorMessage" :id="errorId" role="alert" class="ui-field-error" data-test="media-error">{{ errorMessage }}</p>
     <ul v-if="purpose === 'message'" class="previews" aria-label="Выбранные вложения">
-      <li v-for="(file, index) in previews" :key="index">
+      <li v-for="(file, index) in previews" :key="index" class="ui-surface-muted">
         <img v-if="file.url" :src="file.url" :alt="file.name" width="72" height="72">
         <span>{{ file.name }}{{ file.id ? '' : ' (не загружено)' }}</span>
         <button type="button" :disabled="busy || disabled" :aria-label="`Убрать ${file.name}`" @click="removePreview(index)">×</button>

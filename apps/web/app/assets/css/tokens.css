@@ -27,6 +27,12 @@
   /* Доля цвета в подложке метки и аватара (остальное — поверхность) и в их тексте (остальное — основной текст). */
   --ui-ministry-tint: 16%;
   --ui-ministry-ink: 100%;
+  /* Обычная кнопка: тональная заливка без видимой рамки. На заливке, близкой к ней
+     (.ui-surface-muted, .ui-surface-accent), заливка переходит на --ui-surface, рамка — на
+     --ui-button-border-on-fill (от 3:1 к --ui-surface-muted и --ui-accent-soft). */
+  --ui-button-fill: var(--ui-surface-muted);
+  --ui-button-border: transparent;
+  --ui-button-border-on-fill: var(--ui-border-strong);
   --ui-space-1: 0.25rem;
   --ui-space-2: 0.5rem;
   --ui-space-3: 0.75rem;
@@ -73,5 +79,7 @@
   --ui-ministry-church: #6b778a;
   /* На светлой подложке чистые бирюзовый, янтарный и церковный дают меньше 4.5:1, текст притемняется. */
   --ui-ministry-ink: 70%;
+  /* --ui-border-strong на #edf1f7 даёт 2.71:1; смесь с вторичным текстом — 3.68:1 (на #e6edff — 3.56:1). */
+  --ui-button-border-on-fill: color-mix(in srgb, var(--ui-border-strong), var(--ui-text-muted));
   --ui-shadow: 0 2px 8px rgb(32 43 58 / 3%);
 }

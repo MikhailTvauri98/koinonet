@@ -176,7 +176,7 @@ await load()
       <section v-if="canArchive && !ministry.archived_at">
         <h2>Архивация</h2>
         <button v-if="!confirmArchive" type="button" class="ui-button" data-test="archive" :disabled="saving" @click="confirmArchive = true">Архивировать</button>
-        <div v-else role="group" aria-label="Подтверждение архивации" class="notice notice--confirm">
+        <div v-else role="group" aria-label="Подтверждение архивации" class="notice ui-surface-muted">
           <p>Архивировать служение? Оно исчезнет из активного списка, история сохранится.</p>
           <button type="button" class="ui-button ui-button--danger" data-test="confirm-archive" :disabled="archiving" @click="archive">Подтвердить архивацию</button>
           <button type="button" class="ui-button" data-test="cancel-archive" :disabled="archiving" @click="confirmArchive = false">Отмена</button>
@@ -194,10 +194,7 @@ await load()
 label { display: flex; flex-direction: column; gap: var(--ui-space-1); margin-bottom: var(--ui-space-4); }
 input, textarea { font: inherit; padding: 0.65rem min(0.65rem, 10px); border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); }
 button { margin-right: min(var(--ui-space-2), 8px); }
-.notice { background: var(--ui-surface-muted); padding: min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin-top: var(--ui-space-4); }
-/* Тональные кнопки подтверждения видны только на поверхности, а не на такой же заливке. */
-.notice--confirm { background: var(--ui-surface); border: 1px solid var(--ui-border); }
-[role='alert'] { color: var(--ui-danger); }
+.notice { background: var(--ui-surface-muted); padding: min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin-top: var(--ui-space-4); }[role='alert'] { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
 fieldset { min-width: 0; border: 0; padding: 0; margin: 0; } input, textarea { width: 100%; max-width: 100%; } button { max-width: 100%; }

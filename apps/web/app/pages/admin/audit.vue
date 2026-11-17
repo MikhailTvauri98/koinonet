@@ -182,11 +182,11 @@ if (canView.value) {
         </label>
       </div>
       </FormSection>
-      <p v-if="actorId" class="admin-audit__chip" data-test="actor-chip">
+      <p v-if="actorId" class="admin-audit__chip ui-surface-muted" data-test="actor-chip">
         Кто: {{ actorName }}
         <button type="button" aria-label="Сбросить фильтр по автору" data-test="clear-actor" @click="clearActorFilter">×</button>
       </p>
-      <p v-if="subjectType" class="admin-audit__chip" data-test="subject-chip">
+      <p v-if="subjectType" class="admin-audit__chip ui-surface-muted" data-test="subject-chip">
         Объект: {{ auditSubjectLabel(subjectType) }} {{ subjectId }}
         <button type="button" aria-label="Сбросить фильтр по объекту" data-test="clear-subject" @click="clearSubjectFilter">×</button>
       </p>

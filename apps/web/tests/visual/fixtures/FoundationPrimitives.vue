@@ -20,6 +20,22 @@ const people = names.map((name, index) => ({ id: `01JCPERSON${String(index).padS
       <a href="#foundation-link" class="ui-button" data-level="link">Ссылка как кнопка</a>
       <label class="ui-field">Поле<input type="text" value="Текст"></label>
     </section>
+    <div class="ui-surface-muted" data-test="muted-surface" role="group" aria-label="Подтверждение" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 16px; padding: 16px; border-radius: 10px; background: var(--ui-surface-muted)">
+      <button type="button" data-muted="base">Без класса</button>
+      <button type="button" class="ui-button" data-muted="default">Отмена</button>
+      <button type="button" class="ui-button ui-button--danger" data-muted="danger">Подтвердить архивацию</button>
+      <a href="#foundation-muted-link" class="ui-button" data-muted="link">Ссылка</a>
+      <button type="button" class="ui-button ui-button--quiet" data-muted="quiet">Показать ещё</button>
+      <dialog data-test="nested-dialog"><button type="button" class="ui-button" data-muted="dialog">Закрыть</button></dialog>
+    </div>
+    <div class="ui-surface-accent" data-test="accent-surface" role="group" aria-label="Выбранные участники" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 16px; padding: 16px; border-radius: 10px">
+      <button type="button" data-muted="base">Открепить</button>
+      <button type="button" class="ui-button" data-muted="default">Убрать</button>
+      <button type="button" class="ui-button ui-button--danger" data-muted="danger">Удалить</button>
+      <a href="#foundation-accent-link" class="ui-button" data-muted="link">Ссылка</a>
+      <button type="button" class="ui-button ui-button--quiet" data-muted="quiet">Показать ещё</button>
+      <dialog><button type="button" class="ui-button" data-muted="dialog">Закрыть</button></dialog>
+    </div>
     <section aria-label="Метки служений" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px">
       <MinistryMark v-for="ministry in ministries" :key="ministry?.id ?? 'church'" :ministry="ministry" />
     </section>

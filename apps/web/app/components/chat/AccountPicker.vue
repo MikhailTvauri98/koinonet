@@ -29,7 +29,7 @@ watch([() => auth.sessionVersion, () => can('people.view')], () => { selected.va
 <template>
   <div class="account-picker">
     <ul v-if="selected.length" class="account-picker__selected" aria-label="Выбранные участники">
-      <li v-for="person in selected" :key="person.id">
+      <li v-for="person in selected" :key="person.id" class="ui-surface-accent">
         <span>{{ person.full_name }}</span>
         <button type="button" class="ui-button ui-button--secondary" :disabled="disabled" :aria-label="`Убрать ${person.full_name}`" @click="remove(person)">Убрать</button>
       </li>
@@ -40,6 +40,6 @@ watch([() => auth.sessionVersion, () => can('people.view')], () => { selected.va
 <style scoped>
 .account-picker { display: grid; gap: 12px; min-width: 0; }
 .account-picker__selected { list-style: none; padding: 0 !important; margin: 0; display: grid; gap: 8px; }
-.account-picker__selected li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; background: var(--ui-accent-soft); }
+.account-picker__selected li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; }
 .account-picker__selected span { flex: 1 1 10rem; min-width: 0; overflow-wrap: anywhere; }
 </style>

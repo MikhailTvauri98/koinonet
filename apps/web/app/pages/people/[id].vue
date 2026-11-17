@@ -166,7 +166,7 @@ await load()
         <p class="person-card__muted">Архивация скрывает запись из активного списка и сохраняет историю.</p>
         <button v-if="person.archived" type="button" class="ui-button" data-test="restore" :disabled="actionsLocked" @click="archive(true)">Вернуть из архива</button>
         <button v-else type="button" class="ui-button ui-button--danger" data-test="archive" :disabled="actionsLocked" @click="confirmArchive = true">Архивировать</button>
-        <div v-if="confirmArchive" role="group" aria-label="Подтверждение архивации" class="person-card__notice">
+        <div v-if="confirmArchive" role="group" aria-label="Подтверждение архивации" class="person-card__notice ui-surface-muted">
           <p>Архивировать человека? Запись будет скрыта из активного списка, история сохранится.</p>
           <div class="person-card__actions">
             <button type="button" class="ui-button ui-button--danger" data-test="confirm-action" :disabled="actionsLocked" @click="archive()">Подтвердить архивацию</button>

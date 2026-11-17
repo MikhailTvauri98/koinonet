@@ -39,11 +39,11 @@ async function colors(page: Page, selector: string) {
     }
     const token = (name: string) => rgba(tokens.getPropertyValue(name).trim())
     return {
-      tokens: Object.fromEntries(['--ui-surface-muted', '--ui-accent', '--ui-danger', '--ui-border-strong', '--ui-focus'].map(name => [name, token(name)])),
+      tokens: Object.fromEntries(['--ui-surface-muted', '--ui-accent-soft', '--ui-accent', '--ui-danger', '--ui-border-strong', '--ui-focus'].map(name => [name, token(name)])),
       elements: Array.from(document.querySelectorAll(selector)).map((element) => {
         const style = getComputedStyle(element)
         return {
-          text: element.textContent?.trim() ?? '', level: element.getAttribute('data-level') ?? '', height: element.getBoundingClientRect().height,
+          text: element.textContent?.trim() ?? '', level: element.getAttribute('data-level') ?? element.getAttribute('data-muted') ?? '', height: element.getBoundingClientRect().height,
           color: rgba(style.color), background: rgba(style.backgroundColor), borderColor: rgba(style.borderTopColor), borderWidth: style.borderTopWidth,
           outline: { style: style.outlineStyle, width: style.outlineWidth, color: rgba(style.outlineColor) },
         }
@@ -192,6 +192,29 @@ for (const theme of ['dark', 'light'] as const) {
       await page.locator(`[data-test=foundation] [data-level=${name}]`).focus()
       const focused = (await colors(page, `[data-test=foundation] [data-level=${name}]`)).elements[0]!
       expect(focused.outline, `${name} focus`).toEqual({ style: 'solid', width: '2px', color: tokens['--ui-focus'] })
+    }
+  })
+
+  test(`${theme} ordinary buttons stay visible on muted and accent surfaces`, async ({ page }) => {
+    await mountFoundation(page, theme)
+    for (const [surface, token] of [['muted-surface', '--ui-surface-muted'], ['accent-surface', '--ui-accent-soft']] as const) {
+      const container = (await colors(page, `[data-test=${surface}]`)).elements[0]!
+      const { tokens, elements } = await colors(page, `[data-test=${surface}] [data-muted]`)
+      expect(container.background, `${surface}: the container has the expected fill`).toEqual(tokens[token])
+      const control = Object.fromEntries(elements.map(element => [element.level, element]))
+      for (const name of ['base', 'default', 'danger', 'link']) {
+        const button = control[name]!, label = `${surface} ${name}`
+        expect(button.height, `${label} height`).toBeGreaterThanOrEqual(44)
+        expect(button.background.join(), `${label}: fill differs from the container`).not.toBe(container.background.join())
+        expect(button.borderWidth, `${label}: boundary`).toBe('1px')
+        expect(button.borderColor[3], `${label}: opaque boundary`).toBe(255)
+        expect(contrast(button.borderColor, container.background), `${label}: boundary against the container`).toBeGreaterThanOrEqual(3)
+        expect(contrast(button.color, button.background), `${label}: text on its fill`).toBeGreaterThanOrEqual(4.5)
+      }
+      expect(control.quiet!.background[3], `${surface}: quiet stays text-only`).toBe(0)
+      expect(control.quiet!.borderColor[3], `${surface}: quiet stays without a border`).toBe(0)
+      expect(control.dialog!.background, `${surface}: a dialog inside restores the ordinary fill`).toEqual(tokens['--ui-surface-muted'])
+      expect(control.dialog!.borderColor[3], `${surface}: a dialog inside restores the hidden border`).toBe(0)
     }
   })
 }
