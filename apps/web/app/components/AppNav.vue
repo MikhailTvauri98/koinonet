@@ -83,8 +83,9 @@ const items = computed<NavItem[]>(() => {
   return list
 })
 const primaryPaths = ['/', '/calendar', '/chats', '/notifications']
-// «Профиль» и «Календарь телефона» на компьютере живут в меню пользователя; в «Ещё» на телефоне они остаются.
-const phoneOnlyPaths = ['/settings/profile', '/settings/ical']
+// «Профиль» и «Календарь телефона» живут в «Ещё» на телефоне и в меню пользователя на компьютере: в основном списке их нет.
+const userMenuPaths = ['/settings/profile', '/settings/ical']
+const listedItems = computed(() => items.value.filter(item => !userMenuPaths.includes(item.to)))
 const secondaryItems = computed(() => {
   const list = items.value.filter(item => !primaryPaths.includes(item.to))
   if (canManageCalendar.value) list.splice(list.findIndex(item => item.to === '/announcements'), 0, { to: '/templates', label: 'Шаблоны' })
@@ -140,11 +141,11 @@ onBeforeUnmount(() => {
       </span>
       <span>{{ settings.churchName || 'Церковь' }}</span>
     </div>
-    <template v-for="item in items" :key="item.to">
+    <template v-for="item in listedItems" :key="item.to">
       <NuxtLink
         :to="item.to"
         class="app-nav__item"
-        :class="{ 'app-nav__secondary': !primaryPaths.includes(item.to), 'app-nav__phone-only': phoneOnlyPaths.includes(item.to), 'app-nav__item--active': isActive(item.to) }"
+        :class="{ 'app-nav__secondary': !primaryPaths.includes(item.to), 'app-nav__item--active': isActive(item.to) }"
         :aria-current="isActive(item.to) ? 'page' : undefined"
         active-class=""
         exact-active-class=""
@@ -177,7 +178,7 @@ onBeforeUnmount(() => {
       <span data-nav-label>Ещё</span>
     </button>
     <div v-if="auth.user" class="app-nav__user">
-      <button type="button" data-test="nav-user" class="app-nav__item app-nav__user-button" :class="{ 'app-nav__item--active': userActive }" aria-haspopup="dialog" :aria-expanded="userOpen" @click="userOpen = true">
+      <button type="button" data-test="nav-user" class="app-nav__item app-nav__user-button" :class="{ 'app-nav__item--active': userActive }" :aria-label="`Меню пользователя: ${userName || 'Профиль'}`" :aria-current="userActive ? 'page' : undefined" aria-haspopup="dialog" :aria-expanded="userOpen" @click="userOpen = true">
         <UiAvatar :id="auth.person?.id ?? auth.user.id" :name="userName || null" size="sm" decorative />
         <span class="app-nav__user-name">{{ userName || 'Профиль' }}</span>
       </button>
@@ -311,10 +312,9 @@ onBeforeUnmount(() => {
     border-right: 1px solid var(--ui-border);
   }
   .app-nav__item { flex-shrink: 0; flex-wrap: wrap; }
-  .app-nav__phone-only { display: none; }
   .app-nav__admin { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ui-border); }
-  /* Блок пользователя всегда у нижнего края панели, даже когда разделы длиннее окна. */
-  .app-nav__user { position: sticky; bottom: -24px; display: block; margin-top: auto; margin-bottom: -24px; padding: 12px 0 24px; border-top: 1px solid var(--ui-border); background: var(--ui-navigation); }
+  /* У нижнего края, когда разделы помещаются; иначе идёт за ними в общем потоке и не закрывает фокус. */
+  .app-nav__user { display: block; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--ui-border); }
   .app-nav__user-button { width: 100%; border: 0; background: transparent; text-align: start; font: inherit; font-size: .875rem; color: inherit; }
   .app-nav__user-name { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 }

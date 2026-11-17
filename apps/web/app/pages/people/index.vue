@@ -176,8 +176,8 @@ if (canView.value) await Promise.all([loadPeople(), loadMinistries()])
         </label>
         <button
           type="button" class="ui-button people-page__filters-toggle" data-test="filters-toggle"
-          :aria-expanded="filtersOpen" :aria-controls="filtersId" @click="filtersOpen = !filtersOpen"
-        >Фильтры <span v-if="activeFilters" class="people-page__count" data-test="filters-count">{{ activeFilters }}</span></button>
+          :aria-expanded="filtersOpen" :aria-controls="filtersOpen ? filtersId : undefined" @click="filtersOpen = !filtersOpen"
+        >Фильтры <span v-if="activeFilters" class="people-page__count" data-test="filters-count"><span class="visually-hidden">включено: </span>{{ activeFilters }}</span></button>
       </div>
       <div v-if="filtersOpen" :id="filtersId" class="people-page__filters ui-surface-muted" data-test="filters-panel">
         <label>
@@ -230,6 +230,7 @@ h1 { margin: 0; }
 .people-page__bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ui-space-3); }
 .people-page__search { flex: 1 1 14rem; }
 .people-page__filters-toggle { flex: none; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .people-page__count { display: inline-block; min-width: 1.5em; margin-inline-start: var(--ui-space-1); padding-inline: var(--ui-space-1); border-radius: 999px; background: var(--ui-accent); color: var(--ui-on-accent); font-size: .875rem; text-align: center; }
 .people-page__filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--ui-space-4); margin-top: var(--ui-space-3); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-4), 16px); }
 label { min-width: 0; display: flex; flex-direction: column; gap: var(--ui-space-2); }

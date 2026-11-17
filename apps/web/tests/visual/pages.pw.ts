@@ -104,7 +104,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
       await page.locator('[data-test=filter-ministry]').selectOption(ministry.id)
       await page.locator('[data-test=filter-archived]').check()
-      await expect(page.getByRole('button', { name: /^Фильтры 2$/ })).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.getByRole('button', { name: /^Фильтры включено: 2$/ })).toHaveAttribute('aria-expanded', 'true')
       await expect(page.locator('.person-item')).toContainText('В архиве')
       await expect(page.locator('.person-item')).toHaveCSS('background-color', 'rgb(29, 34, 37)')
       await fits(page)

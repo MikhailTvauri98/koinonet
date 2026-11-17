@@ -78,10 +78,21 @@ describe('phone navigation', () => {
 })
 
 describe('desktop navigation', () => {
-  it('keeps phone-only destinations out of the desktop list but in the phone sections', async () => {
+  it('keeps profile and phone calendar out of the main list; they live in the phone «Ещё» and the user menu', async () => {
     const nav = await mountSuspended(AppNav)
-    expect(nav.findAll('a.app-nav__phone-only').map(a => a.attributes('href'))).toEqual(['/settings/profile', '/settings/ical'])
-    expect(nav.findAll('a:not(.app-nav__phone-only)').map(a => a.attributes('href'))).toEqual(['/', '/calendar', '/announcements', '/chats', '/notifications'])
+    expect(nav.findAll('a').map(a => a.attributes('href'))).toEqual(['/', '/calendar', '/announcements', '/chats', '/notifications'])
+    await nav.get('[data-test="nav-more"]').trigger('click')
+    const more = nav.get('dialog[open]').findAll('a').map(a => a.attributes('href'))
+    expect(more).toContain('/settings/profile'); expect(more).toContain('/settings/ical')
+  })
+  it('names the user button as a menu and marks it current on settings pages', async () => {
+    const nav = await mountSuspended(AppNav)
+    const user = nav.get('[data-test="nav-user"]')
+    expect(user.attributes('aria-label')).toBe('Меню пользователя: Тест Вошедший')
+    expect(user.attributes('aria-current')).toBeUndefined()
+    await useRouter().push('/settings/devices'); await flushPromises()
+    expect(user.attributes('aria-current')).toBe('page')
+    await useRouter().push('/')
   })
   it('groups administration under a visible label and only with the permissions present', async () => {
     grantPermissions({ global: ['audit.view'] })

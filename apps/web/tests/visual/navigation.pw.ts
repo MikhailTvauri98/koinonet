@@ -49,13 +49,11 @@ for (const width of [320, 390, 767, 768, 1024, 1440, 1920]) {
         const admin = nav.getByRole('group', { name: 'Управление', exact: true })
         await expect(admin).toBeVisible()
         await expect(admin.getByRole('link')).toHaveText(['Роли', 'Настройки церкви', 'Журнал'])
-        // Блок пользователя прижат к нижнему краю панели и виден без прокрутки.
-        const user = nav.getByRole('button', { name: /Анна Петрова|Тест Вошедший|Профиль/ })
-        await expect(user).toBeVisible()
+        // Блок пользователя идёт за разделами (у нижнего края, если всё помещается).
+        const user = nav.getByRole('button', { name: 'Меню пользователя: Анна Петрова', exact: true })
+        await user.scrollIntoViewIfNeeded()
         await expect(user).toBeInViewport({ ratio: 1 })
-        const userBox = (await user.boundingBox())!
-        expect(userBox.height).toBeGreaterThanOrEqual(44)
-        expect(userBox.y + userBox.height).toBeGreaterThan(600)
+        expect((await user.boundingBox())!.height).toBeGreaterThanOrEqual(44)
         await page.screenshot({ path: testInfo.outputPath('navigation-desktop-' + width + '-' + scale + '.png') })
         await user.click()
         const menu = page.getByRole('dialog', { name: 'Меню пользователя', exact: true })
@@ -171,5 +169,31 @@ for (const width of [320, 768]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
     await save.scrollIntoViewIfNeeded()
     await page.screenshot({ path: testInfo.outputPath('shell-readable-' + width + '-200.png') })
+  })
+}
+
+// Фокус с клавиатуры на коротком окне: последний пункт «Управление» и блок пользователя не скрыты под чем-либо.
+for (const [width, height, scale] of [[1024, 600, 1], [768, 500, 2]] as const) {
+  test(`desktop sidebar keeps keyboard focus visible at ${width}x${height} text ${scale * 100}%`, async ({ page }) => {
+    await page.setViewportSize({ width, height }); await mockVisualApi(page); await page.goto('/')
+    if (scale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important; }' })
+    await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important; }' })
+    const nav = page.getByRole('navigation', { name: 'Основная навигация', exact: true })
+    await expect(nav.getByRole('link', { name: 'Журнал', exact: true })).toBeVisible()
+    await page.locator('body').click({ position: { x: width - 5, y: 5 } })
+    for (const target of [nav.getByRole('link', { name: 'Журнал', exact: true }), nav.getByRole('button', { name: /^Меню пользователя/ })]) {
+      let focused = false
+      for (let i = 0; i < 40 && !focused; i++) {
+        await page.keyboard.press('Tab')
+        focused = await target.evaluate(el => el === document.activeElement)
+      }
+      expect(focused, 'Tab reaches the control').toBe(true)
+      const box = (await target.boundingBox())!
+      expect(await target.evaluate((el, point) => {
+        const top = document.elementFromPoint(point.x, point.y)
+        return !!top && el.contains(top)
+      }, { x: box.x + box.width / 2, y: box.y + box.height / 2 }), 'focused control is not covered').toBe(true)
+      expect(box.y).toBeGreaterThanOrEqual(0); expect(box.y + box.height).toBeLessThanOrEqual(height)
+    }
   })
 }
