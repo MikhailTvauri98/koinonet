@@ -60,6 +60,7 @@ describe('notification center', () => {
   })
 
   it('groups a year boundary by the church day and exposes unread text on each unread row', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-17T06:20:00Z'))
     useSettingsStore().timezone = 'Europe/Moscow'
     get.mockResolvedValue({ data: [
       { ...entry, id: 'jan', created_at: '2026-12-31T21:05:00Z' },
@@ -69,12 +70,13 @@ describe('notification center', () => {
     const page = await mountSuspended(NotificationsPage)
     const groups = page.findAll('.notification-list__group')
     expect(groups).toHaveLength(2)
-    expect(groups[0]!.find('h2').text()).toBe('1 янв. 2027 г.')
+    expect(groups[0]!.find('h2').text()).toBe('Пятница, 1 января 2027')
     expect(groups[0]!.findAll('button')).toHaveLength(2)
     expect(groups[0]!.text()).toContain('00:05')
-    expect(groups[1]!.find('h2').text()).toBe('31 дек. 2026 г.')
+    expect(groups[1]!.find('h2').text()).toBe('Четверг, 31 декабря')
     expect(page.get('[data-test="notification-jan"]').text()).toContain('Непрочитано')
     expect(page.get('[data-test="notification-jan-read"]').text()).not.toContain('Непрочитано')
+    vi.useRealTimers()
   })
 
   it('keeps mark-all pending without announcing success and restores unread after rejection', async () => {

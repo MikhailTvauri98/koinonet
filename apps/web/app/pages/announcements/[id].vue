@@ -5,7 +5,7 @@ import AnnouncementEditor from '~/components/announcements/AnnouncementEditor.vu
 import MarkdownBody from '~/components/announcements/MarkdownBody.vue'
 import AttachmentList from '~/components/announcements/AttachmentList.vue'
 const api = useApi(), route = useRoute(), auth = useAuthStore()
-const { can, canIn } = useCan(), { formatDateTime } = useChurchDate()
+const { can, canIn } = useCan(), { formatMoment } = useChurchDate()
 const item = ref<Announcement | null>(null)
 const errorMessage = ref(''), actionError = ref(''), feedback = ref('')
 const editing = ref(false), confirming = ref(false), busy = ref(false), loading = ref(false)
@@ -64,7 +64,7 @@ await load()
       <div class="announcement-page__meta">
         <span v-if="item.archived" class="announcement-page__badge">В архиве</span>
         <span v-if="item.pinned" class="announcement-page__badge">Закреплено</span>
-        <p>{{ item.ministry?.name ?? 'Церковь' }} · <time :datetime="item.published_at">{{ formatDateTime(item.published_at) }}</time> · {{ item.author?.full_name ?? 'Удалённый человек' }}</p>
+        <p>{{ item.ministry?.name ?? 'Церковь' }} · <time :datetime="item.published_at">{{ formatMoment(item.published_at) }}</time> · {{ item.author?.full_name ?? 'Удалённый человек' }}</p>
         <p v-if="item.hide_after">Скрыть после: {{ item.hide_after.split('-').reverse().join('.') }}</p>
         <p v-if="manages && item.views_count !== undefined" data-test="views">Просмотров: {{ item.views_count }}</p>
       </div>

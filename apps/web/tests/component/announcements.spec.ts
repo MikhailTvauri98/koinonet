@@ -125,11 +125,12 @@ describe('announcement detail', () => {
     const previous = settings.timezone
     settings.timezone = 'America/Los_Angeles'
     try {
+      vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-17T06:20:00Z'))
       get.mockResolvedValue({ data: announcement({ published_at: '2026-10-01T02:00:00Z', hide_after: '2026-10-30' }) })
       const page = await mountSuspended(AnnouncementPage)
-      expect(page.text()).toContain('30 сент.')
+      expect(page.text()).toContain('30 сентября')
       expect(page.text()).toContain('Скрыть после: 30.10.2026')
-    } finally { settings.timezone = previous }
+    } finally { settings.timezone = previous; vi.useRealTimers() }
   })
   it('allows ministry publishers and keeps pin errors visible', async () => {
     grantPermissions({ ministries: { m1: ['announcements.publish'] } })

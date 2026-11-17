@@ -193,10 +193,11 @@ test.describe('task18 notification center', () => {
         let finish!: () => void
         const pending = new Promise<void>(resolve => { finish = resolve })
         await page.route('**/api/v1/notifications/read', async route => { await pending; await route.fulfill({ status: 500, json: { message: 'Private diagnostic' } }) })
+        await page.clock.setFixedTime(new Date('2026-11-17T06:20:00Z'))
         await page.goto('/notifications')
         await expect(page.getByRole('heading', { name: 'Уведомления', exact: true })).toBeVisible()
         await expect(page.locator('.notification-list__group')).toHaveCount(2)
-        await expect(page.locator('.notification-list__group h2').first()).toHaveText('1 янв. 2027 г.')
+        await expect(page.locator('.notification-list__group h2').first()).toHaveText('Пятница, 1 января 2027')
         await expect(page.locator('[data-test=notification-new]')).toContainText('00:05')
         await expect(page.locator('[data-test=notification-new]')).toContainText('Непрочитано')
         await expect(page.locator('[data-test=notification-read]')).not.toContainText('Непрочитано')

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { Announcement } from '~/utils/announcements'
 withDefaults(defineProps<{ announcement: Announcement, headingLevel?: 2 | 3 }>(), { headingLevel: 2 })
-const { formatDateTime } = useChurchDate()
+const { formatMoment } = useChurchDate()
 </script>
 
 <template>
   <article class="announcement-card">
     <span v-if="announcement.pinned" class="announcement-card__pin" :data-test="`pinned-${announcement.id}`">Закреплено</span>
     <component :is="`h${headingLevel}`"><NuxtLink :to="`/announcements/${encodeURIComponent(announcement.id)}`">{{ announcement.title }}</NuxtLink></component>
-    <p>{{ announcement.ministry?.name ?? 'Церковь' }} · <time :datetime="announcement.published_at">{{ formatDateTime(announcement.published_at) }}</time></p>
+    <p>{{ announcement.ministry?.name ?? 'Церковь' }} · <time :datetime="announcement.published_at">{{ formatMoment(announcement.published_at) }}</time></p>
     <p v-if="announcement.author">{{ announcement.author.full_name }}</p>
   </article>
 </template>

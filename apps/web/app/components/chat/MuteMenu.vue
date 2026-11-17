@@ -3,9 +3,9 @@ import { useChatMuted } from '~/composables/useChatMuted'
 const props = defineProps<{ until: string | null, disabled?: boolean }>()
 defineEmits<{ mute: [hours?: number], unmute: [] }>()
 const muted = useChatMuted(() => props.until)
-const { formatDateTime } = useChurchDate()
+const { formatMoment } = useChurchDate()
 const state = computed(() => !muted.value ? 'sound' : Date.parse(props.until ?? '') >= Date.parse('9999-01-01T00:00:00Z') ? 'forever' : 'until')
-const status = computed(() => state.value === 'sound' ? 'Звук включён' : state.value === 'forever' ? 'Без звука бессрочно' : `Без звука до ${formatDateTime(props.until!)}`)
+const status = computed(() => state.value === 'sound' ? 'Звук включён' : state.value === 'forever' ? 'Без звука бессрочно' : `Без звука до ${formatMoment(props.until!)}`)
 const statusId = useId()
 </script>
 <template>

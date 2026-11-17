@@ -3,13 +3,13 @@ import type { AppNotification } from '~/stores/notifications'
 
 const props = defineProps<{ items: AppNotification[], disabled?: boolean }>()
 defineEmits<{ select: [notification: AppNotification] }>()
-const { formatDate, formatTime, toLocalInput } = useChurchDate()
+const { formatDayHeading, formatTime, toLocalInput } = useChurchDate()
 const headingId = useId()
 const groups = computed(() => {
   const days = new Map<string, { key: string, label: string, items: AppNotification[] }>()
   for (const item of props.items) {
     const key = item.created_at ? toLocalInput(item.created_at).slice(0, 10) : 'undated'
-    if (!days.has(key)) days.set(key, { key, label: item.created_at ? formatDate(item.created_at) : 'Дата не указана', items: [] })
+    if (!days.has(key)) days.set(key, { key, label: item.created_at ? formatDayHeading(key) : 'Дата не указана', items: [] })
     days.get(key)!.items.push(item)
   }
   return [...days.values()]

@@ -29,7 +29,7 @@ const loadingMore = ref(false)
 const loadError = ref('')
 
 const settings = useSettingsStore()
-const { formatDateTime } = useChurchDate()
+const { formatMoment } = useChurchDate()
 const actionFilter = ref('')
 const actorId = ref<string | null>(null)
 const actorName = ref<string | null>(null)
@@ -132,7 +132,7 @@ function retry() {
 }
 
 function formatCreatedAt(iso: string) {
-  return formatDateTime(iso)
+  return formatMoment(iso)
 }
 
 watch([actionFilter, fromDate, toDate], resetList)
