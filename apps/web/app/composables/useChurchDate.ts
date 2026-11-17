@@ -34,8 +34,19 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     const ago = daysAgo(key)
     if (ago === 0) return time.format(at)
     if (ago === 1) return `вчера, ${time.format(at)}`
-    if (ago >= 2 && ago <= 6) return `${weekdayShort.format(at)}, ${time.format(at)}`
-    return dayPart(at, key)
+    if (ago === -1) return `завтра, ${time.format(at)}`
+    if ((ago >= 2 && ago <= 6) || (ago <= -2 && ago >= -6)) return `${weekdayShort.format(at)}, ${time.format(at)}`
+    return ago < 0 ? `${dayPart(at, key)}, ${time.format(at)}` : dayPart(at, key)
+  }
+
+  // Всегда со временем: журнал, последняя активность устройства.
+  const formatMomentFull = (value: string) => {
+    const at = new Date(value)
+    const key = dayKey(at)
+    const ago = daysAgo(key)
+    if (ago === 0) return `сегодня, ${time.format(at)}`
+    if (ago === 1) return `вчера, ${time.format(at)}`
+    return `${dayPart(at, key)}, ${time.format(at)}`
   }
 
   const formatEventWhen = (startIso: string, endIso: string) => {
@@ -93,6 +104,7 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     todayInChurch: () => iso.format(now()),
     formatNumericDateTime: (value: string) => numeric.format(new Date(value)),
     formatMoment,
+    formatMomentFull,
     formatEventWhen,
     formatDuration,
     formatDayHeading,
@@ -111,6 +123,7 @@ export function useChurchDate() {
     formatDateTime: (iso: string) => formatter.value.formatDateTime(iso),
     todayInChurch: () => formatter.value.todayInChurch(),
     formatMoment: (iso: string) => formatter.value.formatMoment(iso),
+    formatMomentFull: (iso: string) => formatter.value.formatMomentFull(iso),
     formatEventWhen: (startIso: string, endIso: string) => formatter.value.formatEventWhen(startIso, endIso),
     formatDuration: (startIso: string, endIso: string) => formatter.value.formatDuration(startIso, endIso),
     formatDayHeading: (dateOnly: string) => formatter.value.formatDayHeading(dateOnly),

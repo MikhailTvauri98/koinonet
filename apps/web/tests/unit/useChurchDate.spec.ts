@@ -44,6 +44,24 @@ describe('human dates', () => {
         expect(f.formatMoment('2025-11-13T10:00:00Z')).toBe('13 ноября 2025')
       })
 
+      it('formats future moments by church days', () => {
+        expect(f.formatMoment('2026-11-17T20:00:00Z')).toBe('23:00')
+        expect(f.formatMoment('2026-11-18T01:00:00Z')).toBe('завтра, 04:00')
+        expect(f.formatMoment('2026-11-20T18:40:00Z')).toBe('пт, 21:40')
+        expect(f.formatMoment('2026-11-23T18:40:00Z')).toBe('пн, 21:40')
+        expect(f.formatMoment('2026-11-24T17:00:00Z')).toBe('24 ноября, 20:00')
+        expect(f.formatMoment('2027-01-05T17:00:00Z')).toBe('5 января 2027, 20:00')
+        expect(f.formatMoment('2026-11-17T06:21:00Z')).toBe('09:21')
+      })
+
+      it('formats full moments always with time', () => {
+        expect(f.formatMomentFull('2026-11-17T06:20:00Z')).toBe('сегодня, 09:20')
+        expect(f.formatMomentFull('2026-11-16T18:40:00Z')).toBe('вчера, 21:40')
+        expect(f.formatMomentFull('2026-11-13T18:40:00Z')).toBe('13 ноября, 21:40')
+        expect(f.formatMomentFull('2025-11-13T18:40:00Z')).toBe('13 ноября 2025, 21:40')
+        expect(f.formatMomentFull('2026-11-18T01:00:00Z')).toBe('18 ноября, 04:00')
+      })
+
       it('counts days by the church calendar around midnight', () => {
         expect(f.formatMoment('2026-11-16T21:00:00Z')).toBe('00:00')
         expect(f.formatMoment('2026-11-16T20:59:00Z')).toBe('вчера, 23:59')

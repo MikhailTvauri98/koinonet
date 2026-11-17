@@ -36,7 +36,7 @@ describe('devices page', () => {
     await flushPromises()
 
     // Kiritimati (UTC+14): 23:30 UTC 1 января -> 13:30 2 января по месту.
-    expect(page.text()).toContain('2 января')
+    expect(page.text()).toContain('2 января, 13:30')
     expect(page.text()).not.toContain(' г.')
     vi.useRealTimers()
   })
