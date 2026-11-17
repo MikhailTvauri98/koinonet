@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import PageHeader from '~/components/ui/PageHeader.vue'
 import FormSection from '~/components/ui/FormSection.vue'
-import type { Ministry } from '~/utils/ministries'
+import MinistryColorField from '~/components/ministries/MinistryColorField.vue'
+import { membersCountLabel, type Ministry } from '~/utils/ministries'
+import { ministryColorVar, type MinistryColorKey } from '~/utils/ministryColor'
 import { apiErrorMessage } from '~/utils/apiError'
 
 const api = useApi(), auth = useAuthStore()
@@ -13,6 +15,9 @@ const errorMessage = ref('')
 const showForm = ref(false)
 const name = ref('')
 const description = ref('')
+const color = ref<MinistryColorKey | null>(null)
+const colorError = ref('')
+const colorField = ref<InstanceType<typeof MinistryColorField>>()
 const saving = ref(false)
 const formError = ref('')
 // Название созданного служения, которого нет в списке смотрящего: создатель
@@ -29,11 +34,11 @@ const createButton = ref<HTMLButtonElement>()
 let active = true, revision = 0, operation = 0
 onBeforeUnmount(() => { active = false; revision++; operation++ })
 async function focusCreate() { await nextTick(); createButton.value?.focus() }
-async function startCreating() { showForm.value = true; formError.value = ''; createdHidden.value = null; created.value = null; await nextTick(); focusName() }
+async function startCreating() { showForm.value = true; formError.value = ''; colorError.value = ''; color.value = null; createdHidden.value = null; created.value = null; await nextTick(); focusName() }
 async function cancelCreating() { showForm.value = false; await focusCreate() }
 function current(token: number, session: number) { return active && token === operation && session === auth.sessionVersion }
 watch([() => auth.sessionVersion, () => auth.user?.id], () => {
-  revision++; operation++; ministries.value = []; showForm.value = false; name.value = ''; description.value = ''; formError.value = ''; created.value = null; createdHidden.value = null; saving.value = false
+  revision++; operation++; ministries.value = []; showForm.value = false; name.value = ''; description.value = ''; color.value = null; colorError.value = ''; formError.value = ''; created.value = null; createdHidden.value = null; saving.value = false
   void load()
 }, { flush: 'sync' })
 
@@ -55,9 +60,11 @@ async function load() {
 
 async function submit() {
   if (saving.value || !canCreate.value) return
-  if (!name.value.trim()) {
-    formError.value = 'Заполните название.'
-    focusName()
+  const nameMissing = !name.value.trim()
+  colorError.value = color.value ? '' : 'Выберите цвет'
+  if (nameMissing) formError.value = 'Заполните название.'
+  if (nameMissing || !color.value) {
+    if (nameMissing) focusName(); else colorField.value?.focus()
     return
   }
   const token = ++operation, session = auth.sessionVersion
@@ -66,12 +73,13 @@ async function submit() {
   createdHidden.value = null
   try {
     const response = await api.post<{ data: Ministry }>('/ministries', {
-      name: name.value.trim(), description: description.value.trim() || null,
+      name: name.value.trim(), description: description.value.trim() || null, color: color.value,
     })
     if (!current(token, session) || !canCreate.value) return
     created.value = response.data
     name.value = ''
     description.value = ''
+    color.value = null
     showForm.value = false
     await focusCreate()
     await load()
@@ -82,7 +90,7 @@ async function submit() {
   }
 }
 
-watch(canCreate, (allowed) => { if (!allowed) { operation++; showForm.value = false; name.value = ''; description.value = ''; formError.value = ''; saving.value = false } }, { flush: 'sync' })
+watch(canCreate, (allowed) => { if (!allowed) { operation++; showForm.value = false; name.value = ''; description.value = ''; color.value = null; colorError.value = ''; formError.value = ''; saving.value = false } }, { flush: 'sync' })
 await load()
 </script>
 
@@ -103,6 +111,7 @@ await load()
           Описание
           <textarea v-model="description" rows="3" data-test="ministry-description" />
         </label>
+        <MinistryColorField ref="colorField" v-model="color" :error="colorError" @update:model-value="colorError = ''" />
       </fieldset>
       </FormSection>
       <p v-if="formError" id="create-ministry-error" role="alert">{{ formError }}</p>
@@ -122,11 +131,12 @@ await load()
     <ul v-else class="ministries-page__list">
       <li v-for="ministry in ministries" :key="ministry.id">
         <NuxtLink :to="`/ministries/${ministry.id}`" class="ministries-page__item">
-          <img v-if="ministry.cover_url" :src="ministry.cover_url" :alt="`Обложка: ${ministry.name}`" loading="lazy">
-          <span v-else class="ministries-page__placeholder" aria-hidden="true">{{ ministry.name.slice(0, 1) }}</span>
+          <img v-if="ministry.cover_url" :src="ministry.cover_url" alt="" loading="lazy" data-test="ministry-cover">
+          <span v-else class="ministries-page__placeholder ui-tinted" :style="{ '--tint-color': ministryColorVar(ministry) }" aria-hidden="true" data-test="ministry-tile">{{ Array.from(ministry.name.trim())[0]?.toLocaleUpperCase('ru-RU') }}</span>
           <div>
             <strong>{{ ministry.name }}</strong>
-            <p v-if="ministry.description">{{ ministry.description }}</p>
+            <p v-if="ministry.description" class="ministries-page__description">{{ ministry.description }}</p>
+            <p class="ministries-page__count" data-test="members-count">{{ membersCountLabel(ministry.members_count) }}</p>
           </div>
         </NuxtLink>
       </li>
@@ -147,8 +157,10 @@ button { max-width: 100%; margin: var(--ui-space-1) var(--ui-space-2) var(--ui-s
 .ministries-page__item { display: flex; flex-wrap: wrap; align-items: center; gap: min(var(--ui-space-4), 12px); padding: min(var(--ui-space-4), 16px); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); box-shadow: var(--ui-shadow); color: inherit; text-decoration: none; }
 .ministries-page__item:hover { border-color: var(--ui-accent); }
 .ministries-page__item > div { min-width: 0; flex: 1 1 12rem; }
-.ministries-page__item p { color: var(--ui-text-muted); margin-bottom: 0; }
+.ministries-page__item p { color: var(--ui-text-muted); margin: var(--ui-space-1) 0 0; }
+.ministries-page__description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.ministries-page__count { font-size: .875rem; }
 .ministries-page__item img, .ministries-page__placeholder { width: 56px; height: 56px; border-radius: var(--ui-radius-sm); object-fit: cover; flex-shrink: 0; }
-.ministries-page__placeholder { display: grid; place-items: center; background: var(--ui-accent-soft); color: var(--ui-accent); font-weight: 600; }
+.ministries-page__placeholder { display: grid; place-items: center; font-size: 1.5rem; font-weight: 700; line-height: 1; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 </style>

@@ -4,7 +4,7 @@ import NewDirectChatDialog from './NewDirectChatDialog.vue'
 import NewGroupDialog from './NewGroupDialog.vue'
 import ChatWriteMenu from './ChatWriteMenu.vue'
 import LoadingState from '~/components/ui/LoadingState.vue'
-const props = defineProps<{ selectedId?: string }>()
+const props = defineProps<{ selectedId?: string, embedded?: boolean }>()
 const chats = useChatsStore(), auth = useAuthStore(), { can } = useCan()
 const search = ref(''), creating = ref(false), startingDirect = ref(false)
 const filtered = computed(() => {
@@ -20,7 +20,7 @@ onMounted(() => { void chats.fetch() })
     <aside class="chat-workspace__list" aria-label="Список чатов">
       <div class="chat-workspace__tools">
         <div class="chats-head">
-          <h1>Чаты</h1>
+          <component :is="embedded ? 'h2' : 'h1'" class="chat-workspace__title">Чаты</component>
           <ChatWriteMenu @direct="startingDirect = true" @group="creating = true" />
         </div>
         <ConnectionStatus v-if="!props.selectedId" />
@@ -44,7 +44,7 @@ onMounted(() => { void chats.fetch() })
 .chat-workspace__list { width: 100%; min-width: 0; }
 .chat-workspace__tools { padding: min(1rem, 16px); }
 .chats-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-2); margin-bottom: var(--ui-space-3); }
-h1 { margin: 0; font-size: 1.25rem; }
+.chat-workspace__title { margin: 0; font-size: 1.25rem; }
 .chat-workspace__search { display: grid; gap: var(--ui-space-2); font-size: .875rem; color: var(--ui-text-muted); }
 .chat-workspace__search input { width: 100%; min-width: 0; }
 .chat-workspace__conversation { display: none; min-width: 0; min-height: min-content; }

@@ -5,7 +5,7 @@ import { takeAcceptanceScreenshot } from './support/acceptance-layout'
 
 const name = 'Константинопольский'.repeat(5) + ' Александр Александрович'
 const title = 'Событие'.repeat(28)
-const ministry = { id: 'm-pages', name: 'Служение'.repeat(12), description: 'Описание '.repeat(35), archived_at: null, chat_id: null, cover_url: null }
+const ministry = { id: 'm-pages', name: 'Служение'.repeat(12), description: 'Описание '.repeat(35), color: 'teal', members_count: 12, archived_at: null, chat_id: null, cover_url: null }
 const person = { id: 'p-pages', first_name: 'Александр', last_name: name.split(' ')[0]!, patronymic: null, full_name: name, status: 'member', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: true, account_disabled: false, ministries: [ministry] }
 const event = { id: 'e-pages', title, owner_type: 'church', ministry: null, ministry_id: null, starts_at: '2026-11-08T07:00:00Z', ends_at: '2026-11-09T09:30:00Z', location: 'Помещение'.repeat(22), description: 'Описание '.repeat(40), visibility: 'church', status: 'cancelled', cancel_reason: 'Причина '.repeat(35), can_manage: false, slots: [], attachments: [], chat_id: null }
 
@@ -121,7 +121,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await expect(page.getByRole('heading', { name: ministry.name, exact: true })).toBeVisible()
       await fits(page)
       await page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'События', exact: true }).click()
-      await expect(page.getByRole('heading', { name: /События служения/ })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 1, name: ministry.name, exact: true })).toBeVisible()
       const period = page.getByRole('group', { name: 'Период календаря' })
       await expect(period.getByRole('heading', { name: 'ноябрь 2026 г.', exact: true })).toBeVisible()
       await expect(period.getByRole('button', { name: width < 1024 ? 'Предыдущая неделя' : 'Предыдущий месяц', exact: true })).toBeVisible()

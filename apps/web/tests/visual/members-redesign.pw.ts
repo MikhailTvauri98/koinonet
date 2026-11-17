@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { expectControlInViewport } from './support/acceptance-layout'
 import { mockVisualApi } from './support/api'
 
-const ministry = { id: 'm-members', name: 'Музыкальное служение', description: 'Готовимся к событиям и служим вместе', cover_url: null, default_role_id: 'r-member', chat_id: null, archived_at: null }
+const ministry = { id: 'm-members', name: 'Музыкальное служение', description: 'Готовимся к событиям и служим вместе', cover_url: null, color: null as string | null, members_count: 100, default_role_id: 'r-member', chat_id: null, archived_at: null }
 const roles = [{ id: 'r-member', name: 'Участник' }, { id: 'r-tech', name: 'Звукорежиссёр и координатор технической команды служения' }]
 const longName = 'Константинопольский-Рождественский Александр Александрович'
 const members = Array.from({ length: 100 }, (_, index) => ({
@@ -12,12 +12,17 @@ const members = Array.from({ length: 100 }, (_, index) => ({
   roles: index < 2 ? roles : [roles[0]!],
 }))
 async function fixtures(page: Page, empty = false) {
+  // Копия на тест: правка служения (PATCH) не протекает в другие тесты.
+  const current = { ...ministry }
   await mockVisualApi(page)
   await page.route('**/members-photo.jpg', route => route.fulfill({ path: 'tests/visual/fixtures/photo-portrait.jpg', contentType: 'image/jpeg' }))
   await page.route('**/api/v1/ministries**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/api/v1', '')
-    if (path === '/ministries') await route.fulfill({ json: { data: [ministry] } })
-    else if (path === `/ministries/${ministry.id}`) await route.fulfill({ json: { data: ministry } })
+    if (path === '/ministries') await route.fulfill({ json: { data: [current] } })
+    else if (path === `/ministries/${ministry.id}`) {
+      if (route.request().method() === 'PATCH') Object.assign(current, route.request().postDataJSON())
+      await route.fulfill({ json: { data: current } })
+    }
     else if (path === `/ministries/${ministry.id}/roles`) await route.fulfill({ json: { data: roles } })
     else if (path.endsWith('/members')) await route.fulfill({ json: { data: empty ? [] : members } })
     else if (path.endsWith('/roles') && route.request().method() === 'PUT') {
@@ -46,17 +51,56 @@ for (const theme of ['dark', 'light'] as const) {
       await page.goto('/ministries')
       await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
       await expect(page.getByRole('heading', { name: 'Служения', exact: true })).toBeVisible()
+      const item = page.locator('.ministries-page__item')
+      await expect(item.locator('[data-test=ministry-tile]')).toHaveText('М')
+      await expect(item).toContainText('100 участников')
       await fits(page)
       await page.screenshot({ path: info.outputPath(`ministries-${theme}-${width}.png`), fullPage: true })
-      await page.locator('.ministries-page__item').click()
-      await expect(page.getByRole('heading', { name: ministry.name, exact: true })).toBeVisible()
+      await item.click()
+      // Заголовок страницы — название служения; плитка нейтрального цвета и подсказка управляющему.
+      await expect(page.getByRole('heading', { level: 1, name: ministry.name, exact: true })).toBeVisible()
       await expect(page.getByText(ministry.description, { exact: true })).toBeVisible()
+      await expect(page.locator('.ministry-header [data-test=members-count]')).toHaveText('100 участников')
+      await expect(page.getByRole('button', { name: 'Выберите цвет служения', exact: true })).toBeVisible()
       await fits(page)
       await page.screenshot({ path: info.outputPath(`ministry-overview-${theme}-${width}.png`), fullPage: true })
-      await page.getByRole('button', { name: 'Редактировать', exact: true }).click()
+      const menu = page.getByRole('button', { name: 'Действия со служением', exact: true })
+      await menu.click()
+      const actions = page.getByRole('dialog', { name: 'Действия со служением' })
+      for (const action of ['Изменить название и описание', 'Обложка', 'Цвет', 'Архивировать']) await expect(actions.getByRole('button', { name: action, exact: true })).toBeVisible()
+      await fits(page)
+      await page.screenshot({ path: info.outputPath(`ministry-menu-${theme}-${width}.png`), fullPage: true })
+      await actions.getByRole('button', { name: 'Изменить название и описание', exact: true }).click()
       await expect(page.getByRole('textbox', { name: 'Название', exact: true })).toBeFocused()
       await fits(page)
       await page.screenshot({ path: info.outputPath(`ministry-edit-${theme}-${width}.png`), fullPage: true })
+      await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+      await expect(menu).toBeFocused()
+      // Цвет: без предвыбора, ошибка у поля, выбор по стрелкам, сохранение меняет плитку.
+      await page.getByRole('button', { name: 'Выберите цвет служения', exact: true }).click()
+      const colors = page.getByRole('radiogroup', { name: 'Цвет служения' })
+      await expect(colors.getByRole('radio')).toHaveCount(6)
+      for (const radio of await colors.getByRole('radio').all()) {
+        await expect(radio).not.toBeChecked()
+        const box = (await radio.locator('xpath=..').boundingBox())!
+        expect(box.height).toBeGreaterThanOrEqual(44)
+      }
+      for (const label of ['Фиолетовый', 'Бирюзовый', 'Розовый', 'Янтарный', 'Голубой', 'Зелёный']) await expect(colors.getByText(label, { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+      await expect(colors.getByText('Выберите цвет', { exact: true })).toBeVisible()
+      await expect(colors).toHaveAccessibleDescription('Выберите цвет')
+      await fits(page)
+      await page.screenshot({ path: info.outputPath(`ministry-color-error-${theme}-${width}.png`), fullPage: true })
+      await colors.getByRole('radio', { name: 'Бирюзовый', exact: true }).focus()
+      await page.keyboard.press('ArrowRight')
+      await expect(colors.getByRole('radio', { name: 'Розовый', exact: true })).toBeChecked()
+      await page.screenshot({ path: info.outputPath(`ministry-color-chosen-${theme}-${width}.png`), fullPage: true })
+      const saved = page.waitForRequest(request => request.method() === 'PATCH' && request.url().endsWith(`/ministries/${ministry.id}`))
+      await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+      expect((await saved).postDataJSON()).toEqual({ color: 'rose' })
+      await expect(page.locator('.ministry-header [data-test=ministry-tile]')).toHaveAttribute('style', /--ui-ministry-rose/)
+      await expect(page.getByRole('button', { name: 'Выберите цвет служения', exact: true })).toHaveCount(0)
+      await page.screenshot({ path: info.outputPath(`ministry-colored-${theme}-${width}.png`), fullPage: true })
     })
   }
   for (const [width, height, scale] of [[390, 844, 1], [1440, 900, 1], [320, 480, 2]] as const) {
@@ -65,7 +109,8 @@ for (const theme of ['dark', 'light'] as const) {
       await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
       await fixtures(page)
       await page.goto(`/ministries/${ministry.id}/members`)
-      await expect(page.getByRole('heading', { name: 'Участники', exact: true })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 1, name: ministry.name, exact: true })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Участники', exact: true })).toHaveAttribute('aria-current', 'page')
       await page.addStyleTag({ content: `nuxt-devtools-frame { display: none !important } html { font-size: ${16 * scale}px !important; }` })
       await expect(page.locator('[data-test=member-row]')).toHaveCount(100)
       await expect(page.locator('[data-test=member-row] input')).toHaveCount(0)
@@ -147,14 +192,42 @@ test('ministry form focuses invalid names above navigation and restores actual f
   await expectControlInViewport(page, name)
   await fits(page)
   await page.screenshot({ path: info.outputPath('ministry-invalid-320-200.png') })
+  await expect(page.getByRole('radiogroup', { name: 'Цвет служения' })).toHaveAccessibleDescription('Выберите цвет')
   await page.getByRole('button', { name: 'Отмена', exact: true }).click()
   await expect(create).toBeFocused()
   await page.locator('.ministries-page__item').click()
-  await page.getByRole('button', { name: 'Редактировать', exact: true }).click()
+  const menu = page.getByRole('button', { name: 'Действия со служением', exact: true })
+  await menu.click()
+  await page.getByRole('button', { name: 'Изменить название и описание', exact: true }).click()
   const editName = page.getByRole('textbox', { name: 'Название', exact: true })
   await expect(editName).toBeFocused()
   await page.getByRole('button', { name: 'Отмена', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Редактировать', exact: true })).toBeFocused()
+  await expect(menu).toBeFocused()
+})
+
+test('creating a ministry requires a colour and sends the chosen one', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await fixtures(page)
+  await page.goto('/ministries')
+  await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+  await page.getByRole('button', { name: 'Создать служение', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Название', exact: true }).fill('Молодёжное')
+  let posted: unknown
+  await page.route('**/api/v1/ministries', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    posted = route.request().postDataJSON()
+    return route.fulfill({ status: 201, json: { data: { ...ministry, id: 'm-new', name: 'Молодёжное', color: 'sky' } } })
+  })
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await expect(page.getByRole('radiogroup', { name: 'Цвет служения' }).getByText('Выберите цвет', { exact: true })).toBeVisible()
+  expect(posted).toBeUndefined()
+  await fits(page)
+  await page.screenshot({ path: info.outputPath('ministry-create-color-required.png'), fullPage: true })
+  await page.getByRole('radio', { name: 'Голубой', exact: true }).check({ force: true })
+  await expect(page.getByText('Выберите цвет', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Служение «Молодёжное» создано' })).toBeVisible()
+  expect(posted).toEqual({ name: 'Молодёжное', description: null, color: 'sky' })
 })
 
 

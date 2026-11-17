@@ -84,7 +84,7 @@ for (const theme of ['dark', 'light'] as const) {
         const path = new URL(route.request().url()).pathname
         if (path.endsWith('/members')) return route.fulfill({ json: { data: [{ id: 'mem-direct', ministry_id: 'm-direct', person_id: person.id, joined_at: '', full_name: person.full_name, photo_url: null, roles: [{ id: 'r1', name: 'Участник' }] }] } })
         if (path.endsWith('/roles')) return route.fulfill({ json: { data: [{ id: 'r1', name: 'Участник' }] } })
-        return route.fulfill({ json: { data: { id: 'm-direct', name: 'Музыкальное служение', archived_at: null, default_role_id: 'r1', chat_id: null, cover_url: null, description: '' } } })
+        return route.fulfill({ json: { data: { id: 'm-direct', name: 'Музыкальное служение', archived_at: null, default_role_id: 'r1', chat_id: null, cover_url: null, description: '', color: 'violet', members_count: 1 } } })
       })
       await page.goto('/people/p-direct')
       await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })

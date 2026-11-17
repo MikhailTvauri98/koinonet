@@ -86,8 +86,8 @@ for (const path of ['/chats/c1', '/ministries/m1/chat']) {
       }), stage))
     }
     const menu = page.getByRole('button', { name: 'Меню чата', exact: true })
-    const wrapping = await page.locator('.chat-header h1').evaluateAll(measureWordWrapping, null)
-    const headingGeometry = await page.locator('.chat-header h1').evaluate(element => ({ width: element.getBoundingClientRect().width, font: getComputedStyle(element).fontSize }))
+    const wrapping = await page.locator('.chat-header :is(h1, h2)').evaluateAll(measureWordWrapping, null)
+    const headingGeometry = await page.locator('.chat-header :is(h1, h2)').evaluate(element => ({ width: element.getBoundingClientRect().width, font: getComputedStyle(element).fontSize }))
     const headingWords = { ...headingGeometry, broken: wrapping[0]!.broken }
     expect.soft(headingWords.broken, 'ordinary chat title words receive a readable column').toEqual([])
     expect.soft(parseFloat(headingWords.font), 'the chat title retains enlarged text').toBeGreaterThanOrEqual(36)

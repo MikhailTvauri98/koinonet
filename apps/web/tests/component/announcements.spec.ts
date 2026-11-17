@@ -48,7 +48,8 @@ describe('announcement lists', () => {
     expect(get).toHaveBeenLastCalledWith('/announcements', expect.objectContaining({ page: 1, scope: 'ministry' }))
   })
   it('uses the ministry and its publication permission', async () => {
-    grantPermissions({ ministries: { a1: ['announcements.publish'] } }); get.mockResolvedValue(list())
+    grantPermissions({ ministries: { a1: ['announcements.publish'] } })
+    get.mockImplementation((path: string) => Promise.resolve(path === '/ministries/a1' ? { data: { id: 'a1', name: 'Хор', description: null, cover_url: null, color: null, members_count: 2, default_role_id: null, chat_id: null, archived_at: null } } : list()))
     const page = await mountSuspended(MinistryAnnouncements)
     expect(get).toHaveBeenCalledWith('/announcements', expect.objectContaining({ scope: 'ministry', ministry: 'a1' }))
     expect(page.find('[data-test="publish"]').exists()).toBe(true)

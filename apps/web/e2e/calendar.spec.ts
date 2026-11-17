@@ -74,12 +74,15 @@ async function calendarSnapshot(page: Page, templateId: string, until: string): 
   throw new Error('Calendar navigation did not reach the full eight-week horizon.')
 }
 
-async function openMinistryTab(page: Page, name: string, heading: string, endpoints: string[]): Promise<void> {
+// Заголовок страницы — название служения на любой вкладке, поэтому открытую вкладку подтверждает ссылка с aria-current.
+async function openMinistryTab(page: Page, name: string, ministryName: string, endpoints: string[]): Promise<void> {
+  const tab = page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name, exact: true })
   await Promise.all([
     ...endpoints.map(endpoint => expectApiResponse(page, 'GET', endpoint, 200)),
-    page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name, exact: true }).click(),
+    tab.click(),
   ])
-  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible()
+  await expect(tab).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { level: 1, name: ministryName, exact: true })).toBeVisible()
 }
 
 // No intercepted HTTP, fake notification or synchronous queue: a real Reverb
@@ -127,7 +130,7 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   const link = page.getByRole('link', { name: ministry, exact: true })
   const ministryPath = (await link.getAttribute('href'))!
   await Promise.all([expectApiResponse(page, 'GET', ministryPath, 200), link.click()])
-  await openMinistryTab(page, 'Роли', 'Роли служения', [ministryPath, `${ministryPath}/roles`])
+  await openMinistryTab(page, 'Роли', ministry, [ministryPath, `${ministryPath}/roles`])
   await Promise.all([expectApiResponse(page, 'GET', '/permissions', 200), page.getByTestId('create-role').click()])
   await page.getByLabel('Название', { exact: true }).fill(role)
   await Promise.all([
@@ -137,7 +140,7 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   ])
   await expect(page.getByRole('button', { name: role, exact: true })).toBeVisible()
 
-  await openMinistryTab(page, 'Участники', 'Участники', [`${ministryPath}/members`, `${ministryPath}/roles`])
+  await openMinistryTab(page, 'Участники', ministry, [`${ministryPath}/members`, `${ministryPath}/roles`])
   for (const [person, ministryRole] of [[leader, 'Лидер'], [singer, role]] as const) {
     await addMember(page, person.lastName, fullName(person))
     const row = page.getByTestId('member-row').filter({ hasText: fullName(person) })

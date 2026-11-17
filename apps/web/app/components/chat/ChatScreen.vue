@@ -10,7 +10,7 @@ import MessageList from './MessageList.vue'
 import Composer from './Composer.vue'
 import PinnedBar from './PinnedBar.vue'
 
-const props = withDefaults(defineProps<{ chatId: string, backTo?: string, backLabel?: string }>(), { backTo: '/chats', backLabel: 'К списку чатов' })
+const props = withDefaults(defineProps<{ chatId: string, backTo?: string, backLabel?: string, embedded?: boolean }>(), { backTo: '/chats', backLabel: 'К списку чатов', embedded: false })
 type Chat = components['schemas']['ChatResource']
 const api = useApi()
 const route = useRoute()
@@ -239,7 +239,7 @@ defineExpose({ refresh })
       <p v-if="loading" role="status">Загрузка чата…</p>
       <p v-if="error" role="alert">{{ error }} <button v-if="!unavailable" type="button" :disabled="busy || loading" @click="retry">Повторить</button></p>
       <template v-if="chat">
-        <ChatHeader :key="chat.id" :chat="chat" :back-to="backTo" :back-label="backLabel" :member="member" :busy="busy" @changed="refresh"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
+        <ChatHeader :key="chat.id" :chat="chat" :back-to="backTo" :back-label="backLabel" :embedded="embedded" :member="member" :busy="busy" @changed="refresh"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
         <ConnectionStatus class="chat-screen__connection" />
         <PinnedBar :messages="pins" :moderate="moderate" @unpin="pin" />
       </template>

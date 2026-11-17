@@ -96,7 +96,7 @@ test('a ministry photo message and reply arrive live through Reverb', async ({ p
   await createMinistry(page, title)
   await page.getByRole('link', { name: title, exact: true }).click()
   await page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'Участники' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible()
   await addMember(page, first.lastName, fullName(first))
   await addMember(page, second.lastName, fullName(second))
   const liveA = observeChat(a), liveB = observeChat(b)

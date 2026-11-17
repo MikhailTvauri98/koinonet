@@ -275,7 +275,7 @@ for (const mode of ['people', 'accounts'] as const) {
           return route.fulfill({ json: { data, meta: { current_page: Number(query.get('page')), last_page: 2, total: 5 } } })
         })
         await page.route('**/picker-photo.jpg', route => route.fulfill({ path: 'tests/visual/fixtures/photo-portrait.jpg', contentType: 'image/jpeg' }))
-        await page.route('**/api/v1/ministries/m1', route => route.fulfill({ json: { data: { id: 'm1', name: 'Музыкальное служение', archived_at: null, chat_id: null, cover_url: null, default_role_id: 'r1' } } }))
+        await page.route('**/api/v1/ministries/m1', route => route.fulfill({ json: { data: { id: 'm1', name: 'Музыкальное служение', archived_at: null, chat_id: null, cover_url: null, color: 'violet', members_count: 1, default_role_id: 'r1' } } }))
         await page.route('**/api/v1/ministries/m1/members', route => route.fulfill(route.request().method() === 'POST'
           ? { status: 503, json: {} } : { json: { data: [] } }))
         await page.goto(mode === 'accounts' ? '/chats' : '/ministries/m1/members')

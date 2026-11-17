@@ -6,7 +6,7 @@ import UiDialog from '~/components/ui/UiDialog.vue'
 import ChatMembersDialog from './ChatMembersDialog.vue'
 import ChatInfoDialog from './ChatInfoDialog.vue'
 import { apiErrorMessage } from '~/utils/apiError'
-const props = withDefaults(defineProps<{ chat: components['schemas']['ChatResource'], member: boolean, busy: boolean, backTo?: string, backLabel?: string }>(), { backTo: '/chats', backLabel: 'К списку чатов' })
+const props = withDefaults(defineProps<{ chat: components['schemas']['ChatResource'], member: boolean, busy: boolean, backTo?: string, backLabel?: string, embedded?: boolean }>(), { backTo: '/chats', backLabel: 'К списку чатов', embedded: false })
 const emit = defineEmits<{ changed: [] }>()
 const api = useApi(), router = useRouter(), auth = useAuthStore(), chats = useChatsStore()
 const menuButton = ref<HTMLButtonElement>()
@@ -109,7 +109,7 @@ onBeforeUnmount(() => { revision++ })
     <div class="chat-header__identity">
       <img v-if="chat.avatar_url" :src="chat.avatar_url" alt="" width="44" height="44">
       <div>
-        <h1>{{ chat.title }}</h1>
+        <component :is="embedded ? 'h2' : 'h1'" class="chat-header__title">{{ chat.title }}</component>
         <p v-if="memberCount" class="chat-header__meta">{{ memberCount }}</p>
       </div>
     </div>
@@ -149,7 +149,7 @@ onBeforeUnmount(() => { revision++ })
 @media (min-width: 1024px) { .chat-header__back--list { display: none; } }
 .chat-header__identity { display: flex; flex: 1 1 10rem; min-width: 0; align-items: start; gap: .4rem; }
 .chat-header__identity > div { flex: 1; min-width: 0; }
-h1 { font-size: 1.125rem; margin: 0 0 .2rem; overflow-wrap: anywhere; }
+.chat-header__title { font-size: 1.125rem; margin: 0 0 .2rem; overflow-wrap: anywhere; }
 .chat-header__meta { margin: 0; color: var(--ui-text-muted); font-size: .875rem; }
 .chat-header > button { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
 .chat-header img { flex: 0 0 44px; border-radius: 50%; object-fit: cover; }

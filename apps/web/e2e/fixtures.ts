@@ -266,6 +266,8 @@ export async function createMinistry(page: Page, name: string): Promise<void> {
   await openSection(page, 'Служения', 'Служения')
   await page.getByRole('button', { name: 'Создать служение' }).click()
   await page.getByLabel('Название').fill(name)
+  // Цвет обязателен и без предвыбора.
+  await page.getByRole('radio', { name: 'Фиолетовый', exact: true }).check()
   // The successful POST refreshes the list; on a slow Docker bind mount that
   // GET can exceed the short element assertion timeout. Register before submit.
   await Promise.all([

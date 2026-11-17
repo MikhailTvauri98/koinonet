@@ -24,7 +24,9 @@ async function openMembersFromNav(page: Page, ministry: string): Promise<void> {
     expectApiResponse(page, 'GET', `${path}/roles`, 200),
     page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'Участники' }).click(),
   ])
-  await expect(page.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
+  // Заголовок остаётся названием служения; открытую вкладку показывает aria-current.
+  await expect(page.getByRole('heading', { level: 1, name: ministry, exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'Участники' })).toHaveAttribute('aria-current', 'page')
 }
 
 function memberRow(page: Page, name: string) {
@@ -107,7 +109,8 @@ test('a leader manages members of their own ministry only', async ({ page, openP
     expectApiResponse(leaderPhone, 'GET', `${ministryPath}/roles`, 200),
     tabs.getByRole('link', { name: 'Роли' }).click(),
   ])
-  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Роли служения' })).toBeVisible()
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Прославление', exact: true })).toBeVisible()
+  await expect(tabs.getByRole('link', { name: 'Роли' })).toHaveAttribute('aria-current', 'page')
   await Promise.all([expectApiResponse(leaderPhone, 'GET', '/permissions', 200), leaderPhone.getByRole('button', { name: 'Участник', exact: true }).click()])
   await leaderPhone.getByRole('textbox', { name: 'Описание', exact: true }).fill(description)
   await expectNoHorizontalScroll(leaderPhone, 'редактор роли служения')
@@ -126,14 +129,15 @@ test('a leader manages members of their own ministry only', async ({ page, openP
     expectApiResponse(leaderPhone, 'GET', `${ministryPath}/roles`, 200),
     tabs.getByRole('link', { name: 'Участники' }).click(),
   ])
-  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Прославление', exact: true })).toBeVisible()
+  await expect(tabs.getByRole('link', { name: 'Участники' })).toHaveAttribute('aria-current', 'page')
 
   // Состав чужого служения по прямой ссылке закрыт, и управлять им нечем.
   await Promise.all([
     expectApiResponse(leaderPhone, 'GET', `${youthHref}/members`, 403),
     visitAuthenticated(leaderPhone, `${youthHref}/members`),
   ])
-  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
+  // Служение недоступно, поэтому шапки с названием нет: вкладка показывает только отказ.
   await expect(leaderPhone.getByRole('alert')).toContainText('Нет права на это действие.')
   await expect(addButton).toHaveCount(0)
 })

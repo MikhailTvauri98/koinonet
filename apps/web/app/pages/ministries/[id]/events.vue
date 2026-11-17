@@ -2,9 +2,8 @@
 import type { EventItem } from '~/composables/useEvents'
 import type { Ministry } from '~/utils/ministries'
 import { apiErrorMessage } from '~/utils/apiError'
-import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
+import MinistryHeader from '~/components/ministries/MinistryHeader.vue'
 import CalendarBrowser from '~/components/calendar/CalendarBrowser.vue'
-import PageHeader from '~/components/ui/PageHeader.vue'
 import EventEditor from '~/components/calendar/EventEditor.vue'
 const route = useRoute(), router = useRouter(), api = useApi(), auth = useAuthStore(), settings = useSettingsStore(), { canIn } = useCan()
 const { load: loadEvents } = useEvents()
@@ -16,7 +15,7 @@ let generation = 0, requestedKey = ''
 const requestKey = () => range.value ? `${id.value}:${range.value.from}:${range.value.to}` : ''
 async function load() {
   const version = ++generation, session = auth.sessionVersion
-  loading.value = true; errorMessage.value = ''; events.value = []; ministry.value = null
+  loading.value = true; errorMessage.value = ''; events.value = []
   try {
     await settings.fetch()
     if (version !== generation || session !== auth.sessionVersion) return
@@ -32,7 +31,7 @@ async function load() {
 }
 function saved(event: EventItem) { creating.value = false; void router.push({ path: `/events/${encodeURIComponent(event.id)}`, query: { return: returnContext.value } }) }
 watch(requestKey, key => { if (state.value && key !== requestedKey) void load() })
-watch(id, () => { state.value = null; creating.value = false; void load() })
+watch(id, () => { state.value = null; ministry.value = null; creating.value = false; void load() })
 watch(() => auth.permissions, () => { creating.value = false; void load() }, { deep: true })
 watch(() => auth.sessionVersion, () => { generation++; events.value = []; ministry.value = null; creating.value = false; state.value = null; loading.value = false; errorMessage.value = '' })
 watch(() => settings.timezone, () => { if (settings.loaded && state.value) void load() })
@@ -41,8 +40,10 @@ await load()
 </script>
 <template>
   <main class="ministry-events">
-    <PageHeader :title="creating ? 'Новое событие' : ministry ? `События служения «${ministry.name}»` : 'События служения'" :description="creating ? `Служение: ${ministry?.name ?? ''}` : undefined"><template #actions><button v-if="canCreate && !creating" type="button" class="ui-button ui-button--primary" data-test="create-event" @click="creating = true">Создать событие</button></template></PageHeader>
-    <MinistryTabs :ministry-id="id" :chat-id="ministry?.chat_id" />
+    <MinistryHeader :ministry="ministry" :ministry-id="id" @updated="ministry = $event">
+      <template #actions><button v-if="canCreate && !creating" type="button" class="ui-button ui-button--primary" data-test="create-event" @click="creating = true">Создать событие</button></template>
+    </MinistryHeader>
+    <h2 v-if="creating">Новое событие</h2>
     <EventEditor v-if="creating && canCreate" :key="`${id}:${auth.sessionVersion}`" :initial-date="state?.date" :default-owner="{ type: 'ministry', ministryId: id }" @saved="saved" @cancel="creating = false" />
     <template v-else>
       <p v-if="ministry?.archived_at">Служение архивировано. События доступны для чтения.</p>

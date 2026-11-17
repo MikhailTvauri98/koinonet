@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { mockVisualApi } from './support/api'
 
 const longRole = 'Роль'.repeat(25)
-const ministry = { id: 'm-settings', name: 'Музыкальное служение', default_role_id: 'long', description: null, cover_url: null, archived: false }
+const ministry = { id: 'm-settings', name: 'Музыкальное служение', default_role_id: 'long', description: null, cover_url: null, color: 'violet', members_count: 1, chat_id: null, archived_at: null }
 const longAgent = 'UnknownBrowser/' + 'x'.repeat(1500)
 async function fixtures(page: Page) {
   await mockVisualApi(page)

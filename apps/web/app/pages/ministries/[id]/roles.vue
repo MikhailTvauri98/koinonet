@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
-import PageHeader from '~/components/ui/PageHeader.vue'
+import MinistryHeader from '~/components/ministries/MinistryHeader.vue'
 import RoleEditor from '~/components/roles/RoleEditor.vue'
 import type { Ministry } from '~/utils/ministries'
 import type { RoleLike } from '~/utils/roles'
@@ -122,10 +121,9 @@ await load()
 
 <template>
   <section class="roles-tab">
-    <MinistryTabs :ministry-id="ministryId" :chat-id="ministry?.chat_id" />
-    <PageHeader title="Роли служения" :description="ministry?.name">
+    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" @updated="ministry = $event">
       <template v-if="canManageRoles" #actions><button type="button" class="ui-button ui-button--primary" data-test="create-role" :disabled="editorBusy" @click="startCreating">Создать роль</button></template>
-    </PageHeader>
+    </MinistryHeader>
     <p v-if="!canSeeRoles" role="alert">Нет права видеть роли этого служения.</p>
     <template v-else>
       <p v-if="loading" role="status">Загрузка…</p>

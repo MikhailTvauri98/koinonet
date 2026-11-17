@@ -219,7 +219,7 @@ test('ministry calendar preserves its fixed scope and return context', async ({ 
   const api = await installAcceptanceApi(page)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/ministries/m1/events?date=2026-11-08&view=month&scope=ministry%3Am1')
-  await expect(page.getByRole('heading', { name: 'События служения «Музыкальное служение»', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Музыкальное служение', exact: true })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Область календаря', exact: true })).toHaveCount(0)
   await expect(page.locator('[data-test="selected-day"] .event-row a')).toHaveCount(2)
   const target = await page.locator('[data-test="selected-day"] .event-row a').first().getAttribute('href')

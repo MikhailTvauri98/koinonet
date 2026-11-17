@@ -17,7 +17,7 @@ async function fixtures(page: Page, readonly = false, archived = false) {
     else if (path === '/chats/c-other/messages') await route.fulfill({ json: { data: [], next_before: null, next_after: null } })
     else if (path === '/chats/c-layout') await route.fulfill({ json: { data: { ...chat, archived, can_write: !readonly, can_moderate: !readonly, members: readonly ? [] : chat.members } } })
     else if (path === '/chats/c-layout/messages') await route.fulfill({ json: { data: messages, next_before: null, next_after: null } })
-    else if (path === '/ministries/m-layout') await route.fulfill({ json: { data: { id: 'm-layout', name: 'Музыкальное служение', chat_id: chat.id, archived: false } } })
+    else if (path === '/ministries/m-layout') await route.fulfill({ json: { data: { id: 'm-layout', name: 'Музыкальное служение', description: null, cover_url: null, color: 'violet', members_count: 4, default_role_id: null, chat_id: chat.id, archived_at: null } } })
     else await route.fallback()
   })
 }

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import AddMemberDialog from '~/components/ministries/AddMemberDialog.vue'
-import PageHeader from '~/components/ui/PageHeader.vue'
 import MemberDetailsDialog from '~/components/ministries/MemberDetailsDialog.vue'
 import MemberRow from '~/components/ministries/MemberRow.vue'
-import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
+import MinistryHeader from '~/components/ministries/MinistryHeader.vue'
 import type { Member, MinistryRole } from '~/utils/ministries'
 import { apiErrorMessage } from '~/utils/apiError'
 
@@ -11,6 +10,7 @@ const api = useApi(), auth = useAuthStore()
 const route = useRoute()
 const { can, canIn } = useCan()
 const ministryId = computed(() => String(route.params.id))
+const { ministry } = useMinistry(ministryId)
 const canManage = computed(() => canIn(ministryId.value, 'members.manage'))
 // Кандидатов для добавления ищет `GET /people`, а он требует people.view:
 // без справочника кнопка вела бы в поиск, который всегда отказывает.
@@ -70,12 +70,15 @@ async function loadRoles() {
   }
 }
 
+function bumpCount(delta: number) { if (ministry.value) ministry.value = { ...ministry.value, members_count: Math.max(0, ministry.value.members_count + delta) } }
 function onAdded(member: Member) {
+  bumpCount(1)
   members.value = [...members.value, member]
   showAddDialog.value = false
 }
 
 function onRemoved(memberId: string) {
+  if (members.value.some(member => member.id === memberId)) bumpCount(-1)
   members.value = members.value.filter(member => member.id !== memberId)
   selectedMember.value = null
 }
@@ -112,11 +115,9 @@ await load()
 
 <template>
   <section class="members-tab">
-    <PageHeader title="Участники" description="Состав и роли в служении">
-      <template #breadcrumbs><NuxtLink to="/ministries">Служения</NuxtLink><span aria-hidden="true">/</span><NuxtLink :to="`/ministries/${encodeURIComponent(ministryId)}`">Обзор служения</NuxtLink></template>
+    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" @updated="ministry = $event">
       <template #actions><button v-if="canAdd" type="button" class="ui-button ui-button--primary" data-test="add-member" @click="showAddDialog = true">Добавить участника</button></template>
-    </PageHeader>
-    <MinistryTabs :ministry-id="ministryId" />
+    </MinistryHeader>
     <label class="members-tab__search"><span>Найти участника</span><input v-model="search" type="search" data-test="member-search" placeholder="Имя или роль"></label>
     <p v-if="rolesError" role="alert">
       {{ rolesError }} <button type="button" data-test="retry-roles" @click="loadRoles">Повторить</button>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import AnnouncementList from '~/components/announcements/AnnouncementList.vue'
-import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
+import MinistryHeader from '~/components/ministries/MinistryHeader.vue'
 const route = useRoute()
 const ministryId = computed(() => String(route.params.id))
+const { ministry } = useMinistry(ministryId)
 </script>
 
 <template>
-  <div><h1>Объявления служения</h1><MinistryTabs :ministry-id="ministryId" /><AnnouncementList :key="ministryId" :ministry-id="ministryId" /></div>
+  <div><MinistryHeader :ministry="ministry" :ministry-id="ministryId" @updated="ministry = $event" /><AnnouncementList :key="ministryId" :ministry-id="ministryId" /></div>
 </template>
