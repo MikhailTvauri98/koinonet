@@ -114,6 +114,79 @@ describe('calendar page', () => {
     expect(page.text()).toContain('Событий пока нет')
   })
 })
+describe('calendar month cells and toolbar', () => {
+  const day = '2026-11-10'
+  const at = (i: number) => ({ starts_at: `2026-11-10T0${i}:00:00Z`, ends_at: `2026-11-10T0${i}:30:00Z` })
+  const month = async (items: EventItem[]) => {
+    Object.assign(routeQuery, { date: day, view: 'month', scope: 'church' })
+    get.mockResolvedValue(list(items))
+    return mountSuspended(CalendarPage)
+  }
+  const chips = (page: Awaited<ReturnType<typeof month>>) => page.findAll(`[data-test="day-${day}"] .calendar-month__event`)
+  it('shows three events of a day, and the fourth only as an overflow count', async () => {
+    const three = await month([1, 2, 3].map(i => event({ id: `e${i}`, title: `Событие ${i}`, ...at(i) })))
+    expect(chips(three)).toHaveLength(3); expect(three.find(`[data-test="overflow-${day}"]`).exists()).toBe(false)
+    const four = await month([1, 2, 3, 4].map(i => event({ id: `e${i}`, title: `Событие ${i}`, ...at(i) })))
+    expect(chips(four)).toHaveLength(3); expect(four.get(`[data-test="overflow-${day}"]`).text()).toBe('Ещё 1')
+  })
+  it('marks my own assignment with visible text «Вы»', async () => {
+    useAuthStore().person = { id: 'me' } as never
+    const mine = event({ id: 'mine', title: 'Моё', ...at(1) }); mine.slots[0]!.assignments = [{ id: 'a1', person: { id: 'me', full_name: 'Я', short_name: 'Я', photo_thumb_url: null }, created_at: null }]
+    const page = await month([mine, event({ id: 'other', title: 'Чужое', ...at(2) })])
+    const [first, second] = chips(page)
+    expect(first!.text()).toContain('Вы'); expect(second!.text()).not.toContain('Вы')
+  })
+  it('strikes cancelled events and names them as cancelled', async () => {
+    const page = await month([event({ id: 'c', title: 'Отмена', status: 'cancelled', ...at(1) })])
+    const chip = chips(page)[0]!
+    expect(chip.classes()).toContain('is-cancelled'); expect(chip.text()).toContain('Отменено'); expect(chip.attributes('title')).toContain('Отменено')
+  })
+  it('takes the stripe color from the ministry and falls back to the church color', async () => {
+    const page = await month([
+      event({ id: 'm', title: 'Хор', ministry: { id: 'm1', name: 'Хор', color: 'teal' }, ...at(1) }),
+      event({ id: 'n', title: 'Без цвета', ministry: { id: 'm2', name: 'Дети', color: null }, ...at(2) }),
+      event({ id: 'c', title: 'Церковь', ...at(3) }),
+    ])
+    const [a, b, c] = chips(page).map(chip => chip.attributes('style'))
+    expect(a).toContain('var(--ui-ministry-teal)'); expect(b).toContain('var(--ui-ministry-church)'); expect(c).toContain('var(--ui-ministry-church)')
+  })
+  it('lists a legend entry per visible ministry plus the church and the «Вы» marker', async () => {
+    const page = await month([event({ id: 'm', ministry: { id: 'm1', name: 'Хор', color: 'teal' }, ...at(1) }), event({ id: 'n', ministry: { id: 'm1', name: 'Хор', color: 'teal' }, ...at(2) })])
+    const legend = page.get('[data-test="calendar-legend"]')
+    expect(legend.findAll('li').map(li => li.text())).toEqual(['Церковь', 'Хор', 'Вы — вы назначены'])
+  })
+  it('opens the native date picker from the month title and navigates to the chosen date', async () => {
+    const page = await month([])
+    const input = page.get('[data-test="calendar-date"]').element as HTMLInputElement
+    const showPicker = vi.fn(); input.showPicker = showPicker
+    expect(page.find('.calendar-toolbar input[type="date"]').exists()).toBe(true)
+    await page.get('[data-test="calendar-month-button"]').trigger('click')
+    expect(showPicker).toHaveBeenCalled()
+    await page.get('[data-test="calendar-date"]').setValue('2027-01-20'); await flushPromises()
+    expect(get).toHaveBeenLastCalledWith('/events', expect.objectContaining({ from: '2026-12-28', to: '2027-01-31' }))
+    expect(page.get('[data-test="selected-day"]').text()).toContain('20 января')
+  })
+  it('falls back to focusing the date field when showPicker is unavailable', async () => {
+    const page = await month([])
+    const input = page.get('[data-test="calendar-date"]').element as HTMLInputElement
+    Reflect.deleteProperty(input, 'showPicker'); const focus = vi.spyOn(input, 'focus')
+    await page.get('[data-test="calendar-month-button"]').trigger('click')
+    expect(focus).toHaveBeenCalled()
+  })
+  it('shows the church time zone only when the device zone differs', async () => {
+    const page = await month([])
+    const differs = new Date('2026-11-10T12:00:00Z').getTimezoneOffset() !== -600
+    expect(page.find('.calendar-zone').exists()).toBe(differs)
+    if (differs) expect(page.get('.calendar-zone').text()).toContain('Asia/Vladivostok')
+    useSettingsStore().timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; await flushPromises()
+    expect(page.find('.calendar-zone').exists()).toBe(false)
+  })
+  it('adds the following events of the same week under the selected day', async () => {
+    const page = await month([event({ id: 'wed', title: 'Среда', starts_at: '2026-11-11T07:00:00Z', ends_at: '2026-11-11T08:00:00Z' }), event({ id: 'next', title: 'Следующая неделя', starts_at: '2026-11-16T07:00:00Z', ends_at: '2026-11-16T08:00:00Z' })])
+    const rest = page.get('[data-test="week-rest"]')
+    expect(rest.text()).toContain('Дальше на неделе'); expect(rest.text()).toContain('Среда'); expect(rest.text()).not.toContain('Следующая неделя')
+  })
+})
 describe('event detail and display hooks', () => {
   it('keeps a confirmed event edit after GET fails and retries only the read', async () => {
     grantPermissions({ global: ['calendar.church.manage'] })

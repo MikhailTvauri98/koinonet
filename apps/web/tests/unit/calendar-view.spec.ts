@@ -1,6 +1,6 @@
 // @vitest-environment nuxt
 import { describe, expect, it } from 'vitest'
-import { calendarRange, calendarQuery, readCalendarQuery, safeCalendarReturn, shiftCalendarMonth } from '~/composables/useCalendarView'
+import { calendarRange, calendarQuery, legendMinistries, readCalendarQuery, safeCalendarReturn, shiftCalendarMonth, weekRemainder } from '~/composables/useCalendarView'
 import { groupCalendarDays } from '~/composables/useEvents'
 import type { EventItem } from '~/composables/useEvents'
 
@@ -33,5 +33,19 @@ describe('visible church days of events', () => {
   it('clips very long events to the visible dates, independent of the device timezone', () => {
     const groups = groupCalendarDays([event('long', '2020-01-01T00:00:00Z', '2040-01-01T00:00:00Z')], 'America/Los_Angeles', { from: '2026-11-08', to: '2026-11-09' })
     expect(groups.map(g => g.day)).toEqual(['2026-11-08', '2026-11-09'])
+  })
+})
+
+describe('month panel helpers', () => {
+  it('limits the rest of the week to days after the selected one, up to Sunday', () => {
+    expect(weekRemainder('2026-11-10')).toEqual({ from: '2026-11-11', to: '2026-11-15' })
+    expect(weekRemainder('2026-11-09')).toEqual({ from: '2026-11-10', to: '2026-11-15' })
+    expect(weekRemainder('2026-11-15')).toBeNull()
+    expect(weekRemainder('2026-12-30')).toEqual({ from: '2026-12-31', to: '2027-01-03' })
+  })
+  it('collects each ministry once, ordered by name, skipping church events', () => {
+    const item = (ministry: EventItem['ministry']) => ({ ministry } as EventItem)
+    const chor = { id: 'm1', name: 'Хор', color: 'teal' }, kids = { id: 'm2', name: 'Дети', color: null }
+    expect(legendMinistries([item(chor), item(null), item(kids), item(chor)])).toEqual([kids, chor])
   })
 })

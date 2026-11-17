@@ -630,3 +630,48 @@ test('template confirmations survive failed destination reads and archive errors
   await expect(page.getByRole('alert')).toContainText('Не удалось загрузить событие')
   expect(eventPosts).toBe(1)
 })
+
+// Задача 8 фазы 8: месяц на компьютере: до трёх событий, цвета служений, «Вы», отменённые, одна строка управления.
+const monthScreenshots = resolve('../../.superpowers/sdd/phase-8/task-8-screenshots')
+for (const width of [1024, 1440]) for (const theme of ['dark', 'light']) for (const bigText of [false, true]) {
+  test(`${theme} month shows three readable events and one toolbar line at ${width}${bigText ? ' with 200% text' : ''}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    const api = await installAcceptanceApi(page)
+    const base = api.data.event, ministry = (id: string, name: string, color: string | null) => ({ id, name, color })
+    const items = [
+      { ...base, id: 'd1', title: 'Воскресное богослужение с причастием', starts_at: '2026-11-10T07:00:00Z', ends_at: '2026-11-10T09:00:00Z' },
+      { ...base, id: 'd2', title: 'Репетиция хора перед служением', owner_type: 'ministry' as const, ministry: ministry('m1', 'Музыкальное служение', 'violet'), slots: [], starts_at: '2026-11-10T09:00:00Z', ends_at: '2026-11-10T10:00:00Z' },
+      { ...base, id: 'd3', title: 'Отменённая встреча молодёжи', owner_type: 'ministry' as const, ministry: ministry('m2', 'Молодёжь', 'amber'), slots: [], status: 'cancelled' as const, starts_at: '2026-11-10T11:00:00Z', ends_at: '2026-11-10T12:00:00Z' },
+      { ...base, id: 'd4', title: 'Четвёртое событие дня', ministry: ministry('m3', 'Без цвета', null), slots: [], starts_at: '2026-11-10T13:00:00Z', ends_at: '2026-11-10T14:00:00Z' },
+    ]
+    api.respond('GET', '/events', () => ({ json: { data: items, meta: { current_page: 1, last_page: 1, total: items.length } } }))
+    await page.goto('/calendar?date=2026-11-10&view=month&scope=church')
+    await expect(page.locator('.calendar-month')).toBeVisible()
+    await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none !important }' + (bigText ? ' html{font-size:32px!important}' : '') })
+    const cell = page.locator('[data-test="day-2026-11-10"]')
+    await expect(cell.locator('.calendar-month__event')).toHaveCount(3)
+    await expect(cell.locator('[data-test="overflow-2026-11-10"]')).toHaveText('Ещё 1')
+    await expect(cell.locator('.calendar-month__event').first()).toContainText('Вы')
+    await expect(cell.locator('.calendar-month__event.is-cancelled')).toHaveCSS('text-decoration-line', /none/)
+    await expect(cell.locator('.calendar-month__event.is-cancelled .calendar-month__text')).toHaveCSS('text-decoration-line', 'line-through')
+    await expect(page.locator('.calendar-zone')).toContainText('Europe/Moscow')
+    const legend = page.locator('[data-test="calendar-legend"]')
+    await expect(legend).toContainText('Церковь'); await expect(legend).toContainText('Музыкальное служение'); await expect(legend).toContainText('Вы — вы назначены')
+    const cellBox = (await cell.boundingBox())!
+    for (const chip of await cell.locator('.calendar-month__event').all()) {
+      const box = (await chip.boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      expect(box.x).toBeGreaterThanOrEqual(cellBox.x); expect(box.x + box.width).toBeLessThanOrEqual(cellBox.x + cellBox.width + 1)
+    }
+    if (!bigText && width === 1440) {
+      const controls = await page.locator('.calendar-toolbar > *').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return [r.top, r.bottom] }))
+      const top = Math.min(...controls.map(c => c[0]!)), bottom = Math.max(...controls.map(c => c[1]!))
+      expect(bottom - top).toBeLessThan(70)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await mkdir(monthScreenshots, { recursive: true })
+    await page.screenshot({ path: resolve(monthScreenshots, `month-${width}-${theme}${bigText ? '-text-200' : ''}.png`), fullPage: true })
+    expect(api.unhandled).toEqual([])
+  })
+}

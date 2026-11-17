@@ -1,5 +1,5 @@
 import { addCalendarDays, calendarWeekStart } from './useEvents'
-import type { EventRange } from './useEvents'
+import type { EventItem, EventRange } from './useEvents'
 
 export type CalendarView = { date: string, view: 'month' | 'list', scope: string }
 type CalendarQuery = Record<string, unknown>
@@ -51,4 +51,15 @@ export function useCalendarView(scope: string | (() => string) = 'church', visib
   watch(() => route.query, () => { if (state.value) initialize() })
   const returnContext = computed(() => state.value ? safeCalendarReturn(route.path + '?' + new URLSearchParams(calendarQuery(state.value))) : '/calendar')
   return { state, range, initialize, update, returnContext, today: () => update({ date: todayInChurch() }), move: (delta: number) => { if (state.value) update({ date: shiftCalendarMonth(state.value.date, delta) }) } }
+}
+/** Дни после выбранного до воскресенья той же недели (неделя с понедельника); null, если выбран воскресный день. */
+export function weekRemainder(date: string): EventRange | null {
+  const from = addCalendarDays(date, 1), to = addCalendarDays(calendarWeekStart(date), 6)
+  return from > to ? null : { from, to }
+}
+/** Служения загруженных событий для легенды: по одному разу, по названию; события церкви пропускаются. */
+export function legendMinistries(events: EventItem[]): NonNullable<EventItem['ministry']>[] {
+  const byId = new Map<string, NonNullable<EventItem['ministry']>>()
+  for (const event of events) if (event.ministry) byId.set(event.ministry.id, event.ministry)
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
 }

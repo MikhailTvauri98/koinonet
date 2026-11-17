@@ -129,7 +129,7 @@ for (const theme of ['dark', 'light'] as const) for (const [path, heading, guest
       '/ministries/m1/events': page.locator('[data-test=create-event]'),
       '/ministries/m1/announcements': page.getByRole('button', { name: 'Опубликовать объявление', exact: true }),
       '/ministries/m1/chat': page.getByRole('textbox', { name: 'Сообщение', exact: true }),
-      '/calendar': page.locator('[data-test=calendar-date]'),
+      '/calendar': page.locator('[data-test=calendar-month-button]'),
       '/events/new': page.locator('[data-test=save-event-top]'),
       '/events/e1': page.locator('[data-test=assign-s1]'),
       '/templates': page.locator('[data-test=new-template]'),

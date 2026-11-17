@@ -80,7 +80,6 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await expect(period.getByRole('button', { name: 'Предыдущий месяц', exact: true })).toBeVisible()
       await expect(period.getByRole('button', { name: 'Следующий месяц', exact: true })).toBeVisible()
       await expect(page.locator('[data-test=calendar-date]')).toHaveValue('2026-11-08')
-      await expect(page.locator('.calendar-zone')).toContainText('Europe/Moscow')
       expect(queries.at(-1)!.searchParams.get('from')).toBe('2026-11-01')
       expect(queries.at(-1)!.searchParams.get('to')).toBe('2026-11-30')
       // The same multi-day event is readable on both occupied civil dates.
