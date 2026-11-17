@@ -44,8 +44,35 @@ describe('announcement lists', () => {
     await page.get('[data-test="more"]').trigger('click'); await flushPromises()
     expect(page.findAll('article')).toHaveLength(2)
     expect(get).toHaveBeenLastCalledWith('/announcements', expect.objectContaining({ page: 2, scope: 'church' }))
-    await page.get('select').setValue('ministry'); await flushPromises()
+    await page.get('[data-test="scope-ministry"]').trigger('click'); await flushPromises()
     expect(get).toHaveBeenLastCalledWith('/announcements', expect.objectContaining({ page: 1, scope: 'ministry' }))
+  })
+  it('switches between church and ministries with two pressed-state buttons instead of a select', async () => {
+    get.mockResolvedValue(list())
+    const page = await mountSuspended(AnnouncementsIndex)
+    expect(page.find('select').exists()).toBe(false)
+    const church = page.get('[data-test="scope-church"]'), ministry = page.get('[data-test="scope-ministry"]')
+    expect([church.text(), ministry.text()]).toEqual(['Церковь', 'Мои служения'])
+    expect([church.attributes('aria-pressed'), ministry.attributes('aria-pressed')]).toEqual(['true', 'false'])
+    await ministry.trigger('click'); await flushPromises()
+    expect([church.attributes('aria-pressed'), ministry.attributes('aria-pressed')]).toEqual(['false', 'true'])
+  })
+  it('lists pinned first with a pin icon, a two-line plain preview, a ministry mark and one stretched link', async () => {
+    get.mockResolvedValue(list([
+      announcement({ id: 'new', title: 'Свежее', body: '## Заголовок\n**жирный** [ссылка](https://x.test)', ministry: { id: 'm1', name: 'Хор', color: 'blue' } as Announcement['ministry'] }),
+      announcement({ id: 'pin', title: 'Важное', pinned: true }),
+    ]))
+    const page = await mountSuspended(AnnouncementsIndex)
+    const cards = page.findAll('article')
+    expect(cards.map(card => card.get('a').attributes('href'))).toEqual(['/announcements/pin', '/announcements/new'])
+    expect(cards[0]!.find('[data-test="pinned-pin"] svg').exists()).toBe(true)
+    expect(cards[0]!.get('[data-test="pinned-pin"]').text()).toBe('Закреплено')
+    expect(cards[1]!.find('[data-test="pinned-new"]').exists()).toBe(false)
+    expect(cards[1]!.get('.announcement-card__text').text()).toBe('Заголовок жирный ссылка')
+    expect(cards[1]!.get('.ministry-mark').text()).toBe('Хор')
+    expect(cards[0]!.find('.ministry-mark').exists()).toBe(false)
+    expect(cards.every(card => card.findAll('a').length === 1)).toBe(true)
+    expect(cards[1]!.get('time').text()).not.toBe('')
   })
   it('uses the ministry and its publication permission', async () => {
     grantPermissions({ ministries: { a1: ['announcements.publish'] } })
@@ -316,10 +343,10 @@ describe('task17 early review', () => {
     await page.get('[data-test="title"]').setValue('Черновик')
     await page.get('[data-test="body"]').setValue('Текст')
     await page.get('form').trigger('submit'); await flushPromises()
-    expect(page.get('select').attributes('disabled')).toBeDefined()
+    expect(page.get('[data-test="scope-ministry"]').attributes('disabled')).toBeDefined()
     resolve({ data: announcement() }); await flushPromises()
     expect(page.text()).toContain('Объявление опубликовано.')
-    expect(page.get('select').attributes('disabled')).toBeUndefined()
+    expect(page.get('[data-test="scope-ministry"]').attributes('disabled')).toBeUndefined()
   })
   it.each(['/announcements', '/events', '/chats'])('renders home without waiting for %s', async path => {
     const chats = useChatsStore(); chats.loaded = false; chats.loading = false; chats.chats = []

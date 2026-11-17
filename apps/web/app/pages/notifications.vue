@@ -59,9 +59,13 @@ await load()
 <template>
   <section class="notifications-page">
     <PageHeader title="Уведомления" description="Объявления, назначения и напоминания.">
-      <template #actions><NuxtLink class="ui-button" to="/settings/notifications">Настройки уведомлений</NuxtLink></template>
+      <template #actions>
+        <NuxtLink class="ui-button ui-button--quiet notifications-page__settings" to="/settings/notifications" aria-label="Настройки уведомлений">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-8 0v6" /></svg>
+        </NuxtLink>
+      </template>
     </PageHeader>
-    <EnableNotificationsButton heading />
+    <EnableNotificationsButton compact />
     <div v-if="notifications.items.length || notifications.marking" class="notifications-page__toolbar">
       <p role="status" data-test="notification-summary">{{ notifications.marking ? 'Отмечаем уведомления…' : notifications.unreadCount ? `Непрочитано: ${notifications.unreadCount}` : 'Все уведомления прочитаны' }}</p>
       <button v-if="notifications.unreadCount || notifications.marking" type="button" class="ui-button" data-test="mark-all-read" :disabled="notifications.marking || opening" @click="markAll">Отметить всё прочитанным</button>
@@ -80,6 +84,7 @@ await load()
 
 <style scoped>
 .notifications-page { min-width: 0; max-width: 56rem; color: var(--ui-text); overflow-wrap: anywhere; }
+.notifications-page__settings { min-width: 44px; padding-inline: 0; }
 .notifications-page__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-3); margin-block: var(--ui-space-6) var(--ui-space-4); }
 .notifications-page__toolbar p { margin: 0; font-size: .875rem; color: var(--ui-text-muted); }
 .notifications-page__error { margin-block: var(--ui-space-4); color: var(--ui-danger); }

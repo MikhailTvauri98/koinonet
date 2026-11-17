@@ -19,6 +19,9 @@ const editorHeading = ref<HTMLElement | null>(null), publishButton = ref<HTMLBut
 async function openEditor() { editing.value = true; await nextTick(); editorHeading.value?.focus() }
 async function closeEditor() { editing.value = false; writing.value = false; await nextTick(); publishButton.value?.focus() }
 async function saved(result: Announcement) { published.value = result; await closeEditor(); await load(true) }
+const scopes = [{ value: 'church', label: 'Церковь' }, { value: 'ministry', label: 'Мои служения' }] as const
+// Закреплённые сверху; внутри группы порядок ответа сохраняется.
+const sorted = computed(() => [...items.value.filter(item => item.pinned), ...items.value.filter(item => !item.pinned)])
 let version = 0
 let failedReset = true
 const canPublish = computed(() => props.ministryId ? canIn(props.ministryId, 'announcements.publish') : scope.value === 'church' && can('announcements.church.publish'))
@@ -68,29 +71,30 @@ await load(true)
 <template>
   <section>
     <div class="announcement-list__toolbar">
-      <label v-if="!ministryId">Показать <select v-model="scope" :disabled="writing"><option value="church">Церковь</option><option value="ministry">Мои служения</option></select></label>
-      <button v-if="canPublish" ref="publishButton" class="primary" data-test="publish" :disabled="editing" @click="openEditor">Опубликовать объявление</button>
+      <div v-if="!ministryId" class="announcement-list__switch" role="group" aria-label="Область объявлений"><button v-for="option in scopes" :key="option.value" type="button" :data-test="`scope-${option.value}`" :aria-pressed="scope === option.value" :disabled="writing" @click="scope = option.value">{{ option.label }}</button></div>
+      <button v-if="canPublish" ref="publishButton" class="ui-button ui-button--primary" data-test="publish" :disabled="editing" @click="openEditor">Опубликовать объявление</button>
     </div>
     <p v-if="published" role="status">Объявление опубликовано. <NuxtLink :to="`/announcements/${encodeURIComponent(published.id)}`" data-test="published-result">Открыть объявление</NuxtLink></p>
     <div v-if="editing && canPublish" class="announcement-list__editor">
       <h2 ref="editorHeading" tabindex="-1">Новое объявление</h2>
       <AnnouncementEditor :scope="ministryId ? 'ministry' : 'church'" :ministry-id="ministryId" @busy="writing = $event" @saved="saved" @cancel="closeEditor" />
     </div>
-    <AnnouncementCard v-for="item in items" :key="item.id" :announcement="item" />
+    <div v-if="sorted.length" class="announcement-list__group"><AnnouncementCard v-for="item in sorted" :key="item.id" :announcement="item" /></div>
     <LoadingState v-if="loading" :label="items.length ? 'Обновляем объявления…' : 'Загружаем объявления…'" />
     <EmptyState v-else-if="!items.length && !errorMessage" title="Объявлений пока нет." :description="emptyDescription" />
     <p v-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" data-test="retry-announcements" :disabled="loading" @click="load(failedReset)">Повторить</button></p>
-    <button v-if="page < lastPage && !errorMessage && page" data-test="more" :disabled="loading" @click="load()">Показать ещё</button>
+    <button v-if="page < lastPage && !errorMessage && page" class="ui-button ui-button--quiet" data-test="more" :disabled="loading" @click="load()">Показать ещё</button>
   </section>
 </template>
 
 <style scoped>
 section { min-width: 0; overflow-wrap: anywhere; }
-label { display: block; margin-bottom: var(--ui-space-3); }
-select { display: block; min-width: 0; width: 100%; max-width: 24rem; }
-.announcement-list__toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: var(--ui-space-3); margin-bottom: var(--ui-space-4); }
-.announcement-list__toolbar label { flex: 1 1 16rem; margin: 0; }
+.announcement-list__toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ui-space-3); margin-bottom: var(--ui-space-4); }
+.announcement-list__switch { display: flex; flex-wrap: wrap; border: 1px solid var(--ui-border); padding: 3px; border-radius: var(--ui-radius-sm); background: var(--ui-surface); }
+.announcement-list__switch button { min-height: 44px; padding: 8px 12px; border: 0; background: transparent; }
+.announcement-list__switch button[aria-pressed=true] { color: var(--ui-accent); background: var(--ui-accent-soft); }
+.announcement-list__group { margin-block: var(--ui-space-4); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); background: var(--ui-surface); overflow: clip; }
+.announcement-list__group > :deep(.announcement-card + .announcement-card) { border-top: 1px solid var(--ui-border); }
 .announcement-list__editor { margin-block: var(--ui-space-6); }
-.primary { background: var(--ui-accent); color: var(--ui-on-accent); border-color: var(--ui-accent); font-weight: 600; }
 button { max-width: 100%; overflow-wrap: anywhere; }
 </style>

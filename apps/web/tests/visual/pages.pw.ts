@@ -101,8 +101,10 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
     test('people filters and archive keep long names and hidden contacts', async ({ page }, info) => {
       await page.goto('/people')
       await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
       await page.locator('[data-test=filter-ministry]').selectOption(ministry.id)
       await page.locator('[data-test=filter-archived]').check()
+      await expect(page.getByRole('button', { name: /^Фильтры 2$/ })).toHaveAttribute('aria-expanded', 'true')
       await expect(page.locator('.person-item')).toContainText('В архиве')
       await expect(page.locator('.person-item')).toHaveCSS('background-color', 'rgb(29, 34, 37)')
       await fits(page)
@@ -134,6 +136,8 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await page.goto('/people')
       await expect(page.locator('.people-page [role=status]')).toContainText('Люди не найдены.')
       await expect(page.locator('[data-test=create-person]')).toBeVisible()
+      await expect(page.locator('[data-test=search]')).toBeVisible()
+      await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
       await expect(page.locator('[data-test=filter-status]')).toBeVisible()
       await fits(page)
       await page.goto('/ministries')
@@ -307,10 +311,21 @@ for (const theme of ['dark', 'light'] as const) {
       await page.goto('/people')
       if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
       await expect(page.locator('.person-item')).toHaveCount(2)
+      // «без ролей» — только фильтр: в строках пометки нет, поиск и «Фильтры» видны, панель закрыта.
+      await expect(page.locator('.person-item').filter({ hasText: 'без ролей' })).toHaveCount(0)
+      await expect(page.locator('[data-test=search]')).toBeVisible()
+      const filtersToggle = page.getByRole('button', { name: 'Фильтры', exact: true })
+      await expect(filtersToggle).toHaveAttribute('aria-expanded', 'false')
+      expect((await filtersToggle.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      await expect(page.locator('[data-test=filter-without-roles]')).toHaveCount(0)
       if (width === 1440) expect((await page.locator('.person-item').last().boundingBox())!.height).toBeLessThanOrEqual(100)
       await fits(page)
       await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
       await page.screenshot({ path: info.outputPath('people-directory.png'), fullPage: true })
+      await filtersToggle.click()
+      await expect(page.locator('[data-test=filter-without-roles]')).toBeVisible()
+      await fits(page)
+      await page.screenshot({ path: info.outputPath('people-directory-filters.png'), fullPage: true })
       await page.getByRole('link', { name: card.full_name, exact: true }).click()
       if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
       await expect(page.getByRole('heading', { name: card.full_name, exact: true })).toBeVisible()
@@ -503,4 +518,83 @@ test('task17 a long week keeps pinned announcements and unread chats together in
   await fits(page)
   await takeAcceptanceScreenshot(page, info, 'task17-long-week-columns')
   expect(api.unhandled).toEqual([])
+})
+
+// Фаза 8, задача 17: объявления и уведомления по общим правилам.
+test.describe('phase 8 task 17 announcements and notifications', () => {
+  for (const theme of ['dark', 'light'] as const) {
+    for (const [width, height, scale] of [[390, 844, 100], [1440, 1000, 100], [320, 900, 200]] as const) {
+      test(`announcement list ${theme} ${width}x${height} ${scale}%: pinned first, plain two-line preview, whole row link`, async ({ page }, info) => {
+        const api = await installAcceptanceApi(page)
+        await page.setViewportSize({ width, height })
+        await page.addInitScript(({ theme, scale }) => {
+          localStorage.setItem('church.ui.theme', theme)
+          document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%` })
+        }, { theme, scale })
+        const base = api.data.announcement
+        const long = 'Очень длинный текст объявления с **разметкой** и [ссылкой](https://example.test), который не помещается в две строки. '.repeat(6)
+        const data = [
+          { ...base, id: 'fresh', title: 'Свежее объявление служения', body: long, pinned: false, scope: 'ministry', ministry: { id: 'm1', name: 'Музыкальное служение', color: 'blue' } },
+          { ...base, id: 'pin', title: 'Закреплённое объявление церкви', body: long, pinned: true, scope: 'church', ministry: null },
+        ]
+        api.respond('GET', '/announcements', () => ({ json: { data, meta: { current_page: 1, last_page: 1, total: 2 } } }))
+        await page.goto('/announcements')
+        const cards = page.locator('.announcement-card')
+        await expect(cards).toHaveCount(2)
+        await expect(cards.first().getByRole('link')).toHaveText('Закреплённое объявление церкви')
+        await expect(cards.first()).toContainText('Закреплено')
+        await expect(cards.last().locator('.ministry-mark')).toContainText('Музыкальное служение')
+        await expect(cards.last().locator('.announcement-card__text')).not.toContainText('**')
+        // Две строки: высота превью не больше двух высот строки.
+        for (const text of await cards.locator('.announcement-card__text').all()) {
+          const { height, line } = await text.evaluate(el => ({ height: el.getBoundingClientRect().height, line: parseFloat(getComputedStyle(el).lineHeight) }))
+          expect(height).toBeLessThanOrEqual(line * 2 + 1)
+        }
+        const switchGroup = page.getByRole('group', { name: 'Область объявлений' })
+        await expect(switchGroup.getByRole('button', { name: 'Церковь', exact: true })).toHaveAttribute('aria-pressed', 'true')
+        await expect(switchGroup.getByRole('button', { name: 'Мои служения', exact: true })).toHaveAttribute('aria-pressed', 'false')
+        for (const control of await switchGroup.getByRole('button').all()) expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await expect(page.locator('select')).toHaveCount(0)
+        // Заголовок без подчёркивания, ссылка одна, строка кликабельна целиком.
+        await expect(cards.first().getByRole('link')).toHaveCSS('text-decoration-line', 'none')
+        await cards.last().scrollIntoViewIfNeeded()
+        const box = (await cards.last().boundingBox())!
+        await page.mouse.click(box.x + box.width - 6, box.y + 6)
+        await expect(page).toHaveURL(/\/announcements\/fresh$/)
+        await page.goBack()
+        await fits(page)
+        await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+        await takeAcceptanceScreenshot(page, info, `phase8-task17-${theme}-${width}-announcements`)
+      })
+
+      test(`notifications ${theme} ${width}x${height} ${scale}%: compact phone offer and settings icon`, async ({ page }, info) => {
+        await mockVisualApi(page)
+        await page.setViewportSize({ width, height })
+        await page.addInitScript(({ theme, scale }) => {
+          localStorage.setItem('church.ui.theme', theme)
+          // Предложение «Включить» показывается там, где Push API доступен: подменяем состояние устройства.
+          Object.defineProperty(window, 'Notification', { configurable: true, value: Object.assign(function () {}, { permission: 'default' }) })
+          document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%` })
+        }, { theme, scale })
+        await page.route('**/api/v1/notifications', route => route.fulfill({ json: { data: [], meta: { unread_count: 0 }, next_cursor: null } }))
+        await page.goto('/notifications')
+        const settings = page.getByRole('link', { name: 'Настройки уведомлений', exact: true })
+        await expect(settings).toBeVisible()
+        const iconBox = (await settings.boundingBox())!
+        expect(iconBox.width).toBeGreaterThanOrEqual(44); expect(iconBox.height).toBeGreaterThanOrEqual(44)
+        await expect(settings).toHaveText('')
+        await expect(page.getByRole('heading', { name: 'Пуши на этом устройстве' })).toHaveCount(0)
+        const offer = page.locator('.enable-notifications--compact')
+        await expect(offer).toBeVisible()
+        const enable = offer.getByRole('button', { name: 'Включить', exact: true })
+        if (await enable.count()) {
+          await expect(offer).toContainText('Получать уведомления на телефон')
+          expect((await enable.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        }
+        await fits(page)
+        await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+        await takeAcceptanceScreenshot(page, info, `phase8-task17-${theme}-${width}-notifications`)
+      })
+    }
+  }
 })

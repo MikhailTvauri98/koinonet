@@ -65,6 +65,7 @@ describe('list feedback', () => {
     grantPermissions({ global: ['people.view', 'people.manage'] })
     await flushPromises()
     expect(page.get('[role=status]').text()).toContain('Создайте человека')
+    await page.get('[data-test=filters-toggle]').trigger('click')
     await page.get('[data-test=filter-status]').setValue('guest')
     await flushPromises()
     expect(page.get('[role=status]').text()).toContain('Измените поиск или фильтры')
@@ -78,7 +79,7 @@ describe('list feedback', () => {
     expect(page.get('[role=status]').text()).toContain('Опубликуйте первое')
     let finish!: (value: unknown) => void
     get.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
-    await page.get('select').setValue('ministry')
+    await page.get('[data-test="scope-ministry"]').trigger('click')
     expect(page.get('[role=status]').text()).toContain('Загружаем объявления')
     expect(page.text()).not.toContain('Объявлений пока нет')
     finish(list()); await flushPromises()
@@ -119,7 +120,7 @@ describe('list feedback', () => {
     const page = await mountSuspended(AnnouncementList)
     let finish!: (value: unknown) => void
     get.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
-    await page.get('select').setValue('ministry')
+    await page.get('[data-test="scope-ministry"]').trigger('click')
     get.mockResolvedValueOnce(list())
     const auth = useAuthStore()
     await auth.setMe({ user: { ...auth.user!, id: auth.user!.id + '-next' }, person: auth.person!, permissions: auth.permissions })

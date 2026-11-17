@@ -12,6 +12,9 @@ const auth = useAuthStore()
 const { can } = useCan()
 const canView = computed(() => can('people.view'))
 const canManage = computed(() => can('people.manage'))
+const filtersOpen = ref(false)
+const filtersId = useId()
+const activeFilters = computed(() => [status.value, ministry.value, archived.value, withoutRoles.value].filter(Boolean).length)
 const filtered = computed(() => !!(search.value.trim() || status.value || ministry.value || archived.value || withoutRoles.value))
 const emptyDescription = computed(() => !filtered.value && canManage.value ? 'Создайте человека кнопкой «Создать человека».' : 'Измените поиск или фильтры, чтобы увидеть доступных людей.')
 const people = ref<Person[]>([])
@@ -166,11 +169,17 @@ if (canView.value) await Promise.all([loadPeople(), loadMinistries()])
         </ul>
       </div>
       <PersonForm v-if="showForm && canManage" @created="onCreated" @cancel="cancelCreate" />
-      <div class="people-page__filters">
+      <div class="people-page__bar">
         <label class="people-page__search">
           Поиск по имени и фамилии
           <input v-model="search" type="search" maxlength="200" data-test="search" placeholder="Имя или фамилия">
         </label>
+        <button
+          type="button" class="ui-button people-page__filters-toggle" data-test="filters-toggle"
+          :aria-expanded="filtersOpen" :aria-controls="filtersId" @click="filtersOpen = !filtersOpen"
+        >Фильтры <span v-if="activeFilters" class="people-page__count" data-test="filters-count">{{ activeFilters }}</span></button>
+      </div>
+      <div v-if="filtersOpen" :id="filtersId" class="people-page__filters ui-surface-muted" data-test="filters-panel">
         <label>
           Статус человека
           <select v-model="status" data-test="filter-status">
@@ -218,9 +227,12 @@ if (canView.value) await Promise.all([loadPeople(), loadMinistries()])
 header { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ui-space-4); justify-content: space-between; margin-bottom: var(--ui-space-6); }
 h1 { margin: 0; }
 
-.people-page__filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--ui-space-4); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-4), 16px); }
+.people-page__bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ui-space-3); }
+.people-page__search { flex: 1 1 14rem; }
+.people-page__filters-toggle { flex: none; }
+.people-page__count { display: inline-block; min-width: 1.5em; margin-inline-start: var(--ui-space-1); padding-inline: var(--ui-space-1); border-radius: 999px; background: var(--ui-accent); color: var(--ui-on-accent); font-size: .875rem; text-align: center; }
+.people-page__filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--ui-space-4); margin-top: var(--ui-space-3); border-radius: var(--ui-radius-md); padding: min(var(--ui-space-4), 16px); }
 label { min-width: 0; display: flex; flex-direction: column; gap: var(--ui-space-2); }
-.people-page__search { grid-column: 1 / -1; }
 .people-page__checkbox { flex-direction: row; align-items: center; gap: min(var(--ui-space-2), 8px); }
 input, select { width: 100%; max-width: 100%; }
 input[type='checkbox'] { flex-shrink: 0; width: min(1.125rem, 24px); height: min(1.125rem, 24px); }

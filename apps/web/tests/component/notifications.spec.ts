@@ -35,6 +35,19 @@ describe('notification center', () => {
     expect(push).toHaveBeenCalledWith('/announcements/a1')
   })
 
+  it('puts settings into a header icon with an accessible name and shows the compact phone offer', async () => {
+    get.mockResolvedValue(response)
+    const page = await mountSuspended(NotificationsPage)
+    const settings = page.get('a[href="/settings/notifications"]')
+    expect(settings.attributes('aria-label')).toBe('Настройки уведомлений')
+    expect(settings.text()).toBe('')
+    expect(settings.find('svg[aria-hidden="true"]').exists()).toBe(true)
+    expect(page.find('.page-header__actions a[href="/settings/notifications"]').exists()).toBe(true)
+    expect(page.find('.enable-notifications--compact').exists()).toBe(true)
+    expect(page.find('.enable-notifications h2').exists()).toBe(false)
+    expect(page.text()).not.toContain('Пуши на этом устройстве')
+  })
+
   it('shows empty state and hides mark all when nothing is unread', async () => {
     get.mockResolvedValue({ data: [], next_cursor: null, meta: { unread_count: 0 } })
     const page = await mountSuspended(NotificationsPage)

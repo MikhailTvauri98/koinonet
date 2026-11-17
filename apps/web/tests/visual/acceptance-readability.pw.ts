@@ -61,6 +61,8 @@ test('fixed labels and detail actions keep normal words at enlarged text', async
     ['/settings/ical', '.ical-settings button'],
   ] as const) {
     await openEnlarged(page, path)
+    // Фильтры людей лежат в панели: чекбоксы видны после «Фильтры».
+    if (path === '/people') await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
     await evidence(page, info, path.slice(1).replaceAll('/', '-'), await wholeWords(page.locator(selector)))
   }
   expect(api.unhandled).toEqual([])
