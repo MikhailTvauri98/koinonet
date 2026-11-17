@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { expectControlInViewport } from './support/acceptance-layout'
 import { mockVisualApi } from './support/api'
 
-const ministry = { id: 'm-members', name: 'Музыкальное служение', description: 'Готовимся к событиям и служим вместе', cover_url: null, color: null as string | null, members_count: 100, default_role_id: 'r-member', chat_id: null, archived_at: null }
+const ministry = { id: 'm-members', name: 'Музыкальное служение', description: 'Готовимся к событиям и служим вместе', cover_url: null, color: null as string | null, members_count: 100, default_role_id: 'r-member', chat_id: 'c-members', archived_at: null }
 const roles = [{ id: 'r-member', name: 'Участник' }, { id: 'r-tech', name: 'Звукорежиссёр и координатор технической команды служения' }]
 const longName = 'Константинопольский-Рождественский Александр Александрович'
 const members = Array.from({ length: 100 }, (_, index) => ({
@@ -11,11 +11,25 @@ const members = Array.from({ length: 100 }, (_, index) => ({
   photo_url: index === 0 ? '/members-photo.jpg' : null,
   roles: index < 2 ? roles : [roles[0]!],
 }))
+const day = 86_400_000
+const upcoming = (index: number, over: Record<string, unknown> = {}) => ({
+  id: `ev-${index}`, chat_id: null, owner_type: 'ministry', ministry: { id: ministry.id, name: ministry.name, color: null }, template_id: null, occurrence_date: null,
+  title: index === 0 ? 'Репетиция перед воскресным служением с очень длинным названием для проверки переноса' : `Событие ${index + 1}`, description: '', location: null,
+  starts_at: new Date(Date.now() + (index + 1) * day).toISOString(), ends_at: new Date(Date.now() + (index + 1) * day + 7_200_000).toISOString(),
+  visibility: 'church', status: 'scheduled', cancelled_at: null, cancel_reason: null, can_manage: index === 0, attachments: [],
+  slots: index === 0 ? [{ id: 's1', label: 'Вокал', resource_type: 'person', role: null, required_count: 3, filled_count: 1, sort_order: 0, can_fill: true, assignments: [] }] : [], ...over,
+})
 async function fixtures(page: Page, empty = false) {
   // Копия на тест: правка служения (PATCH) не протекает в другие тесты.
   const current = { ...ministry }
   await mockVisualApi(page)
   await page.route('**/members-photo.jpg', route => route.fulfill({ path: 'tests/visual/fixtures/photo-portrait.jpg', contentType: 'image/jpeg' }))
+  await page.route('**/api/v1/events**', route => route.fulfill({ json: { data: empty ? [] : [0, 1, 2, 3].map(index => upcoming(index)), meta: { current_page: 1, last_page: 1, total: 4 } } }))
+  await page.route('**/api/v1/announcements**', route => route.fulfill({ json: { data: empty ? [] : [{
+    id: 'an-1', scope: 'ministry', ministry: { id: ministry.id, name: ministry.name, color: null }, author: null, title: 'Сбор на репетицию в субботу',
+    body: '**Приходим** к десяти утра, берём [ноты](https://example.test) и воду. Вторая строка текста объявления, чтобы проверить обрезку. Третья строка не должна быть видна на экране.',
+    pinned: false, hide_after: null, notify_on_publish: false, published_at: new Date(Date.now() - day).toISOString(), archived: false, attachments: [],
+  }], meta: { current_page: 1, last_page: 1, total: 1 } } }))
   await page.route('**/api/v1/ministries**', async (route) => {
     const path = new URL(route.request().url()).pathname.replace('/api/v1', '')
     if (path === '/ministries') await route.fulfill({ json: { data: [current] } })
@@ -63,6 +77,20 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(page.getByText(ministry.description, { exact: true })).toBeVisible()
       await expect(page.locator('.ministry-header [data-test=members-count]')).toHaveText('100 участников')
       await expect(page.getByRole('button', { name: 'Выберите цвет служения', exact: true })).toBeVisible()
+      // Сводка: три ближайших события, пометка мест, состав с распределением по ролям, объявление, чат; служебных блоков на экране нет.
+      await expect(page.getByRole('heading', { level: 2, name: 'Ближайшие события', exact: true })).toBeVisible()
+      await expect(page.locator('[data-test=overview-event]')).toHaveCount(3)
+      await expect(page.locator('[data-test=overview-places-ev-0]')).toHaveText('2 места')
+      await expect(page.locator('[data-test=overview-places-ev-1]')).toHaveCount(0)
+      await expect(page.getByRole('heading', { level: 2, name: 'Состав', exact: true })).toBeVisible()
+      await expect(page.locator('[data-test=composition-member]')).toHaveCount(12)
+      await expect(page.locator('[data-test=composition-roles]')).toHaveText(`${roles[1]!.name} 2`)
+      await expect(page.locator('[data-test=announcement-preview]')).toContainText('Приходим к десяти утра, берём ноты и воду.')
+      await expect(page.getByRole('link', { name: 'Перейти в чат', exact: true })).toBeVisible()
+      for (const hidden of ['Изменить название и описание', 'Обложка', 'Архивировать']) await expect(page.getByRole('button', { name: hidden, exact: true })).toHaveCount(0)
+      for (const link of await page.locator('.overview-grid a').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      const columns = await page.locator('.overview-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)
+      expect(columns).toBe(width >= 768 ? 2 : 1)
       await fits(page)
       await page.screenshot({ path: info.outputPath(`ministry-overview-${theme}-${width}.png`), fullPage: true })
       const menu = page.getByRole('button', { name: 'Действия со служением', exact: true })
@@ -104,6 +132,18 @@ for (const theme of ['dark', 'light'] as const) {
       await page.screenshot({ path: info.outputPath(`ministry-colored-${theme}-${width}.png`), fullPage: true })
     })
   }
+  test(`ministry overview at 320px with 200% text ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 320, height: 480 })
+    await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+    await fixtures(page)
+    await page.goto(`/ministries/${ministry.id}`)
+    await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important } html { font-size: 32px !important; }' })
+    await expect(page.locator('[data-test=overview-event]')).toHaveCount(3)
+    await expect(page.locator('[data-test=composition-member]')).toHaveCount(12)
+    await expect(page.getByRole('link', { name: 'Перейти в чат', exact: true })).toBeVisible()
+    await fits(page)
+    await page.screenshot({ path: info.outputPath(`ministry-overview-200-${theme}-320.png`), fullPage: true })
+  })
   for (const [width, height, scale] of [[390, 844, 1], [1440, 900, 1], [320, 480, 2]] as const) {
     test(`compact members and details ${theme} ${width}px ${scale * 100}%`, async ({ page }, info) => {
       await page.setViewportSize({ width, height })
@@ -115,6 +155,9 @@ for (const theme of ['dark', 'light'] as const) {
       await page.addStyleTag({ content: `nuxt-devtools-frame { display: none !important } html { font-size: ${16 * scale}px !important; }` })
       await expect(page.locator('[data-test=member-row]')).toHaveCount(100)
       await expect(page.locator('[data-test=member-row] input')).toHaveCount(0)
+      // Роль по умолчанию скрыта, пока есть другие; единственная показана.
+      await expect(page.locator('[data-test=member-row] .member-row__roles').first()).toHaveText(roles[1]!.name)
+      await expect(page.locator('[data-test=member-row] .member-row__roles').nth(2)).toHaveText('Участник')
       await expect(page.locator('[data-test=save-roles]')).toHaveCount(0)
       await fits(page)
       await page.screenshot({ path: info.outputPath(`members-${theme}-${width}.png`) })

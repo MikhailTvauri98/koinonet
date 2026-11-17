@@ -134,7 +134,7 @@ await load()
     <p v-else-if="!filteredMembers.length" role="status">Участники не найдены. Попробуйте другое имя или роль.</p>
     <ul v-else class="members-tab__list" aria-label="Состав служения">
       <MemberRow
-        v-for="member in filteredMembers" :key="member.id" :member="member" @open="selectedMember = $event"
+        v-for="member in filteredMembers" :key="member.id" :member="member" :default-role-id="ministry?.default_role_id ?? null" @open="selectedMember = $event"
       />
     </ul>
     <p v-if="members.length && !loading" class="members-tab__count" role="status">Показано {{ filteredMembers.length }} из {{ members.length }}</p>

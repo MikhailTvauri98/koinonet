@@ -154,7 +154,8 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
     expect((await saved).status()).toBe(200)
     await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
     await memberDialog.getByTestId('close-member').click()
-    await expect.poll(async () => (await row.locator('.member-row__roles').innerText()).split(' · ').sort()).toEqual(['Участник', ministryRole].sort())
+    // Роль по умолчанию в строке скрыта, пока у человека есть другая.
+    await expect(row.locator('.member-row__roles')).toHaveText(ministryRole)
   }
 
   await openSection(page, 'Шаблоны', 'Шаблоны')

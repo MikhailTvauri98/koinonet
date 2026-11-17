@@ -61,7 +61,7 @@ describe('ministry header on every ministry route', () => {
   })
 
   it('shows the cover instead of the tile when there is one', async () => {
-    get.mockImplementation(() => Promise.resolve({ data: { ...ministry, cover_url: 'https://church.test/cover.webp' } }))
+    get.mockImplementation((path: string) => Promise.resolve(path === '/ministries/m1' ? { data: { ...ministry, cover_url: 'https://church.test/cover.webp' } } : path === '/events' || path === '/announcements' ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } : { data: [] }))
 
     const view = await mountSuspended(MinistryCard)
 

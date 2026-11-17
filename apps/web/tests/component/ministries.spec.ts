@@ -65,6 +65,14 @@ function mockMembersAndRoles(members: unknown[], roles: unknown[] = ministryRole
   ))
 }
 
+// Обзор служения сверху читает ещё события, состав и объявления: пустые ответы по их путям,
+// а не одно и то же служение на любой запрос.
+function mockMinistryOnly(data: Ministry | Record<string, unknown>) {
+  get.mockImplementation((path: string) => Promise.resolve(
+    isMinistryPath(path) ? { data } : path === '/events' || path === '/announcements' ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } : { data: [] },
+  ))
+}
+
 describe('ministry members tab', () => {
   it.each(['roles', 'remove'])('keeps details open during %s write so its confirmed result remains visible', async (operation) => {
     grantPermissions({ ministries: { m1: ['members.manage'] } })
@@ -361,7 +369,7 @@ describe('ministry tabs', () => {
   // читают носители roles.manage и members.manage в этом служении
   // (docs/architecture.md, 6.1).
   it('hides the roles tab from someone who manages neither roles nor members in that ministry', async () => {
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     const tabs = page.get('nav[aria-label="Разделы служения"]')
@@ -382,7 +390,7 @@ describe('ministry tabs', () => {
 
   it('hides the roles tab again when the right is withdrawn mid-session', async () => {
     grantPermissions({ ministries: { m1: ['roles.manage'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     grantPermissions({ ministries: { m1: [] } })
@@ -406,7 +414,7 @@ async function chooseAction(page: Awaited<ReturnType<typeof mountSuspended>>, ac
 describe('ministry card', () => {
   it('keeps a pending edit when only archive permission is withdrawn', async () => {
     grantPermissions({ global: ['ministries.create'], ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
     let resolve!: (value: { data: Ministry }) => void
     patch.mockImplementation(() => new Promise(done => { resolve = done }))
     const page = await mountSuspended(MinistryCard)
@@ -423,7 +431,7 @@ describe('ministry card', () => {
 
   it('discards a late edit from the previous ministry', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'], m2: ['ministry.edit'] } })
-    get.mockImplementation((path: string) => Promise.resolve({ data: { ...ministry, id: path.endsWith('m2') ? 'm2' : 'm1', name: path.endsWith('m2') ? 'Новое служение' : ministry.name } }))
+    get.mockImplementation((path: string) => Promise.resolve(isMinistryPath(path) ? { data: { ...ministry, id: path.endsWith('m2') ? 'm2' : 'm1', name: path.endsWith('m2') ? 'Новое служение' : ministry.name } } : path === '/events' ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } : { data: [] }))
     let resolve!: (value: { data: Ministry }) => void
     patch.mockImplementation(() => new Promise(done => { resolve = done }))
     const page = await mountSuspended(MinistryCard)
@@ -450,7 +458,7 @@ describe('ministry card', () => {
   })
 
   it('has no menu and no hint without any management right', async () => {
-    get.mockResolvedValue({ data: { ...ministry, color: null } })
+    mockMinistryOnly({ ...ministry, color: null })
 
     const page = await mountSuspended(MinistryCard)
 
@@ -460,7 +468,7 @@ describe('ministry card', () => {
 
   it('names the menu and offers each action only with its own right', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     expect(page.get('[data-test="ministry-menu"]').attributes('aria-label')).toBe('Действия со служением')
@@ -474,7 +482,7 @@ describe('ministry card', () => {
 
   it('offers only archiving to someone who can archive but not edit', async () => {
     grantPermissions({ global: ['ministries.create'] })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     await openMenu(page)
@@ -487,7 +495,7 @@ describe('ministry card', () => {
 
   it('closes the menu when the right to manage is withdrawn', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     await openMenu(page)
@@ -499,7 +507,7 @@ describe('ministry card', () => {
   })
 
   it('hides the cover uploader without ministry.edit', async () => {
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
 
@@ -513,7 +521,7 @@ describe('ministry card', () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
     get.mockImplementation((path: string) => Promise.resolve(path === '/media/md1/status'
       ? { data: { id: 'md1', kind: 'image', status: 'ready', url: '/media/md1', thumb_url: null } }
-      : { data: ministry }))
+      : isMinistryPath(path) ? { data: ministry } : path === '/events' ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } : { data: [] }))
     post.mockResolvedValue({ data: { id: 'md1', kind: 'image', status: 'processing', url: '/media/md1', thumb_url: null } })
     put.mockResolvedValue({ data: { ...ministry, cover_url: 'https://church.test/cover.webp' } })
 
@@ -535,7 +543,7 @@ describe('ministry card', () => {
 
   it('lets the cover window be closed again after the right was revoked during an upload', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
     const page = await mountSuspended(MinistryCard)
     await chooseAction(page, 'edit-cover')
     page.findComponent(MediaUploader).vm.$emit('busy', true)
@@ -554,7 +562,7 @@ describe('ministry card', () => {
 
   it('does not offer to change an archived ministry', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: { ...ministry, archived_at: '2026-09-01T10:00:00Z' } })
+    mockMinistryOnly({ ...ministry, archived_at: '2026-09-01T10:00:00Z' })
 
     const page = await mountSuspended(MinistryCard)
     await openMenu(page)
@@ -565,7 +573,7 @@ describe('ministry card', () => {
 
   it('asks for confirmation before archiving', async () => {
     grantPermissions({ global: ['ministries.create'] })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     await chooseAction(page, 'archive')
@@ -584,7 +592,7 @@ describe('ministry card', () => {
   // Доделка задачи 28 (второе сомнение): новый код правки названия/описания
   // остался без теста — контроллер попросил закрыть это.
   it('hides editing the name and description without ministry.edit in that ministry', async () => {
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
 
@@ -593,7 +601,7 @@ describe('ministry card', () => {
 
   it('edits the name and description with ministry.edit in that ministry', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
     patch.mockResolvedValue({ data: { ...ministry, name: 'Прославление и музыка', description: 'Хвала Богу музыкой' } })
 
     const page = await mountSuspended(MinistryCard)
@@ -612,7 +620,7 @@ describe('ministry card', () => {
 
   it('changes the colour from the menu', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
     patch.mockResolvedValue({ data: { ...ministry, color: 'teal' } })
 
     const page = await mountSuspended(MinistryCard)
@@ -628,7 +636,7 @@ describe('ministry card', () => {
   })
 
   it('shows the colour hint to someone who can edit a ministry without colour, and only then', async () => {
-    get.mockResolvedValue({ data: { ...ministry, color: null } })
+    mockMinistryOnly({ ...ministry, color: null })
     const guest = await mountSuspended(MinistryCard)
     expect(guest.find('[data-test="color-hint"]').exists()).toBe(false)
     guest.unmount()

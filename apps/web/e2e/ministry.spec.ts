@@ -66,7 +66,8 @@ test('a leader manages members of their own ministry only', async ({ page, openP
   expect((await rolesSaved).status()).toBe(200)
   await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
   await memberDialog.getByTestId('close-member').click()
-  await expect.poll(async () => (await leaderRow.locator('.member-row__roles').innerText()).split(' · ').sort()).toEqual(['Лидер', 'Участник'].sort())
+  // Роль по умолчанию в строке скрыта, пока у человека есть другая.
+  await expect(leaderRow.locator('.member-row__roles')).toHaveText('Лидер')
 
   // Права лидера пересчитывает слушатель в очереди (MemberAdded и
   // MemberRolesChanged → BumpMembershipPermissionCache), а экран читает их
