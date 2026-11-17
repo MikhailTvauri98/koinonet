@@ -29,7 +29,7 @@ async function load() {
 const rows = computed(() => groupByChurchDay(items.value, settings.timezone).flatMap(group => group.events.map(event => ({ event, day: group.day }))))
 const me = computed(() => auth.person?.id)
 const link = (event: EventItem, day: string) => ({ path: `/events/${encodeURIComponent(event.id)}`, query: { return: `/calendar?date=${day}&view=list&scope=church` } })
-watch(() => auth.sessionVersion, () => { generation++; items.value = []; loaded.value = false; loading.value = false; errorMessage.value = ''; offline.value = false; requestedFrom = '' })
+watch(() => auth.sessionVersion, () => { generation++; items.value = []; loaded.value = false; loading.value = false; errorMessage.value = ''; offline.value = false; requestedFrom = ''; if (auth.user) void load() })
 watch(() => props.from, (from) => { if (settings.loaded && from !== requestedFrom) void load() })
 onBeforeUnmount(() => { generation++ })
 void load()
@@ -44,27 +44,31 @@ void load()
       <li v-for="{ event, day } in rows" :key="event.id" class="week-row" :class="{ 'week-row--cancelled': event.status === 'cancelled' }" :style="{ '--stripe': ministryColorVar(event.ministry) }" data-test="week-event">
         <time class="week-row__when" :datetime="event.starts_at"><span>{{ formatWeekdayShort(event.starts_at) }}</span><strong>{{ formatTime(event.starts_at) }}</strong></time>
         <div class="week-row__body">
-          <NuxtLink class="week-row__title" :to="link(event, day)">{{ event.title }}</NuxtLink>
+          <NuxtLink class="week-row__title week-row__link" :to="link(event, day)">{{ event.title }}</NuxtLink>
           <span class="week-row__meta">{{ [event.location, event.ministry?.name ?? 'Церковь'].filter(Boolean).join(' · ') }}</span>
         </div>
         <span v-if="event.status === 'cancelled'" class="week-row__tag week-row__tag--cancelled" :data-test="`week-cancelled-${event.id}`">Отменено</span>
         <span v-if="isAssigned(event, me)" class="week-row__tag" :data-test="`week-mine-${event.id}`">Вы</span>
       </li>
     </ul>
-    <p v-else-if="loaded && !loading && !offline" class="ui-hint week-empty">На этой неделе событий нет</p>
+    <p v-else-if="loaded && !loading && !offline && !errorMessage" class="ui-hint week-empty">На этой неделе событий нет</p>
     <p v-else-if="offline && !loaded" class="ui-hint" role="status">События появятся, когда восстановится связь.</p>
   </section>
 </template>
 
 <style scoped>
 .week-list { list-style: none; margin: 0; padding: 0; }
-.week-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1) var(--ui-space-3); min-width: 0; padding: var(--ui-space-2) 0 var(--ui-space-2) var(--ui-space-3); border-bottom: 1px solid var(--ui-border); border-inline-start: 4px solid var(--stripe); }
+.week-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-1) var(--ui-space-3); min-width: 0; padding: var(--ui-space-2) 0 var(--ui-space-2) var(--ui-space-3); border-bottom: 1px solid var(--ui-border); border-inline-start: 4px solid var(--stripe); }
 .week-row:last-child { border-bottom: 0; }
 .week-row__when { display: grid; justify-items: start; min-width: 3.5rem; line-height: 1.25; font-variant-numeric: tabular-nums; }
 .week-row__when span { color: var(--ui-text-muted); font-size: .875rem; }
 .week-row__body { display: grid; flex: 1 1 10rem; min-width: 0; }
 .week-row__title { display: inline-flex; align-items: center; min-height: var(--ui-control-height); font-weight: 600; color: inherit; text-decoration: none; }
 .week-row__title:hover { text-decoration: underline; }
+/* Растянутая ссылка: вся строка кликабельна, ссылка одна; метки остаются текстом внутри строки. */
+.week-row__link::after { content: ''; position: absolute; inset: 0; }
+.week-row:focus-within { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.week-row__link:focus-visible { outline: none; }
 .week-row__meta { color: var(--ui-text-muted); font-size: .875rem; margin-top: calc(var(--ui-space-1) * -1); }
 .week-row__tag { padding: 2px 10px; border-radius: 999px; background: var(--ui-accent-soft); color: var(--ui-accent); font-size: .875rem; font-weight: 600; }
 .week-row__tag--cancelled { background: var(--ui-surface-muted); color: var(--ui-text); }

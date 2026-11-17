@@ -20,7 +20,7 @@ async function load() {
 }
 const slots = computed(() => next.value ? ownSlots(next.value, auth.person?.id) : [])
 const eventLink = computed(() => next.value ? { path: `/events/${encodeURIComponent(next.value.id)}`, query: { return: `/calendar?date=${todayInChurch()}&view=list&scope=mine` } } : '')
-watch(() => auth.sessionVersion, () => { generation++; next.value = null })
+watch(() => auth.sessionVersion, () => { generation++; next.value = null; if (auth.user) void load() })
 watch(() => settings.timezone, () => { if (settings.loaded) void load() })
 onBeforeUnmount(() => { generation++ })
 void load()

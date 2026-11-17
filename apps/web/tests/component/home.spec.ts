@@ -6,6 +6,7 @@ import HomePage from '~/pages/index.vue'
 import type { EventItem, EventSlot } from '~/composables/useEvents'
 import { useSettingsStore } from '~/stores/settings'
 import { useChatsStore } from '~/stores/chats'
+import { useAuthStore } from '~/stores/auth'
 import { grantPermissions } from '../support/permissions'
 
 const get = vi.fn()
@@ -29,6 +30,7 @@ function api(options: { mine?: EventItem[], week?: EventItem[] }) {
     if (path === '/events') return list(query?.scope === 'mine' ? options.mine ?? [] : options.week ?? [])
     if (path === '/announcements') return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } }
     if (path === '/chats') return { data: [], meta: { unread_total: 0 } }
+    if (path === '/settings') return { data: { church_name: 'Церковь', timezone: 'Asia/Vladivostok' } }
     return { data: [] }
   })
 }
@@ -121,6 +123,56 @@ describe('home «Моя неделя»', () => {
     useSettingsStore().apply({ church_name: 'Церковь', timezone: 'America/New_York' } as never)
     await flushPromises()
     expect(page.find('[role="alert"]').exists()).toBe(false)
+    expect(page.text()).not.toContain('На этой неделе событий нет')
+  })
+
+  it('reloads both blocks for a new account after a session change and ignores the late reply of the old one', async () => {
+    const own = event({ id: 'old-own', title: 'Старое назначение', slots: [slot('Вокал', me)] })
+    let releaseOld!: () => void
+    const oldReply = new Promise<void>((resolve) => { releaseOld = resolve })
+    let hold = true
+    get.mockImplementation(async (path: string, query?: Record<string, unknown>) => {
+      if (path === '/events' && hold) { await oldReply; return list([own]) }
+      if (path === '/events') return list(query?.scope === 'mine' ? [event({ id: 'new-own', title: 'Новое назначение', slots: [slot('Звук', 'p-new')] })] : [event({ id: 'new-week', title: 'Событие нового аккаунта' })])
+      if (path === '/settings') return { data: { church_name: 'Церковь', timezone: 'Asia/Vladivostok' } }
+      if (path === '/announcements') return { data: [], meta: { current_page: 1, last_page: 1, total: 0 } }
+      if (path === '/chats') return { data: [], meta: { unread_total: 0 } }
+      return { data: [] }
+    })
+    const page = await mountSuspended(HomePage)
+    await flushPromises()
+    hold = false
+    const auth = useAuthStore()
+    void auth.setMe({ user: { ...auth.user!, id: 'u-new' }, person: { ...auth.person!, id: 'p-new' }, permissions: auth.permissions })
+    await flushPromises()
+    releaseOld()
+    await flushPromises()
+    expect(page.text()).toContain('Событие нового аккаунта')
+    expect(page.get('section[aria-label="Вы служите"]').text()).toContain('Новое назначение')
+    expect(page.text()).not.toContain('Старое назначение')
+    expect(page.findAll('[data-test="week-event"]')).toHaveLength(1)
+  })
+
+  it('makes the whole week row clickable through a single stretched link and keeps the tags as text in the row', async () => {
+    const own = event({ slots: [slot('Вокал', useAuthStore().person!.id)] })
+    api({ week: [own] })
+    const page = await mountSuspended(HomePage)
+    await flushPromises()
+    const row = page.get('[data-test="week-event"]')
+    expect(row.findAll('a')).toHaveLength(1)
+    expect(row.get('a').classes()).toContain('week-row__link')
+    expect(row.get('[data-test="week-mine-e1"]').text()).toBe('Вы')
+  })
+
+  it('does not say the week is empty next to a load error', async () => {
+    get.mockImplementation(async (path: string) => {
+      if (path === '/events') throw Object.assign(new Error('boom'), { statusCode: 500 })
+      if (path === '/settings') return { data: { church_name: 'Церковь', timezone: 'Asia/Vladivostok' } }
+      return path === '/chats' ? { data: [], meta: { unread_total: 0 } } : { data: [], meta: { current_page: 1, last_page: 1, total: 0 } }
+    })
+    const page = await mountSuspended(HomePage)
+    await flushPromises()
+    expect(page.text()).toContain('Не удалось загрузить события недели.')
     expect(page.text()).not.toContain('На этой неделе событий нет')
   })
 })

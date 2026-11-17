@@ -52,11 +52,15 @@ void load()
 
 <style scoped>
 .home-announcements { list-style: none; margin: 0; padding: 0; }
-.home-announcement { padding: var(--ui-space-3) 0; border-bottom: 1px solid var(--ui-border); min-width: 0; }
+.home-announcement { position: relative; padding: var(--ui-space-3) 0; border-bottom: 1px solid var(--ui-border); min-width: 0; }
 .home-announcement:last-child { border-bottom: 0; }
 .home-announcement h3 { margin: var(--ui-space-1) 0; font-size: 1rem; }
 .home-announcement h3 a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); color: inherit; text-decoration: none; }
 .home-announcement h3 a:hover { text-decoration: underline; }
+/* Растянутая ссылка: вся карточка кликабельна, ссылка одна. */
+.home-announcement h3 a::after { content: ''; position: absolute; inset: 0; }
+.home-announcement:focus-within { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.home-announcement h3 a:focus-visible { outline: none; }
 .home-announcement__pin { display: inline-flex; align-items: center; gap: var(--ui-space-1); color: var(--ui-accent); font-size: .875rem; font-weight: 600; }
 .home-announcement__text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin: 0; color: var(--ui-text-muted); }
 .home-announcement__meta { margin: var(--ui-space-1) 0 0; color: var(--ui-text-muted); font-size: .875rem; }
