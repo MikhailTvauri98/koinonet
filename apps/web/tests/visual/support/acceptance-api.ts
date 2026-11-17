@@ -77,7 +77,7 @@ function createData(long: boolean) {
     visibility: 'church', status: 'scheduled', cancelled_at: null, cancel_reason: null, can_manage: true, attachments: media,
     slots: [{ id: 's1', label: 'Помощь в подготовке зала', resource_type: 'person', role: null,
       required_count: 3, filled_count: 1, sort_order: 0, can_fill: true,
-      assignments: [{ id: 'as1', person: { id: person.id, full_name: person.full_name, short_name: person.full_name, photo_thumb_url: person.photo_url }, created_at: now }] }],
+      assignments: [{ id: 'as1', person: { id: person.id, full_name: person.full_name, short_name: 'Анна Петрова', photo_thumb_url: person.photo_url }, created_at: now }] }],
   }
   const template: Schema<'EventTemplateResource'> = {
     id: 't1', owner_type: 'church', ministry: null, title: 'Воскресное событие', description: 'Еженедельное событие для всей церкви',

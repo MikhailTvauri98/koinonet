@@ -375,6 +375,7 @@ describe('event detail and display hooks', () => {
     const original = event({ can_manage: true })
     get.mockImplementation(async path => ({ data: path === '/calendar/slot-choices' ? [] : original }))
     const page = await mountSuspended(EventPage)
+    await page.get('[data-test="slot-row-s1"]').trigger('click'); await flushPromises()
     await page.get('[data-test="edit-slot-s1"]').trigger('click'); await flushPromises()
     await page.get('[data-test="slot-0-count"]').setValue('4')
     patch.mockResolvedValue({})
@@ -382,7 +383,7 @@ describe('event detail and display hooks', () => {
     await page.get('[data-test="save-slot"]').trigger('click'); await flushPromises()
     expect(page.find('[data-test="save-slot"]').exists()).toBe(false)
     expect(page.text()).toContain('Изменение сохранено')
-    expect(page.get('[data-test="edit-slot-s1"]').attributes('disabled')).toBeDefined()
+    expect(page.get('[data-test="edit-slot-s1"]').attributes('disabled')).toBeDefined(); expect(page.get('[data-test="slot-row-s1"]').attributes('disabled')).toBeDefined()
     get.mockResolvedValueOnce({ data: { ...original, slots: original.slots.map(s => ({ ...s, required_count: 4 })) } })
     await page.get('[data-test="retry-assignments"]').trigger('click'); await flushPromises()
     expect(page.get('[data-test="slot-s1-count"]').text()).toBe('3 из 4')
@@ -415,9 +416,11 @@ describe('event detail and display hooks', () => {
     const page = await mountSuspended(EventPage)
     expect(page.get('[data-test="my-participation"]').text()).toContain('Вы служите')
     expect(page.get('[data-test="my-participation"]').text()).toContain('Вокалист')
-    expect(page.findAll('[data-test="edit-slot-s1"]')).toHaveLength(1)
     expect(page.findAll('.slot')).toHaveLength(1)
+    expect(page.find('[data-test="edit-slot-s1"]').exists()).toBe(false) // structure lives in the slot dialog, opened from the single row
     expect(page.text().split('Вокалист')).toHaveLength(3) // participation + single roster
+    await page.get('[data-test="slot-row-s1"]').trigger('click'); await flushPromises()
+    expect(page.findAll('[data-test="edit-slot-s1"]')).toHaveLength(1)
     expect(page.find('img').exists()).toBe(false)
   })
   it('replaces the detail with an explicit editor and retains its own cancel confirmation', async () => {
@@ -470,7 +473,7 @@ describe('event detail and display hooks', () => {
     const card = await mountSuspended(EventCard, { props: { event: item, detail: true }, attachTo: document.body })
     await card.get('[data-test="edit-event"]').trigger('click'); await card.get('[data-test="event-menu"]').trigger('click'); await card.get('[data-test="cancel-event"]').trigger('click'); await flushPromises()
     expect(card.emitted('edit')?.[0]).toEqual([item]); expect(card.emitted('cancel')?.[0]).toEqual([item])
-    const slots = await mountSuspended(SlotList, { props: { slots: [{ ...item.slots[0]!, can_fill: true }] } })
+    const slots = await mountSuspended(SlotList, { props: { slots: [{ ...item.slots[0]!, can_fill: true, filled_count: 1 }] } })
     await slots.get('[data-test="assign-s1"]').trigger('click')
     expect(slots.emitted('assign')?.[0]?.[0]).toMatchObject({ id: 's1' })
   })
@@ -552,7 +555,7 @@ describe('event card header and my participation', () => {
   })
   it('keeps cancelling and chat creation in the menu, by permission, with no danger button on the screen', async () => {
     const page = await mount(event({ can_manage: true }), { attachTo: document.body })
-    expect(page.find('.event-card > .event-head .ui-button--danger').exists()).toBe(false) // slot removal in the roster is reworked in task 11
+    expect(page.find('.ui-button--danger').exists()).toBe(false) // slot removal moved into the slot dialog confirmation
     expect(page.findAll('.ui-button--danger').map(button => button.text())).not.toContain('Отменить событие')
     expect(page.find('[data-test="cancel-event"]').exists()).toBe(false); expect(page.find('[data-test="create-chat"]').exists()).toBe(false)
     const trigger = page.get('[data-test="event-menu"]')

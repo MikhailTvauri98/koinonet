@@ -9,7 +9,7 @@ import { safeCalendarReturn } from '~/composables/useCalendarView'
 import { isAssigned, ownSlots } from '~/utils/assignments'
 import { ministryColorVar } from '~/utils/ministryColor'
 const props = defineProps<{ event: EventItem, detail?: boolean, compact?: boolean, day?: string, returnContext?: string, disabled?: boolean, chatBusy?: boolean }>()
-defineEmits<{ edit: [event: EventItem], cancel: [event: EventItem], createChat: [], assign: [slot: EventSlot], assignmentsChanged: [], manageSlot: [mode: 'new' | 'edit' | 'remove', slot?: EventSlot] }>()
+defineEmits<{ edit: [event: EventItem], cancel: [event: EventItem], createChat: [], assign: [slot: EventSlot], openSlot: [slot: EventSlot], manageSlot: [mode: 'new'] }>()
 const { formatDateTime, formatTime, formatDate, formatEventWhen, formatDuration, deviceZoneDiffers } = useChurchDate()
 const auth = useAuthStore(), settings = useSettingsStore(), { can } = useCan()
 const ministryVisible = computed(() => !!props.event.ministry && (can('ministries.view_all') || can('ministries.manage_all') || Object.hasOwn(auth.permissions.ministries, props.event.ministry.id)))
@@ -61,7 +61,7 @@ const dayTime = computed(() => {
     <div class="event-detail-grid" :class="{ 'event-detail-grid--single': !hasDetails }">
       <section class="event-detail-panel" aria-label="О событии">
         <template v-if="event.description"><h2 class="event-description-heading">Описание</h2><p class="description">{{ event.description }}</p></template>
-        <SlotList :slots="event.slots" :can-manage="event.can_manage && event.status === 'scheduled'" :disabled="disabled" @assign="$emit('assign', $event)" @changed="$emit('assignmentsChanged')" @manage="(mode, slot) => $emit('manageSlot', mode, slot)" />
+        <SlotList :slots="event.slots" :can-manage="event.can_manage && event.status === 'scheduled'" :disabled="disabled" @assign="$emit('assign', $event)" @open="$emit('openSlot', $event)" @manage="$emit('manageSlot', $event)" />
       </section>
       <aside v-if="hasDetails" class="event-detail-panel" aria-label="Подробности события">
         <dl v-if="event.visibility !== 'church'"><dt>Видимость</dt><dd>{{ event.visibility === 'ministry' ? 'Служение' : 'Только назначенные' }}</dd></dl>

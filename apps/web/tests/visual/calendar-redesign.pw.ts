@@ -243,7 +243,9 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await expect(page.locator('[data-test=my-participation] [data-test=open-chat]')).toHaveText('Чат события')
     await expect(page.locator('[data-test=my-participation] [data-test=add-to-calendar]')).toHaveAttribute('href', '/api/v1/events/e1/ics')
     await expect(page.locator('.slot')).toHaveCount(1)
-    await expect(page.locator('[data-test=edit-slot-s1]')).toHaveCount(1)
+    await expect(page.locator('[data-test=slot-row-s1]')).toContainText('Анна Петрова')
+    await expect(page.locator('[data-test=edit-slot-s1], [data-test^=remove-assignment-]')).toHaveCount(0)
+    await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
     await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 3')
     expect(await page.locator('[data-test=calendar-return]').getAttribute('href')).toBe(context)
     const participation = (await page.locator('[data-test=my-participation]').boundingBox())!
@@ -264,12 +266,17 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await page.locator('[data-test=cancel-edit]').click()
     await page.locator('[data-test=discard-edit]').click()
     await expect(page.locator('[data-test=edit-event]')).toBeFocused()
+    await page.locator('[data-test=slot-row-s1]').click()
+    await expect(page.getByRole('dialog', { name: 'Слот: Помощь в подготовке зала', exact: true })).toBeVisible()
+    await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
     await page.locator('[data-test=edit-slot-s1]').click()
     await expect(page.getByRole('dialog', { name: 'Изменить слот', exact: true })).toBeVisible()
     await page.locator('[data-test=slot-0-count]').fill('4')
     await page.screenshot({ path: resolve(detailScreenshots, `slot-${width}-${theme}.png`), fullPage: true })
     await page.keyboard.press('Escape')
     await expect(page.locator('[data-test=edit-slot-s1]')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-test=slot-row-s1]')).toBeFocused()
     await expect(page.locator('[data-test=cancel-event]')).toHaveCount(0)
     await expect(page.locator('.ui-button--danger:visible', { hasText: 'Отменить событие' })).toHaveCount(0)
     await page.locator('[data-test=event-menu]').click()
@@ -285,18 +292,76 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
   })
 }
 
+const rosterScreenshots = resolve('../../.superpowers/sdd/phase-8/task-11-screenshots')
+const rosterRoles = [
+  { name: 'manager', manage: true, fill: true },
+  { name: 'filler', manage: false, fill: true },
+  { name: 'member', manage: false, fill: false },
+] as const
+for (const role of rosterRoles) for (const [width, height, zoom] of [[390, 900, false], [1440, 900, false], [320, 700, true]] as const) for (const theme of ['dark', 'light']) {
+  test(`${theme} slot roster and dialog as ${role.name} at ${width}${zoom ? ' text 200%' : ''}`, async ({ page }) => {
+    await page.setViewportSize({ width, height })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    const api = await installAcceptanceApi(page)
+    api.data.event.can_manage = role.manage
+    const slot = api.data.event.slots[0]!
+    slot.can_fill = role.fill
+    slot.assignments.push({ id: 'as2', person: { id: 'p-two', full_name: 'Мария Орлова', short_name: 'Мария Орлова', photo_thumb_url: null }, created_at: null })
+    slot.filled_count = 2
+    api.data.event.slots.push({ ...slot, id: 's2', label: 'Встречающие', required_count: 2, filled_count: 0, assignments: [] })
+    await page.goto('/events/e1')
+    await expect(page.locator('.slot')).toHaveCount(2)
+    if (zoom) await page.addStyleTag({ content: 'html{font-size:200%!important}' })
+    await page.addStyleTag({ content: 'nuxt-devtools-frame{display:none!important}' })
+    await expect(page.locator('.slot').first()).toContainText('Анна Петрова')
+    await expect(page.locator('.slot').nth(1)).toContainText('Никто не назначен')
+    await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
+    await expect(page.locator('[data-test=slot-row-s1]')).toHaveCount(role.manage || role.fill ? 1 : 0)
+    await expect(page.locator('[data-test=assign-s1]')).toHaveCount(role.fill ? 1 : 0)
+    if (!role.manage && !role.fill) await expect(page.locator('.slot button')).toHaveCount(0)
+    for (const row of await page.locator('.slot__main--button').all()) expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await mkdir(rosterScreenshots, { recursive: true })
+    await page.locator('.slot-list').scrollIntoViewIfNeeded()
+    await page.screenshot({ path: resolve(rosterScreenshots, `roster-${role.name}-${width}${zoom ? '-200' : ''}-${theme}.png`), fullPage: !zoom })
+    if (role.manage || role.fill) {
+      await page.locator('[data-test=slot-row-s1]').click()
+      const dialog = page.getByRole('dialog', { name: 'Слот: Помощь в подготовке зала', exact: true })
+      await expect(dialog).toBeVisible()
+      await expect(dialog.locator('[data-test=dialog-assign-s1]')).toHaveCount(role.fill ? 1 : 0)
+      await expect(dialog.locator('[data-test^=remove-assignment-]')).toHaveCount(role.fill ? 2 : 0)
+      await expect(dialog.locator('[data-test=edit-slot-s1], [data-test=remove-slot-s1]')).toHaveCount(role.manage ? 2 : 0)
+      await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
+      expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+      await page.screenshot({ path: resolve(rosterScreenshots, `dialog-${role.name}-${width}${zoom ? '-200' : ''}-${theme}.png`) })
+      if (role.fill) {
+        await page.locator('[data-test=remove-assignment-as1]').click()
+        await expect(page.locator('.ui-button--danger:visible')).toHaveCount(1)
+        await page.screenshot({ path: resolve(rosterScreenshots, `confirm-${role.name}-${width}${zoom ? '-200' : ''}-${theme}.png`) })
+        await page.locator('[data-test=cancel-remove-assignment]').click()
+      }
+      await page.keyboard.press('Escape')
+      await expect(page.locator('[data-test=slot-row-s1]')).toBeFocused()
+    }
+    expect(api.unhandled).toEqual([])
+  })
+}
+
 test('saved slot stays saved when rereading fails and retry never repeats the write', async ({ page }) => {
   const api = await installAcceptanceApi(page)
   let writes = 0, failRead = false
   api.respond('PATCH', '/slots/s1', request => { writes++; api.data.event.slots[0]!.required_count = request.postDataJSON().required_count; failRead = true; return {} })
   api.respond('GET', '/events/e1', () => failRead ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: api.data.event } })
   await page.goto('/events/e1')
+  await page.locator('[data-test=slot-row-s1]').click()
   await page.locator('[data-test=edit-slot-s1]').click()
   await page.locator('[data-test=slot-0-count]').fill('4')
   await page.locator('[data-test=save-slot]').click()
-  await expect(page.getByRole('status').filter({ hasText: 'Изменение сохранено.' })).toBeVisible()
   await expect(page.locator('[data-test=save-slot]')).toHaveCount(0)
   await expect(page.locator('[data-test=edit-slot-s1]')).toBeDisabled()
+  await expect(page.getByRole('dialog', { name: 'Слот: Помощь в подготовке зала' })).toContainText('Закройте окно')
+  await page.locator('[data-test=close-slot-dialog]').click()
+  await expect(page.getByRole('status').filter({ hasText: 'Изменение сохранено.' })).toBeVisible()
   failRead = false
   await page.locator('[data-test=retry-assignments]').click()
   await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 4')
@@ -315,11 +380,14 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow detail with long id
   await page.goto('/events/e1')
   await expect(page.locator('[data-test=my-participation]')).toBeVisible()
   await page.addStyleTag({ content: 'html{font-size:200%!important} nuxt-devtools-frame{display:none!important}' })
-  await expect(page.locator('.slot__state')).toContainText('Сверх нормы: 1')
-  await expect(page.locator('.assignees')).toContainText('Имя скрыто')
+  await expect(page.locator('.slot')).toContainText('Сверх нормы: 1')
+  await expect(page.locator('.slot__people')).toContainText('Имя скрыто')
+  expect(await page.locator('.slot__main').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
   await mkdir(detailScreenshots, { recursive: true })
   await page.screenshot({ path: resolve(detailScreenshots, `detail-320-text-200-${theme}.png`), fullPage: true })
+  await page.locator('[data-test=slot-row-s1]').click()
+  await page.screenshot({ path: resolve(detailScreenshots, `slotdialog-320-text-200-${theme}.png`) })
   await page.locator('[data-test=remove-assignment-as1]').click()
   const dialog = page.getByRole('dialog', { name: 'Подтверждение снятия назначения' })
   await expect(dialog).toBeVisible()
@@ -339,7 +407,8 @@ test('event detail distinguishes full, empty, hidden and cancelled states withou
   api.data.event.slots[0]!.can_fill = false
   api.data.event.slots[0]!.required_count = 1
   await page.goto('/events/e1')
-  await expect(page.locator('.slot__state')).toContainText('Заполнен')
+  await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 1')
+  await expect(page.locator('.slot button')).toHaveCount(0)
   await expect(page.locator('[data-test=edit-event], [data-test=assign-s1], [data-test=edit-slot-s1]')).toHaveCount(0)
   api.data.event.slots = []
   await page.reload()

@@ -69,7 +69,7 @@ test('fixed labels and detail actions keep normal words at enlarged text', async
 test('event slot actions and ordinary card text remain readable without nested gutter loss', async ({ page }, info) => {
   const api = await installAcceptanceApi(page)
   await openEnlarged(page, '/events/e1')
-  await evidence(page, info, 'event-slots', await wholeWords(page.locator('.slot button, .event-card h1'), 12))
+  await evidence(page, info, 'event-slots', await wholeWords(page.locator('.slot button, .slot__title, .slot__person, .event-card h1'), 12))
   await openEnlarged(page, '/calendar')
   await evidence(page, info, 'cancelled-event', await wholeWords(page.locator('.cancelled, .event-row__cancelled'), 12))
   expect(api.unhandled).toEqual([])
@@ -123,7 +123,7 @@ test('detail controls keep visible spacing and image attachments keep list seman
     const controls = path === '/announcements/a1'
       ? page.locator('.announcement-page__actions button')
       : path === '/events/e1'
-        ? page.locator('.slot__actions button')
+        ? page.locator('.slot-list button')
         : path === '/notifications'
           ? page.locator('.notifications-page a[href="/settings/notifications"], .notifications-page [data-test=mark-all-read]')
           : page.locator('[data-test=edit-template], [data-test=toggle-active]')
