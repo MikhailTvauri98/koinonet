@@ -208,6 +208,101 @@ describe('calendar month cells and toolbar', () => {
     expect(rest.text()).toContain('Дальше на неделе'); expect(rest.text()).toContain('Среда'); expect(rest.text()).not.toContain('Следующая неделя')
   })
 })
+describe('calendar on a phone', () => {
+  // Сегодня в Владивостоке 9 ноября 2026 (на устройстве ещё 8-е в UTC).
+  const row = (day: number, i = 1, over: Partial<EventItem> = {}) => event({ id: `d${day}-${i}`, title: `Событие ${day}-${i}`, starts_at: `2026-11-${String(day).padStart(2, '0')}T0${i}:00:00Z`, ends_at: `2026-11-${String(day).padStart(2, '0')}T0${i}:30:00Z`, ...over })
+  const scrolled = vi.fn()
+  beforeEach(() => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(query => ({ matches: query.includes('max-width'), media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }) as unknown as MediaQueryList)
+    scrolled.mockReset(); Element.prototype.scrollIntoView = scrolled
+  })
+  afterEach(() => vi.restoreAllMocks())
+  const phone = async (items: EventItem[], query: Record<string, string> = {}) => {
+    Object.assign(routeQuery, { view: 'list', ...query }); get.mockResolvedValue(list(items))
+    return mountSuspended(CalendarPage)
+  }
+  it('starts the list at the church today and hides the legend and the desktop-only controls', async () => {
+    const page = await phone([row(2), row(9), row(12)])
+    const headings = page.findAll('.event-list h2').map(h => h.text())
+    expect(headings[0]).toContain('Сегодня'); expect(headings[1]).toContain('12 ноября')
+    expect(page.text()).not.toContain('Событие 2-1'); expect(page.text()).toContain('Событие 9-1')
+    expect(page.find('[data-test="calendar-legend"]').exists()).toBe(false)
+    expect(page.find('[data-test="strip-days"]').exists()).toBe(true)
+    expect(page.find('.calendar-toolbar').exists()).toBe(false)
+  })
+  it('puts the chips in one row: scope, a native ministry select and the month switch', async () => {
+    grantPermissions({ ministries: { m1: [] } })
+    get.mockImplementation(async (path: string) => path === '/ministries' ? { data: [{ id: 'm1', name: 'Хор' }] } : list([]))
+    Object.assign(routeQuery, { view: 'list' })
+    const page = await mountSuspended(CalendarPage)
+    const chips = page.get('[data-test="phone-chips"]')
+    expect(chips.findAll('button').map(button => button.text())).toEqual(['Все', 'Мои', 'Месяц'])
+    expect(chips.get('select').text()).toContain('Хор')
+    await chips.get('[data-test="phone-view-switch"]').trigger('click')
+    expect(replace).toHaveBeenLastCalledWith(expect.objectContaining({ query: expect.objectContaining({ view: 'month' }) }))
+  })
+  it('shows a «+» named «Создать событие» only to those who can create, for the selected day with the return context', async () => {
+    grantPermissions({ global: ['calendar.church.manage'] })
+    const page = await phone([], { date: '2026-11-12' })
+    const link = page.get('[data-test="toolbar-create"]')
+    expect(link.attributes('aria-label')).toBe('Создать событие'); expect(link.text()).toBe('+')
+    const target = new URL(link.attributes('href')!, 'https://church.test')
+    expect(target.searchParams.get('date')).toBe('2026-11-12'); expect(target.searchParams.get('return')).toContain('/calendar?date=2026-11-12&view=list&scope=church')
+    grantPermissions(); await flushPromises()
+    expect(page.find('[data-test="toolbar-create"]').exists()).toBe(false)
+  })
+  it('reveals past days of the month above the list on demand', async () => {
+    const page = await phone([row(2), row(9), row(12)])
+    const button = page.get('[data-test="show-past"]')
+    expect(button.text()).toBe('Показать прошедшие')
+    await button.trigger('click'); await flushPromises()
+    const headings = page.findAll('.event-list h2').map(h => h.text())
+    expect(headings[0]).toContain('2 ноября'); expect(headings[1]).toContain('Сегодня')
+    expect(page.find('[data-test="show-past"]').exists()).toBe(false)
+  })
+  it('offers the past days button only when the shown month has past days', async () => {
+    const none = await phone([row(12)], { date: '2026-11-09' })
+    expect(none.find('[data-test="show-past"]').exists()).toBe(false)
+    const page = await phone([row(2), row(12)], { date: '2026-11-09' })
+    expect(page.find('[data-test="show-past"]').exists()).toBe(true)
+    const future = await phone([row(12)], { date: '2026-12-09' })
+    expect(future.find('[data-test="show-past"]').exists()).toBe(false)
+  })
+  it('keeps a whole past month readable from its first day without the button', async () => {
+    const page = await phone([row(2)], { date: '2026-10-15' })
+    expect(page.find('[data-test="show-past"]').exists()).toBe(false)
+  })
+  it('scrolls to the heading of a day picked in the strip, reveals it if past, and keeps date, view and scope in the URL', async () => {
+    const page = await phone([row(2), row(9), row(12)])
+    await page.get('[data-test="strip-day-2026-11-12"]').trigger('click'); await flushPromises()
+    expect(replace).toHaveBeenLastCalledWith(expect.objectContaining({ query: { date: '2026-11-12', view: 'list', scope: 'church' } }))
+    expect(scrolled).toHaveBeenCalled()
+    expect(page.get('[data-test="selected-day"]').text()).toContain('12 ноября')
+    await page.get('[data-test="strip-day-2026-11-12"]').trigger('click'); await flushPromises()
+    await page.get('[data-test="strip-previous"]').trigger('click'); await flushPromises()
+    await page.get('[data-test="strip-day-2026-11-02"]').trigger('click'); await flushPromises()
+    expect(page.get('[data-test="selected-day"]').text()).toContain('2 ноября')
+    expect(page.text()).toContain('Событие 2-1')
+  })
+  it('renders an empty selected day explicitly', async () => {
+    const page = await phone([row(12)], { date: '2026-11-20' })
+    expect(page.get('[data-test="selected-day"]').text()).toContain('20 ноября'); expect(page.get('[data-test="selected-day"]').text()).toContain('Событий нет')
+  })
+  it('shows the general empty state instead of an empty day when the month has no events', async () => {
+    const page = await phone([])
+    expect(page.text()).toContain('Событий пока нет.'); expect(page.find('[data-test="selected-day"]').exists()).toBe(false)
+  })
+  it('opens a row through one stretched link and keeps the calendar context for the way back', async () => {
+    useAuthStore().person = { id: 'me' } as never
+    const mine = row(12, 1, { ministry: { id: 'm1', name: 'Хор', color: 'teal' } }); mine.slots[0]!.assignments = [{ id: 'a', person: { id: 'me', full_name: 'Я Я', short_name: 'Я Я', photo_thumb_url: null }, created_at: null }]
+    const page = await phone([mine, row(12, 2, { status: 'cancelled' })], { date: '2026-11-12', scope: 'church' })
+    const rows = page.findAll('.event-row')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.findAll('a')).toHaveLength(1); expect(rows[0]!.text()).toContain('Вы')
+    expect(rows[1]!.text()).toContain('Отменено'); expect(rows[1]!.classes()).toContain('is-cancelled')
+    expect(new URL(rows[0]!.get('a').attributes('href')!, 'https://church.test').searchParams.get('return')).toBe('/calendar?date=2026-11-12&view=list&scope=church')
+  })
+})
 describe('event detail and display hooks', () => {
   it('keeps a confirmed event edit after GET fails and retries only the read', async () => {
     grantPermissions({ global: ['calendar.church.manage'] })

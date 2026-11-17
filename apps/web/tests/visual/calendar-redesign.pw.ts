@@ -156,7 +156,7 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
       await expect(page.locator('[data-test="selected-day"]')).toBeFocused()
       expect(requests[0]!.searchParams.get('from')).toBe('2026-10-26')
       expect(requests[0]!.searchParams.get('to')).toBe('2026-12-06')
-    } else await expect(page.getByRole('button', { name: 'Список', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    } else { await expect(page.getByRole('button', { name: 'Месяц', exact: true })).toHaveAttribute('aria-pressed', 'false'); await expect(page.locator('[data-test="strip-day-2026-11-08"]')).toHaveAttribute('aria-pressed', 'true') }
     await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none !important }' })
     await mkdir(screenshots, { recursive: true })
     await page.screenshot({ path: resolve(screenshots, `calendar-${width}-${theme}.png`), fullPage: true })
@@ -691,3 +691,94 @@ test('hidden date field still accepts fill (used by e2e), is hidden from screen 
   expect(await page.locator('.calendar-toolbar > *').last().evaluate(node => node.matches('[data-test="toolbar-create"]'))).toBe(true)
   expect(api.unhandled).toEqual([])
 })
+
+const phoneScreenshots = resolve('../../.superpowers/sdd/phase-8/task-9-screenshots')
+async function phoneCalendar(page: import('@playwright/test').Page, theme: string) {
+  await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+  const api = await installAcceptanceApi(page)
+  await page.clock.setFixedTime(new Date('2026-11-10T08:00:00Z'))
+  const at = (id: string, title: string, start: string, over: Record<string, unknown> = {}) => ({ ...api.data.event, id, title, starts_at: start, ends_at: start.replace(/T(\d\d)/, (_, h) => `T${String(Number(h) + 1).padStart(2, '0')}`), ...over })
+  const choir = { id: 'm1', name: api.data.ministry.name, color: 'teal' }
+  const items = [
+    at('p1', 'Репетиция хора', '2026-11-03T16:00:00Z', { owner_type: 'ministry', ministry: choir, slots: [] }),
+    at('t1', 'Воскресное событие и совместный обед', '2026-11-10T07:00:00Z'),
+    at('t2', 'Отменённая встреча молодёжи с длинным названием', '2026-11-10T10:00:00Z', { status: 'cancelled', cancel_reason: 'Ремонт зала', slots: [] }),
+    at('f1', 'Служение для детей', '2026-11-12T07:00:00Z', { owner_type: 'ministry', ministry: choir, slots: [] }),
+    at('f2', 'Домашняя группа', '2026-11-14T15:00:00Z', { slots: [] }),
+  ]
+  api.respond('GET', '/events', () => ({ json: { data: items, meta: { current_page: 1, last_page: 1, total: items.length } } }))
+  api.respond('GET', '/events/t1', () => ({ json: { data: items[1] } }))
+  return api
+}
+for (const theme of ['dark', 'light']) {
+  test(`${theme} phone calendar keeps the strip and chips above a list that starts today at 390`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const api = await phoneCalendar(page, theme)
+    await page.goto('/calendar')
+    await expect(page.locator('.event-row').first()).toBeVisible()
+    await expect(page.locator('.event-list h2').first()).toContainText('Сегодня')
+    await expect(page.locator('[data-test="calendar-legend"]')).toHaveCount(0)
+    const link = page.getByRole('link', { name: 'Создать событие', exact: true })
+    await expect(link).toHaveCount(1)
+    expect((await link.boundingBox())!.width).toBeGreaterThanOrEqual(44)
+    // До первого события: заголовок страницы, одна шапка, одна лента, один ряд чипов.
+    const strip = (await page.locator('.week-strip').boundingBox())!, chips = (await page.locator('[data-test=phone-chips]').boundingBox())!
+    const first = (await page.locator('.event-list h2').first().boundingBox())!
+    expect(strip.height).toBeLessThanOrEqual(72); expect(chips.height).toBeLessThanOrEqual(56)
+    const head = (await page.locator('.phone-head').boundingBox())!
+    expect(head.height).toBeLessThanOrEqual(56)
+    // Между рядом чипов и первым днём — только подсказка пояса и кнопка «Показать прошедшие».
+    expect(first.y).toBeLessThanOrEqual(chips.y + chips.height + 130)
+    expect(first.y).toBeLessThan(420)
+    const tops = await page.locator('[data-test=phone-chips] > *').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return r.top + r.height / 2 }))
+    expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(2)
+    for (const day of await page.locator('[data-test^="strip-day-"]').all()) expect((await day.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await expect(page.getByRole('button', { name: 'Вторник, 10 ноября, событий: 2', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    for (const row of await page.locator('.event-row').all()) {
+      const box = (await row.boundingBox())!, anchor = (await row.locator('a').boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(56); expect(anchor.height).toBeGreaterThanOrEqual(44)
+      expect(await row.locator('a').count()).toBe(1)
+    }
+    await expect(page.locator('.event-row.is-cancelled')).toContainText('Отменено')
+    await expect(page.locator('.event-row__mine')).toHaveText('Вы')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    await mkdir(phoneScreenshots, { recursive: true })
+    await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none !important }' })
+    await page.screenshot({ path: resolve(phoneScreenshots, `phone-390-${theme}.png`), fullPage: true })
+    // Прошедшие дни открываются выше; сегодняшний день остаётся на месте.
+    const today = page.locator('[data-day="2026-11-10"] h2')
+    const before = (await today.boundingBox())!.y
+    await page.getByRole('button', { name: 'Показать прошедшие', exact: true }).click()
+    await expect(page.locator('[data-day="2026-11-03"]')).toBeVisible()
+    expect(Math.abs((await today.boundingBox())!.y - before)).toBeLessThanOrEqual(2)
+    // Выбор дня в ленте: адрес хранит дату, вид и область; заголовок дня виден.
+    await page.locator('[data-test="strip-day-2026-11-12"]').click()
+    await expect(page).toHaveURL(/date=2026-11-12&view=list&scope=church/)
+    await expect(page.locator('[data-test="selected-day"]')).toBeFocused()
+    await expect(page.locator('[data-test="selected-day"] h2')).toBeInViewport()
+    // Возврат из события сохраняет контекст.
+    await page.locator('[data-day="2026-11-10"] .event-row a').first().click()
+    await expect(page).toHaveURL(/\/events\/t1\?return=/)
+    await page.getByRole('link', { name: 'Календарь', exact: true }).last().click()
+    await expect(page).toHaveURL(/date=2026-11-12&view=list&scope=church/)
+    await expect(page.locator('[data-test="strip-day-2026-11-12"]')).toHaveAttribute('aria-pressed', 'true')
+    expect(api.unhandled).toEqual([])
+  })
+  test(`${theme} phone calendar at 320 with 200% text keeps the page from scrolling sideways`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 })
+    const api = await phoneCalendar(page, theme)
+    await page.goto('/calendar')
+    await expect(page.locator('.event-row').first()).toBeVisible()
+    await page.addStyleTag({ content: 'html{font-size:32px!important} nuxt-devtools-frame{display:none!important}' })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+    for (const day of await page.locator('[data-test^="strip-day-"]').all()) { const box = (await day.boundingBox())!; expect(box.height).toBeGreaterThanOrEqual(44); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(321) }
+    for (const row of await page.locator('.event-row').all()) { expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(56); await expect(row.locator('a')).toHaveCount(1) }
+    for (const control of ['[data-test=strip-previous]', '[data-test=strip-next]', '[data-test=phone-view-switch]', '[data-test=calendar-today]', '[data-test=previous-month]']) {
+      const box = (await page.locator(control).boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(44); expect(box.x + box.width).toBeLessThanOrEqual(321); expect(box.x).toBeGreaterThanOrEqual(-1)
+    }
+    await mkdir(phoneScreenshots, { recursive: true })
+    await page.screenshot({ path: resolve(phoneScreenshots, `phone-320-text-200-${theme}.png`), fullPage: true })
+    expect(api.unhandled).toEqual([])
+  })
+}

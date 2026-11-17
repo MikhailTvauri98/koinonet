@@ -5,6 +5,7 @@ import SlotList from './SlotList.vue'
 import PageHeader from '~/components/ui/PageHeader.vue'
 import { safeCalendarReturn } from '~/composables/useCalendarView'
 import { isAssigned, ownSlots } from '~/utils/assignments'
+import { ministryColorVar } from '~/utils/ministryColor'
 const props = defineProps<{ event: EventItem, detail?: boolean, compact?: boolean, day?: string, returnContext?: string, disabled?: boolean }>()
 defineEmits<{ edit: [event: EventItem], cancel: [event: EventItem], assign: [slot: EventSlot], assignmentsChanged: [], manageSlot: [mode: 'new' | 'edit' | 'remove', slot?: EventSlot] }>()
 const { formatDateTime, formatTime, formatDate } = useChurchDate()
@@ -24,9 +25,9 @@ const dayTime = computed(() => {
 </script>
 
 <template>
-  <article v-if="compact && !detail" class="event-row">
+  <article v-if="compact && !detail" class="event-row" :class="{ 'is-cancelled': event.status === 'cancelled' }" :style="{ '--stripe': ministryColorVar(event.ministry) }">
     <div class="event-row__time"><time :datetime="event.starts_at">{{ dayTime }}</time><small v-if="endOnDifferentDate">{{ formatDate(event.starts_at) }} — {{ formatDate(event.ends_at) }}, {{ formatTime(event.ends_at) }}</small><small v-else>{{ formatTime(event.ends_at) }}</small></div>
-    <div class="event-row__content"><h3><NuxtLink :to="target">{{ event.title }}</NuxtLink></h3><p v-if="event.status === 'cancelled'" :data-test="`cancelled-${event.id}`" class="event-row__cancelled">Отменено<span v-if="event.cancel_reason">: {{ event.cancel_reason }}</span></p><p>{{ event.location }}<span v-if="event.location"> · </span>{{ event.ministry?.name || 'Церковь' }}</p><span v-if="ownAssignment" class="event-row__mine">Вы назначены</span></div>
+    <div class="event-row__content"><h3><NuxtLink class="event-row__link" :to="target">{{ event.title }}</NuxtLink></h3><p v-if="event.status === 'cancelled'" :data-test="`cancelled-${event.id}`" class="event-row__cancelled">Отменено<span v-if="event.cancel_reason">: {{ event.cancel_reason }}</span></p><p>{{ event.location }}<span v-if="event.location"> · </span>{{ event.ministry?.name || 'Церковь' }}</p><span v-if="ownAssignment" class="event-row__mine">Вы</span></div>
   </article>
   <article v-else-if="detail" class="event-card event-card--detail">
     <PageHeader data-test="event-detail-heading" tabindex="-1" :title="event.title" :description="event.ministry?.name || 'Церковь'">
@@ -87,14 +88,21 @@ p { color: var(--ui-text-muted); }
   .event-detail-panel { padding: 16px 12px; }
   .event-participation { padding: 16px 12px; }
 }
-.event-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--ui-space-4); padding: var(--ui-space-4); border-bottom: 1px solid var(--ui-border); min-width: 0; overflow-wrap: anywhere; }
+.event-row { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--ui-space-4); min-height: 56px; padding: var(--ui-space-2) var(--ui-space-4) var(--ui-space-2) var(--ui-space-3); border-bottom: 1px solid var(--ui-border); border-inline-start: 4px solid var(--stripe, var(--ui-ministry-church)); min-width: 0; overflow-wrap: anywhere; }
 .event-row:last-child { border-bottom: 0; }
-.event-row__time { display: grid; align-content: start; gap: 4px; max-width: 7rem; font-variant-numeric: tabular-nums; }
+.event-row__time { display: grid; align-content: start; gap: 2px; max-width: 7rem; padding-top: 10px; font-variant-numeric: tabular-nums; }
 .event-row__time small { color: var(--ui-text-muted); font-size: .875rem; }
 .event-row h3 { font-size: 1rem; margin: 0; }
-.event-row h3 a { display: block; min-height: 44px; padding-block: 8px; }
-.event-row p { font-size: .875rem; margin: 4px 0 0; }
-.event-row .event-row__cancelled { color: var(--ui-danger); }
-.event-row__mine { display: inline-block; background: var(--ui-accent-soft); color: var(--ui-accent); padding: 4px 8px; border-radius: var(--ui-radius-sm); margin-top: 8px; font-size: .875rem; }
+.event-row h3 a { display: block; min-height: 44px; padding-block: 10px 0; }
+/* Растянутая ссылка: вся строка кликабельна, ссылка в строке одна. */
+.event-row__link::after { content: ''; position: absolute; inset: 0; }
+.event-row:focus-within { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.event-row__link:focus-visible { outline: none; }
+.event-row p { font-size: .875rem; margin: 0; }
+.event-row p + p { margin-top: 2px; }
+.event-row .event-row__cancelled { color: var(--ui-danger); font-weight: 600; }
+.event-row.is-cancelled h3 a, .event-row.is-cancelled .event-row__time time { text-decoration: line-through; color: var(--ui-text-muted); }
+.event-row.is-cancelled { border-inline-start-color: var(--ui-text-muted); }
+.event-row__mine { display: inline-block; background: var(--ui-accent-soft); color: var(--ui-accent); padding: 2px 10px; border-radius: 999px; margin-top: 4px; font-size: .875rem; font-weight: 600; }
 @container (max-width: 18rem) { .event-row { grid-template-columns: minmax(0, 1fr); gap: var(--ui-space-2); } .event-row__time { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); max-width: none; } }
 </style>

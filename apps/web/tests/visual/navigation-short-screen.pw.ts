@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Locator } from '@playwright/test'
 import { mockVisualApi } from './support/api'
+import { installAcceptanceApi } from './support/acceptance-api'
 
 async function setup(page: Page, theme: string, scale: number) {
   await mockVisualApi(page)
@@ -113,4 +114,20 @@ for (const theme of ['dark', 'light']) test(`${theme} flow keeps chat history, c
   await login.fill('anna@example.test')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(login).toHaveValue('anna@example.test')
+})
+
+for (const theme of ['dark', 'light']) test(`${theme} phone calendar controls and rows stay above the menu at 375x390`, async ({ page }, info) => {
+  await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+  const api = await installAcceptanceApi(page)
+  await page.setViewportSize({ width: 375, height: 390 })
+  await page.goto('/calendar?date=2026-11-08&view=list&scope=church')
+  await expect(page.locator('.event-row').first()).toBeVisible()
+  await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+  for (const target of [page.locator('[data-test=strip-day-2026-11-08]'), page.locator('[data-test=strip-next]'), page.locator('[data-test=phone-view-switch]'), page.locator('.event-row a').first(), page.locator('.event-row a').last()]) await readable(page, target)
+  await page.locator('[data-test=strip-day-2026-11-07]').click()
+  await expect(page.locator('[data-test=selected-day]')).toBeFocused()
+  await readable(page, page.locator('[data-test=selected-day] h2'))
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+  await page.screenshot({ path: info.outputPath('phone-calendar.png') })
+  expect(api.unhandled).toEqual([])
 })
