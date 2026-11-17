@@ -136,7 +136,7 @@ for (const theme of ['dark', 'light'] as const) for (const [path, heading, guest
       '/templates/t1': page.locator('[data-test=event-date]'),
       '/announcements': page.getByRole('button', { name: 'Опубликовать объявление', exact: true }),
       '/announcements/a1': page.locator('.announcement-page__actions button').first(),
-      '/chats': page.locator('[data-test=new-message]'),
+      '/chats': page.locator('[data-test=write]'),
       '/chats/c1': page.getByRole('textbox', { name: 'Сообщение', exact: true }),
       '/notifications': page.locator('[data-test=mark-all-read]'),
       '/settings/profile': page.locator('[data-test=save-profile]'),

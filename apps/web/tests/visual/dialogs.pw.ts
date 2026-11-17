@@ -106,8 +106,9 @@ test('file chooser is reachable by Tab and opens with Enter and Space', async ({
 test('new group traps keyboard focus, Escape closes and returns focus', async ({ page }) => {
   await mockVisualApi(page)
   await page.goto('/chats')
-  const trigger = page.getByRole('button', { name: 'Новая группа', exact: true })
+  const trigger = page.getByRole('button', { name: 'Написать', exact: true })
   await trigger.click()
+  await page.getByRole('dialog', { name: 'Написать', exact: true }).getByRole('button', { name: 'Новая группа', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Новая группа', exact: true })
   await expect(dialog.locator('input[data-test="title"]')).toBeFocused()
   await dialog.evaluate(el => {
@@ -233,7 +234,8 @@ test('busy dialog keeps focus when every action is disabled', async ({ page }) =
 test('dialog does not steal Tab from another native modal', async ({ page }) => {
   await mockVisualApi(page)
   await page.goto('/chats')
-  await page.getByRole('button', { name: 'Новая группа', exact: true }).click()
+  await page.getByRole('button', { name: 'Написать', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Написать', exact: true }).getByRole('button', { name: 'Новая группа', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Новая группа', exact: true })
   await page.evaluate(() => {
     const other = document.createElement('dialog')
@@ -251,7 +253,7 @@ test('dialog does not steal Tab from another native modal', async ({ page }) => 
   await page.keyboard.press('Escape')
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Новая группа', exact: true })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Написать', exact: true })).toBeFocused()
 })
 
 // Task 9: actual production dialogs with permitted Directory responses.
@@ -278,8 +280,9 @@ for (const mode of ['people', 'accounts'] as const) {
           ? { status: 503, json: {} } : { json: { data: [] } }))
         await page.goto(mode === 'accounts' ? '/chats' : '/ministries/m1/members')
         if (scale === 2) await page.addStyleTag({ content: 'html { font-size: 32px !important; }' })
-        const trigger = page.getByRole('button', { name: mode === 'accounts' ? 'Новая группа' : 'Добавить участника', exact: true })
+        const trigger = page.getByRole('button', { name: mode === 'accounts' ? 'Написать' : 'Добавить участника', exact: true })
         await trigger.click()
+        if (mode === 'accounts') await page.getByRole('dialog', { name: 'Написать', exact: true }).getByRole('button', { name: 'Новая группа', exact: true }).click()
         const dialog = page.getByRole('dialog', { name: mode === 'accounts' ? 'Новая группа' : 'Добавить участника', exact: true })
         await expect(dialog.locator('[data-test="option-photo"]')).toBeVisible()
         expect(queries[0]!.has('search')).toBe(false)

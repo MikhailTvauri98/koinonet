@@ -64,11 +64,17 @@ describe('chat list', () => {
   it('offers only available new chat actions in the empty hint', async () => {
     grantPermissions({ global: ['people.view', 'chats.dm', 'chats.create_groups'] })
     const list = await mountSuspended(ChatList, { props: { chats: [] } })
-    expect(list.text()).toContain('Новое сообщение')
+    expect(list.text()).toContain('«Написать»')
+    expect(list.text()).toContain('Личное сообщение')
     expect(list.text()).toContain('Новая группа')
+    grantPermissions({ global: ['people.view', 'chats.dm'] })
+    await flushPromises()
+    expect(list.text()).toContain('личный чат')
+    expect(list.text()).not.toContain('Новая группа')
     grantPermissions({ global: ['chats.dm'] })
     await flushPromises()
-    expect(list.text()).not.toContain('Новое сообщение')
+    expect(list.text()).not.toContain('Написать')
+    expect(list.text()).not.toContain('Личное сообщение')
     expect(list.text()).not.toContain('карточку человека')
   })
   it('renders empty and deleted message fallbacks and ignores expired mute', async () => {
@@ -171,5 +177,31 @@ it('normalizes multiline preview spacing without shortening the chat title', asy
   const title = 'Подготовка воскресного служения и совместного обеда'
   const list = await mountSuspended(ChatList, { props: { chats: [{ ...entry, title, last_message: { ...entry.last_message!, body_preview: '  Подготовим\nзал\r\nдля\tвоскресного   служения.  ' } }] } })
   expect(list.get('.chat-item__preview').text()).toBe('Подготовим зал для воскресного служения.')
-  expect(list.get('.chat-item__content strong').text()).toBe(title)
+  expect(list.get('.chat-item__title').text()).toBe(title)
+})
+
+describe('compact row', () => {
+  const row = (over: Partial<ChatListItem> = {}) => mountSuspended(ChatList, { props: { chats: [{ ...entry, ...over }] } })
+  it('is one link with avatar, single-line title, preview without sender, moment and unread counter', async () => {
+    const title = 'Подготовка воскресного служения и совместного обеда'
+    const list = await row({ title, last_message_at: '2000-01-05T10:00:00Z' })
+    expect(list.findAll('a')).toHaveLength(1)
+    const link = list.get('a[href="/chats/a"]')
+    expect(link.get('.ui-avatar').attributes('aria-hidden')).toBe('true')
+    expect(link.get('.chat-item__title').text()).toBe(title)
+    expect(link.text()).toContain(title)
+    expect(link.get('.chat-item__preview').text()).toBe('Репетиция в 18:00')
+    expect(link.get('time').text()).not.toMatch(/г\./)
+    expect(link.get('time').text()).toBe('5 января 2000')
+    expect(link.get('[data-test="unread-a"]').attributes('aria-label')).toBe('Непрочитанных: 3')
+  })
+  it('keeps the mute marker as text and shows the photo through the shared avatar', async () => {
+    const list = await row({ avatar_url: 'https://example.test/a.jpg' })
+    expect(list.get('[data-test="muted-a"]').text()).toBe('Без звука')
+    expect(list.get('.ui-avatar img').attributes('src')).toBe('https://example.test/a.jpg')
+  })
+  it('omits the time when there is no last message', async () => {
+    const list = await row({ last_message: null, last_message_at: null })
+    expect(list.find('time').exists()).toBe(false)
+  })
 })

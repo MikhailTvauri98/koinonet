@@ -58,10 +58,11 @@ it('does not query Directory without people.view and explains unavailable select
 })
 it('shows a working new group control only with create_groups', async () => {
   const page = await mountSuspended(ChatsIndex)
-  await page.get('[data-test="new-group"]').trigger('click')
+  await page.get('[data-test="write"]').trigger('click')
+  await page.get('[data-test="write-group"]').trigger('click'); await flushPromises()
   expect(page.findComponent(NewGroupDialog).exists()).toBe(true)
   grantPermissions(); await flushPromises()
-  expect(page.find('[data-test="new-group"]').exists()).toBe(false)
+  expect(page.find('[data-test="write"]').exists()).toBe(false)
   expect(page.findComponent(NewGroupDialog).exists()).toBe(false)
 })
 it('exposes group-only management from server flags and confirms leave/archive', async () => {
