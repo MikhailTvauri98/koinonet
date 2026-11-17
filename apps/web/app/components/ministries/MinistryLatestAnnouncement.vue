@@ -32,7 +32,7 @@ void load()
   <section v-if="latest || errorMessage" class="overview-block" aria-labelledby="overview-announcement-title" data-test="overview-announcement">
     <header class="overview-block__header">
       <h2 id="overview-announcement-title">Объявления служения</h2>
-      <NuxtLink class="ui-button ui-button--quiet" :to="`/ministries/${encodeURIComponent(ministryId)}/announcements`" data-test="all-announcements">Все</NuxtLink>
+      <NuxtLink class="ui-button ui-button--quiet" :to="`/ministries/${encodeURIComponent(ministryId)}/announcements`" data-test="all-announcements" aria-label="Все объявления служения">Все</NuxtLink>
     </header>
     <p v-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" class="ui-button" data-test="retry-announcement" :disabled="loading" @click="load">Повторить</button></p>
     <article v-else-if="latest" class="latest-announcement">

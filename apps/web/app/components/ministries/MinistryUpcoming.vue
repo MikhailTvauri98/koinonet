@@ -11,6 +11,9 @@ const props = defineProps<{ ministryId: string }>()
 const auth = useAuthStore(), settings = useSettingsStore()
 const { load: loadEvents } = useEvents(), { formatEventWhen, todayInChurch } = useChurchDate()
 const items = ref<EventItem[]>([]), loaded = ref(false), loading = ref(false), errorMessage = ref('')
+// API отдаёт не больше 93 дней за запрос, поэтому год берётся окнами по 73 дня; поиск идёт, пока не набрались три события.
+const WINDOW_DAYS = 73, WINDOWS = 5, SHOWN = 3
+const notEnded = (event: EventItem) => Date.parse(event.ends_at) > Date.now()
 let generation = 0
 
 async function load() {
@@ -20,9 +23,16 @@ async function load() {
   try {
     await settings.fetch()
     if (!live()) return
-    const from = todayInChurch()
-    const result = await loadEvents({ from, to: addCalendarDays(from, 60) }, `ministry:${id}`)
-    if (live()) { items.value = result; loaded.value = true }
+    const today = todayInChurch()
+    let found: EventItem[] = []
+    for (let index = 0; index < WINDOWS && found.length < SHOWN; index++) {
+      const from = addCalendarDays(today, index * WINDOW_DAYS)
+      const part = await loadEvents({ from, to: addCalendarDays(from, WINDOW_DAYS - 1) }, `ministry:${id}`)
+      if (!live()) return
+      // Событие на стыке окон приходит в обоих: берём по id один раз.
+      found = [...found, ...part.filter(event => notEnded(event) && !found.some(known => known.id === event.id))]
+    }
+    items.value = found; loaded.value = true
   } catch (error) {
     if (live()) errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить события служения. Попробуйте ещё раз.')
   } finally { if (live()) loading.value = false }
@@ -31,7 +41,7 @@ function reset() { generation++; items.value = []; loaded.value = false; errorMe
 watch([() => props.ministryId, () => auth.sessionVersion], reset, { flush: 'sync' })
 onBeforeUnmount(() => { generation++ })
 
-const rows = computed(() => items.value.filter(event => Date.parse(event.ends_at) > Date.now()).slice(0, 3))
+const rows = computed(() => items.value.filter(notEnded).slice(0, SHOWN))
 const me = computed(() => auth.person?.id)
 function freePlaces(event: EventItem) {
   if (!event.can_manage && !event.slots.some(slot => slot.can_fill)) return 0
@@ -49,7 +59,7 @@ void load()
   <section class="overview-block" aria-labelledby="overview-events-title" data-test="overview-events">
     <header class="overview-block__header">
       <h2 id="overview-events-title">Ближайшие события</h2>
-      <NuxtLink class="ui-button ui-button--quiet" :to="`/ministries/${encodeURIComponent(ministryId)}/events`" data-test="all-events">Все события</NuxtLink>
+      <NuxtLink class="ui-button ui-button--quiet" :to="`/ministries/${encodeURIComponent(ministryId)}/events`" data-test="all-events" aria-label="Все события служения">Все события</NuxtLink>
     </header>
     <p v-if="loading && !loaded" role="status">Загружаем события…</p>
     <p v-if="errorMessage" role="alert">{{ errorMessage }} <button type="button" class="ui-button" data-test="retry-events" :disabled="loading" @click="load">Повторить</button></p>

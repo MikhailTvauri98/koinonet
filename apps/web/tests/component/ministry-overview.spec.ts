@@ -75,6 +75,32 @@ describe('ministry overview: upcoming events', () => {
     expect(page.get('[data-test="all-events"]').attributes('href')).toBe('/ministries/m1/events')
   })
 
+  it('finds the only upcoming event about 70 days out in a later window and stays within the API range limit', async () => {
+    const far = event('far', { starts_at: '2027-01-17T01:00:00Z', ends_at: '2027-01-17T03:00:00Z' })
+    get.mockImplementation(async (path: string, query?: Record<string, unknown>) => {
+      if (path === '/events') {
+        const days = (Date.parse(`${query!.to}T00:00:00Z`) - Date.parse(`${query!.from}T00:00:00Z`)) / 86_400_000
+        expect(days).toBeLessThanOrEqual(92)
+        return list(String(query!.from) <= '2027-01-17' && '2027-01-17' <= String(query!.to) ? [far] : [])
+      }
+      if (path === '/announcements') return list([])
+      if (path === '/ministries/m1/members') return { data: [] }
+      return { data: ministry }
+    })
+    const page = await mount()
+    expect(page.findAll('[data-test="overview-event"]').map(row => row.find('a').text())).toEqual(['Событие far'])
+    expect(page.find('[data-test="overview-events-empty"]').exists()).toBe(false)
+  })
+
+  it('says there is nothing only after a whole year without events', async () => {
+    api({ events: [] })
+    const page = await mount()
+    const requests = get.mock.calls.filter(([path]) => path === '/events').map(([, query]) => query as { from: string, to: string })
+    expect(requests[0]!.from).toBe('2026-11-09')
+    expect(requests.at(-1)!.to).toBe('2027-11-08')
+    expect(page.get('[data-test="overview-events-empty"]').text()).toBe('Ближайших событий нет')
+  })
+
   it('says there are no upcoming events in one line', async () => {
     api({ events: [] })
     const page = await mount()
@@ -154,6 +180,27 @@ describe('ministry overview: composition', () => {
     expect(page.get('[data-test="all-members"]').attributes('href')).toBe('/ministries/m1/members')
   })
 
+  it('ignores a late members answer for the previous ministry and for the previous session', async () => {
+    const pending: Record<string, (value: unknown) => void> = {}
+    get.mockImplementation((path: string) => {
+      if (path === '/ministries/m1/members') return new Promise((done) => { pending.m1 = done })
+      if (path === '/ministries/m2/members') return Promise.resolve({ data: [member(7, [roleMember], 'Новый участник')] })
+      if (path === '/events' || path === '/announcements') return Promise.resolve(list([]))
+      return Promise.resolve({ data: { ...ministry, id: path.split('/').pop()! } })
+    })
+    const page = await mountSuspended(MinistryOverview)
+    route.params.id = 'm2'
+    await flushPromises()
+    pending.m1!({ data: [member(1, [roleMember], 'Старый участник')] })
+    await flushPromises()
+    expect(page.text()).toContain('Новый участник')
+    expect(page.text()).not.toContain('Старый участник')
+    api({ members: [] })
+    useAuthStore().sessionVersion++
+    await flushPromises()
+    expect(page.find('[data-test="composition-member"]').exists()).toBe(false)
+  })
+
   it('shows a hidden name as a nameless participant', async () => {
     api({ members: [member(1, [roleMember], null)] })
     const page = await mount()
@@ -171,6 +218,34 @@ describe('ministry overview: announcement, chat and independence', () => {
     expect(block.get('[data-test="announcement-preview"]').text()).toBe('Жирный текст ссылка')
     expect(block.text()).not.toContain('Объявление a1')
     expect(block.get('[data-test="all-announcements"]').attributes('href')).toBe('/ministries/m1/announcements')
+  })
+
+  it('ignores a late announcement for the previous ministry and for the previous session', async () => {
+    let release!: (value: unknown) => void, requested = false
+    get.mockImplementation((path: string) => {
+      if (path === '/announcements') return Promise.resolve(requested ? list([announcement('new', '2026-11-05T10:00:00Z')]) : new Promise((done) => { requested = true; release = done }))
+      if (path === '/events') return Promise.resolve(list([]))
+      if (/members$/.test(path)) return Promise.resolve({ data: [] })
+      return Promise.resolve({ data: { ...ministry, id: path.split('/').pop()! } })
+    })
+    const page = await mountSuspended(MinistryOverview)
+    route.params.id = 'm2'
+    await flushPromises()
+    release(list([announcement('old', '2026-11-01T10:00:00Z')]))
+    await flushPromises()
+    expect(page.text()).toContain('Объявление new')
+    expect(page.text()).not.toContain('Объявление old')
+    api({ announcements: [] })
+    useAuthStore().sessionVersion++
+    await flushPromises()
+    expect(page.find('[data-test="overview-announcement"]').exists()).toBe(false)
+  })
+
+  it('gives the two "all" links unambiguous names', async () => {
+    api({ announcements: [announcement('a1', '2026-11-05T10:00:00Z')] })
+    const page = await mount()
+    expect(page.get('[data-test="all-events"]').attributes('aria-label')).toBe('Все события служения')
+    expect(page.get('[data-test="all-announcements"]').attributes('aria-label')).toBe('Все объявления служения')
   })
 
   it('shows no announcement block when there is none', async () => {

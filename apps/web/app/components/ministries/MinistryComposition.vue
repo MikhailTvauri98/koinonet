@@ -5,7 +5,7 @@ import { apiErrorMessage } from '~/utils/apiError'
 
 // «Состав»: аватары первых участников и распределение по ролям. Роль по умолчанию
 // в распределение не входит (по `default_role_id`, имя роли в условиях не участвует).
-const props = defineProps<{ ministryId: string, defaultRoleId: string | null }>()
+const props = defineProps<{ ministryId: string, defaultRoleId?: string | null }>()
 const AVATARS = 12
 const api = useApi(), auth = useAuthStore()
 const members = ref<Member[]>([]), loaded = ref(false), loading = ref(false), errorMessage = ref('')
