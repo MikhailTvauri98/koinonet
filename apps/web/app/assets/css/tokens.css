@@ -16,6 +16,17 @@
   --ui-danger: #ffaba6;
   --ui-success: #9bd9b0;
   --ui-focus: #91b4ff;
+  /* Цвета служений (ключи каталога MinistryColor) и нейтральный цвет церкви. */
+  --ui-ministry-violet: #b9a4f5;
+  --ui-ministry-teal: #6fcfbf;
+  --ui-ministry-rose: #f0a3b8;
+  --ui-ministry-amber: #e8c37a;
+  --ui-ministry-sky: #8ccfe8;
+  --ui-ministry-green: #9bd9b0;
+  --ui-ministry-church: #a8b2b5;
+  /* Доля цвета в подложке метки и аватара (остальное — поверхность) и в их тексте (остальное — основной текст). */
+  --ui-ministry-tint: 16%;
+  --ui-ministry-ink: 100%;
   --ui-space-1: 0.25rem;
   --ui-space-2: 0.5rem;
   --ui-space-3: 0.75rem;
@@ -53,5 +64,14 @@
   --ui-danger: #ad3434;
   --ui-success: #276344;
   --ui-focus: #315fc6;
+  --ui-ministry-violet: #6a4fc4;
+  --ui-ministry-teal: #1f7a6d;
+  --ui-ministry-rose: #a83a5e;
+  --ui-ministry-amber: #94620a;
+  --ui-ministry-sky: #1f6d8a;
+  --ui-ministry-green: #276344;
+  --ui-ministry-church: #6b778a;
+  /* На светлой подложке чистые бирюзовый, янтарный и церковный дают меньше 4.5:1, текст притемняется. */
+  --ui-ministry-ink: 70%;
   --ui-shadow: 0 2px 8px rgb(32 43 58 / 3%);
 }

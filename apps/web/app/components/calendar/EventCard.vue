@@ -4,14 +4,15 @@ import AttachmentList from '~/components/announcements/AttachmentList.vue'
 import SlotList from './SlotList.vue'
 import PageHeader from '~/components/ui/PageHeader.vue'
 import { safeCalendarReturn } from '~/composables/useCalendarView'
+import { isAssigned, ownSlots } from '~/utils/assignments'
 const props = defineProps<{ event: EventItem, detail?: boolean, compact?: boolean, day?: string, returnContext?: string, disabled?: boolean }>()
 defineEmits<{ edit: [event: EventItem], cancel: [event: EventItem], assign: [slot: EventSlot], assignmentsChanged: [], manageSlot: [mode: 'new' | 'edit' | 'remove', slot?: EventSlot] }>()
 const { formatDateTime, formatTime, formatDate } = useChurchDate()
 const auth = useAuthStore(), settings = useSettingsStore(), { can } = useCan()
 const ministryVisible = computed(() => !!props.event.ministry && (can('ministries.view_all') || can('ministries.manage_all') || Object.hasOwn(auth.permissions.ministries, props.event.ministry.id)))
 const target = computed(() => ({ path: `/events/${encodeURIComponent(props.event.id)}`, ...(props.returnContext ? { query: { return: safeCalendarReturn(props.returnContext) } } : {}) }))
-const ownAssignment = computed(() => !!auth.person?.id && props.event.slots.some(slot => slot.assignments.some(assignment => assignment.person.id === auth.person!.id)))
-const ownSlots = computed(() => props.event.slots.filter(slot => !!auth.person?.id && slot.assignments.some(assignment => assignment.person.id === auth.person!.id)))
+const ownAssignment = computed(() => isAssigned(props.event, auth.person?.id))
+const mySlots = computed(() => ownSlots(props.event, auth.person?.id))
 const multiDay = computed(() => formatDate(props.event.starts_at) !== formatDate(new Date(Date.parse(props.event.ends_at) - 1).toISOString()))
 const endOnDifferentDate = computed(() => formatDate(props.event.starts_at) !== formatDate(props.event.ends_at))
 const dayTime = computed(() => {
@@ -32,7 +33,7 @@ const dayTime = computed(() => {
       <template v-if="event.can_manage" #actions><button type="button" class="ui-button" data-test="edit-event" :disabled="disabled" @click="$emit('edit', event)">Изменить</button></template>
     </PageHeader>
     <p v-if="event.status === 'cancelled'" :data-test="`cancelled-${event.id}`" class="cancelled">Отменено<span v-if="event.cancel_reason">: {{ event.cancel_reason }}</span></p>
-    <section v-if="ownAssignment" data-test="my-participation" aria-label="Моё участие" class="event-participation"><strong>Вы назначены{{ event.status === 'cancelled' ? ' · событие отменено' : '' }}</strong><ul><li v-for="slot in ownSlots" :key="slot.id">{{ slot.label }}</li></ul></section>
+    <section v-if="ownAssignment" data-test="my-participation" aria-label="Моё участие" class="event-participation"><strong>Вы назначены{{ event.status === 'cancelled' ? ' · событие отменено' : '' }}</strong><ul><li v-for="slot in mySlots" :key="slot.id">{{ slot.label }}</li></ul></section>
     <div class="event-detail-grid">
       <section class="event-detail-panel" aria-label="О событии">
         <h2>О событии</h2>

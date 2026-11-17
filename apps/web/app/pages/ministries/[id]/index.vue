@@ -123,7 +123,7 @@ await load()
 
     <p v-if="loading" role="status">Загрузка…</p>
     <p v-else-if="errorMessage" role="alert">
-      {{ errorMessage }} <button type="button" data-test="retry-ministry" @click="load">Повторить</button>
+      {{ errorMessage }} <button type="button" class="ui-button" data-test="retry-ministry" @click="load">Повторить</button>
     </p>
     <template v-if="ministry">
       <PageHeader :title="ministry.name">
@@ -150,14 +150,14 @@ await load()
           </FormSection>
           <p v-if="saveError" id="edit-ministry-error" role="alert">{{ saveError }}</p>
           <button type="submit" class="ui-button ui-button--primary" data-test="save-ministry" :disabled="saving">Сохранить</button>
-          <button type="button" data-test="cancel-edit-ministry" :disabled="saving" @click="finishEditing">Отмена</button>
+          <button type="button" class="ui-button" data-test="cancel-edit-ministry" :disabled="saving" @click="finishEditing">Отмена</button>
         </form>
       </template>
       <template v-else>
         <p v-if="ministry.description">{{ ministry.description }}</p>
         <p v-else>Описание не заполнено.</p>
         <button
-          v-if="canEdit" ref="editButton" type="button" class="ui-button ui-button--secondary" data-test="edit-ministry" :disabled="!!ministry.archived_at || archiving"
+          v-if="canEdit" ref="editButton" type="button" class="ui-button" data-test="edit-ministry" :disabled="!!ministry.archived_at || archiving"
           :title="ministry.archived_at ? 'Сначала архивное служение нужно вернуть на сервере.' : ''"
           @click="startEditing"
         >Редактировать</button>
@@ -175,11 +175,11 @@ await load()
       </section>
       <section v-if="canArchive && !ministry.archived_at">
         <h2>Архивация</h2>
-        <button v-if="!confirmArchive" type="button" data-test="archive" :disabled="saving" @click="confirmArchive = true">Архивировать</button>
-        <div v-else role="group" aria-label="Подтверждение архивации" class="notice">
+        <button v-if="!confirmArchive" type="button" class="ui-button" data-test="archive" :disabled="saving" @click="confirmArchive = true">Архивировать</button>
+        <div v-else role="group" aria-label="Подтверждение архивации" class="notice notice--confirm">
           <p>Архивировать служение? Оно исчезнет из активного списка, история сохранится.</p>
-          <button type="button" data-test="confirm-archive" :disabled="archiving" @click="archive">Подтвердить архивацию</button>
-          <button type="button" data-test="cancel-archive" :disabled="archiving" @click="confirmArchive = false">Отмена</button>
+          <button type="button" class="ui-button ui-button--danger" data-test="confirm-archive" :disabled="archiving" @click="archive">Подтвердить архивацию</button>
+          <button type="button" class="ui-button" data-test="cancel-archive" :disabled="archiving" @click="confirmArchive = false">Отмена</button>
         </div>
         <p v-if="archiveError" role="alert">{{ archiveError }}</p>
       </section>
@@ -192,10 +192,11 @@ await load()
 .ministry-card__cover { display: block; width: 100%; max-height: 16rem; object-fit: cover; border-radius: var(--ui-radius-sm); margin-bottom: var(--ui-space-3); }
 .ministry-card > section { border-top: 1px solid var(--ui-border); margin-top: var(--ui-space-6); padding-top: var(--ui-space-4); }
 label { display: flex; flex-direction: column; gap: var(--ui-space-1); margin-bottom: var(--ui-space-4); }
-input, textarea, button { font: inherit; padding: 0.65rem min(0.65rem, 10px); border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); }
-button { cursor: pointer; margin-right: min(var(--ui-space-2), 8px); }
-button:disabled { opacity: 0.6; cursor: wait; }
+input, textarea { font: inherit; padding: 0.65rem min(0.65rem, 10px); border: 1px solid var(--ui-border-strong); border-radius: var(--ui-radius-sm); }
+button { margin-right: min(var(--ui-space-2), 8px); }
 .notice { background: var(--ui-surface-muted); padding: min(var(--ui-space-4), 16px); border-radius: var(--ui-radius-sm); margin-top: var(--ui-space-4); }
+/* Тональные кнопки подтверждения видны только на поверхности, а не на такой же заливке. */
+.notice--confirm { background: var(--ui-surface); border: 1px solid var(--ui-border); }
 [role='alert'] { color: var(--ui-danger); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
