@@ -37,12 +37,14 @@ function createData(long: boolean) {
   }
   const person: Schema<'PersonResource'> = {
     id: 'p1', first_name: 'Анна', last_name: 'Петрова-Константинопольская', patronymic: 'Сергеевна',
-    full_name: 'Петрова-Константинопольская Анна Сергеевна', short_name: 'Петрова-Константинопольская Анна Сергеевна', status: 'member', archived: false,
+    full_name: 'Петрова-Константинопольская Анна Сергеевна', short_name: 'Анна Петрова-Константинопольская', status: 'member', archived: false,
     photo_url: mediaUrl('photo-square.jpg'), has_account: true, user_id: 'u1', has_global_roles: true, account_disabled: false,
     global_roles: [{ id: 'r1', name: 'Координатор' }], ministries: [{ id: ministry.id, name: ministry.name }],
     contacts: { phone: '+79991234567', email: 'anna@example.test', birth_date: '1990-04-12' },
     note: 'Помогает в подготовке событий. Подробности доступны по текущим правам.',
   }
+  // Собеседник: короткое имя — «Имя Фамилия» без отчества, как Person::shortName().
+  const partner = { id: 'p2', full_name: 'Орлов Михаил Сергеевич', short_name: 'Михаил Орлов' }
   const profile: Schema<'MyProfileResource'> = {
     photo_url: person.photo_url, contacts: { ...person.contacts! }, contacts_public: true,
   }
@@ -77,7 +79,7 @@ function createData(long: boolean) {
     visibility: 'church', status: 'scheduled', cancelled_at: null, cancel_reason: null, can_manage: true, attachments: media,
     slots: [{ id: 's1', label: 'Помощь в подготовке зала', resource_type: 'person', role: null,
       required_count: 3, filled_count: 1, sort_order: 0, can_fill: true,
-      assignments: [{ id: 'as1', person: { id: person.id, full_name: person.full_name, short_name: 'Анна Петрова', photo_thumb_url: person.photo_url }, created_at: now }] }],
+      assignments: [{ id: 'as1', person: { id: person.id, full_name: person.full_name, short_name: person.short_name, photo_thumb_url: person.photo_url }, created_at: now }] }],
   }
   const template: Schema<'EventTemplateResource'> = {
     id: 't1', owner_type: 'church', ministry: null, title: 'Воскресное событие', description: 'Еженедельное событие для всей церкви',
@@ -86,7 +88,7 @@ function createData(long: boolean) {
     slots: [{ id: 'ts1', label: 'Подготовка', role: null, required_count: 3, sort_order: 0 }],
   }
   const announcement: Schema<'AnnouncementResource'> = {
-    id: 'a1', scope: 'church', ministry: null, author: { id: 'u1', full_name: person.full_name , short_name: person.full_name},
+    id: 'a1', scope: 'church', ministry: null, author: { id: 'u1', full_name: person.full_name, short_name: person.short_name },
     title: long ? 'Объявление'.repeat(20) : 'Подготовка к воскресенью',
     body: '## Приглашаем всех\nВстречаемся в **10:00**. После события будет совместный обед.\n\n- Помогите подготовить зал\n- Возьмите ноты\n\n[Подробности](https://example.test/' + 'long-link'.repeat(20) + ')',
     pinned: true, hide_after: null, notify_on_publish: true, published_at: now, archived: false, views_count: 18, attachments: media,
@@ -95,7 +97,7 @@ function createData(long: boolean) {
   const senders = ['u1', 'u2', 'u2', 'u1', 'u1', 'u2', 'u1', 'u2']
   const sentAt = ['2026-10-31T14:58:00Z', '2026-10-31T15:00:00Z', '2026-10-31T15:02:00Z', '2026-11-01T06:00:00Z', '2026-11-01T06:01:00Z', '2026-11-01T06:10:00Z', '2026-11-01T06:12:00Z', '2026-11-01T06:15:00Z']
   const messages: Schema<'MessageResource'>[] = Array.from({ length: 8 }, (_, i) => ({
-    id: 'msg' + i, chat_id: 'c1', sender: { id: senders[i]!, person: senders[i] === 'u2' ? { id: 'p2', full_name: 'Михаил Сергеевич Орлов', short_name: 'Михаил Орлов', photo_thumb_url: null } : { id: 'p1', full_name: person.full_name, short_name: 'Анна Петрова', photo_thumb_url: person.photo_url } },
+    id: 'msg' + i, chat_id: 'c1', sender: { id: senders[i]!, person: senders[i] === 'u2' ? { ...partner, photo_thumb_url: null } : { id: 'p1', full_name: person.full_name, short_name: person.short_name, photo_thumb_url: person.photo_url } },
     body: senders[i] === 'u2' ? 'Спасибо! Приду пораньше и помогу подготовить зал.' : 'Всем добрый день! Репетиция в субботу в 18:00. Возьмите ноты и проверьте расписание.',
     reply_to: i === 6 ? { id: 'msg5', sender_name: 'Михаил Орлов', body_preview: 'Спасибо! Приду пораньше.', deleted: false } : null,
     attachments: i === 4 ? media : [], edited_at: null, deleted: false, created_at: sentAt[i]!, cursor: 'cursor' + i,
@@ -105,11 +107,22 @@ function createData(long: boolean) {
     archived: false, last_message_at: now, last_message: { id: 'msg7', body_preview: messages[7]!.body!, created_at: now, deleted: false },
     unread_count: 3, muted_until: null, is_owner: true,
     members: [
-      { user_id: 'u1', person_id: 'p1', full_name: person.full_name, short_name: person.full_name, photo_url: person.photo_url, is_owner: true, joined_at: now },
-      { user_id: 'u2', person_id: 'p2', full_name: 'Михаил Орлов', short_name: 'Михаил Орлов', photo_url: null, is_owner: false, joined_at: now },
+      { user_id: 'u1', person_id: 'p1', full_name: person.full_name, short_name: person.short_name, photo_url: person.photo_url, is_owner: true, joined_at: now },
+      { user_id: 'u2', person_id: partner.id, full_name: partner.full_name, short_name: partner.short_name, photo_url: null, is_owner: false, joined_at: now },
     ], pinned_messages: [], can_write: true, can_moderate: true, can_manage_members: true,
   }
-  const member: Schema<'MemberResource'> = { id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: person.full_name, short_name: person.full_name, joined_at: now, photo_url: person.photo_url, roles: [{ id: 'rm1', name: ministryRole.name }] }
+  // Личный чат называется коротким именем собеседника (ChatTitle для direct).
+  const direct: Schema<'ChatResource'> = {
+    id: 'c2', type: 'direct', title: partner.short_name, avatar_url: null, ministry_id: null, event_id: null,
+    archived: false, last_message_at: '2026-10-31T18:40:00Z', last_message: { id: 'dm1', body_preview: 'До встречи в воскресенье! Ключи от зала у меня.', created_at: '2026-10-31T18:40:00Z', deleted: false },
+    unread_count: 1, muted_until: null, is_owner: false,
+    members: [chat.members[0]!, chat.members[1]!], pinned_messages: [], can_write: true, can_moderate: false, can_manage_members: false,
+  }
+  const directMessages: Schema<'MessageResource'>[] = [{
+    id: 'dm1', chat_id: 'c2', sender: { id: 'u2', person: { ...partner, photo_thumb_url: null } }, body: direct.last_message!.body_preview,
+    reply_to: null, attachments: [], edited_at: null, deleted: false, created_at: direct.last_message_at!, cursor: 'direct-cursor1',
+  }]
+  const member: Schema<'MemberResource'> = { id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: person.full_name, short_name: person.short_name, joined_at: now, photo_url: person.photo_url, roles: [{ id: 'rm1', name: ministryRole.name }] }
   const notifications: Success<'notificationCenter.index'> = {
     data: [{ id: 'n1', category: 'assignments', title: 'Вы назначены на событие', body: event.title, url: '/events/e1', read_at: null, created_at: now }],
     next_cursor: null, meta: { unread_count: 1 },
@@ -127,7 +140,7 @@ function createData(long: boolean) {
     { category: 'assignments', label: 'Назначения', enabled: true },
     { category: 'reminders', label: 'Напоминания', enabled: false },
   ]
-  return { person, profile, me, settings, ministry, role, ministryRole, permissions, media, event, template, announcement, messages, chat, member, notifications, audit, sessions, categories }
+  return { person, partner, profile, me, settings, ministry, role, ministryRole, permissions, media, event, template, announcement, messages, chat, direct, directMessages, member, notifications, audit, sessions, categories }
 }
 
 /** Real Nuxt/CSS and decoded local bytes; no server permissions or nginx claim. */
@@ -139,7 +152,7 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
   const unhandled: string[] = []
   const overrides = new Map<string, Handler>()
   const selected = <T>(items: T[]) => options.empty ? [] : items
-  const people = (): Success<'person.index'> => paginated(selected([data.person, { ...data.person, id: 'p2', first_name: 'Михаил', last_name: 'Орлов', patronymic: null, full_name: 'Орлов Михаил', user_id: 'u2' }]))
+  const people = (): Success<'person.index'> => paginated(selected([data.person, { ...data.person, id: data.partner.id, first_name: 'Михаил', last_name: 'Орлов', patronymic: 'Сергеевич', full_name: data.partner.full_name, short_name: data.partner.short_name, user_id: 'u2' }]))
   const events = (request: Request): Success<'event.index'> => {
     const query = new URL(request.url()).searchParams
     const scope = query.get('scope')
@@ -166,8 +179,8 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
   }
   const templates = (): Success<'template.index'> => ({ data: selected([data.template]) })
   const chats = (): Success<'chat.index'> => {
-    const { id, type, title, avatar_url, ministry_id, event_id, archived, last_message_at, last_message, unread_count, muted_until, is_owner } = data.chat
-    return { data: selected([{ id, type, title, avatar_url, ministry_id, event_id, archived, last_message_at, last_message, unread_count, muted_until, is_owner }]), meta: { unread_total: options.empty ? 0 : unread_count } }
+    const rows = [data.chat, data.direct].map(({ id, type, title, avatar_url, ministry_id, event_id, archived, last_message_at, last_message, unread_count, muted_until, is_owner }) => ({ id, type, title, avatar_url, ministry_id, event_id, archived, last_message_at, last_message, unread_count, muted_until, is_owner }))
+    return { data: selected(rows), meta: { unread_total: options.empty ? 0 : rows.reduce((total, row) => total + row.unread_count, 0) } }
   }
   const history = (request: Request): Success<'message.index'> => {
     const query = new URL(request.url()).searchParams
@@ -204,7 +217,9 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
     '/chats': chats,
     '/chats/c1': () => ({ data: data.chat }),
     '/chats/c1/messages': history,
-    '/slots/s1/candidates': () => ({ data: [{ person: { id: 'p1', full_name: data.person.full_name, short_name: data.person.full_name, photo_thumb_url: data.person.photo_url }, has_role: true, conflicts: [] } satisfies Schema<'CandidateResource'>] }),
+    '/chats/c2': () => ({ data: data.direct }),
+    '/chats/c2/messages': () => ({ data: selected(data.directMessages), next_before: null, next_after: null }),
+    '/slots/s1/candidates': () => ({ data: [{ person: { id: 'p1', full_name: data.person.full_name, short_name: data.person.short_name, photo_thumb_url: data.person.photo_url }, has_role: true, conflicts: [] } satisfies Schema<'CandidateResource'>] }),
     '/notifications': () => options.empty ? { data: [], next_cursor: null, meta: { unread_count: 0 } } : data.notifications,
     '/notification-settings': () => ({ data: data.categories }),
     '/auth/sessions': () => ({ data: data.sessions }),
@@ -212,7 +227,7 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
     '/access-links/acceptance-invite': () => ({ data: { kind: 'invite', person: { first_name: 'Анна', last_name: data.person.last_name }, login_hint: { phone: null, email: 'anna@example.test' } } satisfies Schema<'AccessLinkResource'> }),
     '/access-links/acceptance-reset': () => ({ data: { kind: 'password_reset', person: { first_name: 'Анна', last_name: data.person.last_name }, login_hint: { phone: null, email: 'anna@example.test' } } satisfies Schema<'AccessLinkResource'> }),
   }
-  for (const message of data.messages) {
+  for (const message of [...data.messages, ...data.directMessages]) {
     gets['/messages/' + message.id] = () => ({ data: message } satisfies Success<'message.show'>)
   }
   await page.route('**/sanctum/csrf-cookie', route => route.fulfill({ status: 204 }))
@@ -232,13 +247,14 @@ export async function installAcceptanceApi(page: Page, options: { guest?: boolea
       await route.fulfill({ status: 422, json: { message: 'Поле «архивные» должно быть «да» или «нет».', errors: { archived: ['Ожидается 0 или 1.'] } } })
     } else if (method === 'GET' && gets[path]) {
       await route.fulfill({ json: gets[path](request) })
-    } else if (method === 'POST' && path === '/chats/c1/read') {
-      if (!data.messages.some(message => message.id === request.postDataJSON()?.message_id)) {
+    } else if (method === 'POST' && (path === '/chats/c1/read' || path === '/chats/c2/read')) {
+      const [target, other, history] = path === '/chats/c1/read' ? [data.chat, data.direct, data.messages] : [data.direct, data.chat, data.directMessages]
+      if (!history.some(message => message.id === request.postDataJSON()?.message_id)) {
         unhandled.push(method + ' ' + path + ': invalid message_id')
         await route.fulfill({ status: 422, json: { message: 'Сообщение не найдено.' } })
       } else {
-        data.chat.unread_count = 0
-        const body: Success<'chat.chatRead'> = { unread_count: 0, unread_total: 0 }
+        target.unread_count = 0
+        const body: Success<'chat.chatRead'> = { unread_count: 0, unread_total: other.unread_count }
         await route.fulfill({ status: 200, json: body })
       }
     } else {

@@ -29,6 +29,8 @@ const routes = [
   ['/announcements/a1', 'Объявление'.repeat(20), false],
   ['/chats', 'Чаты', false],
   ['/chats/c1', 'Подготовка воскресного события', false],
+  // Личный чат называется коротким именем собеседника.
+  ['/chats/c2', 'Михаил Орлов', false],
   ['/notifications', 'Уведомления', false],
   ['/settings/profile', 'Профиль', false],
   ['/settings/login', 'Безопасность', false],
@@ -138,6 +140,7 @@ for (const theme of ['dark', 'light'] as const) for (const [path, heading, guest
       '/announcements/a1': page.locator('.announcement-page__actions button').first(),
       '/chats': page.locator('[data-test=write]'),
       '/chats/c1': page.getByRole('textbox', { name: 'Сообщение', exact: true }),
+      '/chats/c2': page.getByRole('textbox', { name: 'Сообщение', exact: true }),
       '/notifications': page.locator('[data-test=mark-all-read]'),
       '/settings/profile': page.locator('[data-test=save-profile]'),
       '/settings/login': page.locator('[data-test=save-login]'),
