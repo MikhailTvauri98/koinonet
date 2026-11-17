@@ -65,6 +65,14 @@ it('marks the signed-in person with text and keeps hidden names neutral without 
   expect(w.findAll('img').map(img => img.attributes('src'))).toEqual(['/mine.jpg'])
 })
 
+it('gives the row a dialog popup hint and each name once in its accessible text', async () => {
+  const w = await mountSuspended(SlotList, { props: { slots: [slotOf()] } })
+  const row = w.get('[data-test="slot-row-s1"]')
+  expect(row.attributes('aria-haspopup')).toBe('dialog')
+  expect(row.findAll('[aria-label]')).toHaveLength(0); expect(row.findAll('[role="img"]')).toHaveLength(0)
+  expect(row.text().split('Анна И.')).toHaveLength(2); expect(row.text().split('Борис П.')).toHaveLength(2)
+})
+
 // Dialog actions by flags
 it('a can_fill-only person sees assign (also when full) and remove-assignment, but not edit/remove slot', async () => {
   const w = await mountDialog(eventOf(slotOf({ required_count: 2 })))
@@ -104,6 +112,18 @@ it('removing an assignment asks for confirmation, keeps the roster on failure an
   await w.get('[data-test="confirm-remove-assignment"]').trigger('click'); await flushPromises()
   expect(remove).toHaveBeenLastCalledWith('/assignments/a1'); expect(w.emitted('assignmentsChanged')).toHaveLength(1)
   expect(w.get('[data-test="remove-assignment-a1"]').text()).toBe('Назначение снято'); expect(w.get('[data-test="remove-assignment-a1"]').attributes('disabled')).toBeDefined()
+})
+it('moves focus inside the dialog after a successful removal and names the person fully in the confirmation', async () => {
+  const w = await mountSuspended(SlotDialog, { props: { event: eventOf(), slot: slotOf() }, attachTo: document.body })
+  await w.get('[data-test="remove-assignment-a1"]').trigger('click')
+  expect(document.body.textContent).toContain('Анна Иванова · Вокалист')
+  await w.get('[data-test="confirm-remove-assignment"]').trigger('click'); await flushPromises()
+  const dialog = w.get('dialog').element
+  expect(dialog.contains(document.activeElement)).toBe(true); expect(document.activeElement).not.toBe(document.body)
+  const hidden = slotOf({ assignments: [{ id: 'a3', person: person('p9', null), created_at: null }], filled_count: 1 })
+  const second = await mountSuspended(SlotDialog, { props: { event: eventOf(hidden), slot: hidden }, attachTo: document.body })
+  await second.get('[data-test="remove-assignment-a3"]').trigger('click')
+  expect(document.body.textContent).toContain('Участник · Вокалист')
 })
 it('removing the slot goes through the confirmation of the slot manager and emits slotRemoved', async () => {
   const event = eventOf(slotOf(), { can_manage: true }); grantPermissions({ global: ['calendar.church.manage'] })

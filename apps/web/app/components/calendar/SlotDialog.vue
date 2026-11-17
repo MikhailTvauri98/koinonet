@@ -8,6 +8,7 @@ import EventSlotManager from './EventSlotManager.vue'
 const props = defineProps<{ event: EventItem, slot: EventSlot, disabled?: boolean }>()
 const emit = defineEmits<{ assignmentsChanged: [], slotChanged: [], slotRemoved: [], close: [] }>()
 const api = useApi(), auth = useAuthStore()
+const heading = ref<HTMLElement>()
 const nested = ref<'assign' | 'edit' | 'remove' | null>(null)
 const removingId = ref<string | null>(null), removing = ref(false), removeError = ref(''), removedIds = ref<string[]>([])
 const structural = computed(() => props.event.can_manage && props.event.status === 'scheduled')
@@ -29,7 +30,7 @@ async function removeAssignment() {
   const current = () => active && token === generation && session === auth.sessionVersion
   try {
     await api.delete(`/assignments/${encodeURIComponent(id)}`)
-    if (current()) { removedIds.value.push(id); removingId.value = null; emit('assignmentsChanged') }
+    if (current()) { removedIds.value.push(id); removingId.value = null; emit('assignmentsChanged'); await nextTick(); if (current()) heading.value?.focus() }
   } catch (error) { if (current()) removeError.value = apiErrorMessage(error, 'Не удалось снять назначение. Попробуйте ещё раз.') }
   finally { if (current()) removing.value = false }
 }
@@ -39,12 +40,12 @@ function slotSaved() { const removed = nested.value === 'remove'; nested.value =
 
 <template>
   <UiDialog :open="true" :label="`Слот: ${slot.label}`" @close="close">
-    <h2>{{ slot.label }}</h2>
+    <h2 ref="heading" tabindex="-1">{{ slot.label }}</h2>
     <p class="slot-dialog__state"><span :data-test="`dialog-slot-${slot.id}-count`" :class="{ overfilled: free < 0 }">{{ slot.filled_count }} из {{ slot.required_count }}</span> · <span v-if="free < 0">Сверх нормы: {{ -free }}</span><span v-else-if="free === 0">Заполнен</span><span v-else>Свободно: {{ free }}</span></p>
     <p v-if="disabled" role="status">Действия недоступны до обновления состава. Закройте окно и при ошибке нажмите «Повторить загрузку» в карточке события.</p>
     <ul v-if="slot.assignments.length" aria-label="Назначенные" class="slot-dialog__people">
       <li v-for="assignment in slot.assignments" :key="assignment.id">
-        <UiAvatar :id="assignment.person.id" :name="assignment.person.short_name" :photo-url="assignment.person.short_name ? assignment.person.photo_thumb_url : null" />
+        <UiAvatar :id="assignment.person.id" :name="assignment.person.short_name" :photo-url="assignment.person.short_name ? assignment.person.photo_thumb_url : null" decorative />
         <span class="slot-dialog__name">{{ assignment.person.short_name ?? 'Имя скрыто' }}<strong v-if="assignment.person.id === auth.person?.id" class="slot-dialog__mine"> · вы</strong></span>
         <button v-if="slot.can_fill" type="button" class="ui-button" :data-test="`remove-assignment-${assignment.id}`" :disabled="disabled || removing || removedIds.includes(assignment.id)" @click="requestRemoval(assignment.id)">{{ removedIds.includes(assignment.id) ? 'Назначение снято' : 'Снять назначение' }}</button>
       </li>
@@ -58,7 +59,7 @@ function slotSaved() { const removed = nested.value === 'remove'; nested.value =
     </template>
   </UiDialog>
   <UiDialog v-if="removingId && removalPerson" :open="true" label="Подтверждение снятия назначения" @close="!removing && resetRemoval()">
-    <h2>Снять назначение?</h2><p>{{ removalPerson.short_name ?? 'Имя скрыто' }} · {{ slot.label }}</p>
+    <h2>Снять назначение?</h2><p>{{ removalPerson.full_name ?? 'Участник' }} · {{ slot.label }}</p>
     <p v-if="removeError" role="alert">{{ removeError }}</p>
     <template #actions><button type="button" class="ui-button" data-test="cancel-remove-assignment" :disabled="removing" @click="resetRemoval">Назад</button><button type="button" class="ui-button ui-button--danger" data-test="confirm-remove-assignment" :disabled="removing || disabled" @click="removeAssignment">Снять назначение</button></template>
   </UiDialog>

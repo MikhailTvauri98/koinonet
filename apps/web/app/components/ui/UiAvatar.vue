@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { colorKeyForId } from '~/utils/ministryColor'
 
-const props = withDefaults(defineProps<{ id: string, name: string | null, photoUrl?: string | null, size?: 'sm' | 'md' | 'lg' }>(), { photoUrl: null, size: 'md' })
+const props = withDefaults(defineProps<{ id: string, name: string | null, photoUrl?: string | null, size?: 'sm' | 'md' | 'lg', decorative?: boolean }>(), { photoUrl: null, size: 'md', decorative: false })
 // Неудачный адрес фото запоминается: новый адрес от API снова показывает фото.
 const failedUrl = ref<string | null>(null)
 
@@ -15,7 +15,7 @@ const photo = computed(() => props.photoUrl && props.photoUrl !== failedUrl.valu
 </script>
 
 <template>
-  <span class="ui-avatar ui-tinted" :class="`ui-avatar--${size}`" role="img" :aria-label="label" :style="{ '--tint-color': tint }">
+  <span class="ui-avatar ui-tinted" :class="`ui-avatar--${size}`" :role="decorative ? undefined : 'img'" :aria-label="decorative ? undefined : label" :aria-hidden="decorative ? 'true' : undefined" :style="{ '--tint-color': tint }">
     <img v-if="photo" :src="photo" alt="" loading="lazy" @error="failedUrl = photo">
     <span v-else aria-hidden="true">{{ initials }}</span>
   </span>

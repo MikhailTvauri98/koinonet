@@ -8,6 +8,12 @@ const tint = (style: string | undefined) => /--tint-color:\s*([^;]+)/.exec(style
 const avatar = (props: { id: string, name: string | null, photoUrl?: string | null, size?: 'sm' | 'md' | 'lg' }) => mountSuspended(UiAvatar, { props })
 
 describe('UiAvatar', () => {
+  it('hides a decorative avatar from assistive technology and keeps the default image role otherwise', async () => {
+    const decorative = await mountSuspended(UiAvatar, { props: { id: 'p1', name: 'Анна Петрова', decorative: true } })
+    expect(decorative.attributes('aria-hidden')).toBe('true'); expect(decorative.attributes('role')).toBeUndefined(); expect(decorative.attributes('aria-label')).toBeUndefined()
+    const plain = await avatar({ id: 'p1', name: 'Анна Петрова' })
+    expect(plain.attributes('role')).toBe('img'); expect(plain.attributes('aria-label')).toBe('Анна Петрова'); expect(plain.attributes('aria-hidden')).toBeUndefined()
+  })
   it('gives the same person the same palette color and different people different colors', async () => {
     const first = await avatar({ id: '01JCPERSON0000000000000001', name: 'Мария Кузнецова' })
     const again = await avatar({ id: '01JCPERSON0000000000000001', name: 'Мария Кузнецова', size: 'lg' })
