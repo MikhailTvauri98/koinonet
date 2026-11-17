@@ -13,6 +13,7 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
   // Дата без времени (ГГГГ-ММ-ДД) показываем в UTC: пояс церкви здесь уже учтён.
   const plainDayMonth = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', day: 'numeric', month: 'long' })
   const plainWeekday = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', weekday: 'long' })
+  const plainWeekdayShort = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', weekday: 'short' })
 
   const dayKey = (value: Date | string) => iso.format(typeof value === 'string' ? new Date(value) : value)
   const dayNumber = (key: string) => Math.floor(Date.parse(`${key}T00:00:00Z`) / DAY_MS)
@@ -92,6 +93,15 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     return `${capitalize(weekday)}, ${full}`
   }
 
+  // Разделитель дня в чате: «Сегодня», «Вчера», «Пт, 13 ноября» (год — только не текущий).
+  const formatChatDay = (dateOnly: string) => {
+    const ago = daysAgo(dateOnly)
+    if (ago === 0) return 'Сегодня'
+    if (ago === 1) return 'Вчера'
+    const at = new Date(`${dateOnly}T00:00:00Z`)
+    return `${capitalize(plainWeekdayShort.format(at))}, ${withYear(plainDayMonth.format(at), dateOnly)}`
+  }
+
   const deviceZoneDiffers = (value: string) => {
     const at = new Date(value)
     return -at.getTimezoneOffset() !== offsetMinutes(at)
@@ -108,6 +118,7 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     formatEventWhen,
     formatDuration,
     formatDayHeading,
+    formatChatDay,
     formatWeekdayShort: (value: string) => weekdayShort.format(new Date(value)),
     deviceZoneDiffers,
   }
@@ -128,6 +139,7 @@ export function useChurchDate() {
     formatEventWhen: (startIso: string, endIso: string) => formatter.value.formatEventWhen(startIso, endIso),
     formatDuration: (startIso: string, endIso: string) => formatter.value.formatDuration(startIso, endIso),
     formatDayHeading: (dateOnly: string) => formatter.value.formatDayHeading(dateOnly),
+    formatChatDay: (dateOnly: string) => formatter.value.formatChatDay(dateOnly),
     formatWeekdayShort: (iso: string) => formatter.value.formatWeekdayShort(iso),
     deviceZoneDiffers: (iso: string) => formatter.value.deviceZoneDiffers(iso),
   }

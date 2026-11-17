@@ -91,11 +91,14 @@ function createData(long: boolean) {
     body: '## Приглашаем всех\nВстречаемся в **10:00**. После события будет совместный обед.\n\n- Помогите подготовить зал\n- Возьмите ноты\n\n[Подробности](https://example.test/' + 'long-link'.repeat(20) + ')',
     pinned: true, hide_after: null, notify_on_publish: true, published_at: now, archived: false, views_count: 18, attachments: media,
   }
+  // Двое подряд у одного отправителя (msg1–msg2, msg3–msg4) и граница дня по церкви (msg2 | msg3).
+  const senders = ['u1', 'u2', 'u2', 'u1', 'u1', 'u2', 'u1', 'u2']
+  const sentAt = ['2026-10-31T14:58:00Z', '2026-10-31T15:00:00Z', '2026-10-31T15:02:00Z', '2026-11-01T06:00:00Z', '2026-11-01T06:01:00Z', '2026-11-01T06:10:00Z', '2026-11-01T06:12:00Z', '2026-11-01T06:15:00Z']
   const messages: Schema<'MessageResource'>[] = Array.from({ length: 8 }, (_, i) => ({
-    id: 'msg' + i, chat_id: 'c1', sender: { id: i % 2 ? 'u2' : 'u1', person: { id: i % 2 ? 'p2' : 'p1', full_name: i % 2 ? 'Михаил Орлов' : person.full_name, short_name: i % 2 ? 'Михаил Орлов' : person.full_name, photo_thumb_url: person.photo_url } },
-    body: i % 2 ? 'Спасибо! Приду пораньше и помогу подготовить зал.' : 'Всем добрый день! Репетиция в субботу в 18:00. Возьмите ноты и проверьте расписание.',
+    id: 'msg' + i, chat_id: 'c1', sender: { id: senders[i]!, person: senders[i] === 'u2' ? { id: 'p2', full_name: 'Михаил Сергеевич Орлов', short_name: 'Михаил Орлов', photo_thumb_url: null } : { id: 'p1', full_name: person.full_name, short_name: 'Анна Петрова', photo_thumb_url: person.photo_url } },
+    body: senders[i] === 'u2' ? 'Спасибо! Приду пораньше и помогу подготовить зал.' : 'Всем добрый день! Репетиция в субботу в 18:00. Возьмите ноты и проверьте расписание.',
     reply_to: i === 6 ? { id: 'msg5', sender_name: 'Михаил Орлов', body_preview: 'Спасибо! Приду пораньше.', deleted: false } : null,
-    attachments: i === 4 ? media : [], edited_at: null, deleted: false, created_at: now, cursor: 'cursor' + i,
+    attachments: i === 4 ? media : [], edited_at: null, deleted: false, created_at: sentAt[i]!, cursor: 'cursor' + i,
   }))
   const chat: Schema<'ChatResource'> = {
     id: 'c1', type: 'group', title: 'Подготовка воскресного события', avatar_url: person.photo_url, ministry_id: null, event_id: null,

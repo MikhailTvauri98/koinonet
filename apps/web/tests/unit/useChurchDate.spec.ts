@@ -94,6 +94,13 @@ describe('human dates', () => {
         expect(f.formatDayHeading('2027-01-05')).toBe('Вторник, 5 января 2027')
       })
 
+      it('formats chat day separators', () => {
+        expect(f.formatChatDay('2026-11-17')).toBe('Сегодня')
+        expect(f.formatChatDay('2026-11-16')).toBe('Вчера')
+        expect(f.formatChatDay('2026-11-13')).toBe('Пт, 13 ноября')
+        expect(f.formatChatDay('2025-12-31')).toBe('Ср, 31 декабря 2025')
+      })
+
       it('compares device and church offsets at the instant', () => {
         expect(f.deviceZoneDiffers('2026-11-17T06:20:00Z')).toBe(zone !== 'Europe/Moscow')
       })

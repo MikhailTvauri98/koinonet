@@ -14,6 +14,14 @@ const menu = ref(false), members = ref(false), rename = ref(false), avatar = ref
 const titleId = useId()
 const title = ref(''), action = ref<'leave' | 'archive' | null>(null), error = ref(''), saving = ref(false), uploading = ref(false)
 const confirmed = ref(''), navigationError = ref(''), left = ref(false), archived = ref(false)
+// Личный чат без числа участников (правило фазы 7); у скрытого состава числа нет.
+const memberCount = computed(() => {
+  const count = props.chat.members.length
+  if (props.chat.type === 'direct' || !count) return ''
+  const last = count % 10, tens = count % 100
+  const word = last === 1 && tens !== 11 ? 'участник' : last >= 2 && last <= 4 && (tens < 12 || tens > 14) ? 'участника' : 'участников'
+  return `${count} ${word}`
+})
 const disabled = computed(() => props.busy || saving.value || uploading.value)
 const group = computed(() => props.chat.type === 'group' && !props.chat.archived && !left.value && !archived.value)
 const manage = computed(() => group.value && props.chat.can_manage_members)
@@ -100,7 +108,10 @@ onBeforeUnmount(() => { revision++ })
     <NuxtLink :to="backTo" :aria-label="backLabel" :title="backLabel" class="chat-header__back" :class="{ 'chat-header__back--list': backTo === '/chats' }" data-test="chat-back"><span aria-hidden="true">←</span></NuxtLink>
     <div class="chat-header__identity">
       <img v-if="chat.avatar_url" :src="chat.avatar_url" alt="" width="44" height="44">
-      <div><h1>{{ chat.title }}</h1></div>
+      <div>
+        <h1>{{ chat.title }}</h1>
+        <p v-if="memberCount" class="chat-header__meta">{{ memberCount }}</p>
+      </div>
     </div>
     <button ref="menuButton" type="button" class="chat-header__menu" data-test="menu" aria-label="Меню чата" title="Меню чата" aria-haspopup="dialog" :aria-expanded="menu" @click="menu = !menu"><span aria-hidden="true">⋯</span></button>
     <ChatInfoDialog v-if="menu" :chat="informationChat" :member="member" :disabled="disabled" :left="left" :archived="archived" @close="menu = false" @action="openAction" @mute="mute" @unmute="unmute">
@@ -139,6 +150,7 @@ onBeforeUnmount(() => { revision++ })
 .chat-header__identity { display: flex; flex: 1 1 10rem; min-width: 0; align-items: start; gap: .4rem; }
 .chat-header__identity > div { flex: 1; min-width: 0; }
 h1 { font-size: 1.125rem; margin: 0 0 .2rem; overflow-wrap: anywhere; }
+.chat-header__meta { margin: 0; color: var(--ui-text-muted); font-size: .875rem; }
 .chat-header > button { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
 .chat-header img { flex: 0 0 44px; border-radius: 50%; object-fit: cover; }
 .chat-header__feedback { flex-basis: 100%; margin: .25rem 0; }

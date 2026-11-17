@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import type { ChatMessage } from '~/composables/useChatMessages'
+import UiAvatar from '~/components/ui/UiAvatar.vue'
+import { groupMessages, senderLabel } from '~/utils/messageGroups'
 import MessageItem from './MessageItem.vue'
 const props = defineProps<{ messages: ChatMessage[], hasOlder: boolean, loadingOlder: boolean, userId?: string, writable: boolean, moderate: boolean, pinnedIds: string[] }>()
 const emit = defineEmits<{ older: [], visible: [id: string, visible: boolean], reply: [message: ChatMessage], edit: [message: ChatMessage], delete: [message: ChatMessage], pin: [message: ChatMessage] }>()
+const settings = useSettingsStore()
+const { formatChatDay } = useChurchDate()
+// Day separators and groups follow the church calendar, not the device's.
+const items = computed(() => groupMessages(props.messages, settings.timezone, 5, props.userId))
 const scroll = ref<HTMLElement>()
 const top = ref<HTMLElement>()
 const latest = ref<HTMLElement>()
@@ -93,15 +99,30 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
     <p v-if="!messages.length">Пока нет сообщений</p>
     <!-- Stable keyed rows retain an open action menu when a newer row arrives.
          A former last row must not clear the newly assigned latest ref. -->
-    <div
-      v-for="message in messages" :key="message.id"
-      :ref="el => { if (!messages.length || message.id === messages.at(-1)?.id) latest = (el as HTMLElement | null) ?? undefined }"
-      :data-test="message.id === messages.at(-1)?.id ? 'latest-message' : undefined">
-      <MessageItem :message="message" :own="message.sender?.id === userId" :writable="writable" :moderate="moderate" :pinned="pinnedIds.includes(message.id)" @reply="emit('reply', $event)" @edit="emit('edit', $event)" @delete="emit('delete', $event)" @pin="emit('pin', $event)" />
-    </div>
+    <template v-for="item in items" :key="item.kind === 'day' ? `day-${item.day}` : item.messages[0]!.id">
+      <p v-if="item.kind === 'day'" class="message-day">{{ formatChatDay(item.day) }}</p>
+      <div v-else class="message-group" :class="{ own: item.own }">
+        <UiAvatar v-if="!item.own" :id="item.messages[0]!.sender?.person?.id ?? item.senderId ?? 'deleted-person'" :name="item.messages[0]!.sender?.person?.short_name ?? null" class="message-group__avatar" size="sm" decorative />
+        <div class="message-group__messages">
+          <div
+            v-for="(message, index) in item.messages" :key="message.id"
+            :ref="el => { if (!messages.length || message.id === messages.at(-1)?.id) latest = (el as HTMLElement | null) ?? undefined }"
+            :data-test="message.id === messages.at(-1)?.id ? 'latest-message' : undefined">
+            <MessageItem :message="message" :own="item.own" :first="index === 0" :sender-name="senderLabel(message.sender)" :writable="writable" :moderate="moderate" :pinned="pinnedIds.includes(message.id)" @reply="emit('reply', $event)" @edit="emit('edit', $event)" @delete="emit('delete', $event)" @pin="emit('pin', $event)" />
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 <style scoped>
 /* History content must not set the grid's intrinsic minimum height. */
+.message-day { margin: 1rem 0 .25rem; text-align: center; color: var(--ui-text-muted); font-size: .875rem; font-weight: 600; }
+.message-group { display: flex; align-items: flex-start; gap: .5rem; margin: .75rem 0; min-width: 0; }
+.message-group__avatar { margin-top: .25rem; }
+.message-group__messages { display: flex; flex-direction: column; align-items: flex-start; gap: .125rem; flex: 1 1 0; min-width: 0; }
+.message-group__messages > * { max-width: 100%; min-width: 0; }
+.message-group.own { justify-content: flex-end; }
+.message-group.own .message-group__messages { align-items: flex-end; }
 .message-list { contain: size; flex: 1 1 0; overflow-y: auto; min-height: 0; min-width: 0; overscroll-behavior: contain; padding: .4rem; }
 </style>

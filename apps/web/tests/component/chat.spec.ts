@@ -354,7 +354,7 @@ it('switches once without transferring draft, reply, observers or private subscr
 it('distinguishes own messages without repeating the author while preserving incoming sender privacy', async () => {
   mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [
     msg('mine', { sender: { id: 'me', person: { id: 'p-me', full_name: 'Анна Петрова', photo_thumb_url: null } } }),
-    msg('incoming', { sender: { id: 'other', person: { id: 'p-other', full_name: 'Михаил Орлов', photo_thumb_url: null } } }),
+    msg('incoming', { sender: { id: 'other', person: { id: 'p-other', full_name: 'Михаил Сергеевич Орлов', short_name: 'Михаил Орлов', photo_thumb_url: null } } }),
     msg('hidden', { sender: { id: 'hidden', person: { id: 'p-hidden', full_name: null, photo_thumb_url: null } } }),
     msg('erased', { sender: null }),
   ], next_before: null, next_after: null } : { data: card() }))
@@ -375,4 +375,104 @@ it('keeps the message-menu close action in the shared dialog footer', async () =
   expect(screen.find('dialog .ui-dialog__actions button').exists()).toBe(true)
   await screen.get('dialog .ui-dialog__actions button').trigger('click')
   expect(screen.find('dialog').exists()).toBe(false)
+})
+
+const person = (id: string, full: string | null, short: string | null) => ({ id, person: { id: `p-${id}`, full_name: full, short_name: short, photo_thumb_url: null } })
+const at = (time: string, day = '2026-12-01') => `${day}T${time}.000001Z`
+function feed(items: ReturnType<typeof msg>[]) {
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: items, next_before: null, next_after: null } : { data: card() }))
+}
+
+it('shows the short name and avatar once per group and only the time in each message', async () => {
+  const orlov = person('other', 'Михаил Сергеевич Орлов', 'Михаил Орлов')
+  feed([
+    msg('m1', { sender: orlov, created_at: at('09:20:00'), cursor: 'm1' }),
+    msg('m2', { sender: orlov, created_at: at('09:21:00'), cursor: 'm2' }),
+    msg('m3', { sender: person('me', 'Анна Петровна Иванова', 'Анна Иванова'), created_at: at('09:22:00'), cursor: 'm3' }),
+  ])
+  const screen = await mount()
+  const groups = screen.findAll('.message-group')
+  expect(groups).toHaveLength(2)
+  expect(groups[0]!.findAll('.ui-avatar')).toHaveLength(1)
+  expect(groups[0]!.findAll('[data-message-id] strong')).toHaveLength(1)
+  expect(groups[0]!.text()).toContain('Михаил Орлов')
+  expect(screen.text()).not.toContain('Сергеевич')
+  expect(screen.get('[data-message-id=m1] time').text()).toBe('09:20')
+  expect(screen.get('[data-message-id=m1] time').attributes('datetime')).toBe(at('09:20:00'))
+  expect(screen.get('[data-message-id=m2] time').text()).toBe('09:21')
+  expect(screen.text()).not.toMatch(/\d{4}\s*г\./)
+})
+
+it('puts own messages in a right-aligned group without a name or avatar', async () => {
+  feed([msg('mine', { sender: person('me', 'Анна Петровна Иванова', 'Анна Иванова') })])
+  const screen = await mount()
+  const group = screen.get('.message-group')
+  expect(group.classes()).toContain('own')
+  expect(group.find('.ui-avatar').exists()).toBe(false)
+  expect(group.text()).not.toContain('Анна Иванова')
+})
+
+it('hides a masked sender behind the neutral name but still groups by id', async () => {
+  const hidden = person('hidden', null, null)
+  feed([msg('h1', { sender: hidden, created_at: at('09:20:00') }), msg('h2', { sender: hidden, created_at: at('09:21:00') })])
+  const screen = await mount()
+  expect(screen.findAll('.message-group')).toHaveLength(1)
+  expect(screen.get('.message-group').text()).toContain('Участник')
+})
+
+it('separates days by the church calendar: Today, Yesterday, weekday and date', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-17T12:00:00Z'))
+  const other = person('other', 'Михаил Орлов', 'Михаил Орлов')
+  feed([
+    msg('d1', { sender: other, created_at: at('09:00:00', '2026-11-13'), cursor: 'd1' }),
+    msg('d2', { sender: other, created_at: at('09:00:00', '2026-11-16'), cursor: 'd2' }),
+    msg('d3', { sender: other, created_at: at('09:00:00', '2026-11-17'), cursor: 'd3' }),
+    msg('d0', { sender: other, created_at: at('09:00:00', '2025-12-31'), cursor: 'd0' }),
+  ])
+  const screen = await mount()
+  expect(screen.findAll('.message-day').map(day => day.text())).toEqual(['Ср, 31 декабря 2025', 'Пт, 13 ноября', 'Вчера', 'Сегодня'])
+})
+
+it('opens the same message actions on a 500 ms touch long press, not on a short touch or a mouse', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  const screen = await mount()
+  const row = screen.get('[data-message-id=a]')
+  await row.trigger('pointerdown', { pointerType: 'mouse' })
+  vi.advanceTimersByTime(600); await flushPromises()
+  expect(screen.find('dialog[open]').exists()).toBe(false)
+  await row.trigger('pointerdown', { pointerType: 'touch' })
+  vi.advanceTimersByTime(300)
+  await row.trigger('pointerup', { pointerType: 'touch' })
+  vi.advanceTimersByTime(600); await flushPromises()
+  expect(screen.find('dialog[open]').exists()).toBe(false)
+  await row.trigger('pointerdown', { pointerType: 'touch' })
+  vi.advanceTimersByTime(499); await flushPromises()
+  expect(screen.find('dialog[open]').exists()).toBe(false)
+  vi.advanceTimersByTime(2); await flushPromises()
+  expect(screen.find('dialog[open]').exists()).toBe(true)
+  expect(screen.find('[data-test=reply-a]').exists()).toBe(true)
+  expect(screen.find('[data-test=pin-a]').exists()).toBe(false)
+})
+
+it('does not offer long-press actions on a deleted message and keeps the trigger in the tab order', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  feed([msg('gone', { deleted: true, body: null }), msg('live')])
+  const screen = await mount()
+  await screen.get('[data-message-id=gone]').trigger('pointerdown', { pointerType: 'touch' })
+  vi.advanceTimersByTime(600); await flushPromises()
+  expect(screen.find('dialog[open]').exists()).toBe(false)
+  const trigger = screen.get('[data-test=actions-live]')
+  expect(trigger.element.tagName).toBe('BUTTON')
+  expect(trigger.attributes('tabindex')).toBeUndefined()
+  expect(trigger.attributes('aria-hidden')).toBeUndefined()
+  expect(trigger.attributes('aria-label')).toBe('Действия сообщения')
+})
+
+it.each([['group', 2, '2 участника'], ['ministry', 5, '5 участников'], ['event', 1, '1 участник'], ['direct', 2, null]])('shows the participant count only for non-direct chats: %s', async (type, count, label) => {
+  const members = Array.from({ length: count }, (_, i) => ({ user_id: i ? `u${i}` : 'me', full_name: `Человек ${i}` }))
+  mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [], next_before: null, next_after: null } : { data: card({ type, members }) }))
+  const screen = await mount()
+  const meta = screen.find('.chat-header__meta')
+  if (label) expect(meta.text()).toBe(label)
+  else expect(meta.exists()).toBe(false)
 })
