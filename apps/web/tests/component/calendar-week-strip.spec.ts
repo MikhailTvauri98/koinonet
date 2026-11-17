@@ -35,12 +35,8 @@ describe('calendar week strip', () => {
     await strip.get('[data-test="strip-day-2026-11-20"]').trigger('click')
     expect(strip.emitted('select')).toEqual([['2026-11-20']])
   })
-  it('turns the week across a month and a year boundary with the arrows', async () => {
-    const strip = await mount('2026-12-30')
-    await strip.get('[data-test="strip-next"]').trigger('click')
-    expect(strip.emitted('select')?.[0]).toEqual(['2027-01-06'])
-    await strip.get('[data-test="strip-previous"]').trigger('click')
-    expect(strip.emitted('select')?.[1]).toEqual(['2026-12-23'])
+  it('holds only the seven day buttons and shows a week across a month and a year boundary', async () => {
+    expect((await mount('2026-12-30')).findAll('button')).toHaveLength(7)
     const boundary = await mount('2026-12-31')
     expect(days(boundary).map(button => button.attributes('data-test')?.slice(-10))).toEqual(['2026-12-28', '2026-12-29', '2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03'])
   })
@@ -48,11 +44,11 @@ describe('calendar week strip', () => {
     const strip = await mount('2026-11-18')
     const area = strip.get('[data-test="strip-days"]')
     await area.trigger('pointerdown', { clientX: 300, clientY: 10, pointerId: 1 }); await area.trigger('pointerup', { clientX: 200, clientY: 14, pointerId: 1 })
-    expect(strip.emitted('select')?.[0]).toEqual(['2026-11-25'])
+    expect(strip.emitted('shift')?.[0]).toEqual([1])
     await area.trigger('pointerdown', { clientX: 100, clientY: 10, pointerId: 2 }); await area.trigger('pointerup', { clientX: 210, clientY: 12, pointerId: 2 })
-    expect(strip.emitted('select')?.[1]).toEqual(['2026-11-11'])
+    expect(strip.emitted('shift')?.[1]).toEqual([-1])
     await area.trigger('pointerdown', { clientX: 100, clientY: 10, pointerId: 3 }); await area.trigger('pointerup', { clientX: 110, clientY: 90, pointerId: 3 })
-    expect(strip.emitted('select')).toHaveLength(2)
+    expect(strip.emitted('shift')).toHaveLength(2); expect(strip.emitted('select')).toBeUndefined()
   })
   it('counts events by church day, including multi-day events, and shows up to three distinct ministry colors', async () => {
     const strip = await mount('2026-11-17', [

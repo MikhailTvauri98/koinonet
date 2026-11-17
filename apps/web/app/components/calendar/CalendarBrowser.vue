@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { EventItem, EventRange } from '~/composables/useEvents'
 import type { CalendarView } from '~/composables/useCalendarView'
-import { legendMinistries, weekRemainder } from '~/composables/useCalendarView'
-import { formatCalendarDay, groupCalendarDays } from '~/composables/useEvents'
+import { calendarRange, legendMinistries, weekRemainder } from '~/composables/useCalendarView'
+import { addCalendarDays, formatCalendarDay, groupCalendarDays } from '~/composables/useEvents'
 import MinistryMark from '~/components/ui/MinistryMark.vue'
 import CalendarMonth from './CalendarMonth.vue'
 import CalendarWeekStrip from './CalendarWeekStrip.vue'
@@ -15,16 +15,16 @@ const dateInput = ref<HTMLInputElement | null>(null)
 const pendingSelection = ref(false)
 const listHost = ref<HTMLElement | null>(null)
 // Ниже 1024 px (там по умолчанию список) работает макет телефона: шапка, лента недели, ряд чипов, список с сегодня.
-const PHONE_QUERY = '(max-width: 1023px)'
-const phone = ref(import.meta.client && window.matchMedia(PHONE_QUERY).matches)
-let media: MediaQueryList | null = null
-const syncPhone = () => { phone.value = !!media?.matches }
-onMounted(() => { media = window.matchMedia(PHONE_QUERY); syncPhone(); media.addEventListener?.('change', syncPhone) })
-onBeforeUnmount(() => media?.removeEventListener?.('change', syncPhone))
+const phone = usePhoneLayout()
 const phoneList = computed(() => phone.value && props.state.view === 'list')
 // Список начинается с сегодняшнего дня церкви, если он в показанном месяце; иначе с первого дня месяца.
-const startFrom = computed(() => { const today = todayInChurch(); return today >= props.range.from && today <= props.range.to ? today : props.range.from })
-const phoneMonthLabel = computed(() => monthLabel.value.replace(/s*г.$/, ''))
+// Загружены недели целиком (для ленты недели), а список показывает только дни выбранного месяца.
+const listRange = computed(() => calendarRange({ ...props.state, view: 'list' }))
+const startFrom = computed(() => { const today = todayInChurch(); return today >= listRange.value.from && today <= listRange.value.to ? today : listRange.value.from })
+const phoneMonthLabel = computed(() => monthLabel.value.replace(/\s*г\.$/, ''))
+// В списке стрелки шапки листают недели (дата меняется без переноса фокуса и прокрутки); в месяце — месяцы.
+const weekArrows = computed(() => props.state.view === 'list')
+function shiftWeek(weeks: number) { emit('update', { date: addCalendarDays(props.state.date, weeks * 7) }) }
 const monthLabel = computed(() => new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(props.state.date + 'T00:00:00Z')))
 const dayLabel = computed(() => new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', day: 'numeric', month: 'long' }).format(new Date(props.state.date + 'T00:00:00Z')))
 const selectedEvents = computed(() => groupCalendarDays(props.events, settings.timezone, { from: props.state.date, to: props.state.date })[0]?.events ?? [])
@@ -62,15 +62,17 @@ function open(event: EventItem) { void router.push({ path: `/events/${encodeURIC
     <template v-if="phone">
       <div class="phone-head">
         <div class="phone-head__month" role="group" aria-label="Период календаря">
-          <button class="ui-button" type="button" aria-label="Предыдущий месяц" data-test="previous-month" @click="$emit('move', -1)">‹</button>
+          <button v-if="weekArrows" class="ui-button" type="button" aria-label="Предыдущая неделя" data-test="week-previous" @click="shiftWeek(-1)">‹</button>
+          <button v-else class="ui-button" type="button" aria-label="Предыдущий месяц" data-test="previous-month" @click="$emit('move', -1)">‹</button>
           <h2 :aria-label="monthLabel"><button class="calendar-toolbar__title" type="button" data-test="calendar-month-button" title="Перейти к дате" :aria-label="`${monthLabel}, перейти к дате`" @click="pickDate">{{ phoneMonthLabel }}<span aria-hidden="true"> ▾</span></button></h2>
-          <button class="ui-button" type="button" aria-label="Следующий месяц" data-test="next-month" @click="$emit('move', 1)">›</button>
+          <button v-if="weekArrows" class="ui-button" type="button" aria-label="Следующая неделя" data-test="week-next" @click="shiftWeek(1)">›</button>
+          <button v-else class="ui-button" type="button" aria-label="Следующий месяц" data-test="next-month" @click="$emit('move', 1)">›</button>
           <label class="calendar-toolbar__date" aria-hidden="true"><span class="visually-hidden">Перейти к дате</span><input ref="dateInput" type="date" data-test="calendar-date" tabindex="-1" :value="state.date" @change="select(($event.target as HTMLInputElement).value)"></label>
         </div>
         <button class="ui-button" type="button" data-test="calendar-today" @click="$emit('today')">Сегодня</button>
         <NuxtLink v-if="canCreate && !ministryId" class="ui-button ui-button--primary phone-head__create" data-test="toolbar-create" aria-label="Создать событие" :to="{ path: '/events/new', query: { date: state.date, return: returnContext } }"><span aria-hidden="true">+</span></NuxtLink>
       </div>
-      <CalendarWeekStrip v-if="state.view === 'list'" :date="state.date" :events="events" @select="select" />
+      <CalendarWeekStrip v-if="state.view === 'list'" :date="state.date" :events="events" @select="select" @shift="shiftWeek" />
       <div class="phone-chips" data-test="phone-chips">
         <div v-if="!ministryId" class="calendar-switch" role="group" aria-label="Область календаря"><button v-for="scope in ['church', 'mine']" :key="scope" type="button" :data-test="`scope-${scope}`" :aria-pressed="state.scope === scope" @click="emit('update', { scope })">{{ scope === 'church' ? 'Все' : 'Мои' }}</button></div>
         <label v-if="!ministryId && ministries?.length" class="calendar-ministry"><span class="visually-hidden">Служение</span><select aria-label="Служение" :value="state.scope.startsWith('ministry:') ? state.scope : 'church'" @change="emit('update', { scope: ($event.target as HTMLSelectElement).value })"><option value="church">Все служения</option><option v-for="item in ministries" :key="item.id" :value="`ministry:${item.id}`">{{ item.name }}</option></select></label>
@@ -108,7 +110,7 @@ function open(event: EventItem) { void router.push({ path: `/events/${encodeURIC
       </section>
     </div>
     <div v-else-if="phoneList" ref="listHost" class="calendar-feed">
-      <EventList :events="events" :range="range" :return-context="returnContext" :start-from="startFrom" :selected-day="state.date" />
+      <EventList :events="events" :range="listRange" :return-context="returnContext" :start-from="startFrom" :selected-day="state.date" />
     </div>
     <template v-else>
       <section ref="selected" class="calendar-selected calendar-selected--list" data-test="selected-day" tabindex="-1" aria-label="Выбранный день"><h2><time :datetime="state.date">{{ formatCalendarDay(state.date) }}</time></h2><NuxtLink v-if="canCreate" class="ui-button" :to="createLink">Создать на {{ dayLabel }}</NuxtLink><EventList :events="selectedEvents" :range="{ from: state.date, to: state.date }" :return-context="returnContext" hide-date empty-description="На выбранный день доступных событий нет." /></section>

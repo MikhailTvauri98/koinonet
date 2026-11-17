@@ -123,7 +123,7 @@ for (const theme of ['dark', 'light']) test(`${theme} phone calendar controls an
   await page.goto('/calendar?date=2026-11-08&view=list&scope=church')
   await expect(page.locator('.event-row').first()).toBeVisible()
   await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
-  for (const target of [page.locator('[data-test=strip-day-2026-11-08]'), page.locator('[data-test=strip-next]'), page.locator('[data-test=phone-view-switch]'), page.locator('.event-row a').first(), page.locator('.event-row a').last()]) await readable(page, target)
+  for (const target of [page.locator('[data-test=strip-day-2026-11-08]'), page.locator('[data-test=week-next]'), page.locator('[data-test=phone-view-switch]'), page.locator('.event-row a').first(), page.locator('.event-row a').last()]) await readable(page, target)
   await page.locator('[data-test=strip-day-2026-11-07]').click()
   await expect(page.locator('[data-test=selected-day]')).toBeFocused()
   await readable(page, page.locator('[data-test=selected-day] h2'))

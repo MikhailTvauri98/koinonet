@@ -168,8 +168,9 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await expect(page.locator('[data-test="scope-mine"]')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2026-11-08')
     await page.locator('[data-test="calendar-date"]').fill('2026-12-31')
-    await page.getByRole('button', { name: 'Следующий месяц', exact: true }).click()
-    await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2027-01-31')
+    // Список на телефоне: стрелки шапки листают недели; на компьютере — месяцы.
+    await page.getByRole('button', { name: width < 1024 ? 'Следующая неделя' : 'Следующий месяц', exact: true }).click()
+    await expect(page.locator('[data-test="calendar-date"]')).toHaveValue(width < 1024 ? '2027-01-07' : '2027-01-31')
     await page.locator('[data-test="calendar-today"]').click()
     await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2026-11-08')
     await page.getByRole('button', { name: 'Месяц', exact: true }).click()
@@ -732,7 +733,7 @@ for (const theme of ['dark', 'light']) {
     expect(first.y).toBeLessThan(420)
     const tops = await page.locator('[data-test=phone-chips] > *').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return r.top + r.height / 2 }))
     expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(2)
-    for (const day of await page.locator('[data-test^="strip-day-"]').all()) expect((await day.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    for (const day of await page.locator('[data-test^="strip-day-"]').all()) { const box = (await day.boundingBox())!; expect(box.height).toBeGreaterThanOrEqual(44); expect(box.width).toBeGreaterThanOrEqual(44) }
     await expect(page.getByRole('button', { name: 'Вторник, 10 ноября, событий: 2', exact: true })).toHaveAttribute('aria-pressed', 'true')
     for (const row of await page.locator('.event-row').all()) {
       const box = (await row.boundingBox())!, anchor = (await row.locator('a').boundingBox())!
@@ -771,14 +772,33 @@ for (const theme of ['dark', 'light']) {
     await expect(page.locator('.event-row').first()).toBeVisible()
     await page.addStyleTag({ content: 'html{font-size:32px!important} nuxt-devtools-frame{display:none!important}' })
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
-    for (const day of await page.locator('[data-test^="strip-day-"]').all()) { const box = (await day.boundingBox())!; expect(box.height).toBeGreaterThanOrEqual(44); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(321) }
+    for (const day of await page.locator('[data-test^="strip-day-"]').all()) { const box = (await day.boundingBox())!; expect(box.height).toBeGreaterThanOrEqual(44); expect(box.width).toBeGreaterThanOrEqual(44); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(321) }
     for (const row of await page.locator('.event-row').all()) { expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(56); await expect(row.locator('a')).toHaveCount(1) }
-    for (const control of ['[data-test=strip-previous]', '[data-test=strip-next]', '[data-test=phone-view-switch]', '[data-test=calendar-today]', '[data-test=previous-month]']) {
+    for (const control of ['[data-test=week-previous]', '[data-test=week-next]', '[data-test=phone-view-switch]', '[data-test=calendar-today]']) {
       const box = (await page.locator(control).boundingBox())!
       expect(box.height).toBeGreaterThanOrEqual(44); expect(box.x + box.width).toBeLessThanOrEqual(321); expect(box.x).toBeGreaterThanOrEqual(-1)
     }
     await mkdir(phoneScreenshots, { recursive: true })
     await page.screenshot({ path: resolve(phoneScreenshots, `phone-320-text-200-${theme}.png`), fullPage: true })
+    expect(api.unhandled).toEqual([])
+  })
+}
+
+for (const [width, scale] of [[390, 100], [390, 200], [320, 100], [320, 200]] as const) {
+  test(`phone week strip keeps 44px days: one row when 7x44 fits, 4 + 3 otherwise (${width}px, ${scale}%)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    const api = await phoneCalendar(page, 'dark')
+    await page.goto('/calendar')
+    await expect(page.locator('.event-row').first()).toBeVisible()
+    await page.addStyleTag({ content: `html{font-size:${scale}%!important} nuxt-devtools-frame{display:none!important}` })
+    const boxes = await page.locator('[data-test^="strip-day-"]').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }))
+    expect(boxes).toHaveLength(7)
+    for (const box of boxes) { expect(box.w).toBeGreaterThanOrEqual(44); expect(box.h).toBeGreaterThanOrEqual(44); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.w).toBeLessThanOrEqual(width + 1) }
+    const rows = [...new Set(boxes.map(box => Math.round(box.y)))].length
+    expect(rows).toBe(width === 320 || scale === 200 ? 2 : 1)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await mkdir(phoneScreenshots, { recursive: true })
+    await page.locator('.phone-head').evaluate(node => node.scrollIntoView()); await page.screenshot({ path: resolve(phoneScreenshots, `strip-${width}-${scale}.png`) })
     expect(api.unhandled).toEqual([])
   })
 }
