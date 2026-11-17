@@ -36,11 +36,8 @@ await load()
 
 <template>
   <section class="ministry-card">
-    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" @updated="ministry = $event" />
+    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" :error="errorMessage" @updated="ministry = $event" @retry="load" />
     <p v-if="loading" role="status">Загрузка…</p>
-    <p v-else-if="errorMessage" role="alert">
-      {{ errorMessage }} <button type="button" class="ui-button" data-test="retry-ministry" @click="load">Повторить</button>
-    </p>
   </section>
 </template>
 

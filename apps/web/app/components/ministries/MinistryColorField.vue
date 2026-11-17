@@ -9,7 +9,7 @@ const uid = useId()
 const errorId = `${uid}-error`
 const name = `ministry-color-${uid}`
 const first = ref<HTMLInputElement[]>([])
-defineExpose({ focus: () => first.value[0]?.focus() })
+defineExpose({ focus: () => (first.value.find(input => input.checked) ?? first.value[0])?.focus() })
 </script>
 
 <template>

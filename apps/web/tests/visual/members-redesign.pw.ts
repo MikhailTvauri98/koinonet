@@ -52,6 +52,7 @@ for (const theme of ['dark', 'light'] as const) {
       await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
       await expect(page.getByRole('heading', { name: 'Служения', exact: true })).toBeVisible()
       const item = page.locator('.ministries-page__item')
+      await expect(page.getByRole('link', { name: ministry.name, exact: true })).toHaveCount(1)
       await expect(item.locator('[data-test=ministry-tile]')).toHaveText('М')
       await expect(item).toContainText('100 участников')
       await fits(page)

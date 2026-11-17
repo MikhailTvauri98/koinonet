@@ -10,7 +10,7 @@ const api = useApi(), auth = useAuthStore()
 const route = useRoute()
 const { can, canIn } = useCan()
 const ministryId = computed(() => String(route.params.id))
-const { ministry } = useMinistry(ministryId)
+const { ministry, error: ministryError, load: reloadMinistry } = useMinistry(ministryId)
 const canManage = computed(() => canIn(ministryId.value, 'members.manage'))
 // Кандидатов для добавления ищет `GET /people`, а он требует people.view:
 // без справочника кнопка вела бы в поиск, который всегда отказывает.
@@ -115,7 +115,7 @@ await load()
 
 <template>
   <section class="members-tab">
-    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" @updated="ministry = $event">
+    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" :error="ministryError" @updated="ministry = $event" @retry="reloadMinistry">
       <template #actions><button v-if="canAdd" type="button" class="ui-button ui-button--primary" data-test="add-member" @click="showAddDialog = true">Добавить участника</button></template>
     </MinistryHeader>
     <label class="members-tab__search"><span>Найти участника</span><input v-model="search" type="search" data-test="member-search" placeholder="Имя или роль"></label>

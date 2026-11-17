@@ -11,8 +11,8 @@ import { MINISTRY_COLORS, ministryColorVar, type MinistryColorKey } from '~/util
 // вкладки под ним. Пока служение не загружено (`ministry` = null), видны путь
 // назад и вкладки. Управление живёт в меню «⋯» и в каждом пункте требует своего
 // существующего права; записи делает сама шапка и отдаёт странице готовое служение.
-const props = defineProps<{ ministry: Ministry | null, ministryId: string, compact?: boolean }>()
-const emit = defineEmits<{ updated: [ministry: Ministry] }>()
+const props = defineProps<{ ministry: Ministry | null, ministryId: string, compact?: boolean, error?: string }>()
+const emit = defineEmits<{ updated: [ministry: Ministry], retry: [] }>()
 
 type Panel = 'menu' | 'edit' | 'cover' | 'color' | 'archive'
 const api = useApi(), auth = useAuthStore()
@@ -41,6 +41,7 @@ async function openPanel(next: Exclude<Panel, 'menu'>) {
   if (next === 'edit') { name.value = props.ministry.name; description.value = props.ministry.description ?? ''; formError.value = '' }
   if (next === 'color') { color.value = MINISTRY_COLORS.find(item => item.key === props.ministry?.color)?.key ?? null; colorError.value = '' }
   if (next === 'archive') archiveError.value = ''
+  if (next === 'cover') uploading.value = false
   const token = menuRevision
   // Меню закрывается раньше: фокус возвращается на «⋯», а следующее окно запоминает его как место возврата.
   closePanel()
@@ -54,7 +55,7 @@ async function openPanel(next: Exclude<Panel, 'menu'>) {
 
 watch(canEdit, (allowed) => {
   if (allowed) return
-  editOperation++; saving.value = false; menuRevision++
+  editOperation++; saving.value = false; uploading.value = false; menuRevision++
   if (panel.value === 'edit' || panel.value === 'cover' || panel.value === 'color') closePanel()
 }, { flush: 'sync' })
 watch(canArchive, (allowed) => {
@@ -63,7 +64,7 @@ watch(canArchive, (allowed) => {
   if (panel.value === 'archive') closePanel()
 }, { flush: 'sync' })
 watch(hasMenu, (available) => { if (!available) { menuRevision++; if (panel.value === 'menu') closePanel() } }, { flush: 'sync' })
-watch(() => props.ministryId, () => { editOperation++; archiveOperation++; menuRevision++; saving.value = false; archiving.value = false; closePanel() }, { flush: 'sync' })
+watch(() => props.ministryId, () => { editOperation++; archiveOperation++; menuRevision++; saving.value = false; uploading.value = false; archiving.value = false; closePanel() }, { flush: 'sync' })
 
 async function patch(payload: Record<string, unknown>, fallback: string, failed: (message: string) => void) {
   if (saving.value || archiving.value || !canEdit.value || archived.value) return
@@ -190,6 +191,11 @@ async function archive() {
           </div>
         </div>
       </UiDialog>
+    </template>
+    <template v-else>
+      <!-- Пока служение не загружено, страница всё равно имеет заголовок. -->
+      <h1 class="ministry-header__fallback">Служение</h1>
+      <p v-if="error" role="alert" class="ministry-form__error">{{ error }} <button type="button" class="ui-button" data-test="retry-ministry" @click="emit('retry')">Повторить</button></p>
     </template>
     <MinistryTabs :ministry-id="ministryId" :chat-id="ministry ? ministry.chat_id : undefined" :members-count="ministry?.members_count" />
   </header>

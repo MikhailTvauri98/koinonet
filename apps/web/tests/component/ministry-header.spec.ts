@@ -96,6 +96,29 @@ describe('ministry header on every ministry route', () => {
   })
 })
 
+describe('ministry header without a loaded ministry', () => {
+  it('keeps a page heading and the tabs while the ministry is loading', async () => {
+    const view = await mountSuspended(MinistryHeader, { props: { ministry: null, ministryId: 'm1' } })
+
+    expect(view.findAll('h1').map(heading => heading.text())).toEqual(['Служение'])
+    expect(view.find('nav[aria-label="Разделы служения"]').exists()).toBe(true)
+  })
+
+  it('shows the load error of a tab with a retry that reloads the ministry', async () => {
+    get.mockRejectedValueOnce(new Error('offline'))
+    const view = await mountSuspended(MinistryMembers)
+    await flushPromises()
+    expect(view.get('h1').text()).toBe('Служение')
+    expect(view.text()).toContain('Не удалось загрузить служение')
+
+    await view.get('[data-test="retry-ministry"]').trigger('click')
+    await flushPromises()
+
+    expect(view.get('h1').text()).toBe('Прославление')
+    expect(view.find('[data-test="retry-ministry"]').exists()).toBe(false)
+  })
+})
+
 describe('members count wording', () => {
   it.each([[0, '0 участников'], [1, '1 участник'], [2, '2 участника'], [4, '4 участника'], [5, '5 участников'], [11, '11 участников'], [12, '12 участников'], [14, '14 участников'], [21, '21 участник'], [22, '22 участника'], [101, '101 участник'], [111, '111 участников']])('%i -> %s', (count, label) => {
     expect(membersCountLabel(count)).toBe(label)

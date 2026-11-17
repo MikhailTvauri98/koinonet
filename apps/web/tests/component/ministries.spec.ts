@@ -533,6 +533,25 @@ describe('ministry card', () => {
     expect(page.get('[data-test="ministry-cover"]').attributes('src')).toBe('https://church.test/cover.webp')
   })
 
+  it('lets the cover window be closed again after the right was revoked during an upload', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    get.mockResolvedValue({ data: ministry })
+    const page = await mountSuspended(MinistryCard)
+    await chooseAction(page, 'edit-cover')
+    page.findComponent(MediaUploader).vm.$emit('busy', true)
+    await flushPromises()
+    expect(page.find('dialog button:not([data-test])').attributes('disabled')).toBeDefined()
+    grantPermissions({ ministries: { m1: [] } })
+    await flushPromises()
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    await flushPromises()
+    await chooseAction(page, 'edit-cover')
+    expect(page.find('dialog button:not([data-test])').attributes('disabled')).toBeUndefined()
+    await page.get('dialog').trigger('cancel')
+    await flushPromises()
+    expect(page.find('dialog').exists()).toBe(false)
+  })
+
   it('does not offer to change an archived ministry', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
     get.mockResolvedValue({ data: { ...ministry, archived_at: '2026-09-01T10:00:00Z' } })
@@ -776,6 +795,31 @@ describe('ministries list', () => {
     expect(item('m5').text()).toContain('0 участников')
   })
 
+  it('names each list link by the ministry name alone and describes it with description and count', async () => {
+    get.mockResolvedValue({ data: [{ ...ministry, id: 'm1', name: 'Прославление', description: 'Хвала и музыка', members_count: 3 }, { ...ministry, id: 'm2', name: 'Дети', description: null, members_count: 1 }] })
+
+    const page = await mountSuspended(MinistriesList)
+    const text = (id: string) => page.find('#' + id).text()
+    for (const [id, name, described] of [['m1', 'Прославление', ['Хвала и музыка', '3 участника']], ['m2', 'Дети', ['1 участник']]] as const) {
+      const link = page.get(`a[href="/ministries/${id}"]`)
+      expect(text(link.attributes('aria-labelledby')!)).toBe(name)
+      expect(link.attributes('aria-describedby')!.split(' ').map(text)).toEqual([...described])
+    }
+  })
+
+  it('does not keep the missing-name alert once the name is filled but the colour is missing', async () => {
+    grantPermissions({ global: ['ministries.create'] })
+    get.mockResolvedValue({ data: [] })
+    const page = await mountSuspended(MinistriesList)
+    await page.get('[data-test="create-ministry"]').trigger('click')
+    await page.get('form').trigger('submit')
+    expect(page.find('[role="alert"]').text()).toBe('Заполните название.')
+    await page.get('[data-test="ministry-name"]').setValue('Молодёжное')
+    await page.get('form').trigger('submit')
+    expect(page.find('[role="alert"]').exists()).toBe(false)
+    expect(page.get('[data-test="ministry-color-error"]').text()).toBe('Выберите цвет')
+  })
+
   it('requires a colour when creating: shows the error at the field and sends nothing', async () => {
     grantPermissions({ global: ['ministries.create'] })
     get.mockResolvedValue({ data: [] })
@@ -829,13 +873,13 @@ describe('ministries list', () => {
   it('creates a ministry and refreshes the list', async () => {
     grantPermissions({ global: ['ministries.create'] })
     get.mockResolvedValue({ data: [] })
-    post.mockResolvedValue({ data: { id: 'm3', name: 'Молодёжное', description: null, cover_url: null, default_role_id: 'r3' } })
+    post.mockResolvedValue({ data: { id: 'm3', name: 'Молодёжное', description: null, cover_url: null, color: 'violet', members_count: 0, default_role_id: 'r3' } })
 
     const page = await mountSuspended(MinistriesList)
     await page.find('[data-test="create-ministry"]').trigger('click')
     await page.find('[data-test="ministry-name"]').setValue('Молодёжное')
     await page.get('[data-test="color-violet"]').setValue(true)
-    get.mockResolvedValue({ data: [{ id: 'm3', name: 'Молодёжное', description: null, cover_url: null, default_role_id: 'r3' }] })
+    get.mockResolvedValue({ data: [{ id: 'm3', name: 'Молодёжное', description: null, cover_url: null, color: 'violet', members_count: 0, default_role_id: 'r3' }] })
     await page.find('form').trigger('submit')
     await flushPromises()
 

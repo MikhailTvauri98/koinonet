@@ -62,7 +62,7 @@ async function submit() {
   if (saving.value || !canCreate.value) return
   const nameMissing = !name.value.trim()
   colorError.value = color.value ? '' : 'Выберите цвет'
-  if (nameMissing) formError.value = 'Заполните название.'
+  formError.value = nameMissing ? 'Заполните название.' : ''
   if (nameMissing || !color.value) {
     if (nameMissing) focusName(); else colorField.value?.focus()
     return
@@ -130,13 +130,13 @@ await load()
     <p v-else-if="!ministries.length" role="status">Служения ещё не созданы.</p>
     <ul v-else class="ministries-page__list">
       <li v-for="ministry in ministries" :key="ministry.id">
-        <NuxtLink :to="`/ministries/${ministry.id}`" class="ministries-page__item">
+        <NuxtLink :to="`/ministries/${ministry.id}`" class="ministries-page__item" :aria-labelledby="`ministry-name-${ministry.id}`" :aria-describedby="ministry.description ? `ministry-description-${ministry.id} ministry-count-${ministry.id}` : `ministry-count-${ministry.id}`">
           <img v-if="ministry.cover_url" :src="ministry.cover_url" alt="" loading="lazy" data-test="ministry-cover">
           <span v-else class="ministries-page__placeholder ui-tinted" :style="{ '--tint-color': ministryColorVar(ministry) }" aria-hidden="true" data-test="ministry-tile">{{ Array.from(ministry.name.trim())[0]?.toLocaleUpperCase('ru-RU') }}</span>
           <div>
-            <strong>{{ ministry.name }}</strong>
-            <p v-if="ministry.description" class="ministries-page__description">{{ ministry.description }}</p>
-            <p class="ministries-page__count" data-test="members-count">{{ membersCountLabel(ministry.members_count) }}</p>
+            <strong :id="`ministry-name-${ministry.id}`">{{ ministry.name }}</strong>
+            <p v-if="ministry.description" :id="`ministry-description-${ministry.id}`" class="ministries-page__description">{{ ministry.description }}</p>
+            <p :id="`ministry-count-${ministry.id}`" class="ministries-page__count" data-test="members-count">{{ membersCountLabel(ministry.members_count) }}</p>
           </div>
         </NuxtLink>
       </li>
