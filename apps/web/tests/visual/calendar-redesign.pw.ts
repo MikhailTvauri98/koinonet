@@ -675,3 +675,19 @@ for (const width of [1024, 1440]) for (const theme of ['dark', 'light']) for (co
     expect(api.unhandled).toEqual([])
   })
 }
+
+test('hidden date field still accepts fill (used by e2e), is hidden from screen readers; create sits last in the toolbar', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const api = await installAcceptanceApi(page)
+  await page.goto('/calendar?date=2026-11-10&view=month&scope=church')
+  await expect(page.locator('.calendar-month')).toBeVisible()
+  await expect(page.getByRole('textbox')).toHaveCount(0)
+  await page.locator('[data-test="calendar-date"]').fill('2026-12-31')
+  await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2026-12-31')
+  await expect(page.locator('[data-test="selected-day"]')).toContainText('31 декабря')
+  const create = page.getByRole('link', { name: 'Создать событие', exact: true })
+  await expect(create).toHaveCount(1); await expect(create).toContainText('Событие')
+  expect(new URL((await create.getAttribute('href'))!, 'https://church.test').searchParams.get('date')).toBe('2026-12-31')
+  expect(await page.locator('.calendar-toolbar > *').last().evaluate(node => node.matches('[data-test="toolbar-create"]'))).toBe(true)
+  expect(api.unhandled).toEqual([])
+})

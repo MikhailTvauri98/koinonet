@@ -45,7 +45,7 @@ if (active && startupSession === auth.sessionVersion) await load()
 </script>
 <template>
   <main class="calendar-page">
-    <PageHeader title="Календарь" description="События церкви и ваши назначения"><template #actions><NuxtLink v-if="canCreate && state" class="ui-button ui-button--primary" :to="{ path: '/events/new', query: { date: state.date, return: returnContext } }">Создать событие</NuxtLink></template></PageHeader>
+    <PageHeader title="Календарь" description="События церкви и ваши назначения" />
     <p v-if="ministriesError" role="alert">{{ ministriesError }} <button type="button" class="ui-button" @click="loadChoices">Повторить</button></p>
     <CalendarBrowser v-if="state && range" :events="events" :state="state" :range="range" :return-context="returnContext" :ministries="ministries" :can-create="canCreate" :loading="loading" :error="errorMessage" @update="update" @today="today" @move="move" @retry="load" />
     <p v-else-if="loading" role="status">Загружаем календарь…</p>

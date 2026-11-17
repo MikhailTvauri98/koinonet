@@ -76,7 +76,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       const action = page.getByRole('link', { name: 'Создать событие', exact: true })
       await expect(action).toHaveCSS('background-color', 'rgb(145, 180, 255)')
       const period = page.getByRole('group', { name: 'Период календаря' })
-      await expect(period.getByRole('heading', { name: 'ноябрь 2026 г.', exact: true })).toBeVisible()
+      await expect(period.getByRole('heading', { name: 'ноябрь 2026 г., перейти к дате', exact: true })).toBeVisible()
       await expect(period.getByRole('button', { name: 'Предыдущий месяц', exact: true })).toBeVisible()
       await expect(period.getByRole('button', { name: 'Следующий месяц', exact: true })).toBeVisible()
       await expect(page.locator('[data-test=calendar-date]')).toHaveValue('2026-11-08')

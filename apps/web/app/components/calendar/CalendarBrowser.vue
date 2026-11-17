@@ -44,21 +44,22 @@ function open(event: EventItem) { void router.push({ path: `/events/${encodeURIC
     <div class="calendar-toolbar">
       <div class="calendar-toolbar__month" role="group" aria-label="Период календаря">
         <button class="ui-button" type="button" aria-label="Предыдущий месяц" data-test="previous-month" @click="$emit('move', -1)">‹</button>
-        <h2><button class="calendar-toolbar__title" type="button" data-test="calendar-month-button" title="Перейти к дате" @click="pickDate">{{ monthLabel }}<span aria-hidden="true"> ▾</span></button></h2>
+        <h2><button class="calendar-toolbar__title" type="button" data-test="calendar-month-button" title="Перейти к дате" :aria-label="`${monthLabel}, перейти к дате`" @click="pickDate">{{ monthLabel }}<span aria-hidden="true"> ▾</span></button></h2>
         <button class="ui-button" type="button" aria-label="Следующий месяц" data-test="next-month" @click="$emit('move', 1)">›</button>
-        <label class="calendar-toolbar__date"><span class="visually-hidden">Перейти к дате</span><input ref="dateInput" type="date" data-test="calendar-date" tabindex="-1" :value="state.date" @change="select(($event.target as HTMLInputElement).value)"></label>
+        <label class="calendar-toolbar__date" aria-hidden="true"><span class="visually-hidden">Перейти к дате</span><input ref="dateInput" type="date" data-test="calendar-date" tabindex="-1" :value="state.date" @change="select(($event.target as HTMLInputElement).value)"></label>
       </div>
       <button class="ui-button" type="button" data-test="calendar-today" @click="$emit('today')">Сегодня</button>
       <div v-if="!ministryId" class="calendar-switch" role="group" aria-label="Область календаря"><button v-for="scope in ['church', 'mine']" :key="scope" type="button" :data-test="`scope-${scope}`" :aria-pressed="state.scope === scope" @click="emit('update', { scope })">{{ scope === 'church' ? 'Все' : 'Мои' }}</button></div>
       <label v-if="!ministryId && ministries?.length" class="calendar-ministry"><span>Служение</span><select :value="state.scope.startsWith('ministry:') ? state.scope : 'church'" @change="emit('update', { scope: ($event.target as HTMLSelectElement).value })"><option value="church">Все служения</option><option v-for="item in ministries" :key="item.id" :value="`ministry:${item.id}`">{{ item.name }}</option></select></label>
       <div class="calendar-switch" role="group" aria-label="Вид календаря"><button v-for="view in (['month', 'list'] as const)" :key="view" type="button" :aria-pressed="state.view === view" @click="emit('update', { view })">{{ view === 'month' ? 'Месяц' : 'Список' }}</button></div>
+    <NuxtLink v-if="canCreate && !ministryId" class="ui-button ui-button--primary calendar-toolbar__create" data-test="toolbar-create" aria-label="Создать событие" :to="{ path: '/events/new', query: { date: state.date, return: returnContext } }"><span aria-hidden="true">+</span>Событие</NuxtLink>
     </div>
     <ul v-if="state.view === 'month' && !loading && !error" class="calendar-legend" data-test="calendar-legend" aria-label="Обозначения цветов">
       <li><MinistryMark :ministry="null" variant="dot" /></li>
       <li v-for="item in legend" :key="item.id"><MinistryMark :ministry="item" variant="dot" /></li>
       <li v-if="auth.person"><span class="calendar-legend__you">Вы</span> — вы назначены</li>
     </ul>
-    <p v-if="zoneDiffers" class="calendar-zone">Время церкви · {{ settings.timezone }}</p>
+    <p v-if="zoneDiffers || state.scope === 'mine'" class="calendar-zone"><template v-if="zoneDiffers">Время церкви · {{ settings.timezone }}</template><template v-if="state.scope === 'mine'"><template v-if="zoneDiffers"> · </template>Ваши назначения</template></p>
     <p v-if="loading" role="status">Загружаем календарь…</p>
     <p v-else-if="error" role="alert">{{ error }} <button type="button" class="ui-button" data-test="retry-calendar" @click="$emit('retry')">Повторить</button></p>
     <div v-else-if="state.view === 'month'" class="calendar-layout">
@@ -80,6 +81,7 @@ function open(event: EventItem) { void router.push({ path: `/events/${encodeURIC
 .calendar-browser { min-width: 0; container-type: inline-size; }
 .calendar-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-3); }
 .calendar-toolbar__month { position: relative; display: flex; align-items: center; gap: var(--ui-space-2); flex-wrap: wrap; }
+.calendar-toolbar__create { display: inline-flex; align-items: center; gap: 6px; }
 .calendar-toolbar__title { min-height: 44px; padding: 8px 12px; border: 0; border-radius: var(--ui-radius-sm); background: transparent; font: inherit; font-weight: 700; color: var(--ui-text); }
 .calendar-toolbar__title:hover { background: var(--ui-accent-soft); }
 h2 { margin: 0; font-size: 1.25rem; }
