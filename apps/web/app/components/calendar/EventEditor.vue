@@ -61,9 +61,13 @@ function readout(prefix: 'starts' | 'ends') {
 }
 // An unchanged boundary keeps its original instant, including the later repeated hour.
 function instant(local: string, original?: string) { return original && local === dates.toLocalInput(original) ? original : dates.toUtcIso(local) }
+// A chip pins the exact end instant (it may be the later repeated hour); typing in an end field drops the pin.
+const pinnedEnd = ref<{ local: string, iso: string } | null>(null)
+function endInstant() { return pinnedEnd.value && pinnedEnd.value.local === localEnd.value ? pinnedEnd.value.iso : instant(localEnd.value, props.event?.ends_at) }
+function releasePreset() { chosenPreset.value = null; pinnedEnd.value = null }
 const duration = computed(() => {
   try {
-    const seconds = (Date.parse(instant(localEnd.value, props.event?.ends_at)) - Date.parse(instant(localStart.value, props.event?.starts_at))) / 1000
+    const seconds = (Date.parse(endInstant()) - Date.parse(instant(localStart.value, props.event?.starts_at))) / 1000
     if (seconds <= 0) return ''
     const hours = Math.floor(seconds / 3600), minutes = Math.floor(seconds % 3600 / 60), rest = seconds % 60
     return [hours ? `${hours} ч` : '', minutes ? `${minutes} мин` : '', rest ? `${rest} с` : ''].filter(Boolean).join(' ')
@@ -74,6 +78,7 @@ function timeStep(part: typeof timeParts[number]) { return secondsKept[part.pref
 function ambiguous(part: typeof timeParts[number]) {
   const date = schedule[part.date], time = schedule[part.time], original = props.event?.[part.field]
   if (!date || !time || !settings.loaded) return false
+  if (part.prefix === 'ends' && pinnedEnd.value?.local === localEnd.value) return false
   try { if (original && `${date}T${time}` === dates.toLocalInput(original)) return false } catch { return false }
   return isAmbiguousChurchTime(date, time, settings.timezone)
 }
@@ -83,12 +88,14 @@ const presetsEnabled = computed(() => {
 })
 const pressedPreset = computed(() => {
   if (chosenPreset.value === null) return null
-  try { return Date.parse(instant(localEnd.value, props.event?.ends_at)) - Date.parse(instant(localStart.value, props.event?.starts_at)) === chosenPreset.value * 60000 ? chosenPreset.value : null } catch { return null }
+  try { return Date.parse(endInstant()) - Date.parse(instant(localStart.value, props.event?.starts_at)) === chosenPreset.value * 60000 ? chosenPreset.value : null } catch { return null }
 })
 function applyPreset(minutes: number) {
   if (!presetsEnabled.value) return
-  const end = endFromPreset(schedule.startsDate, schedule.startsTime, minutes, settings.timezone, instant(localStart.value, props.event?.starts_at))
+  const startIso = instant(localStart.value, props.event?.starts_at)
+  const end = endFromPreset(schedule.startsDate, schedule.startsTime, minutes, settings.timezone, startIso)
   schedule.endsDate = end.date; schedule.endsTime = end.time; chosenPreset.value = minutes
+  pinnedEnd.value = { local: `${end.date}T${end.time}`, iso: new Date(Date.parse(startIso) + minutes * 60000).toISOString() }
 }
 function attrs(field: string, extra?: string) {
   return { 'aria-invalid': fieldErrors.value[field]?.length ? 'true' as const : undefined, 'aria-describedby': [extra, fieldErrors.value[field]?.length ? `${id}-${field}-error` : ''].filter(Boolean).join(' ') || undefined }
@@ -164,7 +171,7 @@ watch(() => props.event?.can_manage, value => { if (value === false) { saveGener
 watch(() => auth.sessionVersion, () => {
   invalidSession.value = true; choiceGeneration++; initGeneration++; saveGeneration++
   ministries.value = []; choices.value = []; slots.value = []; mediaIds.value = []
-  title.value = ''; description.value = ''; location.value = ''; owner.value = ''; Object.assign(schedule, { startsDate: '', startsTime: '', endsDate: '', endsTime: '' }); chosenPreset.value = null
+  title.value = ''; description.value = ''; location.value = ''; owner.value = ''; Object.assign(schedule, { startsDate: '', startsTime: '', endsDate: '', endsTime: '' }); releasePreset()
   fieldErrors.value = {}; errorMessage.value = ''; pendingOwner.value = ''; keepEditing()
 }, { flush: 'sync' })
 onBeforeUnmount(() => { alive = false; choiceGeneration++; initGeneration++; saveGeneration++; window.removeEventListener('beforeunload', beforeUnload); resolveLeave?.(false) })
@@ -179,7 +186,8 @@ async function save() {
       if (!schedule[part.time]) fieldErrors.value[part.time] = ['Укажите время.']
       if (fieldErrors.value[part.date] || fieldErrors.value[part.time]) continue
       try {
-        const value = instant(`${schedule[part.date]}T${schedule[part.time]}`, props.event?.[part.field])
+        const local = `${schedule[part.date]}T${schedule[part.time]}`
+        const value = part.prefix === 'ends' ? endInstant() : instant(local, props.event?.[part.field])
         if (part.prefix === 'starts') starts_at = value; else ends_at = value
       } catch (error) { fieldErrors.value[part.time] = [error instanceof Error ? error.message : 'Проверьте дату и время.'] }
     }
@@ -235,8 +243,8 @@ await initialize()
             <p v-if="cancelled" class="ui-hint">Событие отменено. Его время изменить нельзя.</p>
             <template v-for="part in timeParts" :key="part.prefix">
             <div class="event-editor__date-row">
-              <label class="ui-field">Дата {{ part.label }} <input v-model="schedule[part.date]" :data-test="`${part.prefix}-date`" :aria-label="`Дата ${part.label}`" type="date" min="0001-01-01" max="9998-12-31" :disabled="cancelled || !settings.loaded || !!settingsError" required v-bind="attrs(part.date, readout(part.prefix) ? `${id}-${part.prefix}-readout` : undefined)" @input="part.prefix === 'ends' && (chosenPreset = null)"><span v-if="fieldErrors[part.date]" :id="`${id}-${part.date}-error`" class="ui-field-error" role="alert">{{ fieldErrors[part.date]!.join(' ') }}</span></label>
-              <label class="ui-field">Время {{ part.label }} <input v-model="schedule[part.time]" :data-test="`${part.prefix}-time`" :aria-label="`Время ${part.label}`" type="time" :step="timeStep(part)" :disabled="cancelled || !settings.loaded || !!settingsError" required v-bind="attrs(part.time, [readout(part.prefix) ? `${id}-${part.prefix}-readout` : '', ambiguous(part) ? `${id}-${part.prefix}-ambiguous` : ''].filter(Boolean).join(' ') || undefined)" @input="part.prefix === 'ends' && (chosenPreset = null)"><span v-if="fieldErrors[part.time]" :id="`${id}-${part.time}-error`" class="ui-field-error" role="alert">{{ fieldErrors[part.time]!.join(' ') }}</span></label>
+              <label class="ui-field">Дата {{ part.label }} <input v-model="schedule[part.date]" :data-test="`${part.prefix}-date`" :aria-label="`Дата ${part.label}`" type="date" min="0001-01-01" max="9998-12-31" :disabled="cancelled || !settings.loaded || !!settingsError" required v-bind="attrs(part.date, readout(part.prefix) ? `${id}-${part.prefix}-readout` : undefined)" @input="part.prefix === 'ends' && releasePreset()"><span v-if="fieldErrors[part.date]" :id="`${id}-${part.date}-error`" class="ui-field-error" role="alert">{{ fieldErrors[part.date]!.join(' ') }}</span></label>
+              <label class="ui-field">Время {{ part.label }} <input v-model="schedule[part.time]" :data-test="`${part.prefix}-time`" :aria-label="`Время ${part.label}`" type="time" :step="timeStep(part)" :disabled="cancelled || !settings.loaded || !!settingsError" required v-bind="attrs(part.time, [readout(part.prefix) ? `${id}-${part.prefix}-readout` : '', ambiguous(part) ? `${id}-${part.prefix}-ambiguous` : ''].filter(Boolean).join(' ') || undefined)" @input="part.prefix === 'ends' && releasePreset()"><span v-if="fieldErrors[part.time]" :id="`${id}-${part.time}-error`" class="ui-field-error" role="alert">{{ fieldErrors[part.time]!.join(' ') }}</span></label>
               <p v-if="readout(part.prefix)" :id="`${id}-${part.prefix}-readout`" class="datetime-readout ui-hint">{{ readout(part.prefix) }}</p>
               <p v-if="ambiguous(part)" :id="`${id}-${part.prefix}-ambiguous`" :data-test="`${part.prefix}-ambiguous`" class="ui-hint">При повторе часа используется первый момент.</p>
               <p v-if="fieldErrors[part.field]" :id="`${id}-${part.field}-error`" role="alert" class="ui-field-error">{{ fieldErrors[part.field]!.join(' ') }}</p>

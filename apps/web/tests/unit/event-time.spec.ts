@@ -38,6 +38,12 @@ describe('event editor time helpers', () => {
     expect(endFromPreset('2026-10-25', '01:30', 120, 'Europe/Berlin')).toEqual({ date: '2026-10-25', time: '02:30' })
     expect(endFromPreset('2026-03-28', '23:30', 180, 'Europe/Berlin')).toEqual({ date: '2026-03-29', time: '03:30' })
   })
+  it('keeps start plus preset exact across the repeated hour, which the wall time alone cannot', () => {
+    const start = Date.parse(churchLocalToUtc('2026-10-25T01:30', 'Europe/Berlin'))
+    expect(endFromPreset('2026-10-25', '01:30', 120, 'Europe/Berlin')).toEqual({ date: '2026-10-25', time: '02:30' })
+    expect(churchLocalToUtc('2026-10-25T02:30', 'Europe/Berlin')).toBe(new Date(start + 3600000).toISOString())
+    expect(Date.parse(churchLocalToUtc('2026-10-25T02:30', 'Europe/Berlin')) - start).not.toBe(120 * 60000)
+  })
   it('flags only wall times that occur twice', () => {
     expect(isAmbiguousChurchTime('2026-10-25', '02:30', 'Europe/Berlin')).toBe(true)
     expect(isAmbiguousChurchTime('2026-10-25', '03:30', 'Europe/Berlin')).toBe(false)
