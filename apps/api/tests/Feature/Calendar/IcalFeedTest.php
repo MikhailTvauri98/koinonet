@@ -221,3 +221,13 @@ it('keeps slot role access under assigned visibility instead of granting ministr
     $this->getJson("/api/v1/events/{$event->id}")->assertForbidden();
     expect($this->get("/api/v1/calendar/feed/{$user->ical_token}.ics")->assertOk()->getContent())->not->toContain('BEGIN:VEVENT');
 });
+
+it('keeps the event description out of the token feed', function () {
+    $user = User::factory()->create();
+    $event = Event::factory()->create(['description' => 'Закрытое описание события']);
+    icalAssign($user, $event, 'Звук');
+
+    $body = unfoldIcal($this->get("/api/v1/calendar/feed/{$user->ical_token}.ics")->assertOk()->getContent());
+
+    expect($body)->toContain('DESCRIPTION:Слоты: Звук')->not->toContain('Закрытое описание события');
+});

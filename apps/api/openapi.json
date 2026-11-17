@@ -2442,6 +2442,64 @@
                 }
             }
         },
+        "/events/{event}/ics": {
+            "get": {
+                "operationId": "calendar.eventIcs",
+                "tags": [
+                    "EventIcs"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "description": "The event ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "text/calendar; charset=UTF-8": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "text/calendar": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Content-Disposition": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Cache-Control": {
+                                "schema": {
+                                    "type": "string",
+                                    "const": "private, no-store"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/calendar/feed/{token}.ics": {
             "get": {
                 "operationId": "calendar.icalFeed",
