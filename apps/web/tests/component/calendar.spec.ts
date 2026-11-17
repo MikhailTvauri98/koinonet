@@ -197,6 +197,8 @@ describe('calendar month cells and toolbar', () => {
   it('names the month button by its purpose, hides the picker field from assistive tech and keeps the «Ваши назначения» hint', async () => {
     const page = await month([])
     expect(page.get('[data-test="calendar-month-button"]').attributes('aria-label')).toBe('ноябрь 2026 г., перейти к дате')
+    // Видимое название — как в макете аудита: с заглавной и без «г.».
+    expect(page.get('[data-test="calendar-month-button"]').text()).toBe('Ноябрь 2026 ▾')
     expect(page.get('[data-test="calendar-date"]').element.closest('[aria-hidden="true"]')).not.toBeNull()
     expect(page.find('.calendar-zone').exists() ? page.get('.calendar-zone').text() : '').not.toContain('Ваши назначения')
     await page.get('[data-test="scope-mine"]').trigger('click'); await flushPromises()
@@ -206,6 +208,8 @@ describe('calendar month cells and toolbar', () => {
     const page = await month([event({ id: 'wed', title: 'Среда', starts_at: '2026-11-11T07:00:00Z', ends_at: '2026-11-11T08:00:00Z' }), event({ id: 'next', title: 'Следующая неделя', starts_at: '2026-11-16T07:00:00Z', ends_at: '2026-11-16T08:00:00Z' })])
     const rest = page.get('[data-test="week-rest"]')
     expect(rest.text()).toContain('Дальше на неделе'); expect(rest.text()).toContain('Среда'); expect(rest.text()).not.toContain('Следующая неделя')
+    // Заголовок выбранного дня — как в макете аудита: «Вторник, 10 ноября», без «г.».
+    expect(page.get('[data-test="selected-day"] h2').text()).toBe('Вторник, 10 ноября')
   })
 })
 describe('calendar on a phone', () => {

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { EventItem, EventRange } from '~/composables/useEvents'
-import { formatCalendarDay, groupCalendarDays } from '~/composables/useEvents'
+import { groupCalendarDays } from '~/composables/useEvents'
 import EmptyState from '~/components/ui/EmptyState.vue'
 import EventCard from './EventCard.vue'
 // startFrom включает режим ленты телефона: дни с этой даты, заголовки по правилу дат, кнопка «Показать прошедшие»,
 // выбранный день (selectedDay) виден всегда, даже пустой.
 const props = withDefaults(defineProps<{ events: EventItem[], range?: EventRange, returnContext?: string, excludeDate?: string, hideDate?: boolean, emptyDescription?: string, startFrom?: string, selectedDay?: string }>(), { range: undefined, returnContext: undefined, excludeDate: undefined, emptyDescription: 'Выберите другой период, чтобы увидеть доступные события.', startFrom: undefined, selectedDay: undefined })
 const { groupByChurchDay } = useEvents()
-const { formatDayHeading } = useChurchDate()
+const { formatDayHeading, formatDayTitle } = useChurchDate()
 const settings = useSettingsStore()
 const root = ref<HTMLElement | null>(null)
 const showPast = ref(false)
@@ -22,7 +22,7 @@ const pastCount = computed(() => groups.value.filter(group => feed.value && grou
 // Нет ни одного события в месяце: вместо пустого выбранного дня общее пустое состояние.
 const nothing = computed(() => feed.value && !groups.value.some(group => group.events.length))
 const visible = computed(() => nothing.value ? [] : feed.value ? groups.value.filter(group => group.day >= props.startFrom! || showPast.value) : groups.value)
-const heading = (day: string) => feed.value ? formatDayHeading(day) : formatCalendarDay(day)
+const heading = (day: string) => feed.value ? formatDayHeading(day) : formatDayTitle(day)
 // Выбранный прошедший день и новый месяц: прошедшие дни раскрываются сами или сворачиваются обратно.
 watch(() => [props.startFrom, props.selectedDay], () => { showPast.value = !!props.selectedDay && !!props.startFrom && props.selectedDay < props.startFrom }, { immediate: true })
 // Раскрытие вставляет дни выше текущего места; положение прокрутки сохраняем по первому видимому дню.

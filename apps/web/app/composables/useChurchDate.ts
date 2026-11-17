@@ -14,6 +14,7 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
   const plainDayMonth = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', day: 'numeric', month: 'long' })
   const plainWeekday = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', weekday: 'long' })
   const plainWeekdayShort = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', weekday: 'short' })
+  const plainMonthYear = new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', month: 'long', year: 'numeric' })
 
   const dayKey = (value: Date | string) => iso.format(typeof value === 'string' ? new Date(value) : value)
   const dayNumber = (key: string) => Math.floor(Date.parse(`${key}T00:00:00Z`) / DAY_MS)
@@ -82,6 +83,12 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     return m === 0 ? `${h} ч` : `${h} ч ${m} мин`
   }
 
+  // Заголовок дня без относительных слов: «Вторник, 17 ноября»; год — только не текущий.
+  const formatDayTitle = (dateOnly: string) => {
+    const at = new Date(`${dateOnly}T00:00:00Z`)
+    return `${capitalize(plainWeekday.format(at))}, ${withYear(plainDayMonth.format(at), dateOnly)}`
+  }
+
   const formatDayHeading = (dateOnly: string) => {
     const at = new Date(`${dateOnly}T00:00:00Z`)
     const weekday = plainWeekday.format(at)
@@ -90,8 +97,11 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     if (ago === 0) return `Сегодня · ${weekday}`
     if (ago === -1) return `Завтра · ${weekday}, ${full}`
     if (ago === 1) return `Вчера · ${weekday}, ${full}`
-    return `${capitalize(weekday)}, ${full}`
+    return formatDayTitle(dateOnly)
   }
+
+  // Название месяца в календаре: «Ноябрь 2026», без «г.».
+  const formatMonthTitle = (dateOnly: string) => capitalize(plainMonthYear.format(new Date(`${dateOnly}T00:00:00Z`)).replace(/\s*г\.$/, ''))
 
   // Разделитель дня в чате: «Сегодня», «Вчера», «Пт, 13 ноября» (год — только не текущий).
   const formatChatDay = (dateOnly: string) => {
@@ -118,6 +128,8 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
     formatEventWhen,
     formatDuration,
     formatDayHeading,
+    formatDayTitle,
+    formatMonthTitle,
     formatChatDay,
     formatWeekdayShort: (value: string) => weekdayShort.format(new Date(value)),
     deviceZoneDiffers,
@@ -139,6 +151,8 @@ export function useChurchDate() {
     formatEventWhen: (startIso: string, endIso: string) => formatter.value.formatEventWhen(startIso, endIso),
     formatDuration: (startIso: string, endIso: string) => formatter.value.formatDuration(startIso, endIso),
     formatDayHeading: (dateOnly: string) => formatter.value.formatDayHeading(dateOnly),
+    formatDayTitle: (dateOnly: string) => formatter.value.formatDayTitle(dateOnly),
+    formatMonthTitle: (dateOnly: string) => formatter.value.formatMonthTitle(dateOnly),
     formatChatDay: (dateOnly: string) => formatter.value.formatChatDay(dateOnly),
     formatWeekdayShort: (iso: string) => formatter.value.formatWeekdayShort(iso),
     deviceZoneDiffers: (iso: string) => formatter.value.deviceZoneDiffers(iso),

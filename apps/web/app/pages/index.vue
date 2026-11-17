@@ -3,8 +3,7 @@ import PinnedAnnouncements from '~/components/announcements/PinnedAnnouncements.
 import UnreadChats from '~/components/chat/UnreadChats.vue'
 import MyNextAssignment from '~/components/home/MyNextAssignment.vue'
 import WeekEvents from '~/components/home/WeekEvents.vue'
-import { formatCalendarDay } from '~/composables/useEvents'
-const auth = useAuthStore(), { todayInChurch } = useChurchDate()
+const auth = useAuthStore(), { todayInChurch, formatDayTitle } = useChurchDate()
 const today = computed(() => todayInChurch())
 </script>
 
@@ -12,7 +11,7 @@ const today = computed(() => todayInChurch())
   <div class="home-page">
     <header class="home-page__greeting">
       <h1>Здравствуйте, {{ auth.person?.first_name }}!</h1>
-      <p class="ui-hint"><time :datetime="today">{{ formatCalendarDay(today) }}</time></p>
+      <p class="ui-hint"><time :datetime="today">{{ formatDayTitle(today) }}</time></p>
     </header>
     <div class="home-page__columns">
       <div class="home-page__column"><MyNextAssignment /><WeekEvents :from="today" /></div>

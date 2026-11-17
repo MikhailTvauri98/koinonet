@@ -94,6 +94,15 @@ describe('human dates', () => {
         expect(f.formatDayHeading('2027-01-05')).toBe('Вторник, 5 января 2027')
       })
 
+      // Приветствие главной и панель выбранного дня: без «Сегодня», без «г.» и без текущего года.
+      it('formats day and month titles without the current year', () => {
+        expect(f.formatDayTitle('2026-11-17')).toBe('Вторник, 17 ноября')
+        expect(f.formatDayTitle('2026-11-18')).toBe('Среда, 18 ноября')
+        expect(f.formatDayTitle('2027-01-05')).toBe('Вторник, 5 января 2027')
+        expect(f.formatMonthTitle('2026-11-17')).toBe('Ноябрь 2026')
+        expect(f.formatMonthTitle('2031-01-07')).toBe('Январь 2031')
+      })
+
       it('formats chat day separators', () => {
         expect(f.formatChatDay('2026-11-17')).toBe('Сегодня')
         expect(f.formatChatDay('2026-11-16')).toBe('Вчера')

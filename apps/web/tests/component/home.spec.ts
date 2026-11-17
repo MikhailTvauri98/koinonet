@@ -50,6 +50,9 @@ describe('home «Моя неделя»', () => {
     await flushPromises()
     expect(headings(page)).toEqual(['На этой неделе', 'Объявления', 'Сообщения'])
     expect(page.text()).not.toContain('Вы служите')
+    // Сегодняшняя дата церкви под приветствием — как в макете: «Понедельник, 9 ноября», без «г.».
+    expect(page.get('.home-page__greeting time').text()).toBe('Понедельник, 9 ноября')
+    expect(page.get('.home-page__greeting time').attributes('datetime')).toBe('2026-11-09')
     expect(get).toHaveBeenCalledWith('/events', expect.objectContaining({ scope: 'church', from: '2026-11-09', to: '2026-11-15' }))
     const rows = page.findAll('[data-test="week-event"]')
     expect(rows).toHaveLength(2)
