@@ -71,6 +71,12 @@ async function loadRoles() {
 }
 
 function bumpCount(delta: number) { if (ministry.value) ministry.value = { ...ministry.value, members_count: Math.max(0, ministry.value.members_count + delta) } }
+function retryHeader() {
+  const sharedError = ministryError.value
+  if (errorMessage.value === sharedError) void load()
+  if (rolesError.value === sharedError) void loadRoles()
+  void reloadMinistry()
+}
 function onAdded(member: Member) {
   bumpCount(1)
   members.value = [...members.value, member]
@@ -115,11 +121,11 @@ await load()
 
 <template>
   <section class="members-tab">
-    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" :error="ministryError" @updated="ministry = $event" @retry="reloadMinistry">
+    <MinistryHeader :ministry="ministry" :ministry-id="ministryId" :error="ministryError" @updated="ministry = $event" @retry="retryHeader">
       <template #actions><button v-if="canAdd" type="button" class="ui-button ui-button--primary" data-test="add-member" @click="showAddDialog = true">Добавить участника</button></template>
     </MinistryHeader>
     <label class="members-tab__search"><span>Найти участника</span><input v-model="search" type="search" data-test="member-search" placeholder="Имя или роль"></label>
-    <p v-if="rolesError" role="alert">
+    <p v-if="rolesError && rolesError !== ministryError" role="alert">
       {{ rolesError }} <button type="button" data-test="retry-roles" @click="loadRoles">Повторить</button>
     </p>
     <AddMemberDialog
@@ -127,9 +133,11 @@ await load()
       @added="onAdded" @close="showAddDialog = false"
     />
     <p v-if="loading" role="status">Загрузка…</p>
-    <p v-else-if="errorMessage" role="alert">
-      {{ errorMessage }} <button type="button" data-test="retry" @click="load">Повторить</button>
-    </p>
+    <template v-else-if="errorMessage">
+      <p v-if="errorMessage !== ministryError" role="alert">
+        {{ errorMessage }} <button type="button" data-test="retry" @click="load">Повторить</button>
+      </p>
+    </template>
     <p v-else-if="!members.length" role="status">В служении пока нет участников.</p>
     <p v-else-if="!filteredMembers.length" role="status">Участники не найдены. Попробуйте другое имя или роль.</p>
     <ul v-else class="members-tab__list" aria-label="Состав служения">

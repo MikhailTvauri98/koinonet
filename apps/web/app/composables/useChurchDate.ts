@@ -3,7 +3,7 @@ import { churchLocalToUtc, utcToChurchLocal } from '~/utils/churchWallTime'
 const DAY_MS = 86_400_000
 
 export function churchDateFormatter(timeZone: string, now: () => Date = () => new Date()) {
-  const date = new Intl.DateTimeFormat('ru-RU', { timeZone, day: 'numeric', month: 'short', year: 'numeric' })
+  const date = new Intl.DateTimeFormat('ru-RU', { timeZone, day: 'numeric', month: 'short' })
   const time = new Intl.DateTimeFormat('ru-RU', { timeZone, hour: '2-digit', minute: '2-digit' })
   const iso = new Intl.DateTimeFormat('sv-SE', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
   const numeric = new Intl.DateTimeFormat('ru-RU', { timeZone, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -23,6 +23,10 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
   const daysAgo = (key: string) => dayNumber(dayKey(now())) - dayNumber(key)
   const withYear = (text: string, key: string) => yearOf(key) === yearOf(dayKey(now())) ? text : `${text} ${yearOf(key)}`
   const dayPart = (value: Date, key: string) => withYear(dayMonth.format(value), key)
+  const formatDate = (value: string) => {
+    const at = new Date(value)
+    return withYear(date.format(at), dayKey(at))
+  }
 
   const offsetMinutes = (instant: Date) => {
     const p = Object.fromEntries(wall.formatToParts(instant).map(part => [part.type, Number(part.value)]))
@@ -118,9 +122,9 @@ export function churchDateFormatter(timeZone: string, now: () => Date = () => ne
   }
 
   return {
-    formatDate: (value: string) => date.format(new Date(value)),
+    formatDate,
     formatTime: (value: string) => time.format(new Date(value)),
-    formatDateTime: (value: string) => `${date.format(new Date(value))}, ${time.format(new Date(value))}`,
+    formatDateTime: (value: string) => `${formatDate(value)}, ${time.format(new Date(value))}`,
     todayInChurch: () => iso.format(now()),
     formatNumericDateTime: (value: string) => numeric.format(new Date(value)),
     formatMoment,

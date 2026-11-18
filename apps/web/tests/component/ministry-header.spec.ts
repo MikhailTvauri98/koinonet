@@ -97,6 +97,33 @@ describe('ministry header on every ministry route', () => {
 })
 
 describe('ministry header without a loaded ministry', () => {
+  it('shows a shared denial once and retries both requests', async () => {
+    grantPermissions()
+    get.mockRejectedValue({ statusCode: 403 })
+    const view = await mountSuspended(MinistryMembers)
+    await flushPromises()
+    expect(view.findAll('[role="alert"]').map(alert => alert.text())).toEqual(['Нет права на это действие. Повторить'])
+    expect(view.text()).not.toContain('В служении пока нет участников.')
+
+    get.mockClear().mockImplementation((path: string) => Promise.resolve({ data: path === '/ministries/m1' ? ministry : [] }))
+    await view.get('[data-test="retry-ministry"]').trigger('click')
+    await flushPromises()
+    expect(get).toHaveBeenCalledWith('/ministries/m1/members')
+    expect(view.find('[role="alert"]').exists()).toBe(false)
+    expect(view.text()).toContain('В служении пока нет участников.')
+  })
+
+  it('keeps the independent member-list denial when the ministry is visible', async () => {
+    grantPermissions()
+    get.mockImplementation((path: string) => path.endsWith('/members')
+      ? Promise.reject({ statusCode: 403 }) : Promise.resolve({ data: ministry }))
+    const view = await mountSuspended(MinistryMembers)
+    await flushPromises()
+    expect(view.get('h1').text()).toBe(ministry.name)
+    expect(view.get('[role="alert"]').text()).toContain('Нет права на это действие.')
+    expect(view.get('[data-test="retry"]').exists()).toBe(true)
+  })
+
   it('keeps a page heading and the tabs while the ministry is loading', async () => {
     const view = await mountSuspended(MinistryHeader, { props: { ministry: null, ministryId: 'm1' } })
 

@@ -8,10 +8,12 @@ beforeEach(() => setActivePinia(createPinia()))
 
 describe('church dates', () => {
   it('formats the church wall clock and calendar day', () => {
-    const f = churchDateFormatter('Asia/Vladivostok')
+    const now = () => new Date('2026-12-31T15:00:00Z') // Уже 2027 год во Владивостоке.
+    const f = churchDateFormatter('Asia/Vladivostok', now)
     expect(f.formatTime('2026-10-01T01:30:00Z')).toBe('11:30')
-    expect(f.formatDate('2026-10-01T15:30:00Z')).toBe('2 окт. 2026 г.')
-    expect(churchDateFormatter('Europe/Moscow').formatDateTime('2026-10-01T07:05:00Z')).toBe('1 окт. 2026 г., 10:05')
+    expect(f.formatDate('2026-10-01T15:30:00Z')).toBe('2 окт. 2026')
+    expect(f.formatDate('2026-12-31T15:30:00Z')).toBe('1 янв.')
+    expect(churchDateFormatter('Europe/Moscow', now).formatDateTime('2026-10-01T07:05:00Z')).toBe('1 окт., 10:05')
   })
 
   it('knows today across the international date line', () => {
