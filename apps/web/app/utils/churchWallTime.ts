@@ -5,8 +5,8 @@ export function utcToChurchLocal(iso: string, timeZone: string): string {
   return `${field('year')}-${field('month')}-${field('day')}T${field('hour')}:${field('minute')}:${field('second')}`
 }
 
-/** Resolve offsets on both sides of a transition; gaps fail, repeated times choose the earlier instant. */
-export function churchLocalToUtc(local: string, timeZone: string): string {
+/** Every instant (epoch ms, ascending) whose church wall-clock reading equals the local value: none in a gap, two in a repeated hour. */
+export function churchLocalInstants(local: string, timeZone: string): number[] {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(local)) throw new Error('Укажите дату и время.')
   const normalized = local.length === 16 ? `${local}:00` : local
   const naive = Date.parse(`${normalized}Z`)
@@ -18,6 +18,12 @@ export function churchLocalToUtc(local: string, timeZone: string): string {
     const candidate = naive - offset
     if (utcToChurchLocal(new Date(candidate).toISOString(), timeZone) === normalized) candidates.add(candidate)
   }
-  if (!candidates.size) throw new Error('Такого времени нет в часовом поясе церкви из-за перевода часов.')
-  return new Date(Math.min(...candidates)).toISOString()
+  return [...candidates].sort((a, b) => a - b)
+}
+
+/** Resolve offsets on both sides of a transition; gaps fail, repeated times choose the earlier instant. */
+export function churchLocalToUtc(local: string, timeZone: string): string {
+  const instants = churchLocalInstants(local, timeZone)
+  if (!instants.length) throw new Error('Такого времени нет в часовом поясе церкви из-за перевода часов.')
+  return new Date(instants[0]!).toISOString()
 }

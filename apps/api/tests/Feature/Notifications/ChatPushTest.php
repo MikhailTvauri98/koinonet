@@ -74,7 +74,7 @@ it('resolves current content and identity permissions at queued delivery', funct
     $chat = Chat::factory()->direct($sender, $recipient)->create();
     $message = Message::factory()->for($chat)->from($sender)->create(['body' => 'Старое']);
     $notification = new ChatMessageNotification($message, $chat);
-    expect($notification->toArray($recipient)['title'])->toBe('Иванов Иван');
+    expect($notification->toArray($recipient)['title'])->toBe('Иван Иванов');
     $job = unserialize(serialize(new SendQueuedNotifications($recipient, $notification, [WebPushChannel::class])));
     if ($revoke) {
         $recipient->person->globalRoles()->detach();
@@ -86,8 +86,8 @@ it('resolves current content and identity permissions at queued delivery', funct
     $job->handle(app(ChannelManager::class));
     expect($transport->sent)->toHaveCount(1);
     expect($transport->sent[0]['payload'])->toMatchArray([
-        'category' => 'chat', 'title' => $revoke ? 'Личный чат' : 'Иванов Иван',
-        'body' => ($revoke ? 'Участник' : 'Иванов Иван').': Новое',
+        'category' => 'chat', 'title' => $revoke ? 'Личный чат' : 'Иван Иванов',
+        'body' => ($revoke ? 'Участник' : 'Иван Иванов').': Новое',
         'url' => "/chats/{$chat->id}", 'tag' => "chat-{$chat->id}",
     ]);
     expect($recipient->notifications()->count())->toBe(0);

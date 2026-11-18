@@ -4,7 +4,7 @@ import type { Ministry } from '~/utils/ministries'
 // тот, кто читает список ролей служения: носитель roles.manage или
 // members.manage в этом служении (docs/architecture.md, 6.1); остальным
 // вкладка вела бы на отказ.
-const props = defineProps<{ ministryId: string, chatId?: string | null }>()
+const props = defineProps<{ ministryId: string, chatId?: string | null, membersCount?: number }>()
 const { canIn } = useCan()
 const api = useApi(), auth = useAuthStore()
 const loadedChat = ref<string | null>(null), chatError = ref(false)
@@ -31,7 +31,7 @@ const canSeeRoles = computed(() => canIn(props.ministryId, 'roles.manage') || ca
 <template>
   <nav aria-label="Разделы служения" class="ministry-tabs">
     <NuxtLink :to="base" exact-active-class="ministry-tabs__active">Обзор</NuxtLink>
-    <NuxtLink :to="`${base}/members`" exact-active-class="ministry-tabs__active">Участники</NuxtLink>
+    <NuxtLink :to="`${base}/members`" exact-active-class="ministry-tabs__active">Участники<span v-if="membersCount !== undefined" class="ministry-tabs__count" aria-hidden="true" data-test="tab-members-count">{{ membersCount }}</span></NuxtLink>
     <NuxtLink :to="`${base}/events`" exact-active-class="ministry-tabs__active">События</NuxtLink>
     <NuxtLink :to="`${base}/announcements`" exact-active-class="ministry-tabs__active">Объявления</NuxtLink>
     <NuxtLink v-if="visibleChat" data-test="ministry-chat-tab" :to="`${base}/chat`" exact-active-class="ministry-tabs__active">Чат</NuxtLink>
@@ -45,5 +45,6 @@ const canSeeRoles = computed(() => canIn(props.ministryId, 'roles.manage') || ca
 .ministry-tabs a { display: inline-flex; align-items: center; min-height: var(--ui-control-height); max-width: 100%; padding: var(--ui-space-2) 0; border-bottom: 2px solid transparent; color: var(--ui-text-muted); text-decoration: none; overflow-wrap: anywhere; }
 .ministry-tabs a:hover { color: var(--ui-text); }
 .ministry-tabs a.ministry-tabs__active { color: var(--ui-text); border-bottom-color: var(--ui-accent); }
+.ministry-tabs__count { margin-inline-start: var(--ui-space-2); padding: 0 var(--ui-space-2); min-width: 1.5rem; border-radius: 999px; background: var(--ui-surface-muted); color: var(--ui-text-muted); font-size: .875rem; text-align: center; }
 .ministry-tabs button { max-width: 100%; overflow-wrap: anywhere; }
 </style>

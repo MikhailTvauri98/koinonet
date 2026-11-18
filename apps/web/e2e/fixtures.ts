@@ -37,11 +37,14 @@ export const test = base.extend<{ resetCache: undefined, openPhone: () => Promis
     ].join(' ')])
     await use(undefined)
   }, { auto: true }],
-  openPhone: async ({ browser }, use) => {
+  // Телефон живёт в том же поясе устройства, что и основная страница сценария
+  // (test.use({ timezoneId })): проверка показа во времени церкви не зависит от него.
+  openPhone: async ({ browser, timezoneId }, use) => {
     const contexts: BrowserContext[] = []
     await use(async () => {
       const context = await browser.newContext({
         ...devices['Pixel 7'],
+        ...(timezoneId ? { timezoneId } : {}),
         baseURL: e2e.webOrigin,
         serviceWorkers: 'block',
       })
@@ -266,6 +269,8 @@ export async function createMinistry(page: Page, name: string): Promise<void> {
   await openSection(page, 'Служения', 'Служения')
   await page.getByRole('button', { name: 'Создать служение' }).click()
   await page.getByLabel('Название').fill(name)
+  // Цвет обязателен и без предвыбора.
+  await page.getByRole('radio', { name: 'Фиолетовый', exact: true }).check()
   // The successful POST refreshes the list; on a slow Docker bind mount that
   // GET can exceed the short element assertion timeout. Register before submit.
   await Promise.all([

@@ -120,3 +120,32 @@ it('follows decoded image growth at unchanged viewport height without moving an 
     expect(scroller.scrollTop).toBe(50)
   } finally { list.unmount(); vi.unstubAllGlobals() }
 })
+
+it('keeps existing messages mounted and the reader anchored when older same-sender history joins the first group', async () => {
+  vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} })
+  const own = (id: string, at: string): ChatMessage => ({ ...message(id), created_at: at, sender: { id: 'u1', person: { id: 'p1', full_name: 'Анна Петрова', short_name: 'Анна Петрова', photo_thumb_url: null } } })
+  const a = own('a', '2026-12-01T10:00:02.000001Z'), b = own('b', '2026-12-01T10:00:03.000001Z')
+  const list = await mountSuspended(MessageList, { props: { messages: [a, b], hasOlder: true, loadingOlder: false, writable: true, moderate: false, pinnedIds: [] } })
+  await flushPromises()
+  const scroller = list.get('[aria-label="История сообщений"]').element as HTMLElement
+  let height = 400
+  Object.defineProperty(scroller, 'scrollHeight', { get: () => height })
+  scroller.scrollTop = 50
+  vi.spyOn(scroller, 'getBoundingClientRect').mockImplementation(() => ({ top: 0, bottom: 200, height: 200 }) as DOMRect)
+  const nodeA = list.get('[data-message-id=a]').element, nodeB = list.get('[data-message-id=b]').element
+  let prepended = 0
+  vi.spyOn(nodeA, 'getBoundingClientRect').mockImplementation(() => ({ top: prepended - scroller.scrollTop, bottom: prepended - scroller.scrollTop + 100, height: 100 }) as DOMRect)
+  expect(list.findAll('.message-row--first')).toHaveLength(1)
+  await list.get('button').trigger('click')
+  await list.setProps({ loadingOlder: true })
+  height = 580; prepended = 100
+  await list.setProps({ messages: [own('old', '2026-12-01T10:00:01.000001Z'), a, b], loadingOlder: false }); await flushPromises()
+  expect(list.get('[data-message-id=a]').element, 'existing message not remounted').toBe(nodeA)
+  expect(list.get('[data-message-id=b]').element).toBe(nodeB)
+  expect(scroller.scrollTop).toBe(150)
+  // The group start moved to the older message; the former first lost its name row.
+  expect(list.findAll('.message-row--first')).toHaveLength(1)
+  expect(list.get('[data-message-id=old]').element.closest('.message-row')!.classList.contains('message-row--first')).toBe(true)
+  expect(nodeA.closest('.message-row')!.classList.contains('message-row--first')).toBe(false)
+  list.unmount(); vi.unstubAllGlobals()
+})

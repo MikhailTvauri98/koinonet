@@ -20,8 +20,8 @@ final class AnnouncementResource extends JsonResource
 {
     /**
      * @return array{
-     *   id: string, scope: AnnouncementScope, ministry: array{id: string, name: string}|null,
-     *   author: array{id: string, full_name: string}|null, title: string, body: string,
+     *   id: string, scope: AnnouncementScope, ministry: array{id: string, name: string, color: string|null}|null,
+     *   author: array{id: string, full_name: string, short_name: string}|null, title: string, body: string,
      *   pinned: bool, hide_after: string|null, notify_on_publish: bool, published_at: string,
      *   archived: bool, attachments: AnonymousResourceCollection, views_count: int|MissingValue
      * }
@@ -36,8 +36,8 @@ final class AnnouncementResource extends JsonResource
         return [
             'id' => $announcement->id,
             'scope' => $announcement->scope,
-            'ministry' => $ministry === null ? null : ['id' => $ministry->id, 'name' => $ministry->name],
-            'author' => $author === null ? null : ['id' => $author->id, 'full_name' => $author->person->fullName()],
+            'ministry' => $ministry === null ? null : ['id' => $ministry->id, 'name' => $ministry->name, 'color' => $ministry->color?->value],
+            'author' => $author === null ? null : ['id' => $author->id, 'full_name' => $author->person->fullName(), 'short_name' => $author->person->shortName()],
             'title' => $announcement->title,
             'body' => $announcement->body,
             'pinned' => $announcement->pinned_at !== null,

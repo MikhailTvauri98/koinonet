@@ -17,7 +17,7 @@ type PeopleResponse = operations['person.index']['responses'][200]['content']['a
 const ministryId = '01J00000000000000000000001'
 const person = (over: Partial<Person> = {}): Person => ({
   id: '01J00000000000000000000002', last_name: 'Прокопенко', first_name: 'Мария',
-  patronymic: null, full_name: 'Прокопенко Мария', status: 'member', archived: false,
+  patronymic: null, full_name: 'Прокопенко Мария', short_name: 'Прокопенко Мария', status: 'member', archived: false,
   has_account: false, user_id: null, has_global_roles: false, account_disabled: false, photo_url: null, ...over,
 })
 function result(data = [person()], page = 1, last = 1): PeopleResponse {
@@ -36,6 +36,11 @@ async function mountPage() {
   pages.push(page)
   await flushPromises()
   return page
+}
+async function openFilters(page: VueWrapper) {
+  const button = page.get('[data-test="filters-toggle"]')
+  if (button.attributes('aria-expanded') !== 'true') await button.trigger('click')
+  await flushPromises()
 }
 function permit(...keys: string[]) {
   grantPermissions({ global: keys }, testPinia)
@@ -64,7 +69,7 @@ describe('people list', () => {
     expect(page.find('[data-test="create-person"]').exists()).toBe(false)
   })
 
-  it('renders names, status, photo and missing-role markers', async () => {
+  it('renders names, status and photo without a per-row missing-role marker', async () => {
     get.mockImplementation((path: string) => Promise.resolve(path === '/ministries' ? { data: [] } : result([
       person({ photo_url: 'https://church.test/photo', archived: true }),
     ])))
@@ -72,10 +77,32 @@ describe('people list', () => {
     expect(page.text()).toContain('Прокопенко Мария')
     expect(page.get('a[href="/people/01J00000000000000000000002"]').text()).toContain('Прокопенко Мария')
     expect(page.text()).toContain('Член церкви')
-    expect(page.text()).toContain('без ролей')
+    expect(page.text()).not.toContain('без ролей')
     expect(page.text()).toContain('В архиве')
     expect(page.find('img').attributes('src')).toBe('https://church.test/photo')
     expect(page.find('[data-test="create-person"]').exists()).toBe(false)
+  })
+
+  it('keeps search visible and moves the other filters into a panel with an active count', async () => {
+    const page = await mountPage()
+    const toggle = page.get('[data-test="filters-toggle"]')
+    expect(page.find('[data-test="search"]').exists()).toBe(true)
+    expect(toggle.text()).toBe('Фильтры')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(toggle.attributes('aria-controls')).toBeUndefined()
+    for (const name of ['status', 'ministry', 'archived', 'without-roles']) expect(page.find(`[data-test="filter-${name}"]`).exists()).toBe(false)
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    expect(toggle.attributes('aria-controls')).toBe(page.get('[data-test="filters-panel"]').attributes('id'))
+    await page.get('[data-test="filter-status"]').setValue('guest')
+    await page.get('[data-test="filter-without-roles"]').setValue(true)
+    expect(toggle.text()).toBe('Фильтры включено: 2')
+    await page.get('[data-test="search"]').setValue('прок')
+    expect(toggle.text()).toBe('Фильтры включено: 2')
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(page.find('[data-test="filter-status"]').exists()).toBe(false)
+    expect(toggle.text()).toBe('Фильтры включено: 2')
   })
 
   it('debounces search for 300 ms and sends only the latest text', async () => {
@@ -97,6 +124,7 @@ describe('people list', () => {
   it('passes status, ministry, archive and missing-role filters and clears them', async () => {
     const page = await mountPage()
     expect(lastQuery().has('archived')).toBe(false)
+    await openFilters(page)
     await page.get('[data-test="filter-status"]').setValue('guest')
     await page.get('[data-test="filter-ministry"]').setValue(ministryId)
     await page.get('[data-test="filter-archived"]').setValue(true)
@@ -121,6 +149,7 @@ describe('people list', () => {
     expect(page.text()).toContain('Прокопенко Мария')
     expect(page.text()).toContain('Иванов Иван')
     expect(page.find('[data-test="load-more"]').exists()).toBe(false)
+    await openFilters(page)
     await page.get('[data-test="filter-status"]').setValue('guest')
     await flushPromises()
     expect(lastQuery().get('page')).toBe('1')
@@ -132,6 +161,7 @@ describe('people list', () => {
     const page = await mountPage()
     let finishOld!: (value: PeopleResponse) => void
     get.mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve }))
+    await openFilters(page)
     await page.get('[data-test="filter-status"]').setValue('guest')
     get.mockResolvedValueOnce(result([person({ full_name: 'Актуальный результат' })]))
     await page.get('[data-test="filter-status"]').setValue('attendee')
@@ -302,12 +332,13 @@ describe('directory redesign boundaries', () => {
     const link = row.get('a')
     expect(link.classes()).toContain('person-item__open')
     expect(link.text()).toContain('Член церкви')
-    expect(link.findAll('img, .person-item__placeholder')).toHaveLength(1)
+    expect(link.findAll('.ui-avatar')).toHaveLength(1)
   })
   it('rejects an old list response across synchronous revoke and restore', async () => {
     const page = await mountPage()
     let finish!: (value: PeopleResponse) => void
     get.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await openFilters(page)
     await page.get('[data-test="filter-status"]').setValue('guest')
     permit(); permit('people.view'); await flushPromises()
     finish(result([person({ full_name: 'Запоздавшее имя' })])); await flushPromises()
@@ -327,6 +358,7 @@ describe('directory redesign boundaries', () => {
 describe('directory filter session scope', () => {
   it('clears prior filters and search before reading for a new session of the same account', async () => {
     const page = await mountPage()
+    await openFilters(page)
     await page.get('[data-test="filter-status"]').setValue('guest')
     await page.get('[data-test="filter-ministry"]').setValue(ministryId)
     await page.get('[data-test="filter-archived"]').setValue(true)
@@ -343,6 +375,7 @@ describe('directory filter session scope', () => {
   })
   it('preserves filters and search on unrelated rights refresh in the same session', async () => {
     const page = await mountPage()
+    await openFilters(page)
     await page.get('[data-test="filter-status"]').setValue('guest')
     await page.get('[data-test="search"]').setValue('Мария')
     permit('people.view', 'audit.view'); await flushPromises()

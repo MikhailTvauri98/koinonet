@@ -21,7 +21,7 @@ mockNuxtImport('useApi', () => () => ({ get, post, patch }))
 mockNuxtImport('useRoute', () => () => ({ params: { id: 'a1' } }))
 enableAutoUnmount(afterEach)
 const announcement = (over: Partial<Announcement> = {}): Announcement => ({
-  id: 'a1', scope: 'church', ministry: null, author: { id: 'other', full_name: 'Иван Иванов' },
+  id: 'a1', scope: 'church', ministry: null, author: { id: 'other', full_name: 'Иван Иванов' , short_name: 'Иван Иванов'},
   title: 'Собрание', body: 'В **10:00**', pinned: false, hide_after: null, notify_on_publish: true,
   published_at: '2026-10-01T07:00:00Z', archived: false, attachments: [], ...over,
 })
@@ -44,21 +44,54 @@ describe('announcement lists', () => {
     await page.get('[data-test="more"]').trigger('click'); await flushPromises()
     expect(page.findAll('article')).toHaveLength(2)
     expect(get).toHaveBeenLastCalledWith('/announcements', expect.objectContaining({ page: 2, scope: 'church' }))
-    await page.get('select').setValue('ministry'); await flushPromises()
+    await page.get('[data-test="scope-ministry"]').trigger('click'); await flushPromises()
     expect(get).toHaveBeenLastCalledWith('/announcements', expect.objectContaining({ page: 1, scope: 'ministry' }))
   })
+  it('switches between church and ministries with two pressed-state buttons instead of a select', async () => {
+    get.mockResolvedValue(list())
+    const page = await mountSuspended(AnnouncementsIndex)
+    expect(page.find('select').exists()).toBe(false)
+    const church = page.get('[data-test="scope-church"]'), ministry = page.get('[data-test="scope-ministry"]')
+    expect([church.text(), ministry.text()]).toEqual(['Церковь', 'Мои служения'])
+    expect([church.attributes('aria-pressed'), ministry.attributes('aria-pressed')]).toEqual(['true', 'false'])
+    await ministry.trigger('click'); await flushPromises()
+    expect([church.attributes('aria-pressed'), ministry.attributes('aria-pressed')]).toEqual(['false', 'true'])
+  })
+  it('lists pinned first with a pin icon, a two-line plain preview, a ministry mark and one stretched link', async () => {
+    get.mockResolvedValue(list([
+      announcement({ id: 'new', title: 'Свежее', body: '## Заголовок\n**жирный** [ссылка](https://x.test)', ministry: { id: 'm1', name: 'Хор', color: 'blue' } as Announcement['ministry'] }),
+      announcement({ id: 'pin', title: 'Важное', pinned: true }),
+    ]))
+    const page = await mountSuspended(AnnouncementsIndex)
+    const cards = page.findAll('article')
+    expect(cards.map(card => card.get('a').attributes('href'))).toEqual(['/announcements/pin', '/announcements/new'])
+    expect(cards[0]!.find('[data-test="pinned-pin"] svg').exists()).toBe(true)
+    expect(cards[0]!.get('[data-test="pinned-pin"]').text()).toBe('Закреплено')
+    expect(cards[1]!.find('[data-test="pinned-new"]').exists()).toBe(false)
+    expect(cards[1]!.get('.announcement-card__text').text()).toBe('Заголовок жирный ссылка')
+    expect(cards[1]!.get('.ministry-mark').text()).toBe('Хор')
+    expect(cards[0]!.find('.ministry-mark').exists()).toBe(false)
+    expect(cards.every(card => card.findAll('a').length === 1)).toBe(true)
+    expect(cards[1]!.get('time').text()).not.toBe('')
+  })
   it('uses the ministry and its publication permission', async () => {
-    grantPermissions({ ministries: { a1: ['announcements.publish'] } }); get.mockResolvedValue(list())
+    grantPermissions({ ministries: { a1: ['announcements.publish'] } })
+    get.mockImplementation((path: string) => Promise.resolve(path === '/ministries/a1' ? { data: { id: 'a1', name: 'Хор', description: null, cover_url: null, color: null, members_count: 2, default_role_id: null, chat_id: null, archived_at: null } } : list()))
     const page = await mountSuspended(MinistryAnnouncements)
     expect(get).toHaveBeenCalledWith('/announcements', expect.objectContaining({ scope: 'ministry', ministry: 'a1' }))
     expect(page.find('[data-test="publish"]').exists()).toBe(true)
   })
-  it('home only renders actual pinned church records, up to three', async () => {
-    get.mockResolvedValue(list([announcement(), ...[1, 2, 3, 4].map(id => announcement({ id: String(id), pinned: true }))]))
+  it('home lists pinned church announcements first with plain-text previews, up to four', async () => {
+    get.mockResolvedValue(list([announcement({ id: 'n1', title: 'Свежее', body: '## Заголовок\n**жирный** [ссылка](https://x.test)' }), ...[1, 2, 3, 4].map(id => announcement({ id: String(id), pinned: true })), announcement({ id: 'old', archived: true })]))
     const page = await mountSuspended(PinnedAnnouncements)
-    expect(page.findAll('article')).toHaveLength(3)
-    expect(page.find('[data-test="pinned-a1"]').exists()).toBe(false)
+    expect(page.findAll('li')).toHaveLength(4)
+    expect(page.findAll('li').map(node => node.find('a').attributes('href'))).toEqual(['/announcements/1', '/announcements/2', '/announcements/3', '/announcements/4'])
+    expect(page.find('[data-test="pinned-1"]').text()).toContain('Закреплено')
     expect(get).toHaveBeenCalledWith('/announcements', expect.objectContaining({ scope: 'church' }))
+    get.mockResolvedValue(list([announcement({ id: 'n1', title: 'Свежее', body: '## Заголовок\n**жирный** [ссылка](https://x.test)' })]))
+    const fresh = await mountSuspended(PinnedAnnouncements)
+    expect(fresh.find('[data-test="pinned-n1"]').exists()).toBe(false)
+    expect(fresh.find('.home-announcement__text').text()).toBe('Заголовок жирный ссылка')
   })
 })
 describe('announcement detail', () => {
@@ -103,7 +136,7 @@ describe('announcement detail', () => {
     expect(page.find('[data-test="views"]').exists()).toBe(false)
   })
   it('compares the account author ID and confirms archive', async () => {
-    get.mockResolvedValue({ data: announcement({ author: { id: 'u-signed-in', full_name: 'Автор' }, views_count: 12 }) })
+    get.mockResolvedValue({ data: announcement({ author: { id: 'u-signed-in', full_name: 'Автор' , short_name: 'Автор'}, views_count: 12 }) })
     post.mockResolvedValue({ data: announcement({ archived: true }) })
     const page = await mountSuspended(AnnouncementPage)
     expect(page.get('[data-test="views"]').text()).toContain('12')
@@ -125,15 +158,16 @@ describe('announcement detail', () => {
     const previous = settings.timezone
     settings.timezone = 'America/Los_Angeles'
     try {
+      vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-17T06:20:00Z'))
       get.mockResolvedValue({ data: announcement({ published_at: '2026-10-01T02:00:00Z', hide_after: '2026-10-30' }) })
       const page = await mountSuspended(AnnouncementPage)
-      expect(page.text()).toContain('30 сент.')
+      expect(page.text()).toContain('30 сентября')
       expect(page.text()).toContain('Скрыть после: 30.10.2026')
-    } finally { settings.timezone = previous }
+    } finally { settings.timezone = previous; vi.useRealTimers() }
   })
   it('allows ministry publishers and keeps pin errors visible', async () => {
     grantPermissions({ ministries: { m1: ['announcements.publish'] } })
-    get.mockResolvedValue({ data: announcement({ scope: 'ministry', ministry: { id: 'm1', name: 'Хор' }, author: null }) })
+    get.mockResolvedValue({ data: announcement({ scope: 'ministry', ministry: { id: 'm1', name: 'Хор', color: 'violet' }, author: null }) })
     post.mockRejectedValue({ statusCode: 403 })
     const page = await mountSuspended(AnnouncementPage)
     await page.get('[data-test="pin"]').trigger('click'); await flushPromises()
@@ -197,7 +231,7 @@ describe('task17 editorial states', () => {
   it('gives the home sections a clear order and shared header structure', async () => {
     get.mockResolvedValue(list())
     const page = await mountSuspended(HomePage)
-    expect(page.findAll('.home-section__header h2').map(node => node.text())).toEqual(['Ближайшие мои события', 'Закреплённые объявления', 'Непрочитанное'])
+    expect(page.findAll('.home-section__header h2').map(node => node.text())).toEqual(['На этой неделе', 'Объявления', 'Сообщения'])
     expect(page.findAll('.home-section__header a').map(node => node.attributes('href'))).toEqual(['/calendar', '/announcements', '/chats'])
   })
   it('groups editor fields and connects inline errors to stable captions', async () => {
@@ -309,10 +343,10 @@ describe('task17 early review', () => {
     await page.get('[data-test="title"]').setValue('Черновик')
     await page.get('[data-test="body"]').setValue('Текст')
     await page.get('form').trigger('submit'); await flushPromises()
-    expect(page.get('select').attributes('disabled')).toBeDefined()
+    expect(page.get('[data-test="scope-ministry"]').attributes('disabled')).toBeDefined()
     resolve({ data: announcement() }); await flushPromises()
     expect(page.text()).toContain('Объявление опубликовано.')
-    expect(page.get('select').attributes('disabled')).toBeUndefined()
+    expect(page.get('[data-test="scope-ministry"]').attributes('disabled')).toBeUndefined()
   })
   it.each(['/announcements', '/events', '/chats'])('renders home without waiting for %s', async path => {
     const chats = useChatsStore(); chats.loaded = false; chats.loading = false; chats.chats = []

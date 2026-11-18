@@ -74,6 +74,21 @@ async function openChat(page: Page, title: string) {
   return new URL(page.url()).pathname.split('/').at(-1)!
 }
 
+// Кнопка действий сообщения не висит в каждом пузыре (фаза 8): мышью она появляется
+// при наведении на сообщение, на телефоне — по долгому нажатию, а с клавиатуры
+// остаётся в порядке фокуса. Сценарии открывают её так же, как человек.
+async function openMessageActions(page: Page, messageId: string, via: 'keyboard' | 'pointer') {
+  const trigger = page.getByTestId(`actions-${messageId}`)
+  if (via === 'pointer') {
+    await page.locator(`[data-message-id="${messageId}"]`).hover()
+    await trigger.click()
+  } else {
+    await trigger.focus()
+    await expect(trigger).toBeFocused()
+    await page.keyboard.press('Enter')
+  }
+}
+
 async function send(page: Page, chatId: string, body: string) {
   await page.getByTestId('composer').fill(body)
   const response = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/chats/${chatId}/messages` && response.request().method() === 'POST')
@@ -96,7 +111,7 @@ test('a ministry photo message and reply arrive live through Reverb', async ({ p
   await createMinistry(page, title)
   await page.getByRole('link', { name: title, exact: true }).click()
   await page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'Участники' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible()
   await addMember(page, first.lastName, fullName(first))
   await addMember(page, second.lastName, fullName(second))
   const liveA = observeChat(a), liveB = observeChat(b)
@@ -159,7 +174,8 @@ test('a plain group member cannot delete another sender but the owner can modera
   const member = await createInvitedAccount(page, openPhone, person)
   const live = observeChat(member)
   await openSection(page, 'Чаты', 'Чаты')
-  await page.getByTestId('new-group').click()
+  await page.getByTestId('write').click()
+  await page.getByTestId('write-group').click()
   await page.getByTestId('title').fill('Модерация e2e')
   await page.getByTestId('search').fill(person.lastName)
   await page.getByTestId(/^option-/).filter({ hasText: fullName(person) }).click()
@@ -173,7 +189,7 @@ test('a plain group member cannot delete another sender but the owner can modera
   const adminMessage = await send(page, id, 'Сообщение владельца e2e')
   await live.delivered(id, adminMessage)
   await expect(member.locator(`[data-message-id="${adminMessage}"]`)).toContainText('Сообщение владельца e2e')
-  await member.getByTestId(`actions-${adminMessage}`).click()
+  await openMessageActions(member, adminMessage, 'keyboard')
   await expect(member.getByTestId(`delete-${adminMessage}`)).toHaveCount(0)
   await member.keyboard.press('Escape')
   // UI absence plus the real authenticated endpoint prove the permission boundary.
@@ -181,11 +197,11 @@ test('a plain group member cannot delete another sender but the owner can modera
   expect(denied.status()).toBe(403)
   const memberMessage = await send(member, id, 'Сообщение участника для модерации e2e')
   await expect(page.locator(`[data-message-id="${memberMessage}"]`)).toContainText('Сообщение участника для модерации e2e')
-  await member.getByTestId(`actions-${memberMessage}`).click()
+  await openMessageActions(member, memberMessage, 'keyboard')
   await expect(member.getByTestId(`delete-${memberMessage}`)).toBeVisible()
   await member.keyboard.press('Escape')
   const before = live.snapshot()
-  await page.getByTestId(`actions-${memberMessage}`).click()
+  await openMessageActions(page, memberMessage, 'pointer')
   await page.getByTestId(`delete-${memberMessage}`).click()
   await Promise.all([expectApiResponse(page, 'DELETE', `/messages/${memberMessage}`, 204), page.getByRole('alertdialog', { name: 'Удалить сообщение?' }).getByRole('button', { name: 'Удалить', exact: true }).click()])
   await live.delivered(id, memberMessage, 'message.deleted')
@@ -207,7 +223,8 @@ test('a new direct message opens an empty chat and reuses the same pair after re
   let muteEvidence: { until: string, requestedUntil: string, persistedUntil: string, unmuted: null } | undefined
   let backTransitions = 0
   for (let attempt = 0; attempt < 2; attempt++) {
-    await page.getByRole('button', { name: 'Новое сообщение', exact: true }).click()
+    await page.getByTestId('write').click()
+    await page.getByTestId('write-direct').click()
     const dialog = page.getByRole('dialog', { name: 'Новое сообщение', exact: true })
     await Promise.all([
       page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/people' && new URL(response.url()).searchParams.get('search') === person.lastName),
@@ -266,7 +283,7 @@ test('a new direct message opens an empty chat and reuses the same pair after re
     }
     await page.getByTestId('chat-back').click()
     await expect(page).toHaveURL('/chats')
-    await expect(page.getByRole('button', { name: 'Новое сообщение', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Написать', exact: true })).toBeVisible()
     backTransitions++
     await page.screenshot({ path: testInfo.outputPath(`direct-real-back-${attempt + 1}.png`) })
     // Back uses the live workspace. Reload separately proves the real list API

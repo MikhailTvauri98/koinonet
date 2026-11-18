@@ -5,10 +5,9 @@ import ChatListItemComponent from './ChatListItem.vue'
 withDefaults(defineProps<{ chats: ChatListItem[], showEmpty?: boolean, selectedId?: string }>(), { showEmpty: true, selectedId: undefined })
 const { can } = useCan()
 const emptyDescription = computed(() => {
-  const actions = []
-  if (can('people.view') && can('chats.dm')) actions.push('начните личный чат кнопкой «Новое сообщение»')
-  if (can('chats.create_groups')) actions.push('создайте группу кнопкой «Новая группа»')
-  return actions.length ? `Здесь появятся чаты ваших служений и событий. Также ${actions.join(' или ')}.` : 'Здесь появятся чаты ваших служений и событий, а также группы, в которые вас добавят.'
+  const direct = can('people.view') && can('chats.dm'), group = can('chats.create_groups')
+  const next = direct && group ? 'выберите «Личное сообщение» или «Новая группа»' : direct ? 'начните личный чат' : group ? 'создайте группу' : ''
+  return next ? `Здесь появятся чаты ваших служений и событий. Также нажмите «Написать» и ${next}.` : 'Здесь появятся чаты ваших служений и событий, а также группы, в которые вас добавят.'
 })
 </script>
 

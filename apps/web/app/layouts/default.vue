@@ -11,6 +11,7 @@ const chatLayout = computed(() => route.meta.chatLayout === true)
     <AppNav @resize="navigationHeight = $event" @flow="navigationInFlow = $event" />
     <main id="main-content" class="app-layout__content" tabindex="-1">
       <div class="app-layout__inner">
+        <ConnectionStatus v-if="!chatLayout" />
         <slot />
       </div>
     </main>

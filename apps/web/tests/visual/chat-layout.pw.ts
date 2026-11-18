@@ -17,7 +17,7 @@ async function fixtures(page: Page, readonly = false, archived = false) {
     else if (path === '/chats/c-other/messages') await route.fulfill({ json: { data: [], next_before: null, next_after: null } })
     else if (path === '/chats/c-layout') await route.fulfill({ json: { data: { ...chat, archived, can_write: !readonly, can_moderate: !readonly, members: readonly ? [] : chat.members } } })
     else if (path === '/chats/c-layout/messages') await route.fulfill({ json: { data: messages, next_before: null, next_after: null } })
-    else if (path === '/ministries/m-layout') await route.fulfill({ json: { data: { id: 'm-layout', name: 'Музыкальное служение', chat_id: chat.id, archived: false } } })
+    else if (path === '/ministries/m-layout') await route.fulfill({ json: { data: { id: 'm-layout', name: 'Музыкальное служение', description: null, cover_url: null, color: 'violet', members_count: 4, default_role_id: null, chat_id: chat.id, archived_at: null } } })
     else await route.fallback()
   })
 }
@@ -77,6 +77,7 @@ test('reply, edit, attachment and read-only states remain reachable', async ({ p
   await fixtures(page)
   await page.setViewportSize({ width: 375, height: 500 })
   await page.goto('/chats/c-layout')
+  await page.locator('[data-message-id=msg-24]').hover()
   await page.locator('[data-test=actions-msg-24]').click()
   await page.getByRole('button', { name: 'Ответить', exact: true }).click()
   await expect(page.locator('[data-test=composer]')).toBeFocused()
@@ -85,6 +86,7 @@ test('reply, edit, attachment and read-only states remain reachable', async ({ p
   await page.locator('[data-test=send]').scrollIntoViewIfNeeded()
   await fits(page)
   await page.getByRole('button', { name: 'Отменить ответ' }).click()
+  await page.locator('[data-message-id=msg-24]').hover()
   await page.locator('[data-test=actions-msg-24]').click()
   await page.getByRole('button', { name: 'Изменить', exact: true }).click()
   await expect(page.locator('[data-test=composer]')).toHaveValue(messages[24]!.body)
@@ -146,8 +148,8 @@ for (const theme of ['dark', 'light']) test(`workspace keeps desktop list, local
   await expect(pane.locator('a[aria-current="page"]')).toHaveAttribute('href', '/chats/c-layout')
   const preview = pane.locator('a[aria-current="page"] .chat-item__preview')
   const previewSize = await preview.evaluate(element => ({ height: element.clientHeight, line: parseFloat(getComputedStyle(element).lineHeight) }))
-  expect(previewSize.height, 'multiline preview stays within two lines').toBeLessThanOrEqual(previewSize.line * 2 + 1)
-  await expect(pane.locator('a[aria-current="page"] strong')).toHaveText('Подготовка воскресного служения')
+  expect(previewSize.height, 'multiline preview stays on one line').toBeLessThanOrEqual(previewSize.line + 1)
+  await expect(pane.locator('a[aria-current="page"] .chat-item__title')).toHaveText('Подготовка воскресного служения')
 
   await expect(page.locator('[data-test=latest-message]')).toBeInViewport()
   await page.locator('[data-test=composer]').fill('Черновик выбранного чата')
@@ -260,3 +262,60 @@ for (const theme of ['dark', 'light']) test(`message menu footer remains reachab
   await expect(dialog).toHaveCount(0)
   await expect(trigger).toBeFocused()
 })
+
+test('message actions are hidden at rest, shown on hover and on focus inside, and stay in the tab order', async ({ page }) => {
+  await fixtures(page)
+  await page.setViewportSize({ width: 1024, height: 700 })
+  await page.goto('/chats/c-layout')
+  const trigger = page.locator('[data-test=actions-msg-24]')
+  await expect(trigger).toHaveCSS('opacity', '0')
+  await page.locator('[data-message-id=msg-24]').hover()
+  await expect(trigger).toHaveCSS('opacity', '1')
+  await page.mouse.move(1, 1)
+  await expect(trigger).toHaveCSS('opacity', '0')
+  await trigger.focus()
+  await expect(trigger).toHaveCSS('opacity', '1')
+  await page.keyboard.press('Shift+Tab')
+  await page.keyboard.press('Tab')
+  await expect(trigger).toBeFocused()
+})
+
+const overlap = (a: { x: number, y: number, width: number, height: number }, b: { x: number, y: number, width: number, height: number }) =>
+  a.x < b.x + b.width - 0.5 && b.x < a.x + a.width - 0.5 && a.y < b.y + b.height - 0.5 && b.y < a.y + a.height - 0.5
+for (const theme of ['dark', 'light']) for (const [width, height, scale] of [[390, 844, 1], [1440, 900, 1], [320, 600, 2]] as const) {
+  test(`chat list rows are compact at 100% and grow without overlap at 200% ${theme} ${width}x${height} ${scale * 100}%`, async ({ page }, info) => {
+    await fixtures(page)
+    await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
+    await page.setViewportSize({ width, height })
+    await page.goto('/chats')
+    if (scale > 1) await page.addStyleTag({ content: `html { font-size: ${scale * 100}% !important; }` })
+    const rows = page.locator('.chat-item')
+    await expect(rows).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Написать', exact: true })).toBeVisible()
+    expect((await page.getByRole('button', { name: 'Написать', exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    for (const index of [0, 1]) {
+      const row = rows.nth(index)
+      const box = (await row.boundingBox())!
+      if (scale === 1) {
+        expect(box.height, 'row height at 100% text').toBeGreaterThanOrEqual(64)
+        expect(box.height, 'row height at 100% text').toBeLessThanOrEqual(72)
+        await expect(row.locator('time, .chat-item__title').first()).toBeVisible()
+        for (const selector of ['.chat-item__title', '.chat-item__preview']) {
+          const size = await row.locator(selector).evaluate(element => ({ height: element.clientHeight, line: parseFloat(getComputedStyle(element).lineHeight) }))
+          expect(size.height, selector + ' is one line').toBeLessThanOrEqual(size.line + 1)
+        }
+      } else {
+        expect(box.height, 'row grows at 200% text').toBeGreaterThan(72)
+        const parts = []
+        for (const selector of ['.ui-avatar', '.chat-item__title', '.chat-item__preview', 'time', '.chat-item__badge']) {
+          const part = row.locator(selector)
+          if (await part.count()) { const partBox = (await part.boundingBox())!; parts.push({ selector, ...partBox }); expect(partBox.x + partBox.width, selector + ' stays inside the row').toBeLessThanOrEqual(box.x + box.width + 0.5) }
+        }
+        for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) expect(overlap(parts[i]!, parts[j]!), `${parts[i]!.selector} and ${parts[j]!.selector} do not overlap`).toBe(false)
+      }
+      expect(await row.locator('.chat-item__preview').textContent()).not.toMatch(/Анна|Михаил/)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`chat-list-${theme}-${width}-${scale}.png`), fullPage: true })
+  })
+}

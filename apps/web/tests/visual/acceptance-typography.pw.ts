@@ -65,13 +65,13 @@ test('fixed action words remain readable at 320px text 200%', async ({ page }, i
     if (path === '/announcements') await page.getByRole('button', { name: 'Опубликовать объявление', exact: true }).click()
     await settleLayout(page)
     const labels = path === '/notifications'
-      ? ['Включить уведомления', 'Отметить всё прочитанным']
+      ? ['Включить', 'Отметить всё прочитанным']
       : ['Опубликовать объявление', 'Опубликовать']
     for (const label of labels) {
       const button = page.getByRole('button', { name: label, exact: true })
       // Some browser engines do not expose Push API. Their explanatory UI is
       // covered separately; do not pretend a nonexistent opt-in button rendered.
-      if (label === 'Включить уведомления' && !await button.count()) {
+      if (label === 'Включить' && !await button.count()) {
         const supported = await page.evaluate(() => 'Notification' in window && 'PushManager' in window && 'serviceWorker' in navigator)
         expect(supported, 'supported desktop browser exposes the explicit opt-in action').toBe(false)
         continue

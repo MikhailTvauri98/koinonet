@@ -21,6 +21,7 @@ final class MemberResource extends JsonResource
      *     ministry_id: string,
      *     person_id: string,
      *     full_name: string|null,
+     *     short_name: string|null,
      *     joined_at: string,
      *     photo_url: string|null,
      *     roles: list<array{id: string, name: string}>
@@ -47,6 +48,7 @@ final class MemberResource extends JsonResource
             'ministry_id' => $member->ministry_id,
             'person_id' => $member->person_id,
             'full_name' => $canViewPerson ? $member->person->fullName() : null,
+            'short_name' => $canViewPerson ? $member->person->shortName() : null,
             'joined_at' => $member->joined_at->toISOString(),
             'photo_url' => $canViewPerson ? SignedMediaUrl::variant($member->person->photo, 'thumb') : null,
             'roles' => $member->roles->map(fn (Role $role): array => [

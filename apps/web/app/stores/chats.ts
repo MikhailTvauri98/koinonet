@@ -1,6 +1,6 @@
 import type { components, operations } from '~~/types/api'
 import type { Channel } from 'laravel-echo'
-import { apiErrorMessage } from '~/utils/apiError'
+import { apiErrorMessage, isConnectionFailure } from '~/utils/apiError'
 
 export type ChatListItem = components['schemas']['ChatListItemResource']
 type ChatPage = operations['chat.index']['responses'][200]['content']['application/json']
@@ -28,7 +28,11 @@ export const useChatsStore = defineStore('chats', () => {
   const loading = ref(false)
   const loaded = ref(false)
   const error = ref('')
-  const connectionError = ref('')
+  // Two causes, cleared independently: a snapshot that succeeds says nothing
+  // about whether the realtime channel was acquired.
+  const subscribeError = ref('')
+  const fetchError = ref('')
+  const connectionError = computed(() => subscribeError.value || fetchError.value)
   const lastChange = shallowRef<{ id: string, removed: boolean } | null>(null)
   let account: string | undefined
   let channel: Channel | undefined
@@ -74,10 +78,17 @@ export const useChatsStore = defineStore('chats', () => {
       chats.value = [...snapshot.values()].sort(newestFirst)
       if (total === totalVersion) unreadTotal.value = response.meta.unread_total
       loaded.value = true
+      fetchError.value = ''
       changes.forEach((change, id) => { if (change.version <= live) changes.delete(id) })
     } catch (failure) {
       if (session === generation && request === requestVersion) {
-        error.value = apiErrorMessage(failure, 'Не удалось загрузить чаты. Попробуйте ещё раз.')
+        // No answer, or a gateway failure: the connection indicator's concern,
+        // not a red list error. Any other answer proves the server is reachable.
+        if (isConnectionFailure(failure)) fetchError.value = 'Не удалось загрузить чаты. Попробуйте ещё раз.'
+        else {
+          fetchError.value = ''
+          error.value = apiErrorMessage(failure, 'Не удалось загрузить чаты. Попробуйте ещё раз.')
+        }
       }
     } finally {
       if (session === generation && request === requestVersion) loading.value = false
@@ -96,7 +107,8 @@ export const useChatsStore = defineStore('chats', () => {
     loaded.value = false
     error.value = ''
     changes.clear()
-    connectionError.value = ''
+    subscribeError.value = ''
+    fetchError.value = ''
     lastChange.value = null
     liveVersion = 0
     totalVersion = 0
@@ -108,11 +120,11 @@ export const useChatsStore = defineStore('chats', () => {
     try {
       next = useEcho().private(`user.${userId}`)
     } catch (failure) {
-      connectionError.value = apiErrorMessage(failure, 'Не удалось подключить чаты. Попробуйте ещё раз.')
+      subscribeError.value = apiErrorMessage(failure, 'Не удалось подключить чаты. Попробуйте ещё раз.')
       return
     }
     if (account === userId && channel === next) {
-      connectionError.value = ''
+      subscribeError.value = ''
       return
     }
     unsubscribeUser()

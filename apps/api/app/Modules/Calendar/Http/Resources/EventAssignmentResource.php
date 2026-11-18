@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Gate;
 /** @mixin EventAssignment */
 final class EventAssignmentResource extends JsonResource
 {
-    /** @return array{id: string, person: array{id: string, full_name: string|null, photo_thumb_url: string|null}, created_at: string} */
+    /** @return array{id: string, person: array{id: string, full_name: string|null, short_name: string|null, photo_thumb_url: string|null}, created_at: string} */
     public function toArray(Request $request): array
     {
         $assignment = $this->resource;
@@ -30,6 +30,7 @@ final class EventAssignmentResource extends JsonResource
             'person' => [
                 'id' => $person->id,
                 'full_name' => $canViewPerson ? $person->fullName() : null,
+                'short_name' => $canViewPerson ? $person->shortName() : null,
                 'photo_thumb_url' => $canViewPerson ? SignedMediaUrl::variant($person->photo, 'thumb') : null,
             ],
             /** @format date-time */

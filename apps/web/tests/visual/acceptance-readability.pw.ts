@@ -40,8 +40,8 @@ test('an invitation heading keeps its complete UI word at 320px text 200%', asyn
 test('list rows retain readable text beside images and unread badges', async ({ page }, info) => {
   const api = await installAcceptanceApi(page)
   for (const [path, selector, maxWord] of [
-    ['/', '.chat-item__content strong, .chat-item__preview', 12],
-    ['/chats', '.chat-item__content strong, .chat-item__preview', 12],
+    ['/', '.home-chat__text strong, .home-chat__preview', 12],
+    ['/chats', '.chat-item__title, .chat-item__preview', 12],
     ['/ministries', '.ministries-page__item p', 12],
     ['/people', '.person-item strong', 10],
   ] as const) {
@@ -61,6 +61,8 @@ test('fixed labels and detail actions keep normal words at enlarged text', async
     ['/settings/ical', '.ical-settings button'],
   ] as const) {
     await openEnlarged(page, path)
+    // Фильтры людей лежат в панели: чекбоксы видны после «Фильтры».
+    if (path === '/people') await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
     await evidence(page, info, path.slice(1).replaceAll('/', '-'), await wholeWords(page.locator(selector)))
   }
   expect(api.unhandled).toEqual([])
@@ -69,7 +71,7 @@ test('fixed labels and detail actions keep normal words at enlarged text', async
 test('event slot actions and ordinary card text remain readable without nested gutter loss', async ({ page }, info) => {
   const api = await installAcceptanceApi(page)
   await openEnlarged(page, '/events/e1')
-  await evidence(page, info, 'event-slots', await wholeWords(page.locator('.slot button, .event-card h1'), 12))
+  await evidence(page, info, 'event-slots', await wholeWords(page.locator('.slot button, .slot__title, .slot__person, .event-card h1'), 12))
   await openEnlarged(page, '/calendar')
   await evidence(page, info, 'cancelled-event', await wholeWords(page.locator('.cancelled, .event-row__cancelled'), 12))
   expect(api.unhandled).toEqual([])
@@ -123,7 +125,7 @@ test('detail controls keep visible spacing and image attachments keep list seman
     const controls = path === '/announcements/a1'
       ? page.locator('.announcement-page__actions button')
       : path === '/events/e1'
-        ? page.locator('.slot__actions button')
+        ? page.locator('.slot-list button')
         : path === '/notifications'
           ? page.locator('.notifications-page a[href="/settings/notifications"], .notifications-page [data-test=mark-all-read]')
           : page.locator('[data-test=edit-template], [data-test=toggle-active]')

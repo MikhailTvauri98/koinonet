@@ -2,8 +2,9 @@
 import ChatList from './ChatList.vue'
 import NewDirectChatDialog from './NewDirectChatDialog.vue'
 import NewGroupDialog from './NewGroupDialog.vue'
+import ChatWriteMenu from './ChatWriteMenu.vue'
 import LoadingState from '~/components/ui/LoadingState.vue'
-const props = defineProps<{ selectedId?: string }>()
+const props = defineProps<{ selectedId?: string, embedded?: boolean }>()
 const chats = useChatsStore(), auth = useAuthStore(), { can } = useCan()
 const search = ref(''), creating = ref(false), startingDirect = ref(false)
 const filtered = computed(() => {
@@ -18,14 +19,14 @@ onMounted(() => { void chats.fetch() })
   <section class="chat-workspace" :class="{ 'chat-workspace--selected': props.selectedId }" aria-label="Чаты">
     <aside class="chat-workspace__list" aria-label="Список чатов">
       <div class="chat-workspace__tools">
-        <h1>Чаты</h1>
-        <div class="chats-actions">
-          <button v-if="can('people.view') && can('chats.dm')" type="button" class="ui-button ui-button--primary" data-test="new-message" @click="startingDirect = true">Новое сообщение</button>
-          <button v-if="can('chats.create_groups')" type="button" class="ui-button ui-button--secondary" data-test="new-group" @click="creating = true">Новая группа</button>
+        <div class="chats-head">
+          <component :is="embedded ? 'h2' : 'h1'" class="chat-workspace__title">Чаты</component>
+          <ChatWriteMenu @direct="startingDirect = true" @group="creating = true" />
         </div>
+        <ConnectionStatus v-if="!props.selectedId" />
         <label class="chat-workspace__search">Найти чат<input v-model="search" type="search" placeholder="Название чата"></label>
         <LoadingState v-if="chats.loading" :label="chats.chats.length ? 'Обновляем чаты…' : 'Загружаем чаты…'" />
-        <p v-if="chats.error || chats.connectionError" role="alert">{{ chats.error || chats.connectionError }} <button type="button" :disabled="chats.loading" @click="chats.retry()">Повторить</button></p>
+        <p v-if="chats.error" role="alert">{{ chats.error }} <button type="button" class="ui-button" :disabled="chats.loading" @click="chats.retry()">Повторить</button></p>
       </div>
       <ChatList v-if="chats.loaded || chats.chats.length" :chats="filtered" :selected-id="selectedId" :show-empty="!search.trim() && !chats.loading && !chats.error && !chats.connectionError" />
       <p v-if="search.trim() && !filtered.length && chats.loaded && !chats.loading && !chats.error && !chats.connectionError" class="chat-workspace__no-match" role="status">Чаты не найдены</p>
@@ -42,9 +43,8 @@ onMounted(() => { void chats.fetch() })
 .chat-workspace { display: flex; flex: 1; min-width: 0; min-height: min-content; }
 .chat-workspace__list { width: 100%; min-width: 0; }
 .chat-workspace__tools { padding: min(1rem, 16px); }
-h1 { margin: 0 0 var(--ui-space-3); font-size: 1.25rem; }
-.chats-actions { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
-.chats-actions > button { flex: 1 1 auto; }
+.chats-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-2); margin-bottom: var(--ui-space-3); }
+.chat-workspace__title { margin: 0; font-size: 1.25rem; }
 .chat-workspace__search { display: grid; gap: var(--ui-space-2); font-size: .875rem; color: var(--ui-text-muted); }
 .chat-workspace__search input { width: 100%; min-width: 0; }
 .chat-workspace__conversation { display: none; min-width: 0; min-height: min-content; }

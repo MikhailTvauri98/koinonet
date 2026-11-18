@@ -24,7 +24,9 @@ async function openMembersFromNav(page: Page, ministry: string): Promise<void> {
     expectApiResponse(page, 'GET', `${path}/roles`, 200),
     page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'Участники' }).click(),
   ])
-  await expect(page.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
+  // Заголовок остаётся названием служения; открытую вкладку показывает aria-current.
+  await expect(page.getByRole('heading', { level: 1, name: ministry, exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'Участники' })).toHaveAttribute('aria-current', 'page')
 }
 
 function memberRow(page: Page, name: string) {
@@ -64,7 +66,8 @@ test('a leader manages members of their own ministry only', async ({ page, openP
   expect((await rolesSaved).status()).toBe(200)
   await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
   await memberDialog.getByTestId('close-member').click()
-  await expect.poll(async () => (await leaderRow.locator('.member-row__roles').innerText()).split(' · ').sort()).toEqual(['Лидер', 'Участник'].sort())
+  // Роль по умолчанию в строке скрыта, пока у человека есть другая.
+  await expect(leaderRow.locator('.member-row__roles')).toHaveText('Лидер')
 
   // Права лидера пересчитывает слушатель в очереди (MemberAdded и
   // MemberRolesChanged → BumpMembershipPermissionCache), а экран читает их
@@ -107,7 +110,8 @@ test('a leader manages members of their own ministry only', async ({ page, openP
     expectApiResponse(leaderPhone, 'GET', `${ministryPath}/roles`, 200),
     tabs.getByRole('link', { name: 'Роли' }).click(),
   ])
-  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Роли служения' })).toBeVisible()
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Прославление', exact: true })).toBeVisible()
+  await expect(tabs.getByRole('link', { name: 'Роли' })).toHaveAttribute('aria-current', 'page')
   await Promise.all([expectApiResponse(leaderPhone, 'GET', '/permissions', 200), leaderPhone.getByRole('button', { name: 'Участник', exact: true }).click()])
   await leaderPhone.getByRole('textbox', { name: 'Описание', exact: true }).fill(description)
   await expectNoHorizontalScroll(leaderPhone, 'редактор роли служения')
@@ -126,14 +130,17 @@ test('a leader manages members of their own ministry only', async ({ page, openP
     expectApiResponse(leaderPhone, 'GET', `${ministryPath}/roles`, 200),
     tabs.getByRole('link', { name: 'Участники' }).click(),
   ])
-  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Прославление', exact: true })).toBeVisible()
+  await expect(tabs.getByRole('link', { name: 'Участники' })).toHaveAttribute('aria-current', 'page')
 
   // Состав чужого служения по прямой ссылке закрыт, и управлять им нечем.
   await Promise.all([
     expectApiResponse(leaderPhone, 'GET', `${youthHref}/members`, 403),
     visitAuthenticated(leaderPhone, `${youthHref}/members`),
   ])
-  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Участники' })).toBeVisible()
-  await expect(leaderPhone.getByRole('alert')).toContainText('Нет права на это действие.')
+  const refusal = leaderPhone.getByRole('alert')
+  await expect(refusal).toHaveCount(1)
+  await expect(refusal).toContainText('Нет права на это действие.')
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Молодёжное', exact: true })).toHaveCount(0)
   await expect(addButton).toHaveCount(0)
 })

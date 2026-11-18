@@ -43,10 +43,10 @@ beforeEach(() => {
 // Тестовые данные — по типам ресурсов из схемы: `MemberResource` плоский,
 // имя и фото лежат в самой строке участника, а не во вложенном `person`.
 const ministry: Ministry = {
-  id: 'm1', name: 'Прославление', description: null, cover_url: null, default_role_id: 'r-member', chat_id: null, archived_at: null,
+  id: 'm1', name: 'Прославление', description: null, cover_url: null, color: 'violet', members_count: 1, default_role_id: 'r-member', chat_id: null, archived_at: null,
 }
 const member: Member = {
-  id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: 'Прокопенко Мария', joined_at: '2026-09-01T10:00:00Z',
+  id: 'mem1', ministry_id: 'm1', person_id: 'p1', full_name: 'Прокопенко Мария', short_name: 'Прокопенко Мария', joined_at: '2026-09-01T10:00:00Z',
   photo_url: null, roles: [{ id: 'r-member', name: 'Участник' }],
 }
 // Каталог ролей служения (GET /ministries/{id}/roles, доступен носителю
@@ -56,9 +56,20 @@ const ministryRoles = [{ id: 'r-member', name: 'Участник' }]
 // `get` в брифе — один моk без разбора по пути: где реализация теперь
 // делает два разных запроса (состав и каталог ролей), различаем по
 // окончанию пути, а не переписываем стиль мока целиком.
+// Шапка вкладки читает само служение: GET /ministries/{id}.
+const isMinistryPath = (path: string) => /^\/ministries\/[^/]+$/.test(path)
+const ministryAt = (path: string) => ({ data: { ...ministry, id: path.split('/').pop()! } })
 function mockMembersAndRoles(members: unknown[], roles: unknown[] = ministryRoles) {
   get.mockImplementation((path: string) => Promise.resolve(
-    path.endsWith('/roles') ? { data: roles } : { data: members },
+    isMinistryPath(path) ? ministryAt(path) : path.endsWith('/roles') ? { data: roles } : { data: members },
+  ))
+}
+
+// Обзор служения сверху читает ещё события, состав и объявления: пустые ответы по их путям,
+// а не одно и то же служение на любой запрос.
+function mockMinistryOnly(data: Ministry | Record<string, unknown>) {
+  get.mockImplementation((path: string) => Promise.resolve(
+    isMinistryPath(path) ? { data } : path === '/events' || path === '/announcements' ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } : { data: [] },
   ))
 }
 
@@ -91,7 +102,7 @@ describe('ministry members tab', () => {
   it('opens readable details while the role catalogue is still loading', async () => {
     grantPermissions({ ministries: { m1: ['members.manage'] } })
     let resolve!: (value: { data: typeof ministryRoles }) => void
-    get.mockImplementation((path: string) => path.endsWith('/roles') ? new Promise(done => { resolve = done }) : Promise.resolve({ data: [member] }))
+    get.mockImplementation((path: string) => isMinistryPath(path) ? Promise.resolve(ministryAt(path)) : path.endsWith('/roles') ? new Promise(done => { resolve = done }) : Promise.resolve({ data: [member] }))
     const page = await mountSuspended(MembersTab)
     await page.get('[data-test="open-member"]').trigger('click')
     expect(page.get('dialog').text()).toContain('Участник')
@@ -104,7 +115,7 @@ describe('ministry members tab', () => {
 
   it('keeps current roles readable when catalogue fails and retries inside details', async () => {
     grantPermissions({ ministries: { m1: ['members.manage'] } })
-    get.mockImplementation((path: string) => path.endsWith('/roles') ? Promise.reject(new Error('offline')) : Promise.resolve({ data: [member] }))
+    get.mockImplementation((path: string) => isMinistryPath(path) ? Promise.resolve(ministryAt(path)) : path.endsWith('/roles') ? Promise.reject(new Error('offline')) : Promise.resolve({ data: [member] }))
     const page = await mountSuspended(MembersTab)
     await page.get('[data-test="open-member"]').trigger('click')
     const dialog = page.get('dialog')
@@ -211,7 +222,7 @@ describe('ministry members tab', () => {
   })
 
   it('hides member actions without members.manage in that ministry', async () => {
-    get.mockResolvedValue({ data: [member] })
+    mockMembersAndRoles([member])
 
     const page = await mountSuspended(MembersTab)
 
@@ -223,7 +234,7 @@ describe('ministry members tab', () => {
   // без справочника кнопка вела бы в поиск, который всегда отказывает.
   it('offers adding a member with members.manage in that ministry and people.view', async () => {
     grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'] } })
-    get.mockResolvedValue({ data: [member] })
+    mockMembersAndRoles([member])
 
     const page = await mountSuspended(MembersTab)
 
@@ -261,7 +272,7 @@ describe('ministry members tab', () => {
   it('shows the default role on a freshly added member', async () => {
     grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'] } })
     get.mockImplementation((path: string) => Promise.resolve(
-      path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }], meta: { last_page: 1 } } : { data: [] },
+      isMinistryPath(path) ? ministryAt(path) : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }], meta: { last_page: 1 } } : { data: [] },
     ))
     post.mockResolvedValue({ data: member })
 
@@ -334,7 +345,7 @@ describe('ministry members tab', () => {
   it('closes the add dialog when the ministry changes, so a stale search result cannot be added to the new one', async () => {
     grantPermissions({ global: ['people.view'], ministries: { m1: ['members.manage'], m2: ['members.manage'] } })
     get.mockImplementation((path: string) => Promise.resolve(
-      path.endsWith('/roles') ? { data: [] }
+      isMinistryPath(path) ? ministryAt(path) : path.endsWith('/roles') ? { data: [] }
         : path.startsWith('/people') ? { data: [{ id: 'p1', full_name: 'Прокопенко Мария' }], meta: { last_page: 1 } }
           : { data: [] },
     ))
@@ -358,7 +369,7 @@ describe('ministry tabs', () => {
   // читают носители roles.manage и members.manage в этом служении
   // (docs/architecture.md, 6.1).
   it('hides the roles tab from someone who manages neither roles nor members in that ministry', async () => {
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     const tabs = page.get('nav[aria-label="Разделы служения"]')
@@ -370,7 +381,7 @@ describe('ministry tabs', () => {
 
   it.each(['roles.manage', 'members.manage'])('shows the roles tab with %s in that ministry', async (key) => {
     grantPermissions({ ministries: { m1: [key] } })
-    get.mockResolvedValue({ data: [member] })
+    mockMembersAndRoles([member])
 
     const page = await mountSuspended(MembersTab)
 
@@ -379,7 +390,7 @@ describe('ministry tabs', () => {
 
   it('hides the roles tab again when the right is withdrawn mid-session', async () => {
     grantPermissions({ ministries: { m1: ['roles.manage'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
     grantPermissions({ ministries: { m1: [] } })
@@ -389,14 +400,25 @@ describe('ministry tabs', () => {
   })
 })
 
+// Управление служением живёт в меню «⋯» шапки: каждый пункт — по своему праву.
+async function openMenu(page: Awaited<ReturnType<typeof mountSuspended>>) {
+  await page.get('[data-test="ministry-menu"]').trigger('click')
+  await flushPromises()
+}
+async function chooseAction(page: Awaited<ReturnType<typeof mountSuspended>>, action: string) {
+  await openMenu(page)
+  await page.get(`[data-test="${action}"]`).trigger('click')
+  await flushPromises()
+}
+
 describe('ministry card', () => {
   it('keeps a pending edit when only archive permission is withdrawn', async () => {
     grantPermissions({ global: ['ministries.create'], ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
     let resolve!: (value: { data: Ministry }) => void
     patch.mockImplementation(() => new Promise(done => { resolve = done }))
     const page = await mountSuspended(MinistryCard)
-    await page.get('[data-test="edit-ministry"]').trigger('click')
+    await chooseAction(page, 'edit-ministry')
     await page.get('[name="name"]').setValue('Сохранённое название')
     await page.get('form').trigger('submit')
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
@@ -409,11 +431,11 @@ describe('ministry card', () => {
 
   it('discards a late edit from the previous ministry', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'], m2: ['ministry.edit'] } })
-    get.mockImplementation((path: string) => Promise.resolve({ data: { ...ministry, id: path.endsWith('m2') ? 'm2' : 'm1', name: path.endsWith('m2') ? 'Новое служение' : ministry.name } }))
+    get.mockImplementation((path: string) => Promise.resolve(isMinistryPath(path) ? { data: { ...ministry, id: path.endsWith('m2') ? 'm2' : 'm1', name: path.endsWith('m2') ? 'Новое служение' : ministry.name } } : path === '/events' ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } : { data: [] }))
     let resolve!: (value: { data: Ministry }) => void
     patch.mockImplementation(() => new Promise(done => { resolve = done }))
     const page = await mountSuspended(MinistryCard)
-    await page.get('[data-test="edit-ministry"]').trigger('click')
+    await chooseAction(page, 'edit-ministry')
     await page.get('[name="name"]').setValue('Поздний ответ')
     await page.get('form').trigger('submit')
     route.params.id = 'm2'
@@ -435,8 +457,57 @@ describe('ministry card', () => {
     expect(page.text()).not.toContain('App\\Modules')
   })
 
+  it('has no menu and no hint without any management right', async () => {
+    mockMinistryOnly({ ...ministry, color: null })
+
+    const page = await mountSuspended(MinistryCard)
+
+    expect(page.find('[data-test="ministry-menu"]').exists()).toBe(false)
+    expect(page.find('[data-test="color-hint"]').exists()).toBe(false)
+  })
+
+  it('names the menu and offers each action only with its own right', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    mockMinistryOnly(ministry)
+
+    const page = await mountSuspended(MinistryCard)
+    expect(page.get('[data-test="ministry-menu"]').attributes('aria-label')).toBe('Действия со служением')
+    await openMenu(page)
+
+    expect(page.get('dialog').text()).toContain('Изменить название и описание')
+    expect(page.get('dialog').text()).toContain('Обложка')
+    expect(page.get('dialog').text()).toContain('Цвет')
+    expect(page.find('[data-test="archive"]').exists()).toBe(false)
+  })
+
+  it('offers only archiving to someone who can archive but not edit', async () => {
+    grantPermissions({ global: ['ministries.create'] })
+    mockMinistryOnly(ministry)
+
+    const page = await mountSuspended(MinistryCard)
+    await openMenu(page)
+
+    expect(page.find('[data-test="archive"]').exists()).toBe(true)
+    expect(page.find('[data-test="edit-ministry"]').exists()).toBe(false)
+    expect(page.find('[data-test="edit-cover"]').exists()).toBe(false)
+    expect(page.find('[data-test="edit-color"]').exists()).toBe(false)
+  })
+
+  it('closes the menu when the right to manage is withdrawn', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    mockMinistryOnly(ministry)
+
+    const page = await mountSuspended(MinistryCard)
+    await openMenu(page)
+    grantPermissions({ ministries: { m1: [] } })
+    await flushPromises()
+
+    expect(page.find('dialog').exists()).toBe(false)
+    expect(page.find('[data-test="ministry-menu"]').exists()).toBe(false)
+  })
+
   it('hides the cover uploader without ministry.edit', async () => {
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
 
@@ -450,11 +521,12 @@ describe('ministry card', () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
     get.mockImplementation((path: string) => Promise.resolve(path === '/media/md1/status'
       ? { data: { id: 'md1', kind: 'image', status: 'ready', url: '/media/md1', thumb_url: null } }
-      : { data: ministry }))
+      : isMinistryPath(path) ? { data: ministry } : path === '/events' ? { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } : { data: [] }))
     post.mockResolvedValue({ data: { id: 'md1', kind: 'image', status: 'processing', url: '/media/md1', thumb_url: null } })
     put.mockResolvedValue({ data: { ...ministry, cover_url: 'https://church.test/cover.webp' } })
 
     const page = await mountSuspended(MinistryCard)
+    await chooseAction(page, 'edit-cover')
     const uploader = page.findComponent(MediaUploader)
     expect(uploader.text()).toContain('Изменить обложку')
     vi.useFakeTimers()
@@ -469,30 +541,58 @@ describe('ministry card', () => {
     expect(page.get('[data-test="ministry-cover"]').attributes('src')).toBe('https://church.test/cover.webp')
   })
 
-  it('does not offer to change the cover of an archived ministry', async () => {
+  it('lets the cover window be closed again after the right was revoked during an upload', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: { ...ministry, archived_at: '2026-09-01T10:00:00Z' } })
+    mockMinistryOnly(ministry)
+    const page = await mountSuspended(MinistryCard)
+    await chooseAction(page, 'edit-cover')
+    page.findComponent(MediaUploader).vm.$emit('busy', true)
+    await flushPromises()
+    expect(page.find('dialog button:not([data-test])').attributes('disabled')).toBeDefined()
+    grantPermissions({ ministries: { m1: [] } })
+    await flushPromises()
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    await flushPromises()
+    await chooseAction(page, 'edit-cover')
+    expect(page.find('dialog button:not([data-test])').attributes('disabled')).toBeUndefined()
+    await page.get('dialog').trigger('cancel')
+    await flushPromises()
+    expect(page.find('dialog').exists()).toBe(false)
+  })
+
+  it('does not offer to change an archived ministry', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    mockMinistryOnly({ ...ministry, archived_at: '2026-09-01T10:00:00Z' })
 
     const page = await mountSuspended(MinistryCard)
+    await openMenu(page)
 
-    expect(page.get('[data-test="file-input"]').attributes('disabled')).toBeDefined()
+    for (const action of ['edit-ministry', 'edit-cover', 'edit-color']) expect(page.get(`[data-test="${action}"]`).attributes('disabled')).toBeDefined()
+    expect(page.text()).toContain('В архиве')
   })
 
   it('asks for confirmation before archiving', async () => {
     grantPermissions({ global: ['ministries.create'] })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
-    await page.find('[data-test="archive"]').trigger('click')
+    await chooseAction(page, 'archive')
 
     expect(page.find('[data-test="confirm-archive"]').exists()).toBe(true)
     expect(post).not.toHaveBeenCalled()
+
+    post.mockResolvedValue({ data: { ...ministry, archived_at: '2026-09-01T10:00:00Z' } })
+    await page.get('[data-test="confirm-archive"]').trigger('click')
+    await flushPromises()
+
+    expect(post).toHaveBeenCalledWith('/ministries/m1/archive')
+    expect(page.text()).toContain('В архиве')
   })
 
   // Доделка задачи 28 (второе сомнение): новый код правки названия/описания
   // остался без теста — контроллер попросил закрыть это.
   it('hides editing the name and description without ministry.edit in that ministry', async () => {
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
 
     const page = await mountSuspended(MinistryCard)
 
@@ -501,11 +601,11 @@ describe('ministry card', () => {
 
   it('edits the name and description with ministry.edit in that ministry', async () => {
     grantPermissions({ ministries: { m1: ['ministry.edit'] } })
-    get.mockResolvedValue({ data: ministry })
+    mockMinistryOnly(ministry)
     patch.mockResolvedValue({ data: { ...ministry, name: 'Прославление и музыка', description: 'Хвала Богу музыкой' } })
 
     const page = await mountSuspended(MinistryCard)
-    await page.find('[data-test="edit-ministry"]').trigger('click')
+    await chooseAction(page, 'edit-ministry')
     await page.find('[name="name"]').setValue('Прославление и музыка')
     await page.find('[name="description"]').setValue('Хвала Богу музыкой')
     // Клик по кнопке submit не всегда транслируется в событие submit формы в
@@ -516,6 +616,52 @@ describe('ministry card', () => {
 
     expect(patch).toHaveBeenCalledWith('/ministries/m1', { name: 'Прославление и музыка', description: 'Хвала Богу музыкой' })
     expect(page.text()).toContain('Прославление и музыка')
+  })
+
+  it('changes the colour from the menu', async () => {
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    mockMinistryOnly(ministry)
+    patch.mockResolvedValue({ data: { ...ministry, color: 'teal' } })
+
+    const page = await mountSuspended(MinistryCard)
+    await chooseAction(page, 'edit-color')
+    expect((page.get('[data-test="color-violet"]').element as HTMLInputElement).checked).toBe(true)
+    await page.get('[data-test="color-teal"]').setValue(true)
+    await page.get('[data-test="color-form"]').trigger('submit')
+    await flushPromises()
+
+    expect(patch).toHaveBeenCalledWith('/ministries/m1', { color: 'teal' })
+    expect(page.find('dialog').exists()).toBe(false)
+    expect(page.get('[data-test="ministry-tile"]').attributes('style')).toContain('--ui-ministry-teal')
+  })
+
+  it('shows the colour hint to someone who can edit a ministry without colour, and only then', async () => {
+    mockMinistryOnly({ ...ministry, color: null })
+    const guest = await mountSuspended(MinistryCard)
+    expect(guest.find('[data-test="color-hint"]').exists()).toBe(false)
+    guest.unmount()
+
+    grantPermissions({ ministries: { m1: ['ministry.edit'] } })
+    patch.mockResolvedValue({ data: { ...ministry, color: 'rose' } })
+    const manager = await mountSuspended(MinistryCard)
+    const hint = manager.get('[data-test="color-hint"]')
+    expect(hint.text()).toContain('Выберите цвет служения')
+    expect(manager.get('[data-test="ministry-tile"]').attributes('style')).toContain('--ui-ministry-church')
+
+    await hint.get('button').trigger('click')
+    await flushPromises()
+    expect(manager.find('[data-test="color-form"]').exists()).toBe(true)
+    expect(manager.findAll('input[type="radio"]').every(input => !(input.element as HTMLInputElement).checked)).toBe(true)
+    await manager.get('[data-test="color-form"]').trigger('submit')
+    await flushPromises()
+    expect(patch).not.toHaveBeenCalled()
+    expect(manager.get('[data-test="ministry-color-error"]').text()).toBe('Выберите цвет')
+
+    await manager.get('[data-test="color-rose"]').setValue(true)
+    await manager.get('[data-test="color-form"]').trigger('submit')
+    await flushPromises()
+    expect(patch).toHaveBeenCalledWith('/ministries/m1', { color: 'rose' })
+    expect(manager.find('[data-test="color-hint"]').exists()).toBe(false)
   })
 })
 
@@ -594,6 +740,7 @@ describe('ministries list', () => {
     const page = await mountSuspended(MinistriesList)
     await page.get('[data-test="create-ministry"]').trigger('click')
     await page.get('[data-test="ministry-name"]').setValue('Молодёжное')
+    await page.get('[data-test="color-violet"]').setValue(true)
     get.mockRejectedValue(new Error('network'))
     await page.get('form').trigger('submit')
     await flushPromises()
@@ -615,6 +762,7 @@ describe('ministries list', () => {
     const page = await mountSuspended(MinistriesList)
     await page.get('[data-test="create-ministry"]').trigger('click')
     await page.get('[data-test="ministry-name"]').setValue('Старый ввод')
+    await page.get('[data-test="color-violet"]').setValue(true)
     await page.get('form').trigger('submit')
     useAuthStore().sessionVersion++
     await flushPromises()
@@ -624,19 +772,80 @@ describe('ministries list', () => {
     expect(page.text()).not.toContain('Не удалось создать')
   })
 
-  it('shows available ministries with their covers', async () => {
+  it('shows each ministry with a cover or a colour tile, name, description and the number of members', async () => {
     get.mockResolvedValue({
       data: [
-        { id: 'm1', name: 'Прославление', description: 'Хвала и музыка', cover_url: 'https://church.test/cover.jpg', default_role_id: 'r-member' },
-        { id: 'm2', name: 'Дети', description: null, cover_url: null, default_role_id: 'r-kids' },
+        { ...ministry, id: 'm1', name: 'Прославление', description: 'Хвала и музыка', cover_url: 'https://church.test/cover.jpg', members_count: 1 },
+        { ...ministry, id: 'm2', name: 'Дети', description: null, color: 'amber', members_count: 3 },
+        { ...ministry, id: 'm3', name: 'Молодёжь', description: 'Встречи', color: null, members_count: 12 },
+        { ...ministry, id: 'm4', name: 'Кухня', members_count: 25 },
+        { ...ministry, id: 'm5', name: 'Приём', members_count: 0 },
       ],
     })
 
     const page = await mountSuspended(MinistriesList)
+    const item = (id: string) => page.get(`a[href="/ministries/${id}"]`)
 
-    expect(page.get('a[href="/ministries/m1"]').text()).toContain('Прославление')
-    expect(page.get('a[href="/ministries/m2"]').text()).toContain('Дети')
-    expect(page.get('img').attributes('src')).toBe('https://church.test/cover.jpg')
+    expect(item('m1').get('img').attributes('src')).toBe('https://church.test/cover.jpg')
+    expect(item('m1').find('[data-test="ministry-tile"]').exists()).toBe(false)
+    expect(item('m1').text()).toContain('Хвала и музыка')
+    expect(item('m1').text()).toContain('1 участник')
+    expect(item('m1').text()).not.toContain('1 участников')
+
+    expect(item('m2').find('img').exists()).toBe(false)
+    expect(item('m2').get('[data-test="ministry-tile"]').text()).toBe('Д')
+    expect(item('m2').get('[data-test="ministry-tile"]').attributes('style')).toContain('--ui-ministry-amber')
+    expect(item('m2').text()).toContain('3 участника')
+
+    expect(item('m3').get('[data-test="ministry-tile"]').attributes('style')).toContain('--ui-ministry-church')
+    expect(item('m3').text()).toContain('12 участников')
+    expect(item('m4').text()).toContain('25 участников')
+    expect(item('m5').text()).toContain('0 участников')
+  })
+
+  it('names each list link by the ministry name alone and describes it with description and count', async () => {
+    get.mockResolvedValue({ data: [{ ...ministry, id: 'm1', name: 'Прославление', description: 'Хвала и музыка', members_count: 3 }, { ...ministry, id: 'm2', name: 'Дети', description: null, members_count: 1 }] })
+
+    const page = await mountSuspended(MinistriesList)
+    const text = (id: string) => page.find('#' + id).text()
+    for (const [id, name, described] of [['m1', 'Прославление', ['Хвала и музыка', '3 участника']], ['m2', 'Дети', ['1 участник']]] as const) {
+      const link = page.get(`a[href="/ministries/${id}"]`)
+      expect(text(link.attributes('aria-labelledby')!)).toBe(name)
+      expect(link.attributes('aria-describedby')!.split(' ').map(text)).toEqual([...described])
+    }
+  })
+
+  it('does not keep the missing-name alert once the name is filled but the colour is missing', async () => {
+    grantPermissions({ global: ['ministries.create'] })
+    get.mockResolvedValue({ data: [] })
+    const page = await mountSuspended(MinistriesList)
+    await page.get('[data-test="create-ministry"]').trigger('click')
+    await page.get('form').trigger('submit')
+    expect(page.find('[role="alert"]').text()).toBe('Заполните название.')
+    await page.get('[data-test="ministry-name"]').setValue('Молодёжное')
+    await page.get('form').trigger('submit')
+    expect(page.find('[role="alert"]').exists()).toBe(false)
+    expect(page.get('[data-test="ministry-color-error"]').text()).toBe('Выберите цвет')
+  })
+
+  it('requires a colour when creating: shows the error at the field and sends nothing', async () => {
+    grantPermissions({ global: ['ministries.create'] })
+    get.mockResolvedValue({ data: [] })
+    const page = await mountSuspended(MinistriesList)
+    await page.get('[data-test="create-ministry"]').trigger('click')
+    const radios = page.findAll('input[type="radio"]')
+    expect(radios).toHaveLength(6)
+    expect(radios.every(radio => !(radio.element as HTMLInputElement).checked)).toBe(true)
+    for (const label of ['Фиолетовый', 'Бирюзовый', 'Розовый', 'Янтарный', 'Голубой', 'Зелёный']) expect(page.get('[data-test="ministry-color"]').text()).toContain(label)
+
+    await page.get('[data-test="ministry-name"]').setValue('Молодёжное')
+    await page.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(post).not.toHaveBeenCalled()
+    const error = page.get('[data-test="ministry-color-error"]')
+    expect(error.text()).toBe('Выберите цвет')
+    expect(page.get('[data-test="ministry-color"]').attributes('aria-describedby')).toBe(error.attributes('id'))
   })
 
   it('shows the create button only with ministries.create', async () => {
@@ -660,6 +869,7 @@ describe('ministries list', () => {
     const page = await mountSuspended(MinistriesList)
     await page.find('[data-test="create-ministry"]').trigger('click')
     await page.find('[data-test="ministry-name"]').setValue('Молодёжное')
+    await page.get('[data-test="color-violet"]').setValue(true)
     await page.find('form').trigger('submit')
     await flushPromises()
 
@@ -671,16 +881,17 @@ describe('ministries list', () => {
   it('creates a ministry and refreshes the list', async () => {
     grantPermissions({ global: ['ministries.create'] })
     get.mockResolvedValue({ data: [] })
-    post.mockResolvedValue({ data: { id: 'm3', name: 'Молодёжное', description: null, cover_url: null, default_role_id: 'r3' } })
+    post.mockResolvedValue({ data: { id: 'm3', name: 'Молодёжное', description: null, cover_url: null, color: 'violet', members_count: 0, default_role_id: 'r3' } })
 
     const page = await mountSuspended(MinistriesList)
     await page.find('[data-test="create-ministry"]').trigger('click')
     await page.find('[data-test="ministry-name"]').setValue('Молодёжное')
-    get.mockResolvedValue({ data: [{ id: 'm3', name: 'Молодёжное', description: null, cover_url: null, default_role_id: 'r3' }] })
+    await page.get('[data-test="color-violet"]').setValue(true)
+    get.mockResolvedValue({ data: [{ id: 'm3', name: 'Молодёжное', description: null, cover_url: null, color: 'violet', members_count: 0, default_role_id: 'r3' }] })
     await page.find('form').trigger('submit')
     await flushPromises()
 
-    expect(post).toHaveBeenCalledWith('/ministries', { name: 'Молодёжное', description: null })
+    expect(post).toHaveBeenCalledWith('/ministries', { name: 'Молодёжное', description: null, color: 'violet' })
     expect(page.text()).toContain('Молодёжное')
   })
 })

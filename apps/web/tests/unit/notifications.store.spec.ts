@@ -205,7 +205,8 @@ describe('notification center store', () => {
     expect(store.items[0]!.read_at).not.toBeNull()
     expect(store.unreadCount).toBe(1)
     expect(store.nextCursor).toBe('c2')
-    expect(store.error).toContain('Не удалось загрузить уведомления')
+    expect(store.connectionError).toContain('Не удалось загрузить уведомления')
+    expect(store.error).toBe('')
     expect(store.loading).toBe(false)
     get.mockResolvedValueOnce(page(['b'], 1, 'c3'))
     await store.fetch()
@@ -213,7 +214,19 @@ describe('notification center store', () => {
     expect(store.items.map(n => n.id)).toEqual(['a', 'b'])
     expect(store.items[0]!.read_at).not.toBeNull()
     expect(store.nextCursor).toBe('c3')
+    expect(store.connectionError).toBe('')
+  })
+
+  it('treats a gateway failure as a lost connection and drops it once the server answers with an error', async () => {
+    const store = useNotificationsStore()
+    get.mockRejectedValueOnce({ statusCode: 502 })
+    await store.fetch(true)
+    expect(store.connectionError).not.toBe('')
     expect(store.error).toBe('')
+    get.mockRejectedValueOnce({ statusCode: 500 })
+    await store.fetch(true)
+    expect(store.connectionError).toBe('')
+    expect(store.error).toContain('Не удалось загрузить уведомления')
   })
 
   it('releases a snapshot waiting for a read on logout and ignores its old mutation', async () => {

@@ -12,6 +12,7 @@ use App\Modules\Ministries\Actions\UpdateMinistry;
 use App\Modules\Ministries\Http\Requests\MinistryRequest;
 use App\Modules\Ministries\Http\Requests\SetCoverRequest;
 use App\Modules\Ministries\Http\Resources\MinistryResource;
+use App\Modules\Ministries\MinistryColor;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -30,6 +31,7 @@ final class MinistryController
         $ministries = Ministry::query()
             ->whereNull('archived_at')
             ->with('cover')
+            ->withCount('members')
             ->unless(
                 Gate::allows('viewAll', Ministry::class),
                 fn (Builder $query): Builder => $query->whereHas(
@@ -47,10 +49,14 @@ final class MinistryController
     {
         Gate::authorize('create', Ministry::class);
 
-        /** @var array{name: string, description?: string|null} $validated */
+        /** @var array{name: string, color: string, description?: string|null} $validated */
         $validated = $request->validated();
 
-        $ministry = $createMinistry->handle($validated['name'], $validated['description'] ?? null);
+        $ministry = $createMinistry->handle(
+            $validated['name'],
+            MinistryColor::from($validated['color']),
+            $validated['description'] ?? null,
+        );
 
         return (new MinistryResource($ministry))->response()->setStatusCode(201);
     }
@@ -67,15 +73,20 @@ final class MinistryController
         Ministry $ministry,
         UpdateMinistry $updateMinistry,
     ): MinistryResource {
-        /** @var array{name?: string, description?: string|null, default_role_id?: string} $validated */
+        /** @var array{name?: string, description?: string|null, default_role_id?: string, color?: string} $validated */
         $validated = $request->validated();
+        $attributes = $validated;
+        if (isset($validated['color'])) {
+            $attributes['color'] = MinistryColor::from($validated['color']);
+        }
 
-        // Каждое поле требует своего права: название и описание —
+        // Каждое поле требует своего права: название, описание и цвет —
         // ministry.edit, роль по умолчанию — roles.manage
         // (docs/architecture.md 6.1). Запрос с обоими типами полей требует
         // оба права, а не хотя бы одно; пустой запрос (ни одного из полей)
         // требует ministry.edit.
-        $touchesGeneralFields = array_key_exists('name', $validated) || array_key_exists('description', $validated);
+        $touchesGeneralFields = array_key_exists('name', $validated) || array_key_exists('description', $validated)
+            || array_key_exists('color', $validated);
         $touchesDefaultRole = array_key_exists('default_role_id', $validated);
 
         if ($touchesGeneralFields || ! $touchesDefaultRole) {
@@ -85,7 +96,7 @@ final class MinistryController
             Gate::authorize('changeDefaultRole', $ministry);
         }
 
-        return new MinistryResource($updateMinistry->handle($ministry, $validated));
+        return new MinistryResource($updateMinistry->handle($ministry, $attributes));
     }
 
     public function archive(Ministry $ministry, ArchiveMinistry $archiveMinistry): MinistryResource

@@ -21,6 +21,36 @@ beforeEach(() => {
   platform.isStandalone = true
 })
 
+describe('compact offer on the notifications page', () => {
+  it('is one line with the phone wording and a short action, without a heading', async () => {
+    const wrapper = await mountSuspended(EnableNotificationsButton, { props: { compact: true } })
+    expect(wrapper.find('h2').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Получать уведомления на телефон')
+    expect(wrapper.text()).not.toContain('Получайте уведомления, даже когда')
+    const button = wrapper.get('[data-test="enable-push"]')
+    expect(button.text()).toBe('Включить')
+    await button.trigger('click')
+    expect(subscribe).toHaveBeenCalledOnce()
+  })
+  it('keeps the explanatory states instead of the offer', async () => {
+    platform.isIos = true; platform.isStandalone = false; state.supported = false
+    const ios = await mountSuspended(EnableNotificationsButton, { props: { compact: true } })
+    expect(ios.text()).toContain('экран «Домой»')
+    expect(ios.find('[data-test="enable-push"]').exists()).toBe(false)
+    platform.isIos = false; platform.isStandalone = true; state.supported = true; state.permission.value = 'denied'
+    const denied = await mountSuspended(EnableNotificationsButton, { props: { compact: true } })
+    expect(denied.text()).toContain('запрещены в настройках')
+    expect(denied.find('[data-test="enable-push"]').exists()).toBe(false)
+  })
+  it('shows a failure next to the offer and allows a retry', async () => {
+    subscribe.mockRejectedValueOnce(new Error('offline'))
+    const wrapper = await mountSuspended(EnableNotificationsButton, { props: { compact: true } })
+    await wrapper.get('[data-test="enable-push"]').trigger('click'); await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Не удалось включить')
+    expect(wrapper.get('[data-test="enable-push"]').attributes('disabled')).toBeUndefined()
+  })
+})
+
 describe('enable notifications button', () => {
   it('only subscribes after an explicit click', async () => {
     const wrapper = await mountSuspended(EnableNotificationsButton)

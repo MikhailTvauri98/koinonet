@@ -28,6 +28,16 @@ export function apiErrorStatus(error: unknown): number | undefined {
   return typeof status === 'number' ? status : undefined
 }
 
+/**
+ * Сбой связи, а не ответ приложения: ответа не было (сеть) или это 408 и
+ * 502/503/504 (перезапуск API, прокси). Остальные статусы, включая 429,
+ * остаются ошибками самого списка или действия.
+ */
+export function isConnectionFailure(error: unknown): boolean {
+  const status = apiErrorStatus(error)
+  return status === undefined || [0, 408, 502, 503, 504].includes(status)
+}
+
 function failureBody(error: unknown): FailureBody {
   if (typeof error !== 'object' || error === null) return undefined
   const { data } = error as ApiFailure

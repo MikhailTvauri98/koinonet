@@ -7,22 +7,24 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Access\PermissionScope;
 use App\Modules\Access\RoleScope;
+use App\Modules\Directory\Models\Person;
 use App\Modules\Media\Models\Media;
 use App\Modules\Ministries\Models\Ministry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
 it('denies creating a ministry without ministries.create', function () {
     actingAsUser();
 
-    $this->postJson('/api/v1/ministries', ['name' => 'Прославление'])->assertForbidden();
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal'])->assertForbidden();
 });
 
 it('creates a ministry with a leader role and a default member role', function () {
     actingAsUserWith([Permission::MinistriesCreate]);
 
-    $this->postJson('/api/v1/ministries', ['name' => 'Прославление'])
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal'])
         ->assertCreated()
         ->assertJsonPath('data.name', 'Прославление');
 
@@ -39,7 +41,7 @@ it('creates a ministry with a leader role and a default member role', function (
 it('does not make the creator a member', function () {
     actingAsUserWith([Permission::MinistriesCreate]);
 
-    $this->postJson('/api/v1/ministries', ['name' => 'Прославление']);
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal']);
 
     expect(Ministry::query()->sole()->members)->toBeEmpty();
 });
@@ -47,7 +49,7 @@ it('does not make the creator a member', function () {
 it('creates ministry-scoped roles, not global ones', function () {
     actingAsUserWith([Permission::MinistriesCreate]);
 
-    $this->postJson('/api/v1/ministries', ['name' => 'Прославление']);
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal']);
 
     expect(Role::query()->where('scope', RoleScope::Ministry)->count())->toBe(2)
         ->and(Role::query()->where('scope', RoleScope::Global)->where('name', 'Лидер')->exists())->toBeFalse();
@@ -55,17 +57,17 @@ it('creates ministry-scoped roles, not global ones', function () {
 
 it('refuses a duplicate name among active ministries', function () {
     actingAsUserWith([Permission::MinistriesCreate]);
-    Ministry::factory()->create(['name' => 'Прославление']);
+    Ministry::factory()->create(['name' => 'Прославление', 'color' => 'teal']);
 
-    $this->postJson('/api/v1/ministries', ['name' => 'Прославление'])
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal'])
         ->assertStatus(422)->assertJsonPath('code', 'ministry.name_taken');
 });
 
 it('allows reusing the name of an archived ministry', function () {
     actingAsUserWith([Permission::MinistriesCreate]);
-    Ministry::factory()->archived()->create(['name' => 'Прославление']);
+    Ministry::factory()->archived()->create(['name' => 'Прославление', 'color' => 'teal']);
 
-    $this->postJson('/api/v1/ministries', ['name' => 'Прославление'])->assertCreated();
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal'])->assertCreated();
 });
 
 it('denies editing a ministry without ministry.edit in it', function () {
@@ -122,10 +124,10 @@ it('refuses to edit an archived ministry', function () {
 
 it('refuses a rename onto the name of another active ministry', function () {
     actingAsUserWith([Permission::MinistriesManageAll]);
-    Ministry::factory()->create(['name' => 'Прославление']);
+    Ministry::factory()->create(['name' => 'Прославление', 'color' => 'teal']);
     $ministry = Ministry::factory()->create(['name' => 'Дети']);
 
-    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['name' => 'Прославление'])
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['name' => 'Прославление', 'color' => 'teal'])
         ->assertStatus(422)
         ->assertJsonPath('code', 'ministry.name_taken');
 });
@@ -184,4 +186,71 @@ it('omits the cover url when the ministry has no cover', function () {
     $ministry = Ministry::factory()->create();
 
     $this->getJson("/api/v1/ministries/{$ministry->id}")->assertOk()->assertJsonPath('data.cover_url', null);
+});
+
+it('requires a color when creating a ministry', function () {
+    actingAsUserWith([Permission::MinistriesCreate]);
+
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление'])
+        ->assertStatus(422)->assertJsonValidationErrors('color');
+
+    $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal'])
+        ->assertCreated()->assertJsonPath('data.color', 'teal');
+});
+
+it('changes the color with ministry.edit and refuses to clear it', function () {
+    $ministry = ministryWithRoles();
+    actingAsUser();
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['color' => 'rose'])->assertForbidden();
+
+    app('auth')->forgetGuards();
+    actingAsUserWith([Permission::MinistriesManageAll]);
+
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['color' => 'rose'])
+        ->assertOk()->assertJsonPath('data.color', 'rose');
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['color' => null])
+        ->assertStatus(422)->assertJsonValidationErrors('color');
+    $this->patchJson("/api/v1/ministries/{$ministry->id}", ['color' => 'magenta'])
+        ->assertStatus(422)->assertJsonValidationErrors('color');
+    expect($ministry->fresh()->color->value)->toBe('rose')
+        ->and(AuditEntry::query()->where('action', 'like', 'ministry.%')->where('action', '!=', 'ministry.created')->count())->toBe(0);
+});
+
+it('returns null color for ministries created before the column', function () {
+    actingAsUserWith([Permission::MinistriesViewAll]);
+    $ministry = Ministry::factory()->create(['color' => null]);
+
+    $this->getJson("/api/v1/ministries/{$ministry->id}")->assertOk()->assertJsonPath('data.color', null);
+});
+
+it('counts members', function () {
+    $ministry = ministryWithRoles();
+    $other = ministryWithRoles('Молодёжное');
+    foreach (range(1, 3) as $i) {
+        memberOf($ministry, Person::factory()->create());
+    }
+    memberOf($other, Person::factory()->create());
+    actingAsUserWith([Permission::MinistriesViewAll, Permission::MinistriesManageAll]);
+
+    $members = $this->getJson("/api/v1/ministries/{$ministry->id}/members")->assertOk()->json('data');
+    $list = collect($this->getJson('/api/v1/ministries')->json('data'))->pluck('members_count', 'id');
+
+    expect($members)->toHaveCount(3)
+        ->and($list[$ministry->id])->toBe(3)
+        ->and($list[$other->id])->toBe(1);
+    $this->getJson("/api/v1/ministries/{$ministry->id}")->assertJsonPath('data.members_count', 3);
+});
+
+it('does not query members once per ministry in the list', function () {
+    foreach (range(1, 4) as $i) {
+        memberOf(ministryWithRoles("Служение {$i}"), Person::factory()->create());
+    }
+    actingAsUserWith([Permission::MinistriesViewAll]);
+
+    DB::enableQueryLog();
+    $this->getJson('/api/v1/ministries')->assertOk();
+    $counts = collect(DB::getQueryLog())->filter(fn ($q) => str_contains($q['query'], 'count(*) from "ministry_members"'));
+    DB::disableQueryLog();
+
+    expect($counts)->toHaveCount(1);
 });

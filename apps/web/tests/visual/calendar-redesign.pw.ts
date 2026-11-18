@@ -21,10 +21,12 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await expect(page.locator('[data-test=owner]')).toHaveValue('m1')
     await page.locator('[data-test=title]').fill('Встреча в новом году')
     await page.locator('[data-test=location]').fill('Малый зал')
-    await page.locator('[data-test=starts-time]').fill('23:00:23')
-    await page.locator('[data-test=ends-date]').fill('2027-01-01')
-    await page.locator('[data-test=ends-time]').fill('01:30:23')
-    await expect(page.locator('[data-test=duration]')).toHaveText('Длительность: 2 ч 30 мин')
+    await expect(page.locator('[data-test=starts-time]')).toHaveAttribute('step', '60')
+    await page.locator('[data-test=starts-time]').fill('23:00')
+    await page.getByRole('group', { name: 'Длительность' }).getByRole('button', { name: '3 ч', exact: true }).click()
+    await expect(page.getByRole('button', { name: '3 ч', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('[data-test=ends-date]')).toHaveValue('2027-01-01'); await expect(page.locator('[data-test=ends-time]')).toHaveValue('02:00')
+    await expect(page.locator('[data-test=duration]')).toHaveText('Длительность: 3 ч')
     await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none!important }' })
     await mkdir(editorScreenshots, { recursive: true })
     await page.screenshot({ path: resolve(editorScreenshots, `editor-${width}-${theme}.png`), fullPage: true })
@@ -36,7 +38,7 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
     await submit.click()
     await expect(page).toHaveURL(/\/events\/e1\?return=/)
-    expect(sent).toMatchObject({ owner_type: 'ministry', ministry_id: 'm1', starts_at: '2026-12-31T20:00:23.000Z', ends_at: '2026-12-31T22:30:23.000Z', notify: 'none' })
+    expect(sent).toMatchObject({ owner_type: 'ministry', ministry_id: 'm1', starts_at: '2026-12-31T20:00:00.000Z', ends_at: '2026-12-31T23:00:00.000Z', notify: 'none' })
     expect(new URL(page.url()).searchParams.get('return')).toBe(context)
     await page.getByRole('link', { name: 'Календарь', exact: true }).last().click()
     await expect(page.locator('[data-test=calendar-date]')).toHaveValue('2026-12-31')
@@ -120,8 +122,8 @@ test('real attachment upload blocks both saves and a successful create is submit
   await page.locator('form.event-editor').evaluate(element => (element as HTMLFormElement).requestSubmit())
   expect(saves).toBe(0)
   finishUpload()
-  await expect(page.locator('[data-test=save-event-top]')).toBeEnabled()
-  await page.locator('[data-test=save-event-top]').click()
+  await expect(page.locator('[data-test=save-event]')).toBeEnabled()
+  await page.locator('[data-test=save-event]').click()
   await expect.poll(() => saves).toBe(1)
   await page.locator('form.event-editor').evaluate(element => (element as HTMLFormElement).requestSubmit())
   expect(saves).toBe(1)
@@ -156,7 +158,7 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
       await expect(page.locator('[data-test="selected-day"]')).toBeFocused()
       expect(requests[0]!.searchParams.get('from')).toBe('2026-10-26')
       expect(requests[0]!.searchParams.get('to')).toBe('2026-12-06')
-    } else await expect(page.getByRole('button', { name: 'Список', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    } else { await expect(page.getByRole('button', { name: 'Месяц', exact: true })).toHaveAttribute('aria-pressed', 'false'); await expect(page.locator('[data-test="strip-day-2026-11-08"]')).toHaveAttribute('aria-pressed', 'true') }
     await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none !important }' })
     await mkdir(screenshots, { recursive: true })
     await page.screenshot({ path: resolve(screenshots, `calendar-${width}-${theme}.png`), fullPage: true })
@@ -168,8 +170,9 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await expect(page.locator('[data-test="scope-mine"]')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2026-11-08')
     await page.locator('[data-test="calendar-date"]').fill('2026-12-31')
-    await page.getByRole('button', { name: 'Следующий месяц', exact: true }).click()
-    await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2027-01-31')
+    // Список на телефоне: стрелки шапки листают недели; на компьютере — месяцы.
+    await page.getByRole('button', { name: width < 1024 ? 'Следующая неделя' : 'Следующий месяц', exact: true }).click()
+    await expect(page.locator('[data-test="calendar-date"]')).toHaveValue(width < 1024 ? '2027-01-07' : '2027-01-31')
     await page.locator('[data-test="calendar-today"]').click()
     await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2026-11-08')
     await page.getByRole('button', { name: 'Месяц', exact: true }).click()
@@ -216,7 +219,7 @@ test('ministry calendar preserves its fixed scope and return context', async ({ 
   const api = await installAcceptanceApi(page)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/ministries/m1/events?date=2026-11-08&view=month&scope=ministry%3Am1')
-  await expect(page.getByRole('heading', { name: 'События служения «Музыкальное служение»', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Музыкальное служение', exact: true })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Область календаря', exact: true })).toHaveCount(0)
   await expect(page.locator('[data-test="selected-day"] .event-row a')).toHaveCount(2)
   const target = await page.locator('[data-test="selected-day"] .event-row a').first().getAttribute('href')
@@ -233,9 +236,18 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     const api = await installAcceptanceApi(page)
     const context = '/calendar?date=2026-12-31&view=month&scope=mine'
     await page.goto('/events/e1?return=' + encodeURIComponent(context))
-    await expect(page.locator('[data-test=my-participation]')).toContainText('Вы назначены')
+    await expect(page.locator('[data-test=my-participation]')).toContainText('Вы служите')
+    await expect(page.locator('.event-head h1')).toBeVisible()
+    await expect(page.locator('.event-head__when')).toHaveText('Вс, 8 ноября · 10:00–12:00 · 2 ч')
+    await expect(page.locator('.event-head .ministry-mark')).toHaveText('Церковь')
+    await expect(page.getByText('Владелец события')).toHaveCount(0)
+    await expect(page.getByText('Видимость')).toHaveCount(0)
+    await expect(page.locator('[data-test=my-participation] [data-test=open-chat]')).toHaveText('Чат события')
+    await expect(page.locator('[data-test=my-participation] [data-test=add-to-calendar]')).toHaveAttribute('href', '/api/v1/events/e1/ics')
     await expect(page.locator('.slot')).toHaveCount(1)
-    await expect(page.locator('[data-test=edit-slot-s1]')).toHaveCount(1)
+    await expect(page.locator('[data-test=slot-row-s1]')).toContainText('Анна Петрова')
+    await expect(page.locator('[data-test=edit-slot-s1], [data-test^=remove-assignment-]')).toHaveCount(0)
+    await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
     await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 3')
     expect(await page.locator('[data-test=calendar-return]').getAttribute('href')).toBe(context)
     const participation = (await page.locator('[data-test=my-participation]').boundingBox())!
@@ -256,19 +268,83 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await page.locator('[data-test=cancel-edit]').click()
     await page.locator('[data-test=discard-edit]').click()
     await expect(page.locator('[data-test=edit-event]')).toBeFocused()
+    await page.locator('[data-test=slot-row-s1]').click()
+    await expect(page.getByRole('dialog', { name: 'Слот: Помощь в подготовке зала', exact: true })).toBeVisible()
+    await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
     await page.locator('[data-test=edit-slot-s1]').click()
     await expect(page.getByRole('dialog', { name: 'Изменить слот', exact: true })).toBeVisible()
     await page.locator('[data-test=slot-0-count]').fill('4')
     await page.screenshot({ path: resolve(detailScreenshots, `slot-${width}-${theme}.png`), fullPage: true })
     await page.keyboard.press('Escape')
     await expect(page.locator('[data-test=edit-slot-s1]')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-test=slot-row-s1]')).toBeFocused()
+    await expect(page.locator('[data-test=cancel-event]')).toHaveCount(0)
+    await expect(page.locator('.ui-button--danger:visible', { hasText: 'Отменить событие' })).toHaveCount(0)
+    await page.locator('[data-test=event-menu]').click()
+    await expect(page.getByRole('dialog', { name: 'Действия с событием' })).toBeVisible()
     await page.locator('[data-test=cancel-event]').click()
     await expect(page.getByRole('dialog', { name: 'Отменить событие?' })).toBeVisible()
     await page.locator('[data-test=reason]').fill('Ремонт зала')
     await page.screenshot({ path: resolve(detailScreenshots, `cancel-${width}-${theme}.png`), fullPage: true })
     await page.keyboard.press('Escape')
-    await expect(page.locator('[data-test=cancel-event]')).toBeFocused()
+    await expect(page.locator('[data-test=event-menu]')).toBeFocused()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    expect(api.unhandled).toEqual([])
+  })
+}
+
+const rosterScreenshots = resolve('../../.superpowers/sdd/phase-8/task-11-screenshots')
+const rosterRoles = [
+  { name: 'manager', manage: true, fill: true },
+  { name: 'filler', manage: false, fill: true },
+  { name: 'member', manage: false, fill: false },
+] as const
+for (const role of rosterRoles) for (const [width, height, zoom] of [[390, 900, false], [1440, 900, false], [320, 700, true]] as const) for (const theme of ['dark', 'light']) {
+  test(`${theme} slot roster and dialog as ${role.name} at ${width}${zoom ? ' text 200%' : ''}`, async ({ page }) => {
+    await page.setViewportSize({ width, height })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    const api = await installAcceptanceApi(page)
+    api.data.event.can_manage = role.manage
+    const slot = api.data.event.slots[0]!
+    slot.can_fill = role.fill
+    slot.assignments.push({ id: 'as2', person: { id: 'p-two', full_name: 'Мария Орлова', short_name: 'Мария Орлова', photo_thumb_url: null }, created_at: null })
+    slot.filled_count = 2
+    api.data.event.slots.push({ ...slot, id: 's2', label: 'Встречающие', required_count: 2, filled_count: 0, assignments: [] })
+    await page.goto('/events/e1')
+    await expect(page.locator('.slot')).toHaveCount(2)
+    if (zoom) await page.addStyleTag({ content: 'html{font-size:200%!important}' })
+    await page.addStyleTag({ content: 'nuxt-devtools-frame{display:none!important}' })
+    await expect(page.locator('.slot').first()).toContainText('Анна Петрова')
+    await expect(page.locator('.slot').nth(1)).toContainText('Никто не назначен')
+    await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
+    await expect(page.locator('[data-test=slot-row-s1]')).toHaveCount(role.manage || role.fill ? 1 : 0)
+    await expect(page.locator('[data-test=assign-s1]')).toHaveCount(role.fill ? 1 : 0)
+    if (!role.manage && !role.fill) await expect(page.locator('.slot button')).toHaveCount(0)
+    for (const row of await page.locator('.slot__main--button').all()) expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await mkdir(rosterScreenshots, { recursive: true })
+    await page.locator('.slot-list').scrollIntoViewIfNeeded()
+    await page.screenshot({ path: resolve(rosterScreenshots, `roster-${role.name}-${width}${zoom ? '-200' : ''}-${theme}.png`), fullPage: !zoom })
+    if (role.manage || role.fill) {
+      await page.locator('[data-test=slot-row-s1]').click()
+      const dialog = page.getByRole('dialog', { name: 'Слот: Помощь в подготовке зала', exact: true })
+      await expect(dialog).toBeVisible()
+      await expect(dialog.locator('[data-test=dialog-assign-s1]')).toHaveCount(role.fill ? 1 : 0)
+      await expect(dialog.locator('[data-test^=remove-assignment-]')).toHaveCount(role.fill ? 2 : 0)
+      await expect(dialog.locator('[data-test=edit-slot-s1], [data-test=remove-slot-s1]')).toHaveCount(role.manage ? 2 : 0)
+      await expect(page.locator('.ui-button--danger:visible')).toHaveCount(0)
+      expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+      await page.screenshot({ path: resolve(rosterScreenshots, `dialog-${role.name}-${width}${zoom ? '-200' : ''}-${theme}.png`) })
+      if (role.fill) {
+        await page.locator('[data-test=remove-assignment-as1]').click()
+        await expect(page.locator('.ui-button--danger:visible')).toHaveCount(1)
+        await page.screenshot({ path: resolve(rosterScreenshots, `confirm-${role.name}-${width}${zoom ? '-200' : ''}-${theme}.png`) })
+        await page.locator('[data-test=cancel-remove-assignment]').click()
+      }
+      await page.keyboard.press('Escape')
+      await expect(page.locator('[data-test=slot-row-s1]')).toBeFocused()
+    }
     expect(api.unhandled).toEqual([])
   })
 }
@@ -279,12 +355,15 @@ test('saved slot stays saved when rereading fails and retry never repeats the wr
   api.respond('PATCH', '/slots/s1', request => { writes++; api.data.event.slots[0]!.required_count = request.postDataJSON().required_count; failRead = true; return {} })
   api.respond('GET', '/events/e1', () => failRead ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: api.data.event } })
   await page.goto('/events/e1')
+  await page.locator('[data-test=slot-row-s1]').click()
   await page.locator('[data-test=edit-slot-s1]').click()
   await page.locator('[data-test=slot-0-count]').fill('4')
   await page.locator('[data-test=save-slot]').click()
-  await expect(page.getByRole('status').filter({ hasText: 'Изменение сохранено.' })).toBeVisible()
   await expect(page.locator('[data-test=save-slot]')).toHaveCount(0)
   await expect(page.locator('[data-test=edit-slot-s1]')).toBeDisabled()
+  await expect(page.getByRole('dialog', { name: 'Слот: Помощь в подготовке зала' })).toContainText('Закройте окно')
+  await page.locator('[data-test=close-slot-dialog]').click()
+  await expect(page.getByRole('status').filter({ hasText: 'Изменение сохранено.' })).toBeVisible()
   failRead = false
   await page.locator('[data-test=retry-assignments]').click()
   await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 4')
@@ -298,16 +377,19 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow detail with long id
   const api = await installAcceptanceApi(page)
   api.data.event.title = 'Событие с очень длинным названием для всех участников служения'
   api.data.event.slots[0]!.label = 'ПодготовкаКСобытию'.repeat(5)
-  api.data.event.slots[0]!.assignments.push({ id: 'hidden', person: { id: 'p-hidden', full_name: null, photo_thumb_url: null }, created_at: null })
+  api.data.event.slots[0]!.assignments.push({ id: 'hidden', person: { id: 'p-hidden', full_name: null, short_name: null, photo_thumb_url: null }, created_at: null })
   api.data.event.slots[0]!.filled_count = 4
   await page.goto('/events/e1')
   await expect(page.locator('[data-test=my-participation]')).toBeVisible()
   await page.addStyleTag({ content: 'html{font-size:200%!important} nuxt-devtools-frame{display:none!important}' })
-  await expect(page.locator('.slot__state')).toContainText('Сверх нормы: 1')
-  await expect(page.locator('.assignees')).toContainText('Имя скрыто')
+  await expect(page.locator('.slot')).toContainText('Сверх нормы: 1')
+  await expect(page.locator('.slot__people')).toContainText('Имя скрыто')
+  expect(await page.locator('.slot__main').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
   await mkdir(detailScreenshots, { recursive: true })
   await page.screenshot({ path: resolve(detailScreenshots, `detail-320-text-200-${theme}.png`), fullPage: true })
+  await page.locator('[data-test=slot-row-s1]').click()
+  await page.screenshot({ path: resolve(detailScreenshots, `slotdialog-320-text-200-${theme}.png`) })
   await page.locator('[data-test=remove-assignment-as1]').click()
   const dialog = page.getByRole('dialog', { name: 'Подтверждение снятия назначения' })
   await expect(dialog).toBeVisible()
@@ -327,7 +409,8 @@ test('event detail distinguishes full, empty, hidden and cancelled states withou
   api.data.event.slots[0]!.can_fill = false
   api.data.event.slots[0]!.required_count = 1
   await page.goto('/events/e1')
-  await expect(page.locator('.slot__state')).toContainText('Заполнен')
+  await expect(page.locator('[data-test=slot-s1-count]')).toHaveText('1 из 1')
+  await expect(page.locator('.slot button')).toHaveCount(0)
   await expect(page.locator('[data-test=edit-event], [data-test=assign-s1], [data-test=edit-slot-s1]')).toHaveCount(0)
   api.data.event.slots = []
   await page.reload()
@@ -335,7 +418,7 @@ test('event detail distinguishes full, empty, hidden and cancelled states withou
   api.data.event.status = 'cancelled'; api.data.event.cancel_reason = 'Ремонт зала'
   await page.reload()
   await expect(page.locator('[data-test=cancelled-e1]')).toContainText('Ремонт зала')
-  await expect(page.locator('[data-test=cancel-event]')).toHaveCount(0)
+  await expect(page.locator('[data-test=cancel-event], [data-test=add-to-calendar], [data-test=event-menu]')).toHaveCount(0)
   await expect(page.locator('[data-test=calendar-return]')).toHaveAttribute('href', '/calendar')
   expect(api.unhandled).toEqual([])
 })
@@ -351,10 +434,10 @@ test('saved detail restores focus while the follow-up GET is pending and calenda
   await page.goto('/events/e1')
   await page.locator('[data-test=edit-event]').click()
   await page.locator('[data-test=title]').fill('Сохранённое название события')
-  await page.locator('[data-test=save-event-top]').click()
+  await page.locator('[data-test=save-event]').click()
   await expect(page.getByRole('heading', { name: 'Сохранённое название события', exact: true })).toBeVisible()
   await expect(page.locator('[data-test=edit-event]')).toBeDisabled()
-  await expect(page.locator('.event-card .page-header')).toBeFocused()
+  await expect(page.locator('.event-card [data-test=event-detail-heading]')).toBeFocused()
   finishRead()
   await expect(page.locator('[data-test=edit-event]')).toBeEnabled()
   expect((await page.locator('[data-test=calendar-return]').boundingBox())!.height).toBeGreaterThanOrEqual(44)
@@ -367,7 +450,7 @@ for (const width of [390, 1440]) for (const theme of ['dark', 'light']) {
     await page.setViewportSize({ width, height: 900 })
     await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
     const api = await installAcceptanceApi(page)
-    const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
+    const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', short_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
     const conflicts = [{ event_id: 'visible', title: 'Репетиция музыкального служения', starts_at: '2026-11-08T08:00:00Z', ends_at: '2026-11-08T09:00:00Z' }, { event_id: null, title: 'Пересечение с недоступным событием', starts_at: null, ends_at: null }]
     const requests: string[] = []
     let writes = 0, failRead = false
@@ -431,7 +514,7 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow candidate preview a
   await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
   const api = await installAcceptanceApi(page)
   let fail = true
-  const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
+  const person = { id: 'p2', full_name: 'Константинопольская Александра Сергеевна', short_name: 'Константинопольская Александра Сергеевна', photo_thumb_url: null }
   api.respond('GET', '/slots/s1/candidates', () => fail ? { status: 503, json: { message: 'Нет связи с сервером.' } } : { json: { data: [{ person, has_role: false, conflicts: [{ event_id: null, title: 'Пересечение с недоступным событием', starts_at: null, ends_at: null }] }] } })
   api.respond('POST', '/slots/s1/assignments', () => ({ status: 201, json: { data: { id: 'as2', person, created_at: null }, warnings: [{ code: 'time_conflict', message: 'Есть пересечение.', event_ids: [] }] } }))
   await page.goto('/events/e1')
@@ -463,8 +546,8 @@ for (const theme of ['dark', 'light']) test(`${theme} narrow candidate preview a
 
 test('candidate dialog blocks a second write after failed roster read and recovers through reading', async ({ page }) => {
   const api = await installAcceptanceApi(page)
-  const person = { id: 'p2', full_name: 'Мария Орлова', photo_thumb_url: null }
-  const other = { id: 'p3', full_name: 'Михаил Орлов', photo_thumb_url: null }
+  const person = { id: 'p2', full_name: 'Мария Орлова', short_name: 'Мария Орлова', photo_thumb_url: null }
+  const other = { id: 'p3', full_name: 'Михаил Орлов', short_name: 'Михаил Орлов', photo_thumb_url: null }
   let failRead = false, writes = 0
   api.respond('GET', '/slots/s1/candidates', () => ({ json: { data: [person, other].map(person => ({ person, has_role: false, conflicts: [] })) } }))
   api.respond('POST', '/slots/s1/assignments', () => {
@@ -630,3 +713,174 @@ test('template confirmations survive failed destination reads and archive errors
   await expect(page.getByRole('alert')).toContainText('Не удалось загрузить событие')
   expect(eventPosts).toBe(1)
 })
+
+// Задача 8 фазы 8: месяц на компьютере: до трёх событий, цвета служений, «Вы», отменённые, одна строка управления.
+const monthScreenshots = resolve('../../.superpowers/sdd/phase-8/task-8-screenshots')
+for (const width of [1024, 1440]) for (const theme of ['dark', 'light']) for (const bigText of [false, true]) {
+  test(`${theme} month shows three readable events and one toolbar line at ${width}${bigText ? ' with 200% text' : ''}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+    const api = await installAcceptanceApi(page)
+    const base = api.data.event, ministry = (id: string, name: string, color: string | null) => ({ id, name, color })
+    const items = [
+      { ...base, id: 'd1', title: 'Воскресное богослужение с причастием', starts_at: '2026-11-10T07:00:00Z', ends_at: '2026-11-10T09:00:00Z' },
+      { ...base, id: 'd2', title: 'Репетиция хора перед служением', owner_type: 'ministry' as const, ministry: ministry('m1', 'Музыкальное служение', 'violet'), slots: [], starts_at: '2026-11-10T09:00:00Z', ends_at: '2026-11-10T10:00:00Z' },
+      { ...base, id: 'd3', title: 'Отменённая встреча молодёжи', owner_type: 'ministry' as const, ministry: ministry('m2', 'Молодёжь', 'amber'), slots: [], status: 'cancelled' as const, starts_at: '2026-11-10T11:00:00Z', ends_at: '2026-11-10T12:00:00Z' },
+      { ...base, id: 'd4', title: 'Четвёртое событие дня', ministry: ministry('m3', 'Без цвета', null), slots: [], starts_at: '2026-11-10T13:00:00Z', ends_at: '2026-11-10T14:00:00Z' },
+    ]
+    api.respond('GET', '/events', () => ({ json: { data: items, meta: { current_page: 1, last_page: 1, total: items.length } } }))
+    await page.goto('/calendar?date=2026-11-10&view=month&scope=church')
+    await expect(page.locator('.calendar-month')).toBeVisible()
+    await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none !important }' + (bigText ? ' html{font-size:32px!important}' : '') })
+    const cell = page.locator('[data-test="day-2026-11-10"]')
+    await expect(cell.locator('.calendar-month__event')).toHaveCount(3)
+    await expect(cell.locator('[data-test="overflow-2026-11-10"]')).toHaveText('Ещё 1')
+    await expect(cell.locator('.calendar-month__event').first()).toContainText('Вы')
+    await expect(cell.locator('.calendar-month__event.is-cancelled')).toHaveCSS('text-decoration-line', /none/)
+    await expect(cell.locator('.calendar-month__event.is-cancelled .calendar-month__text')).toHaveCSS('text-decoration-line', 'line-through')
+    await expect(page.locator('.calendar-zone')).toContainText('Europe/Moscow')
+    const legend = page.locator('[data-test="calendar-legend"]')
+    await expect(legend).toContainText('Церковь'); await expect(legend).toContainText('Музыкальное служение'); await expect(legend).toContainText('Вы — вы назначены')
+    const cellBox = (await cell.boundingBox())!
+    for (const chip of await cell.locator('.calendar-month__event').all()) {
+      const box = (await chip.boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      expect(box.x).toBeGreaterThanOrEqual(cellBox.x); expect(box.x + box.width).toBeLessThanOrEqual(cellBox.x + cellBox.width + 1)
+    }
+    if (!bigText && width === 1440) {
+      const controls = await page.locator('.calendar-toolbar > *').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return [r.top, r.bottom] }))
+      const top = Math.min(...controls.map(c => c[0]!)), bottom = Math.max(...controls.map(c => c[1]!))
+      expect(bottom - top).toBeLessThan(70)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await mkdir(monthScreenshots, { recursive: true })
+    await page.screenshot({ path: resolve(monthScreenshots, `month-${width}-${theme}${bigText ? '-text-200' : ''}.png`), fullPage: true })
+    expect(api.unhandled).toEqual([])
+  })
+}
+
+test('hidden date field still accepts fill (used by e2e), is hidden from screen readers; create sits last in the toolbar', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const api = await installAcceptanceApi(page)
+  await page.goto('/calendar?date=2026-11-10&view=month&scope=church')
+  await expect(page.locator('.calendar-month')).toBeVisible()
+  await expect(page.getByRole('textbox')).toHaveCount(0)
+  await page.locator('[data-test="calendar-date"]').fill('2026-12-31')
+  await expect(page.locator('[data-test="calendar-date"]')).toHaveValue('2026-12-31')
+  await expect(page.locator('[data-test="selected-day"]')).toContainText('31 декабря')
+  const create = page.getByRole('link', { name: 'Создать событие', exact: true })
+  await expect(create).toHaveCount(1); await expect(create).toContainText('Событие')
+  expect(new URL((await create.getAttribute('href'))!, 'https://church.test').searchParams.get('date')).toBe('2026-12-31')
+  expect(await page.locator('.calendar-toolbar > *').last().evaluate(node => node.matches('[data-test="toolbar-create"]'))).toBe(true)
+  expect(api.unhandled).toEqual([])
+})
+
+const phoneScreenshots = resolve('../../.superpowers/sdd/phase-8/task-9-screenshots')
+async function phoneCalendar(page: import('@playwright/test').Page, theme: string) {
+  await page.addInitScript(theme => localStorage.setItem('church.ui.theme', theme), theme)
+  const api = await installAcceptanceApi(page)
+  await page.clock.setFixedTime(new Date('2026-11-10T08:00:00Z'))
+  const at = (id: string, title: string, start: string, over: Record<string, unknown> = {}) => ({ ...api.data.event, id, title, starts_at: start, ends_at: start.replace(/T(\d\d)/, (_, h) => `T${String(Number(h) + 1).padStart(2, '0')}`), ...over })
+  const choir = { id: 'm1', name: api.data.ministry.name, color: 'teal' }
+  const items = [
+    at('p1', 'Репетиция хора', '2026-11-03T16:00:00Z', { owner_type: 'ministry', ministry: choir, slots: [] }),
+    at('t1', 'Воскресное событие и совместный обед', '2026-11-10T07:00:00Z'),
+    at('t2', 'Отменённая встреча молодёжи с длинным названием', '2026-11-10T10:00:00Z', { status: 'cancelled', cancel_reason: 'Ремонт зала', slots: [] }),
+    at('f1', 'Служение для детей', '2026-11-12T07:00:00Z', { owner_type: 'ministry', ministry: choir, slots: [] }),
+    at('f2', 'Домашняя группа', '2026-11-14T15:00:00Z', { slots: [] }),
+  ]
+  api.respond('GET', '/events', () => ({ json: { data: items, meta: { current_page: 1, last_page: 1, total: items.length } } }))
+  api.respond('GET', '/events/t1', () => ({ json: { data: items[1] } }))
+  return api
+}
+for (const theme of ['dark', 'light']) {
+  test(`${theme} phone calendar keeps the strip and chips above a list that starts today at 390`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const api = await phoneCalendar(page, theme)
+    await page.goto('/calendar')
+    await expect(page.locator('.event-row').first()).toBeVisible()
+    await expect(page.locator('.event-list h2').first()).toContainText('Сегодня')
+    await expect(page.locator('[data-test="calendar-legend"]')).toHaveCount(0)
+    const link = page.getByRole('link', { name: 'Создать событие', exact: true })
+    await expect(link).toHaveCount(1)
+    expect((await link.boundingBox())!.width).toBeGreaterThanOrEqual(44)
+    // До первого события: заголовок страницы, одна шапка, одна лента, один ряд чипов.
+    const strip = (await page.locator('.week-strip').boundingBox())!, chips = (await page.locator('[data-test=phone-chips]').boundingBox())!
+    const first = (await page.locator('.event-list h2').first().boundingBox())!
+    expect(strip.height).toBeLessThanOrEqual(72); expect(chips.height).toBeLessThanOrEqual(56)
+    const head = (await page.locator('.phone-head').boundingBox())!
+    expect(head.height).toBeLessThanOrEqual(56)
+    // Между рядом чипов и первым днём — только подсказка пояса и кнопка «Показать прошедшие».
+    expect(first.y).toBeLessThanOrEqual(chips.y + chips.height + 130)
+    expect(first.y).toBeLessThan(420)
+    const tops = await page.locator('[data-test=phone-chips] > *').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return r.top + r.height / 2 }))
+    expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(2)
+    for (const day of await page.locator('[data-test^="strip-day-"]').all()) { const box = (await day.boundingBox())!; expect(box.height).toBeGreaterThanOrEqual(44); expect(box.width).toBeGreaterThanOrEqual(44) }
+    await expect(page.getByRole('button', { name: 'Вторник, 10 ноября, событий: 2', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    for (const row of await page.locator('.event-row').all()) {
+      const box = (await row.boundingBox())!, anchor = (await row.locator('a').boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(56); expect(anchor.height).toBeGreaterThanOrEqual(44)
+      expect(await row.locator('a').count()).toBe(1)
+    }
+    await expect(page.locator('.event-row.is-cancelled')).toContainText('Отменено')
+    await expect(page.locator('.event-row__mine')).toHaveText('Вы')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+    await mkdir(phoneScreenshots, { recursive: true })
+    await page.addStyleTag({ content: 'nuxt-devtools-frame { display:none !important }' })
+    await page.screenshot({ path: resolve(phoneScreenshots, `phone-390-${theme}.png`), fullPage: true })
+    // Прошедшие дни открываются выше; сегодняшний день остаётся на месте.
+    const today = page.locator('[data-day="2026-11-10"] h2')
+    const before = (await today.boundingBox())!.y
+    await page.getByRole('button', { name: 'Показать прошедшие', exact: true }).click()
+    await expect(page.locator('[data-day="2026-11-03"]')).toBeVisible()
+    expect(Math.abs((await today.boundingBox())!.y - before)).toBeLessThanOrEqual(2)
+    // Выбор дня в ленте: адрес хранит дату, вид и область; заголовок дня виден.
+    await page.locator('[data-test="strip-day-2026-11-12"]').click()
+    await expect(page).toHaveURL(/date=2026-11-12&view=list&scope=church/)
+    await expect(page.locator('[data-test="selected-day"]')).toBeFocused()
+    await expect(page.locator('[data-test="selected-day"] h2')).toBeInViewport()
+    // Возврат из события сохраняет контекст.
+    await page.locator('[data-day="2026-11-10"] .event-row a').first().click()
+    await expect(page).toHaveURL(/\/events\/t1\?return=/)
+    await page.getByRole('link', { name: 'Календарь', exact: true }).last().click()
+    await expect(page).toHaveURL(/date=2026-11-12&view=list&scope=church/)
+    await expect(page.locator('[data-test="strip-day-2026-11-12"]')).toHaveAttribute('aria-pressed', 'true')
+    expect(api.unhandled).toEqual([])
+  })
+  test(`${theme} phone calendar at 320 with 200% text keeps the page from scrolling sideways`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 })
+    const api = await phoneCalendar(page, theme)
+    await page.goto('/calendar')
+    await expect(page.locator('.event-row').first()).toBeVisible()
+    await page.addStyleTag({ content: 'html{font-size:32px!important} nuxt-devtools-frame{display:none!important}' })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+    for (const day of await page.locator('[data-test^="strip-day-"]').all()) { const box = (await day.boundingBox())!; expect(box.height).toBeGreaterThanOrEqual(44); expect(box.width).toBeGreaterThanOrEqual(44); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(321) }
+    for (const row of await page.locator('.event-row').all()) { expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(56); await expect(row.locator('a')).toHaveCount(1) }
+    for (const control of ['[data-test=week-previous]', '[data-test=week-next]', '[data-test=phone-view-switch]', '[data-test=calendar-today]']) {
+      const box = (await page.locator(control).boundingBox())!
+      expect(box.height).toBeGreaterThanOrEqual(44); expect(box.x + box.width).toBeLessThanOrEqual(321); expect(box.x).toBeGreaterThanOrEqual(-1)
+    }
+    await mkdir(phoneScreenshots, { recursive: true })
+    await page.screenshot({ path: resolve(phoneScreenshots, `phone-320-text-200-${theme}.png`), fullPage: true })
+    expect(api.unhandled).toEqual([])
+  })
+}
+
+for (const [width, scale] of [[390, 100], [390, 200], [320, 100], [320, 200]] as const) {
+  test(`phone week strip keeps 44px days: one row when 7x44 fits, 4 + 3 otherwise (${width}px, ${scale}%)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    const api = await phoneCalendar(page, 'dark')
+    await page.goto('/calendar')
+    await expect(page.locator('.event-row').first()).toBeVisible()
+    await page.addStyleTag({ content: `html{font-size:${scale}%!important} nuxt-devtools-frame{display:none!important}` })
+    const boxes = await page.locator('[data-test^="strip-day-"]').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }))
+    expect(boxes).toHaveLength(7)
+    for (const box of boxes) { expect(box.w).toBeGreaterThanOrEqual(44); expect(box.h).toBeGreaterThanOrEqual(44); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.w).toBeLessThanOrEqual(width + 1) }
+    const rows = [...new Set(boxes.map(box => Math.round(box.y)))].length
+    expect(rows).toBe(width === 320 || scale === 200 ? 2 : 1)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await mkdir(phoneScreenshots, { recursive: true })
+    await page.locator('.phone-head').evaluate(node => node.scrollIntoView()); await page.screenshot({ path: resolve(phoneScreenshots, `strip-${width}-${scale}.png`) })
+    expect(api.unhandled).toEqual([])
+  })
+}

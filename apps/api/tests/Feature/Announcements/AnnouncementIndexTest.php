@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Access\Permission;
 use App\Modules\Announcements\Models\Announcement;
+use App\Modules\Directory\Models\User;
 use App\Modules\Settings\ChurchSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -104,6 +105,16 @@ it('keeps hide_after inclusive through the end of the church day', function () {
     $this->getJson('/api/v1/announcements')->assertJsonCount(0, 'data');
 });
 
+it('returns the author short name next to the full name', function () {
+    actingAsUser();
+    $author = User::factory()->create();
+    $author->person->update(['last_name' => 'Кузнецова', 'first_name' => 'Мария', 'patronymic' => 'Игоревна']);
+    Announcement::factory()->create(['author_user_id' => $author->id]);
+
+    $this->getJson('/api/v1/announcements')->assertOk()
+        ->assertJsonPath('data.0.author.full_name', 'Кузнецова Мария Игоревна')->assertJsonPath('data.0.author.short_name', 'Мария Кузнецова');
+});
+
 it('never lists archived announcements even for managers or their author', function () {
     $author = actingAsUserWith([Permission::MinistriesManageAll]);
     Announcement::factory()->archived()->create(['author_user_id' => $author->id]);
@@ -133,3 +144,14 @@ it('validates pagination and filter input', function (array $query, string $fiel
     [['scope' => 'invalid'], 'scope'],
     [['ministry' => 'invalid'], 'ministry'],
 ]);
+
+it('exposes the owner ministry color in announcements', function () {
+    $ministry = ministryWithRoles();
+    actingAsUserWith([Permission::MinistriesViewAll]);
+    Announcement::factory()->ministry($ministry)->create(['published_at' => now()->subDay()]);
+    Announcement::factory()->create(['published_at' => now()->subDays(2)]);
+
+    $this->getJson('/api/v1/announcements')->assertOk()
+        ->assertJsonPath('data.0.ministry', ['id' => $ministry->id, 'name' => $ministry->name, 'color' => 'violet'])
+        ->assertJsonPath('data.1.ministry', null);
+});

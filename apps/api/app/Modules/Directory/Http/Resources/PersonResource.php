@@ -34,6 +34,7 @@ final class PersonResource extends JsonResource
      *     first_name: string,
      *     patronymic: string|null,
      *     full_name: string,
+     *     short_name: string,
      *     status: string,
      *     archived: bool,
      *     has_account: bool,
@@ -62,6 +63,7 @@ final class PersonResource extends JsonResource
             'first_name' => $person->first_name,
             'patronymic' => $person->patronymic,
             'full_name' => $person->fullName(),
+            'short_name' => $person->shortName(),
             'status' => $person->status->value,
             'archived' => $person->archived_at !== null,
             // Reads authorize the card, own-profile responses concern the

@@ -7,7 +7,6 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Calendar\EventAccess;
 use App\Modules\Calendar\Models\Event;
-use App\Modules\Calendar\Models\EventAssignment;
 use App\Modules\Calendar\Models\EventSlot;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
@@ -21,18 +20,6 @@ beforeEach(function (): void {
     $this->travelTo(CarbonImmutable::parse('2026-11-01 00:00Z'));
     config(['app.url' => 'https://church.example.test:8443']);
 });
-
-function icalAssign(User $user, Event $event, string $label = 'Звук', array $attributes = [], array $slotAttributes = []): EventAssignment
-{
-    $slot = EventSlot::factory()->for($event)->create(['label' => $label, ...$slotAttributes]);
-
-    return EventAssignment::factory()->for($slot)->for($user->person)->create($attributes);
-}
-
-function unfoldIcal(string $body): string
-{
-    return preg_replace('/\r\n[ \t]/', '', $body);
-}
 
 it('rejects unknown tokens disabled accounts and archived people', function () {
     $this->get('/api/v1/calendar/feed/unknown.ics')->assertNotFound();
@@ -220,4 +207,14 @@ it('keeps slot role access under assigned visibility instead of granting ministr
     expect(app(EventAccess::class)->canView($user, $event))->toBeFalse();
     $this->getJson("/api/v1/events/{$event->id}")->assertForbidden();
     expect($this->get("/api/v1/calendar/feed/{$user->ical_token}.ics")->assertOk()->getContent())->not->toContain('BEGIN:VEVENT');
+});
+
+it('keeps the event description out of the token feed', function () {
+    $user = User::factory()->create();
+    $event = Event::factory()->create(['description' => 'Закрытое описание события']);
+    icalAssign($user, $event, 'Звук');
+
+    $body = unfoldIcal($this->get("/api/v1/calendar/feed/{$user->ical_token}.ics")->assertOk()->getContent());
+
+    expect($body)->toContain('DESCRIPTION:Слоты: Звук')->not->toContain('Закрытое описание события');
 });

@@ -18,7 +18,7 @@ final class ChatTitle
             ChatType::Ministry => $chat->ministry->name ?? '',
             ChatType::Event => $chat->event->title ?? '',
             ChatType::Group => $chat->title ?? '',
-            ChatType::Direct => $this->visiblePartner($viewer, $chat)?->fullName() ?? 'Личный чат',
+            ChatType::Direct => $this->visiblePartner($viewer, $chat)?->shortName() ?? 'Личный чат',
         };
     }
 

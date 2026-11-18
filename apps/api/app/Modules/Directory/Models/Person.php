@@ -119,6 +119,15 @@ final class Person extends Model
         return $this->belongsTo(Media::class, 'photo_media_id');
     }
 
+    public function shortName(): string
+    {
+        return trim(sprintf(
+            '%s %s',
+            (string) $this->getAttribute('first_name'),
+            (string) $this->getAttribute('last_name'),
+        ));
+    }
+
     public function fullName(): string
     {
         return trim(sprintf(

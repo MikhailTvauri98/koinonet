@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Calendar\Http\Controllers\AssignmentController;
 use App\Modules\Calendar\Http\Controllers\CandidateController;
 use App\Modules\Calendar\Http\Controllers\EventController;
+use App\Modules\Calendar\Http\Controllers\EventIcsController;
 use App\Modules\Calendar\Http\Controllers\IcalFeedController;
 use App\Modules\Calendar\Http\Controllers\SlotChoicesController;
 use App\Modules\Calendar\Http\Controllers\SlotController;
@@ -24,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('events', [EventController::class, 'index']);
     Route::post('events', [EventController::class, 'store']);
     Route::get('events/{event}', [EventController::class, 'show']);
+    Route::get('events/{event}/ics', EventIcsController::class);
     Route::patch('events/{event}', [EventController::class, 'update']);
     Route::post('events/{event}/cancel', [EventController::class, 'cancel']);
     Route::post('events/{event}/slots', [SlotController::class, 'store']);

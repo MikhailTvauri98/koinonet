@@ -18,7 +18,7 @@ let generation = 0
 const actionNotice = ref('')
 
 const sessions = ref<Session[]>([])
-const { formatDateTime } = useChurchDate()
+const { formatMomentFull } = useChurchDate()
 const loading = ref(true)
 const loadError = ref('')
 const busyId = ref<string | null>(null)
@@ -43,7 +43,7 @@ async function load() {
 }
 
 function formatLastActivity(iso: string | null) {
-  return iso ? formatDateTime(iso) : '—'
+  return iso ? formatMomentFull(iso) : '—'
 }
 
 async function end(session: Session) {

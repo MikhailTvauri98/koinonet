@@ -44,6 +44,6 @@ textarea { display: block; box-sizing: border-box; width: 100%; padding: .625rem
 .composer-editing button { font-size: inherit; min-width: 44px; }
 .composer :deep(.previews:empty) { display: none; }
 .composer :deep(.previews) { margin-block: .5rem 0; }
-.composer :deep(.previews li) { padding: .5rem; gap: .25rem; border: 1px solid var(--ui-border); border-radius: .625rem; background: var(--ui-surface-muted); font-size: .875rem; }
+.composer :deep(.previews li) { padding: .5rem; gap: .25rem; border: 1px solid var(--ui-border); border-radius: .625rem; font-size: .875rem; }
 .composer :deep(.previews button) { min-width: 44px; min-height: 44px; }
 </style>

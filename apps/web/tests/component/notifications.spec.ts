@@ -35,6 +35,19 @@ describe('notification center', () => {
     expect(push).toHaveBeenCalledWith('/announcements/a1')
   })
 
+  it('puts settings into a header icon with an accessible name and shows the compact phone offer', async () => {
+    get.mockResolvedValue(response)
+    const page = await mountSuspended(NotificationsPage)
+    const settings = page.get('a[href="/settings/notifications"]')
+    expect(settings.attributes('aria-label')).toBe('Настройки уведомлений')
+    expect(settings.text()).toBe('')
+    expect(settings.find('svg[aria-hidden="true"]').exists()).toBe(true)
+    expect(page.find('.page-header__actions a[href="/settings/notifications"]').exists()).toBe(true)
+    expect(page.find('.enable-notifications--compact').exists()).toBe(true)
+    expect(page.find('.enable-notifications h2').exists()).toBe(false)
+    expect(page.text()).not.toContain('Пуши на этом устройстве')
+  })
+
   it('shows empty state and hides mark all when nothing is unread', async () => {
     get.mockResolvedValue({ data: [], next_cursor: null, meta: { unread_count: 0 } })
     const page = await mountSuspended(NotificationsPage)
@@ -45,8 +58,11 @@ describe('notification center', () => {
   it('shows errors with retry, preserves the list after a failed read and can mark all', async () => {
     get.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(response)
     const page = await mountSuspended(NotificationsPage)
-    expect(page.text()).toContain('Не удалось загрузить уведомления')
-    await page.find('[data-test="retry"]').trigger('click')
+    expect(page.find('[data-test="retry"]').exists()).toBe(false)
+    expect(page.text()).not.toContain('Не удалось загрузить уведомления')
+    expect(page.text()).not.toContain('Уведомлений пока нет')
+    expect(useNotificationsStore().connectionError).not.toBe('')
+    await useNotificationsStore().fetch(true)
     await flushPromises()
     post.mockRejectedValueOnce(new Error('offline'))
     await page.find('[data-test="notification-n1"]').trigger('click')
@@ -60,6 +76,7 @@ describe('notification center', () => {
   })
 
   it('groups a year boundary by the church day and exposes unread text on each unread row', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-17T06:20:00Z'))
     useSettingsStore().timezone = 'Europe/Moscow'
     get.mockResolvedValue({ data: [
       { ...entry, id: 'jan', created_at: '2026-12-31T21:05:00Z' },
@@ -69,12 +86,13 @@ describe('notification center', () => {
     const page = await mountSuspended(NotificationsPage)
     const groups = page.findAll('.notification-list__group')
     expect(groups).toHaveLength(2)
-    expect(groups[0]!.find('h2').text()).toBe('1 янв. 2027 г.')
+    expect(groups[0]!.find('h2').text()).toBe('Пятница, 1 января 2027')
     expect(groups[0]!.findAll('button')).toHaveLength(2)
     expect(groups[0]!.text()).toContain('00:05')
-    expect(groups[1]!.find('h2').text()).toBe('31 дек. 2026 г.')
+    expect(groups[1]!.find('h2').text()).toBe('Четверг, 31 декабря')
     expect(page.get('[data-test="notification-jan"]').text()).toContain('Непрочитано')
     expect(page.get('[data-test="notification-jan-read"]').text()).not.toContain('Непрочитано')
+    vi.useRealTimers()
   })
 
   it('keeps mark-all pending without announcing success and restores unread after rejection', async () => {
@@ -106,7 +124,9 @@ describe('notification center', () => {
     await flushPromises()
     expect(page.get('[data-test="notification-live"]').text()).toContain('Новое назначение')
     expect(store.unreadCount).toBe(2)
-    expect(page.text()).toContain('Не удалось загрузить уведомления')
+    expect(page.find('[data-test="notification-live"]').exists()).toBe(true)
+    expect(page.find('[role=alert]').exists()).toBe(false)
+    expect(store.connectionError).toContain('Не удалось загрузить уведомления')
   })
 
   it('distinguishes a confirmed read from failed navigation without sending the read twice', async () => {

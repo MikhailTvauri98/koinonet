@@ -74,12 +74,15 @@ async function calendarSnapshot(page: Page, templateId: string, until: string): 
   throw new Error('Calendar navigation did not reach the full eight-week horizon.')
 }
 
-async function openMinistryTab(page: Page, name: string, heading: string, endpoints: string[]): Promise<void> {
+// Заголовок страницы — название служения на любой вкладке, поэтому открытую вкладку подтверждает ссылка с aria-current.
+async function openMinistryTab(page: Page, name: string, ministryName: string, endpoints: string[]): Promise<void> {
+  const tab = page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name, exact: true })
   await Promise.all([
     ...endpoints.map(endpoint => expectApiResponse(page, 'GET', endpoint, 200)),
-    page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name, exact: true }).click(),
+    tab.click(),
   ])
-  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible()
+  await expect(tab).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { level: 1, name: ministryName, exact: true })).toBeVisible()
 }
 
 // No intercepted HTTP, fake notification or synchronous queue: a real Reverb
@@ -127,7 +130,7 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   const link = page.getByRole('link', { name: ministry, exact: true })
   const ministryPath = (await link.getAttribute('href'))!
   await Promise.all([expectApiResponse(page, 'GET', ministryPath, 200), link.click()])
-  await openMinistryTab(page, 'Роли', 'Роли служения', [ministryPath, `${ministryPath}/roles`])
+  await openMinistryTab(page, 'Роли', ministry, [ministryPath, `${ministryPath}/roles`])
   await Promise.all([expectApiResponse(page, 'GET', '/permissions', 200), page.getByTestId('create-role').click()])
   await page.getByLabel('Название', { exact: true }).fill(role)
   await Promise.all([
@@ -137,7 +140,7 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   ])
   await expect(page.getByRole('button', { name: role, exact: true })).toBeVisible()
 
-  await openMinistryTab(page, 'Участники', 'Участники', [`${ministryPath}/members`, `${ministryPath}/roles`])
+  await openMinistryTab(page, 'Участники', ministry, [`${ministryPath}/members`, `${ministryPath}/roles`])
   for (const [person, ministryRole] of [[leader, 'Лидер'], [singer, role]] as const) {
     await addMember(page, person.lastName, fullName(person))
     const row = page.getByTestId('member-row').filter({ hasText: fullName(person) })
@@ -151,7 +154,8 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
     expect((await saved).status()).toBe(200)
     await expect(memberDialog.getByLabel('Участник', { exact: true })).toBeChecked()
     await memberDialog.getByTestId('close-member').click()
-    await expect.poll(async () => (await row.locator('.member-row__roles').innerText()).split(' · ').sort()).toEqual(['Участник', ministryRole].sort())
+    // Роль по умолчанию в строке скрыта, пока у человека есть другая.
+    await expect(row.locator('.member-row__roles')).toHaveText(ministryRole)
   }
 
   await openSection(page, 'Шаблоны', 'Шаблоны')
@@ -239,7 +243,8 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   await dialog.getByTestId('close-assign').click()
   await expect(dialog).toBeHidden()
   await expect(leaderPhone.getByTestId(`slot-${slotId}-count`)).toHaveText('1 из 2')
-  await expect(leaderPhone.getByRole('list', { name: 'Назначенные' }).getByText(fullName(singer), { exact: true })).toBeVisible()
+  // Строка слота показывает короткое имя («Имя Фамилия»), полное остаётся в выборе кандидата.
+  await expect(leaderPhone.getByTestId(`slot-row-${slotId}`)).toContainText(`${singer.firstName} ${singer.lastName}`)
   await expectNoHorizontalScroll(leaderPhone, 'заполненный слот')
 
   await expect.poll(() => live.notifications.find(notification => notification.title === 'Вас назначили' && notification.url === `/events/${event.id}`), { timeout: 20_000 }).toBeTruthy()

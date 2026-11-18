@@ -35,7 +35,7 @@ it('announces loading once and keeps empty-state actions with their explanatory 
 })
 mockNuxtImport('useApi', () => () => ({ get }))
 const list = (data: unknown[] = [], page = 1, last = 1) => ({ data, meta: { current_page: page, last_page: last, unread_count: 0 }, next_cursor: null })
-const statePerson: Person = { id: 'p-state', first_name: 'Человек', last_name: 'Прежний', patronymic: null, full_name: 'Прежний человек', status: 'member', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: false, account_disabled: false }
+const statePerson: Person = { id: 'p-state', first_name: 'Человек', last_name: 'Прежний', patronymic: null, full_name: 'Прежний человек', short_name: 'Прежний человек', status: 'member', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: false, account_disabled: false }
 const announcement = { id: 'a-state', scope: 'church', ministry: null, author: null, title: 'Сохранённое объявление', body: 'Текст', pinned: false, hide_after: null, notify_on_publish: true, published_at: '2026-11-01T07:00:00Z', archived: false, attachments: [] }
 enableAutoUnmount(afterEach)
 beforeEach(() => {
@@ -65,6 +65,7 @@ describe('list feedback', () => {
     grantPermissions({ global: ['people.view', 'people.manage'] })
     await flushPromises()
     expect(page.get('[role=status]').text()).toContain('Создайте человека')
+    await page.get('[data-test=filters-toggle]').trigger('click')
     await page.get('[data-test=filter-status]').setValue('guest')
     await flushPromises()
     expect(page.get('[role=status]').text()).toContain('Измените поиск или фильтры')
@@ -78,7 +79,7 @@ describe('list feedback', () => {
     expect(page.get('[role=status]').text()).toContain('Опубликуйте первое')
     let finish!: (value: unknown) => void
     get.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
-    await page.get('select').setValue('ministry')
+    await page.get('[data-test="scope-ministry"]').trigger('click')
     expect(page.get('[role=status]').text()).toContain('Загружаем объявления')
     expect(page.text()).not.toContain('Объявлений пока нет')
     finish(list()); await flushPromises()
@@ -119,7 +120,7 @@ describe('list feedback', () => {
     const page = await mountSuspended(AnnouncementList)
     let finish!: (value: unknown) => void
     get.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
-    await page.get('select').setValue('ministry')
+    await page.get('[data-test="scope-ministry"]').trigger('click')
     get.mockResolvedValueOnce(list())
     const auth = useAuthStore()
     await auth.setMe({ user: { ...auth.user!, id: auth.user!.id + '-next' }, person: auth.person!, permissions: auth.permissions })
@@ -169,9 +170,9 @@ describe('list feedback', () => {
   it('offers the next available chat step without unauthorized group creation', async () => {
     const page = await mountSuspended(ChatList, { props: { chats: [] } })
     expect(page.text()).toContain('Здесь появятся чаты')
-    expect(page.text()).not.toContain('Новая группа')
+    expect(page.text()).not.toContain('создайте группу')
     grantPermissions({ global: ['chats.create_groups'] }); await flushPromises()
-    expect(page.text()).toContain('Новая группа')
+    expect(page.text()).toContain('создайте группу')
   })
   it('keeps a failed chat refresh from claiming that an empty list is a successful result', async () => {
     useChatsStore().unsubscribeUser()
@@ -179,7 +180,8 @@ describe('list feedback', () => {
     expect(page.text()).toContain('Чатов пока нет')
     get.mockRejectedValueOnce(new Error('offline'))
     await useChatsStore().fetch(); await flushPromises()
-    expect(page.text()).toContain('Не удалось загрузить чаты')
+    expect(useChatsStore().connectionError).toContain('Не удалось загрузить чаты')
+    expect(page.find('[role=alert]').exists()).toBe(false)
     expect(page.text()).not.toContain('Чатов пока нет')
   })
   it('does not navigate from a pending notification read after the account changes', async () => {

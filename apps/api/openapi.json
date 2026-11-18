@@ -2442,6 +2442,64 @@
                 }
             }
         },
+        "/events/{event}/ics": {
+            "get": {
+                "operationId": "calendar.eventIcs",
+                "tags": [
+                    "EventIcs"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "description": "The event ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "text/calendar; charset=UTF-8": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "text/calendar": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Content-Disposition": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Cache-Control": {
+                                "schema": {
+                                    "type": "string",
+                                    "const": "private, no-store"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/calendar/feed/{token}.ics": {
             "get": {
                 "operationId": "calendar.icalFeed",
@@ -6570,11 +6628,18 @@
                             },
                             "name": {
                                 "type": "string"
+                            },
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
-                            "name"
+                            "name",
+                            "color"
                         ]
                     },
                     "author": {
@@ -6588,11 +6653,15 @@
                             },
                             "full_name": {
                                 "type": "string"
+                            },
+                            "short_name": {
+                                "type": "string"
                             }
                         },
                         "required": [
                             "id",
-                            "full_name"
+                            "full_name",
+                            "short_name"
                         ]
                     },
                     "title": {
@@ -6703,6 +6772,12 @@
                                     "null"
                                 ]
                             },
+                            "short_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
                             "photo_thumb_url": {
                                 "type": [
                                     "string",
@@ -6713,6 +6788,7 @@
                         "required": [
                             "id",
                             "full_name",
+                            "short_name",
                             "photo_thumb_url"
                         ]
                     },
@@ -6885,6 +6961,12 @@
                             "null"
                         ]
                     },
+                    "short_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "photo_url": {
                         "type": [
                             "string",
@@ -6903,6 +6985,7 @@
                     "user_id",
                     "person_id",
                     "full_name",
+                    "short_name",
                     "photo_url",
                     "is_owner",
                     "joined_at"
@@ -7152,6 +7235,12 @@
                                     "null"
                                 ]
                             },
+                            "short_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
                             "photo_thumb_url": {
                                 "type": [
                                     "string",
@@ -7162,6 +7251,7 @@
                         "required": [
                             "id",
                             "full_name",
+                            "short_name",
                             "photo_thumb_url"
                         ]
                     },
@@ -7214,11 +7304,18 @@
                             },
                             "name": {
                                 "type": "string"
+                            },
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
-                            "name"
+                            "name",
+                            "color"
                         ]
                     },
                     "template_id": {
@@ -7412,11 +7509,18 @@
                             },
                             "name": {
                                 "type": "string"
+                            },
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             }
                         },
                         "required": [
                             "id",
-                            "name"
+                            "name",
+                            "color"
                         ]
                     },
                     "title": {
@@ -7844,6 +7948,12 @@
                             "null"
                         ]
                     },
+                    "short_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "joined_at": {
                         "type": [
                             "string",
@@ -7880,6 +7990,7 @@
                     "ministry_id",
                     "person_id",
                     "full_name",
+                    "short_name",
                     "joined_at",
                     "photo_url",
                     "roles"
@@ -7916,6 +8027,12 @@
                                             "null"
                                         ]
                                     },
+                                    "short_name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
                                     "photo_thumb_url": {
                                         "type": [
                                             "string",
@@ -7926,6 +8043,7 @@
                                 "required": [
                                     "id",
                                     "full_name",
+                                    "short_name",
                                     "photo_thumb_url"
                                 ]
                             }
@@ -8011,12 +8129,27 @@
                 ],
                 "title": "MessageResource"
             },
+            "MinistryColor": {
+                "type": "string",
+                "enum": [
+                    "violet",
+                    "teal",
+                    "rose",
+                    "amber",
+                    "sky",
+                    "green"
+                ],
+                "title": "MinistryColor"
+            },
             "MinistryRequest": {
                 "type": "object",
                 "properties": {
                     "name": {
                         "type": "string",
                         "maxLength": 100
+                    },
+                    "color": {
+                        "$ref": "#/components/schemas/MinistryColor"
                     },
                     "description": {
                         "type": [
@@ -8029,7 +8162,8 @@
                     }
                 },
                 "required": [
-                    "name"
+                    "name",
+                    "color"
                 ],
                 "title": "MinistryRequest"
             },
@@ -8043,6 +8177,12 @@
                         "type": "string"
                     },
                     "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "color": {
                         "type": [
                             "string",
                             "null"
@@ -8067,6 +8207,9 @@
                             "null"
                         ]
                     },
+                    "members_count": {
+                        "type": "integer"
+                    },
                     "archived_at": {
                         "type": [
                             "string",
@@ -8078,9 +8221,11 @@
                     "id",
                     "name",
                     "description",
+                    "color",
                     "cover_url",
                     "default_role_id",
                     "chat_id",
+                    "members_count",
                     "archived_at"
                 ],
                 "title": "MinistryResource"
@@ -8303,6 +8448,9 @@
                     "full_name": {
                         "type": "string"
                     },
+                    "short_name": {
+                        "type": "string"
+                    },
                     "status": {
                         "type": "string"
                     },
@@ -8408,6 +8556,7 @@
                     "first_name",
                     "patronymic",
                     "full_name",
+                    "short_name",
                     "status",
                     "archived",
                     "photo_url",

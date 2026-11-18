@@ -134,7 +134,7 @@ function permissionCases(): array
         Permission::MinistriesCreate->value => function (bool $granted): void {
             actingWithGlobalKey(Permission::MinistriesCreate, $granted);
 
-            test()->postJson('/api/v1/ministries', ['name' => 'Прославление'])->assertStatus($granted ? 201 : 403);
+            test()->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal'])->assertStatus($granted ? 201 : 403);
         },
 
         Permission::MinistriesViewAll->value => function (bool $granted): void {

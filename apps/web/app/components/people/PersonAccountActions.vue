@@ -73,7 +73,7 @@ async function closeLink() {
       </details>
     </template>
     <p v-if="inviteReason && !person.has_account" class="ui-hint">{{ inviteReason }}</p>
-    <div v-if="confirmDisable" role="group" aria-label="Подтверждение отключения аккаунта" class="person-account__confirmation">
+    <div v-if="confirmDisable" role="group" aria-label="Подтверждение отключения аккаунта" class="person-account__confirmation ui-surface-muted">
       <p>Отключить аккаунт? Все устройства выйдут из системы. Человек и его история сохранятся.</p>
       <div class="person-account__actions">
         <button type="button" class="ui-button ui-button--danger" data-test="confirm-account" :disabled="disabled || busy" @click="act('disable')">Подтвердить отключение</button>

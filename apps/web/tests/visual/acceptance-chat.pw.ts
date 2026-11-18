@@ -4,6 +4,22 @@ import { installAcceptanceApi } from './support/acceptance-api'
 import { checkDocumentWidth, settleLayout, takeAcceptanceScreenshot } from './support/acceptance-layout'
 import { measureWordWrapping } from './support/word-wrapping'
 
+test.describe('touch message actions', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+  test('keeps a 44px action target for assistive input on touch', async ({ page }) => {
+    await installAcceptanceApi(page)
+    await page.goto('/chats/c1')
+    const button = page.locator('[data-test=actions-msg7]')
+    await expect(button).toBeAttached()
+    const box = await button.boundingBox()
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+    await button.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('dialog', { name: 'Действия сообщения' })).toBeVisible()
+  })
+})
+
 // A fixed chat-height subtraction or competing minimum height must expose an
 // overlap here. Resizing a desktop viewport does not simulate a phone keyboard.
 for (const path of ['/chats/c1', '/ministries/m1/chat']) {
@@ -86,8 +102,8 @@ for (const path of ['/chats/c1', '/ministries/m1/chat']) {
       }), stage))
     }
     const menu = page.getByRole('button', { name: 'Меню чата', exact: true })
-    const wrapping = await page.locator('.chat-header h1').evaluateAll(measureWordWrapping, null)
-    const headingGeometry = await page.locator('.chat-header h1').evaluate(element => ({ width: element.getBoundingClientRect().width, font: getComputedStyle(element).fontSize }))
+    const wrapping = await page.locator('.chat-header :is(h1, h2)').evaluateAll(measureWordWrapping, null)
+    const headingGeometry = await page.locator('.chat-header :is(h1, h2)').evaluate(element => ({ width: element.getBoundingClientRect().width, font: getComputedStyle(element).fontSize }))
     const headingWords = { ...headingGeometry, broken: wrapping[0]!.broken }
     expect.soft(headingWords.broken, 'ordinary chat title words receive a readable column').toEqual([])
     expect.soft(parseFloat(headingWords.font), 'the chat title retains enlarged text').toBeGreaterThanOrEqual(36)
@@ -206,7 +222,7 @@ test('message author and ordinary body words remain readable at 320px text 200%'
     await page.setViewportSize({ width: size.width, height: 844 })
     if (size.text === 200) await page.addStyleTag({ content: 'html { font-size: 200% !important; }' })
     await settleLayout(page)
-    const author = last.locator('.message-heading strong'), body = last.locator('.body')
+    const author = last.locator('.message-sender'), body = last.locator('.body')
     const authorWords = await author.evaluateAll(measureWordWrapping, 12)
     const bodyWords = await body.evaluateAll(measureWordWrapping, 12)
     expect.soft(authorWords[0]!.words.some(word => word.text === 'Михаил')).toBe(true)
@@ -243,7 +259,7 @@ for (const type of ['direct', 'ministry', 'event'] as const) {
   test(`chat information preserves draft and exposes only available ${type} composition`, async ({ page }) => {
     const api = await installAcceptanceApi(page)
     api.data.chat.type = type
-    api.data.chat.members.push({ ...api.data.chat.members[0]!, user_id: 'hidden', full_name: null, is_owner: false })
+    api.data.chat.members.push({ ...api.data.chat.members[0]!, user_id: 'hidden', person_id: 'hidden-person', full_name: null, short_name: null, photo_url: null, is_owner: false })
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/chats/c1')
     const composer = page.getByRole('textbox', { name: 'Сообщение', exact: true })
@@ -282,9 +298,9 @@ for (const theme of ['dark', 'light']) for (const width of [390, 1440]) test(`me
   await page.goto('/chats/c1')
   const own = page.locator('[data-message-id=msg6]')
   await expect(own).toHaveAttribute('aria-label', 'Ваше сообщение')
-  await expect(own.locator('.message-heading strong')).toHaveCount(0)
+  await expect(own.locator('.message-sender')).toHaveCount(0)
   const incoming = page.locator('[data-message-id=msg7]')
-  await expect(incoming.locator('.message-heading strong')).toHaveText('Михаил Орлов')
+  await expect(incoming.locator('.message-sender')).toHaveText('Михаил Орлов')
   for (const metadata of [own.locator('time'), incoming.locator('time'), own.locator('.message-edited')]) {
     expect(await metadata.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14)
   }
@@ -294,6 +310,10 @@ for (const theme of ['dark', 'light']) for (const width of [390, 1440]) test(`me
   }
   await expect(page.getByRole('button', { name: 'Отправить', exact: true })).toHaveClass(/ui-button--primary/)
   await own.scrollIntoViewIfNeeded()
+  // Свои сообщения справа (спецификация фазы 8, чат): даже длинный свой пузырь
+  // на телефоне начинается правее чужих, а не во всю ширину ленты.
+  const ownBox = (await own.boundingBox())!, incomingBox = (await incoming.boundingBox())!
+  expect(ownBox.x).toBeGreaterThan(incomingBox.x)
   await checkDocumentWidth(page)
   await takeAcceptanceScreenshot(page, info, `${theme}-${width}-messages`)
   await page.locator('[data-message-id=msg4]').scrollIntoViewIfNeeded()
@@ -312,6 +332,7 @@ for (const theme of ['dark', 'light']) test(`failed send keeps reply and draft, 
   await page.addInitScript(value => localStorage.setItem('church.ui.theme', value), theme)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/chats/c1')
+  await page.locator('[data-message-id=msg7]').hover()
   await page.locator('[data-test=actions-msg7]').click()
   await page.getByRole('button', { name: 'Ответить', exact: true }).click()
   const composer = page.getByRole('textbox', { name: 'Сообщение', exact: true })
@@ -345,5 +366,23 @@ for (const theme of ['dark', 'light']) test(`failed send keeps reply and draft, 
     { body: 'Приду пораньше и помогу подготовить зал.', media_ids: [], reply_to_id: 'msg7' },
   ])
   await checkDocumentWidth(page)
+  expect(api.unhandled).toEqual([])
+})
+
+test('messages are grouped by sender, separated by church days and show only the time', async ({ page }, info) => {
+  const api = await installAcceptanceApi(page)
+  await page.setViewportSize({ width: 390, height: 1000 })
+  await page.goto('/chats/c1')
+  await expect(page.locator('[data-message-id=msg7]')).toBeVisible()
+  await expect(page.locator('.message-day')).toHaveText(['Вчера', 'Сегодня'])
+  await expect(page.locator('.message-row--first')).toHaveCount(6)
+  await expect(page.locator('.message-row .ui-avatar')).toHaveCount(3)
+  await expect(page.locator('[data-message-id=msg1] .message-sender')).toHaveText('Михаил Орлов')
+  await expect(page.locator('[data-message-id=msg2] .message-sender')).toHaveCount(0)
+  await expect(page.locator('[data-message-id=msg7] time')).toHaveText('09:15')
+  await expect(page.locator('.message-list')).not.toContainText(/\d{4}\s*г\./)
+  await expect(page.locator('.chat-header__meta')).toHaveText('2 участника')
+  await checkDocumentWidth(page)
+  await takeAcceptanceScreenshot(page, info, 'grouped-messages')
   expect(api.unhandled).toEqual([])
 })

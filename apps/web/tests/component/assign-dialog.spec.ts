@@ -4,6 +4,7 @@ import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import AssignDialog from '~/components/calendar/AssignDialog.vue'
 import SlotList from '~/components/calendar/SlotList.vue'
+import SlotDialog from '~/components/calendar/SlotDialog.vue'
 import EventPage from '~/pages/events/[id].vue'
 import type { EventItem, EventSlot } from '~/composables/useEvents'
 import type { components } from '~~/types/api'
@@ -17,7 +18,7 @@ mockNuxtImport('useRoute', () => () => ({ params: { id: 'e1' }, query: {} }))
 enableAutoUnmount(afterEach)
 afterEach(() => vi.useRealTimers())
 type Candidate = components['schemas']['CandidateResource']
-const candidate = (id = 'p1', name: string | null = 'Анна'): Candidate => ({ person: { id, full_name: name, photo_thumb_url: null }, has_role: true, conflicts: [] })
+const candidate = (id = 'p1', name: string | null = 'Анна'): Candidate => ({ person: { id, full_name: name, short_name: name, photo_thumb_url: null }, has_role: true, conflicts: [] })
 const roleSlot = (): EventSlot => ({ id: 's1', label: 'Вокалист', resource_type: 'person', role: { id: 'r1', name: 'Вокалист', ministry_id: 'm1' }, required_count: 2, filled_count: 0, sort_order: 0, can_fill: true, assignments: [] })
 const freeSlot = (): EventSlot => ({ ...roleSlot(), id: 's2', role: null, label: 'Встречающий' })
 const assignment = { id: 'a1', person: candidate().person, created_at: '2026-11-08T07:00:00Z' }
@@ -104,20 +105,24 @@ it('resets state on slot identity change and ignores old candidate responses', a
   expect(w.find('[data-test="candidate-old"]').exists()).toBe(false); expect(w.get('[data-test="search"]').element).toHaveProperty('value', '')
 })
 it('requires removal confirmation, preserves roster on failure and emits refresh after DELETE', async () => {
-  const w = await mountSuspended(SlotList, { props: { slots: [{ ...roleSlot(), assignments: [assignment], filled_count: 1 }] } })
+  const filled = { ...roleSlot(), assignments: [assignment], filled_count: 1 }
+  const w = await mountSuspended(SlotDialog, { props: { event: event(filled), slot: filled } })
   await w.get('[data-test="remove-assignment-a1"]').trigger('click'); expect(remove).not.toHaveBeenCalled()
   await w.get('[data-test="cancel-remove-assignment"]').trigger('click'); expect(remove).not.toHaveBeenCalled()
   await w.get('[data-test="remove-assignment-a1"]').trigger('click')
   remove.mockRejectedValueOnce({ statusCode: 422, data: { message: 'Назначения отменённого события изменить нельзя.' } })
   await w.get('[data-test="confirm-remove-assignment"]').trigger('click'); await flushPromises()
-  expect(w.text()).toContain('отменённого события'); expect(w.text()).toContain('Анна'); expect(w.emitted('changed')).toBeUndefined()
+  expect(w.text()).toContain('отменённого события'); expect(w.text()).toContain('Анна'); expect(w.emitted('assignmentsChanged')).toBeUndefined()
   await w.get('[data-test="confirm-remove-assignment"]').trigger('click'); await flushPromises()
-  expect(remove).toHaveBeenLastCalledWith('/assignments/a1'); expect(w.emitted('changed')).toHaveLength(1)
+  expect(remove).toHaveBeenLastCalledWith('/assignments/a1'); expect(w.emitted('assignmentsChanged')).toHaveLength(1)
 })
 it('uses can_fill for assignment and removal regardless of management permissions', async () => {
-  const w = await mountSuspended(SlotList, { props: { slots: [{ ...roleSlot(), can_fill: false, assignments: [assignment] }] } })
-  expect(w.find('button').exists()).toBe(false)
-  await w.setProps({ slots: [{ ...roleSlot(), assignments: [assignment] }] })
+  const list = await mountSuspended(SlotList, { props: { slots: [{ ...roleSlot(), can_fill: false, assignments: [assignment] }] } })
+  expect(list.find('button').exists()).toBe(false)
+  const withoutFlag = { ...roleSlot(), can_fill: false, assignments: [assignment] }, withFlag = { ...roleSlot(), assignments: [assignment] }
+  const w = await mountSuspended(SlotDialog, { props: { event: event(withoutFlag), slot: withoutFlag } })
+  expect(w.find('[data-test="remove-assignment-a1"]').exists()).toBe(false)
+  await w.setProps({ slot: withFlag })
   expect(w.find('[data-test="remove-assignment-a1"]').exists()).toBe(true)
 })
 it('refreshes event counts and roster after assignment without losing dialog warnings, then refreshes after removal', async () => {
@@ -131,6 +136,7 @@ it('refreshes event counts and roster after assignment without losing dialog war
   expect(w.get('[data-test="slot-s1-count"]').text()).toBe('1 из 2'); expect(w.get('[data-test="warnings"]').text()).toContain('сверх нормы')
   expect(w.get('[data-test="candidate-p1"]').attributes('disabled')).toBeDefined()
   await w.get('[data-test="close-assign"]').trigger('click')
+  await w.get('[data-test="slot-row-s1"]').trigger('click'); await flushPromises()
   await w.get('[data-test="remove-assignment-a1"]').trigger('click')
   get.mockResolvedValue({ data: event(roleSlot()) })
   await w.get('[data-test="confirm-remove-assignment"]').trigger('click'); await flushPromises()
@@ -203,6 +209,7 @@ it('discards late assignment success after changing slots', async () => {
 it.each([403, 404])('clears an unavailable event after successful removal followed by HTTP %s', async (statusCode) => {
   get.mockResolvedValueOnce({ data: event({ ...roleSlot(), filled_count: 1, assignments: [assignment] }) })
   const w = await mountSuspended(EventPage)
+  await w.get('[data-test="slot-row-s1"]').trigger('click'); await flushPromises()
   await w.get('[data-test="remove-assignment-a1"]').trigger('click')
   get.mockRejectedValueOnce({ statusCode })
   await w.get('[data-test="confirm-remove-assignment"]').trigger('click'); await flushPromises()

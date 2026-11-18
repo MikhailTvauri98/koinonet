@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import AnnouncementList from '~/components/announcements/AnnouncementList.vue'
-import MinistryTabs from '~/components/ministries/MinistryTabs.vue'
+import MinistryHeader from '~/components/ministries/MinistryHeader.vue'
 const route = useRoute()
 const ministryId = computed(() => String(route.params.id))
+const { ministry, error, load } = useMinistry(ministryId)
 </script>
 
 <template>
-  <div><h1>Объявления служения</h1><MinistryTabs :ministry-id="ministryId" /><AnnouncementList :key="ministryId" :ministry-id="ministryId" /></div>
+  <div><MinistryHeader :ministry="ministry" :ministry-id="ministryId" :error="error" @updated="ministry = $event" @retry="load" /><AnnouncementList :key="ministryId" :ministry-id="ministryId" /></div>
 </template>

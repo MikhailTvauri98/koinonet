@@ -54,12 +54,12 @@ it('protects person names and photos in chat members and direct titles', functio
     $chat = Chat::factory()->direct($user, $other)->create();
     $message = Message::factory()->for($chat)->from($other)->create();
     $chat->update(['last_message_id' => $message->id, 'last_message_at' => $message->created_at]);
-    $title = $allowed ? 'Иванова Мария' : 'Личный чат';
+    $title = $allowed ? 'Мария Иванова' : 'Личный чат';
     $list = $this->getJson('/api/v1/chats')->assertJsonPath('data.0.title', $title);
     expect($list->json('data.0.avatar_url') !== null)->toBe($allowed);
     $response = $this->getJson("/api/v1/chats/{$chat->id}")->assertOk()->assertJsonPath('data.title', $title);
     $member = collect($response->json('data.members'))->firstWhere('user_id', $other->id);
-    expect($member['full_name'])->toBe($allowed ? 'Иванова Мария' : null)->and($member['photo_url'] !== null)->toBe($allowed);
+    expect($member['full_name'])->toBe($allowed ? 'Иванова Мария' : null)->and($member['short_name'])->toBe($allowed ? 'Мария Иванова' : null)->and($member['photo_url'] !== null)->toBe($allowed);
     expect($response->getContent())->not->toContain('Секрет', 'secret@example.com', '"note"', '"email"', '"phone"');
 })->with([true, false]);
 

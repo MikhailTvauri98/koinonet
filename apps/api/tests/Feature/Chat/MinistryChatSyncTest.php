@@ -41,7 +41,7 @@ function ministryChat(Ministry $ministry): Chat
 
 it('creates a ministry chat and exposes its id without storing its title', function () {
     actingAsUserWith([Permission::MinistriesCreate, Permission::MinistriesViewAll]);
-    $id = $this->postJson('/api/v1/ministries', ['name' => 'Прославление'])->assertCreated()->json('data.id');
+    $id = $this->postJson('/api/v1/ministries', ['name' => 'Прославление', 'color' => 'teal'])->assertCreated()->json('data.id');
     $chat = Chat::query()->where('ministry_id', $id)->sole();
     expect($chat->type->value)->toBe('ministry')->and($chat->title)->toBeNull()->and($chat->members)->toHaveCount(0);
     $this->getJson("/api/v1/ministries/{$id}")->assertJsonPath('data.chat_id', $chat->id);

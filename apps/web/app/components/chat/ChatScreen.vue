@@ -10,7 +10,7 @@ import MessageList from './MessageList.vue'
 import Composer from './Composer.vue'
 import PinnedBar from './PinnedBar.vue'
 
-const props = withDefaults(defineProps<{ chatId: string, backTo?: string, backLabel?: string }>(), { backTo: '/chats', backLabel: 'К списку чатов' })
+const props = withDefaults(defineProps<{ chatId: string, backTo?: string, backLabel?: string, embedded?: boolean }>(), { backTo: '/chats', backLabel: 'К списку чатов', embedded: false })
 type Chat = components['schemas']['ChatResource']
 const api = useApi()
 const route = useRoute()
@@ -234,11 +234,13 @@ defineExpose({ refresh })
 <template>
   <section class="chat-screen" aria-label="Чат">
     <div class="chat-screen__heading">
+      <ConnectionStatus v-if="!chat" />
       <NuxtLink v-if="!chat" :to="backTo" :aria-label="backLabel" class="chat-screen__back" data-test="chat-back">← {{ backLabel }}</NuxtLink>
       <p v-if="loading" role="status">Загрузка чата…</p>
       <p v-if="error" role="alert">{{ error }} <button v-if="!unavailable" type="button" :disabled="busy || loading" @click="retry">Повторить</button></p>
       <template v-if="chat">
-        <ChatHeader :key="chat.id" :chat="chat" :back-to="backTo" :back-label="backLabel" :member="member" :busy="busy" @changed="refresh"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
+        <ChatHeader :key="chat.id" :chat="chat" :back-to="backTo" :back-label="backLabel" :embedded="embedded" :member="member" :busy="busy" @changed="refresh"><template #menu><slot name="menu" :chat="chat" :refresh="refresh" /></template></ChatHeader>
+        <ConnectionStatus class="chat-screen__connection" />
         <PinnedBar :messages="pins" :moderate="moderate" @unpin="pin" />
       </template>
     </div>
@@ -258,6 +260,7 @@ defineExpose({ refresh })
 .chat-screen { display: grid; grid-template-rows: auto minmax(6rem, 1fr) auto; flex: 1; min-height: min-content; min-width: 0; width: 100%; max-width: 100%; margin-inline: auto; }
 .chat-screen__back { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; gap: .5rem; }
 .chat-screen__heading { grid-row: 1; min-width: 0; }
+.chat-screen__heading :deep(.connection-status) { margin-block: var(--ui-space-2); }
 .chat-screen > :deep(.message-list) { grid-row: 2; }
 .chat-screen > :deep(.composer), .chat-screen__status { grid-row: 3; }
 .chat-screen__status, .chat-screen__heading > p { margin: .25rem 0; }

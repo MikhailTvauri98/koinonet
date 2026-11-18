@@ -18,9 +18,11 @@ final class MinistryResource extends JsonResource
      *     id: string,
      *     name: string,
      *     description: string|null,
+     *     color: string|null,
      *     cover_url: string|null,
      *     default_role_id: string|null,
      *     chat_id: string|null,
+     *     members_count: int,
      *     archived_at: string|null
      * }
      */
@@ -34,6 +36,7 @@ final class MinistryResource extends JsonResource
             'id' => $ministry->id,
             'name' => $ministry->name,
             'description' => $ministry->description,
+            'color' => $ministry->color?->value,
             // `large` (1080px), not `thumb` (320px, architecture 7.8 defines
             // both sizes but not which screen uses which): unlike a
             // person's photo or a member row's avatar, a ministry cover is
@@ -42,6 +45,7 @@ final class MinistryResource extends JsonResource
             'cover_url' => SignedMediaUrl::variant($ministry->cover, 'large'),
             'default_role_id' => $ministry->default_role_id,
             'chat_id' => $chatId === null ? null : (string) $chatId,
+            'members_count' => (int) ($ministry->members_count ?? $ministry->members()->count()),
             'archived_at' => $ministry->archived_at?->toISOString(),
         ];
     }

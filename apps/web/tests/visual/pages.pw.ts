@@ -5,7 +5,7 @@ import { takeAcceptanceScreenshot } from './support/acceptance-layout'
 
 const name = 'Константинопольский'.repeat(5) + ' Александр Александрович'
 const title = 'Событие'.repeat(28)
-const ministry = { id: 'm-pages', name: 'Служение'.repeat(12), description: 'Описание '.repeat(35), archived_at: null, chat_id: null, cover_url: null }
+const ministry = { id: 'm-pages', name: 'Служение'.repeat(12), description: 'Описание '.repeat(35), color: 'teal', members_count: 12, archived_at: null, chat_id: null, cover_url: null }
 const person = { id: 'p-pages', first_name: 'Александр', last_name: name.split(' ')[0]!, patronymic: null, full_name: name, status: 'member', archived: false, photo_url: null, has_account: false, user_id: null, has_global_roles: true, account_disabled: false, ministries: [ministry] }
 const event = { id: 'e-pages', title, owner_type: 'church', ministry: null, ministry_id: null, starts_at: '2026-11-08T07:00:00Z', ends_at: '2026-11-09T09:30:00Z', location: 'Помещение'.repeat(22), description: 'Описание '.repeat(40), visibility: 'church', status: 'cancelled', cancel_reason: 'Причина '.repeat(35), can_manage: false, slots: [], attachments: [], chat_id: null }
 
@@ -77,12 +77,13 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await expect(action).toHaveCSS('background-color', 'rgb(145, 180, 255)')
       const period = page.getByRole('group', { name: 'Период календаря' })
       await expect(period.getByRole('heading', { name: 'ноябрь 2026 г.', exact: true })).toBeVisible()
-      await expect(period.getByRole('button', { name: 'Предыдущий месяц', exact: true })).toBeVisible()
-      await expect(period.getByRole('button', { name: 'Следующий месяц', exact: true })).toBeVisible()
+      await expect(period.getByRole('button', { name: 'ноябрь 2026 г., перейти к дате', exact: true })).toBeVisible()
+      // На телефоне в списке стрелки шапки листают недели, а загружены недели целиком (30 ноября — понедельник).
+      await expect(period.getByRole('button', { name: width < 1024 ? 'Предыдущая неделя' : 'Предыдущий месяц', exact: true })).toBeVisible()
+      await expect(period.getByRole('button', { name: width < 1024 ? 'Следующая неделя' : 'Следующий месяц', exact: true })).toBeVisible()
       await expect(page.locator('[data-test=calendar-date]')).toHaveValue('2026-11-08')
-      await expect(page.locator('.calendar-zone')).toContainText('Europe/Moscow')
-      expect(queries.at(-1)!.searchParams.get('from')).toBe('2026-11-01')
-      expect(queries.at(-1)!.searchParams.get('to')).toBe('2026-11-30')
+      expect(queries.at(-1)!.searchParams.get('from')).toBe(width < 1024 ? '2026-10-26' : '2026-11-01')
+      expect(queries.at(-1)!.searchParams.get('to')).toBe(width < 1024 ? '2026-12-06' : '2026-11-30')
       // The same multi-day event is readable on both occupied civil dates.
       const rows = page.locator('.event-row')
       await expect(rows).toHaveCount(2)
@@ -92,8 +93,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await page.locator('[data-test=selected-day]').getByRole('link', { name: title, exact: true }).click()
       await expect(page).toHaveURL(/\/events\/e-pages\?return=/)
       await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible()
-      await expect(page.locator('.event-card')).toContainText('8 нояб.')
-      await expect(page.locator('.event-card')).toContainText('9 нояб.')
+      await expect(page.locator('.event-card')).toContainText(/8–9 ноября/)
       await expect(page.locator('[data-test=edit-event]')).toHaveCount(0)
       await fits(page)
       await page.screenshot({ path: info.outputPath('event-detail.png'), fullPage: true })
@@ -101,8 +101,10 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
     test('people filters and archive keep long names and hidden contacts', async ({ page }, info) => {
       await page.goto('/people')
       await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
       await page.locator('[data-test=filter-ministry]').selectOption(ministry.id)
       await page.locator('[data-test=filter-archived]').check()
+      await expect(page.getByRole('button', { name: /^Фильтры включено: 2$/ })).toHaveAttribute('aria-expanded', 'true')
       await expect(page.locator('.person-item')).toContainText('В архиве')
       await expect(page.locator('.person-item')).toHaveCSS('background-color', 'rgb(29, 34, 37)')
       await fits(page)
@@ -121,11 +123,11 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await expect(page.getByRole('heading', { name: ministry.name, exact: true })).toBeVisible()
       await fits(page)
       await page.getByRole('navigation', { name: 'Разделы служения' }).getByRole('link', { name: 'События', exact: true }).click()
-      await expect(page.getByRole('heading', { name: /События служения/ })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 1, name: ministry.name, exact: true })).toBeVisible()
       const period = page.getByRole('group', { name: 'Период календаря' })
       await expect(period.getByRole('heading', { name: 'ноябрь 2026 г.', exact: true })).toBeVisible()
-      await expect(period.getByRole('button', { name: 'Предыдущий месяц', exact: true })).toBeVisible()
-      await expect(period.getByRole('button', { name: 'Следующий месяц', exact: true })).toBeVisible()
+      await expect(period.getByRole('button', { name: width < 1024 ? 'Предыдущая неделя' : 'Предыдущий месяц', exact: true })).toBeVisible()
+      await expect(period.getByRole('button', { name: width < 1024 ? 'Следующая неделя' : 'Следующий месяц', exact: true })).toBeVisible()
       await fits(page)
       await page.screenshot({ path: info.outputPath('ministry-events.png'), fullPage: true })
     })
@@ -134,6 +136,8 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await page.goto('/people')
       await expect(page.locator('.people-page [role=status]')).toContainText('Люди не найдены.')
       await expect(page.locator('[data-test=create-person]')).toBeVisible()
+      await expect(page.locator('[data-test=search]')).toBeVisible()
+      await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
       await expect(page.locator('[data-test=filter-status]')).toBeVisible()
       await fits(page)
       await page.goto('/ministries')
@@ -147,7 +151,7 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
     })
     test('home populated events retain cancellation and dates', async ({ page }, info) => {
       await page.goto('/')
-      const section = page.getByRole('region', { name: 'Ближайшие мои события' })
+      const section = page.getByRole('region', { name: 'На этой неделе' })
       await expect(section.getByRole('link', { name: title, exact: true })).toBeVisible()
       await expect(section).toContainText('Отменено')
       await expect(section.locator('time').first()).toHaveAttribute('datetime', event.starts_at)
@@ -158,8 +162,8 @@ for (const [width, scale] of [[320, 200], [375, 100], [768, 100], [1440, 100], [
       await fixtures(page, true)
       await page.goto('/')
       await expect(page.getByRole('heading', { name: 'Здравствуйте, Анна!' })).toBeVisible()
-      const section = page.getByRole('region', { name: 'Ближайшие мои события' })
-      await expect(section).toContainText('Ближайших событий пока нет.')
+      const section = page.getByRole('region', { name: 'На этой неделе' })
+      await expect(section).toContainText('На этой неделе событий нет')
       await expect(section).toHaveCSS('background-color', 'rgb(29, 34, 37)')
       await wholeHeadingWords(page)
       await fits(page)
@@ -193,10 +197,11 @@ test.describe('task18 notification center', () => {
         let finish!: () => void
         const pending = new Promise<void>(resolve => { finish = resolve })
         await page.route('**/api/v1/notifications/read', async route => { await pending; await route.fulfill({ status: 500, json: { message: 'Private diagnostic' } }) })
+        await page.clock.setFixedTime(new Date('2026-11-17T06:20:00Z'))
         await page.goto('/notifications')
         await expect(page.getByRole('heading', { name: 'Уведомления', exact: true })).toBeVisible()
         await expect(page.locator('.notification-list__group')).toHaveCount(2)
-        await expect(page.locator('.notification-list__group h2').first()).toHaveText('1 янв. 2027 г.')
+        await expect(page.locator('.notification-list__group h2').first()).toHaveText('Пятница, 1 января 2027')
         await expect(page.locator('[data-test=notification-new]')).toContainText('00:05')
         await expect(page.locator('[data-test=notification-new]')).toContainText('Непрочитано')
         await expect(page.locator('[data-test=notification-read]')).not.toContainText('Непрочитано')
@@ -306,10 +311,21 @@ for (const theme of ['dark', 'light'] as const) {
       await page.goto('/people')
       if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
       await expect(page.locator('.person-item')).toHaveCount(2)
+      // «без ролей» — только фильтр: в строках пометки нет, поиск и «Фильтры» видны, панель закрыта.
+      await expect(page.locator('.person-item').filter({ hasText: 'без ролей' })).toHaveCount(0)
+      await expect(page.locator('[data-test=search]')).toBeVisible()
+      const filtersToggle = page.getByRole('button', { name: 'Фильтры', exact: true })
+      await expect(filtersToggle).toHaveAttribute('aria-expanded', 'false')
+      expect((await filtersToggle.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      await expect(page.locator('[data-test=filter-without-roles]')).toHaveCount(0)
       if (width === 1440) expect((await page.locator('.person-item').last().boundingBox())!.height).toBeLessThanOrEqual(100)
       await fits(page)
       await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
       await page.screenshot({ path: info.outputPath('people-directory.png'), fullPage: true })
+      await filtersToggle.click()
+      await expect(page.locator('[data-test=filter-without-roles]')).toBeVisible()
+      await fits(page)
+      await page.screenshot({ path: info.outputPath('people-directory-filters.png'), fullPage: true })
       await page.getByRole('link', { name: card.full_name, exact: true }).click()
       if (scale === 2) await page.addStyleTag({ content: 'html { font-size:32px !important }' })
       await expect(page.getByRole('heading', { name: card.full_name, exact: true })).toBeVisible()
@@ -380,6 +396,25 @@ for (const theme of ['dark', 'light'] as const) {
   }
 }
 
+// Компьютер: две колонки без пустой левой; телефон: одна колонка в порядке назначение, неделя, объявления, сообщения.
+async function expectHomeLayout(page: Page, width: number) {
+  const box = async (name: string) => (await page.getByRole('region', { name, exact: true }).boundingBox())!
+  const serving = await box('Вы служите'), week = await box('На этой неделе'), pins = await box('Объявления'), unread = await box('Сообщения')
+  if (width >= 1200) {
+    expect(week.x).toBe(serving.x)
+    expect(unread.x).toBe(pins.x)
+    expect(pins.x).toBeGreaterThanOrEqual(serving.x + serving.width)
+    expect(pins.y).toBe(serving.y)
+    expect(week.y).toBeGreaterThanOrEqual(serving.y + serving.height)
+    expect(unread.y).toBeGreaterThanOrEqual(pins.y + pins.height)
+  } else {
+    for (const other of [week, pins, unread]) expect(other.x).toBe(serving.x)
+    expect(week.y).toBeGreaterThanOrEqual(serving.y + serving.height)
+    expect(pins.y).toBeGreaterThanOrEqual(week.y + week.height)
+    expect(unread.y).toBeGreaterThanOrEqual(pins.y + pins.height)
+  }
+}
+
 // Task17 owns home and announcements. Keep other task scenarios untouched.
 test.describe('task17 home and announcements', () => {
   for (const theme of ['dark', 'light'] as const) {
@@ -392,8 +427,9 @@ test.describe('task17 home and announcements', () => {
           document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%` })
         }, { theme, scale })
         await page.goto('/')
-        await expect(page.locator('.home-section__header h2')).toHaveText(['Ближайшие мои события', 'Закреплённые объявления', 'Непрочитанное'])
-        await expect(page.getByRole('region', { name: 'Закреплённые объявления' }).getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
+        await expect(page.locator('.home-section__header h2')).toHaveText(['Вы служите', 'На этой неделе', 'Объявления', 'Сообщения'])
+        await expect(page.getByRole('region', { name: 'Объявления' }).getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
+        await expectHomeLayout(page, width)
         await expect(page.locator('.home-section__header h2').first()).toHaveCSS('font-size', scale === 200 ? '36px' : '18px')
         await fits(page)
         await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}x${height}-${scale}-home`)
@@ -401,8 +437,8 @@ test.describe('task17 home and announcements', () => {
         api.respond('GET', '/events', () => ({ json: { data: [], meta: { current_page: 1, last_page: 1, total: 0 } } }))
         api.respond('GET', '/chats', () => ({ json: { data: [], meta: { unread_total: 0 } } }))
         await page.reload()
-        await expect(page.getByText('Ближайших событий пока нет.', { exact: true })).toBeVisible()
-        await expect(page.getByText('Закреплённых объявлений пока нет.', { exact: true })).toBeVisible()
+        await expect(page.getByText('На этой неделе событий нет', { exact: true })).toBeVisible()
+        await expect(page.getByText('Объявлений пока нет.', { exact: true })).toBeVisible()
         await expect(page.getByText('Непрочитанных сообщений нет.', { exact: true })).toBeVisible()
         await fits(page)
         await takeAcceptanceScreenshot(page, info, `task17-${theme}-${width}x${height}-${scale}-home-empty`)
@@ -453,32 +489,112 @@ test('task17 home keeps available sections while one request is pending or faile
   await page.goto('/')
   try {
     await expect(page.getByRole('heading', { name: 'Здравствуйте, Анна!' })).toBeVisible()
-    const pins = page.getByRole('region', { name: 'Закреплённые объявления' })
+    const pins = page.getByRole('region', { name: 'Объявления' })
     await expect(pins.getByRole('status')).toContainText('Загружаем объявления…')
-    await expect(page.getByRole('region', { name: 'Ближайшие мои события' }).getByRole('link', { name: api.data.event.title, exact: true })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Вы служите' }).getByRole('link', { name: api.data.event.title, exact: true }).first()).toBeVisible()
     await takeAcceptanceScreenshot(page, info, 'task17-home-pending')
   } finally { release() }
-  await expect(page.getByRole('region', { name: 'Закреплённые объявления' }).getByRole('alert')).toContainText('Не удалось загрузить закреплённые объявления.')
-  await expect(page.getByRole('region', { name: 'Непрочитанное' }).getByRole('link', { name: /Все чаты/ })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Объявления' }).getByRole('alert')).toContainText('Не удалось загрузить объявления.')
+  await expect(page.getByRole('region', { name: 'Сообщения' }).getByRole('link', { name: /Все чаты/ })).toBeVisible()
   await fits(page)
   await takeAcceptanceScreenshot(page, info, 'task17-home-error')
   expect(api.unhandled).toEqual([])
 })
 
-test('task17 maximum five home events keep pinned announcements and unread chats together', async ({ page }, info) => {
+test('task17 a long week keeps pinned announcements and unread chats together in the right column', async ({ page }, info) => {
   const api = await installAcceptanceApi(page)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  api.respond('GET', '/events', () => ({ json: { data: Array.from({ length: 5 }, (_, index) => ({ ...api.data.event, id: `home-event-${index}`, title: `Личное событие ${index + 1}` })), meta: { current_page: 1, last_page: 1, total: 5 } } }))
+  api.respond('GET', '/events', () => ({ json: { data: Array.from({ length: 8 }, (_, index) => ({ ...api.data.event, id: `home-event-${index}`, title: `Событие недели ${index + 1}`, starts_at: `2026-11-0${index % 7 + 1}T07:00:00Z`, ends_at: `2026-11-0${index % 7 + 1}T09:00:00Z` })), meta: { current_page: 1, last_page: 1, total: 8 } } }))
   await page.goto('/')
-  const events = page.getByRole('region', { name: 'Ближайшие мои события' })
-  await expect(events.locator('.event-card')).toHaveCount(5)
-  const pins = page.getByRole('region', { name: 'Закреплённые объявления' })
-  const unread = page.getByRole('region', { name: 'Непрочитанное' })
+  const week = page.getByRole('region', { name: 'На этой неделе', exact: true })
+  await expect(week.locator('.week-row')).toHaveCount(8)
+  const pins = page.getByRole('region', { name: 'Объявления', exact: true })
+  const unread = page.getByRole('region', { name: 'Сообщения', exact: true })
   await expect(pins.getByRole('link', { name: api.data.announcement.title, exact: true })).toBeVisible()
-  await expect(unread.locator('.chat-list')).toBeVisible()
+  await expect(unread.locator('.home-chats')).toBeVisible()
   const top = (await unread.boundingBox())!.y, bottom = (await pins.boundingBox())!
   expect(top - bottom.y - bottom.height).toBe(16)
+  await expectHomeLayout(page, 1440)
   await fits(page)
-  await takeAcceptanceScreenshot(page, info, 'task17-five-events-columns')
+  await takeAcceptanceScreenshot(page, info, 'task17-long-week-columns')
   expect(api.unhandled).toEqual([])
+})
+
+// Фаза 8, задача 17: объявления и уведомления по общим правилам.
+test.describe('phase 8 task 17 announcements and notifications', () => {
+  for (const theme of ['dark', 'light'] as const) {
+    for (const [width, height, scale] of [[390, 844, 100], [1440, 1000, 100], [320, 900, 200]] as const) {
+      test(`announcement list ${theme} ${width}x${height} ${scale}%: pinned first, plain two-line preview, whole row link`, async ({ page }, info) => {
+        const api = await installAcceptanceApi(page)
+        await page.setViewportSize({ width, height })
+        await page.addInitScript(({ theme, scale }) => {
+          localStorage.setItem('church.ui.theme', theme)
+          document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%` })
+        }, { theme, scale })
+        const base = api.data.announcement
+        const long = 'Очень длинный текст объявления с **разметкой** и [ссылкой](https://example.test), который не помещается в две строки. '.repeat(6)
+        const data = [
+          { ...base, id: 'fresh', title: 'Свежее объявление служения', body: long, pinned: false, scope: 'ministry', ministry: { id: 'm1', name: 'Музыкальное служение', color: 'blue' } },
+          { ...base, id: 'pin', title: 'Закреплённое объявление церкви', body: long, pinned: true, scope: 'church', ministry: null },
+        ]
+        api.respond('GET', '/announcements', () => ({ json: { data, meta: { current_page: 1, last_page: 1, total: 2 } } }))
+        await page.goto('/announcements')
+        const cards = page.locator('.announcement-card')
+        await expect(cards).toHaveCount(2)
+        await expect(cards.first().getByRole('link')).toHaveText('Закреплённое объявление церкви')
+        await expect(cards.first()).toContainText('Закреплено')
+        await expect(cards.last().locator('.ministry-mark')).toContainText('Музыкальное служение')
+        await expect(cards.last().locator('.announcement-card__text')).not.toContainText('**')
+        // Две строки: высота превью не больше двух высот строки.
+        for (const text of await cards.locator('.announcement-card__text').all()) {
+          const { height, line } = await text.evaluate(el => ({ height: el.getBoundingClientRect().height, line: parseFloat(getComputedStyle(el).lineHeight) }))
+          expect(height).toBeLessThanOrEqual(line * 2 + 1)
+        }
+        const switchGroup = page.getByRole('group', { name: 'Область объявлений' })
+        await expect(switchGroup.getByRole('button', { name: 'Церковь', exact: true })).toHaveAttribute('aria-pressed', 'true')
+        await expect(switchGroup.getByRole('button', { name: 'Мои служения', exact: true })).toHaveAttribute('aria-pressed', 'false')
+        for (const control of await switchGroup.getByRole('button').all()) expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await expect(page.locator('select')).toHaveCount(0)
+        // Заголовок без подчёркивания, ссылка одна, строка кликабельна целиком.
+        await expect(cards.first().getByRole('link')).toHaveCSS('text-decoration-line', 'none')
+        await cards.last().scrollIntoViewIfNeeded()
+        const box = (await cards.last().boundingBox())!
+        await page.mouse.click(box.x + box.width - 6, box.y + 6)
+        await expect(page).toHaveURL(/\/announcements\/fresh$/)
+        await page.goBack()
+        await fits(page)
+        await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+        await takeAcceptanceScreenshot(page, info, `phase8-task17-${theme}-${width}-announcements`)
+      })
+
+      test(`notifications ${theme} ${width}x${height} ${scale}%: compact phone offer and settings icon`, async ({ page }, info) => {
+        await mockVisualApi(page)
+        await page.setViewportSize({ width, height })
+        await page.addInitScript(({ theme, scale }) => {
+          localStorage.setItem('church.ui.theme', theme)
+          // Предложение «Включить» показывается там, где Push API доступен: подменяем состояние устройства.
+          Object.defineProperty(window, 'Notification', { configurable: true, value: Object.assign(function () {}, { permission: 'default' }) })
+          document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.fontSize = `${scale}%` })
+        }, { theme, scale })
+        await page.route('**/api/v1/notifications', route => route.fulfill({ json: { data: [], meta: { unread_count: 0 }, next_cursor: null } }))
+        await page.goto('/notifications')
+        const settings = page.getByRole('link', { name: 'Настройки уведомлений', exact: true })
+        await expect(settings).toBeVisible()
+        const iconBox = (await settings.boundingBox())!
+        expect(iconBox.width).toBeGreaterThanOrEqual(44); expect(iconBox.height).toBeGreaterThanOrEqual(44)
+        await expect(settings).toHaveText('')
+        await expect(page.getByRole('heading', { name: 'Пуши на этом устройстве' })).toHaveCount(0)
+        const offer = page.locator('.enable-notifications--compact')
+        await expect(offer).toBeVisible()
+        const enable = offer.getByRole('button', { name: 'Включить', exact: true })
+        if (await enable.count()) {
+          await expect(offer).toContainText('Получать уведомления на телефон')
+          expect((await enable.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        }
+        await fits(page)
+        await page.addStyleTag({ content: 'nuxt-devtools-frame { display: none !important }' })
+        await takeAcceptanceScreenshot(page, info, `phase8-task17-${theme}-${width}-notifications`)
+      })
+    }
+  }
 })

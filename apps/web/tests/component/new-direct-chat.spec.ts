@@ -4,6 +4,8 @@ import { useRouter } from '#app'
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import ChatsIndex from '~/pages/chats/index.vue'
+import NewDirectChatDialog from '~/components/chat/NewDirectChatDialog.vue'
+import NewGroupDialog from '~/components/chat/NewGroupDialog.vue'
 import MemberDetailsDialog from '~/components/ministries/MemberDetailsDialog.vue'
 import { useAuthStore } from '~/stores/auth'
 import { useChatsStore } from '~/stores/chats'
@@ -12,13 +14,13 @@ import { grantPermissions } from '../support/permissions'
 
 const m = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
 mockNuxtImport('useApi', () => () => m)
-const person = (id = 'p1', over = {}): Person => ({ id, first_name: 'Анна', last_name: 'Петрова', patronymic: null, full_name: 'Петрова Анна', photo_url: null, status: 'member', archived: false, has_account: true, user_id: 'account-' + id, account_disabled: false, has_global_roles: true, ...over })
-const member = { id: 'membership-1', ministry_id: 'm1', person_id: 'p1', joined_at: '', full_name: 'Петрова Анна', photo_url: null, roles: [{ id: 'r1', name: 'Участник' }] }
+const person = (id = 'p1', over = {}): Person => ({ id, first_name: 'Анна', last_name: 'Петрова', patronymic: null, full_name: 'Петрова Анна', short_name: 'Петрова Анна', photo_url: null, status: 'member', archived: false, has_account: true, user_id: 'account-' + id, account_disabled: false, has_global_roles: true, ...over })
+const member = { id: 'membership-1', ministry_id: 'm1', person_id: 'p1', joined_at: '', full_name: 'Петрова Анна', short_name: 'Петрова Анна', photo_url: null, roles: [{ id: 'r1', name: 'Участник' }] }
 let people: Person[], push: ReturnType<typeof vi.spyOn>
 const rights = (...global: string[]) => grantPermissions({ global })
 async function choose() {
   const page = await mountSuspended(ChatsIndex)
-  await page.get('[data-test="new-message"]').trigger('click'); await flushPromises()
+  await page.get('[data-test="write"]').trigger('click'); await flushPromises()
   return page
 }
 enableAutoUnmount(afterEach)
@@ -35,7 +37,8 @@ afterEach(() => vi.restoreAllMocks())
 it.each([{ keys: [] }, { keys: ['people.view'] }, { keys: ['chats.dm'] }])('does not offer or query a new message without both rights: %j', async ({ keys }) => {
   rights(...keys)
   const page = await mountSuspended(ChatsIndex)
-  expect(page.find('[data-test="new-message"]').exists()).toBe(false)
+  expect(page.find('[data-test="write-direct"]').exists()).toBe(false)
+  expect(page.find('[data-test="write"]').exists()).toBe(false)
   expect(m.get.mock.calls.some(([path]) => path === '/people')).toBe(false)
   expect(m.post).not.toHaveBeenCalled()
 })
@@ -168,4 +171,47 @@ it('does not navigate after member details close because their context changed d
   expect(dialog.emitted('close')).toHaveLength(1)
   finish({ data: { id: 'old-member-chat' } }); await flushPromises()
   expect(push).not.toHaveBeenCalled()
+})
+
+it('with both rights one button opens a menu with both entries and each opens its own dialog', async () => {
+  rights('people.view', 'chats.dm', 'chats.create_groups')
+  const page = await mountSuspended(ChatsIndex)
+  expect(page.get('[data-test="write"]').text()).toBe('Написать')
+  expect(page.find('[data-test="write-group"]').exists()).toBe(false)
+  expect(page.find('[data-test="write-direct"]').exists()).toBe(false)
+  await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+  expect(page.get('[data-test="write-direct"]').text()).toBe('Личное сообщение')
+  expect(page.get('[data-test="write-group"]').text()).toBe('Новая группа')
+  expect(page.findComponent(NewDirectChatDialog).exists()).toBe(false)
+  await page.get('[data-test="write-direct"]').trigger('click'); await flushPromises()
+  expect(page.findComponent(NewDirectChatDialog).exists()).toBe(true)
+  expect(page.find('[data-test="write-direct"]').exists()).toBe(false)
+})
+it('with both rights the group entry opens the group dialog', async () => {
+  rights('people.view', 'chats.dm', 'chats.create_groups')
+  const page = await mountSuspended(ChatsIndex)
+  await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+  await page.get('[data-test="write-group"]').trigger('click'); await flushPromises()
+  expect(page.findComponent(NewGroupDialog).exists()).toBe(true)
+  expect(page.findComponent(NewDirectChatDialog).exists()).toBe(false)
+})
+it('with only the group right the same button opens the group dialog directly, with only dm it opens the picker', async () => {
+  rights('chats.create_groups')
+  const page = await mountSuspended(ChatsIndex)
+  expect(page.get('[data-test="write"]').text()).toBe('Написать')
+  await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+  expect(page.findComponent(NewGroupDialog).exists()).toBe(true)
+  expect(page.find('[data-test="write-group"]').exists()).toBe(false)
+  rights('people.view', 'chats.dm'); await flushPromises()
+  expect(page.findComponent(NewGroupDialog).exists()).toBe(false)
+  await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+  expect(page.findComponent(NewDirectChatDialog).exists()).toBe(true)
+})
+it('closes an open menu when the rights are revoked', async () => {
+  rights('people.view', 'chats.dm', 'chats.create_groups')
+  const page = await mountSuspended(ChatsIndex)
+  await page.get('[data-test="write"]').trigger('click'); await flushPromises()
+  rights(); await flushPromises()
+  expect(page.find('[data-test="write"]').exists()).toBe(false)
+  expect(page.find('[data-test="write-direct"]').exists()).toBe(false)
 })

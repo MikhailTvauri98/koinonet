@@ -5,6 +5,10 @@ const route = useRoute()
 const emit = defineEmits<{ resize: [height: number], flow: [enabled: boolean] }>()
 const navigation = ref<HTMLElement>()
 const moreOpen = ref(false)
+const userOpen = ref(false)
+const adminLabelId = useId()
+// «Имя Фамилия» собирается из снимка /auth/me: короткого имени там нет.
+const userName = computed(() => [auth.person?.first_name, auth.person?.last_name].filter(Boolean).join(' '))
 const inFlow = ref(false)
 const settings = useSettingsStore()
 const canManageCalendar = computed(() => hasCalendarManagement(auth.permissions))
@@ -79,6 +83,9 @@ const items = computed<NavItem[]>(() => {
   return list
 })
 const primaryPaths = ['/', '/calendar', '/chats', '/notifications']
+// «Профиль» и «Календарь телефона» живут в «Ещё» на телефоне и в меню пользователя на компьютере: в основном списке их нет.
+const userMenuPaths = ['/settings/profile', '/settings/ical']
+const listedItems = computed(() => items.value.filter(item => !userMenuPaths.includes(item.to)))
 const secondaryItems = computed(() => {
   const list = items.value.filter(item => !primaryPaths.includes(item.to))
   if (canManageCalendar.value) list.splice(list.findIndex(item => item.to === '/announcements'), 0, { to: '/templates', label: 'Шаблоны' })
@@ -90,8 +97,9 @@ function isActive(to: string) {
   if (to === '/calendar' && route.path.startsWith('/events/')) return true
   return route.path === to || route.path.startsWith(to + '/')
 }
+const userActive = computed(() => route.path.startsWith('/settings/'))
 const moreActive = computed(() => [...secondaryItems.value, ...adminItems.value].some(item => isActive(item.to)))
-watch([() => route.fullPath, () => auth.sessionVersion, () => JSON.stringify(auth.permissions)], () => { moreOpen.value = false })
+watch([() => route.fullPath, () => auth.sessionVersion, () => JSON.stringify(auth.permissions)], () => { moreOpen.value = false; userOpen.value = false })
 
 // Position changes preserve width/height, so observing the border box cannot
 // oscillate between modes. The layout reserves only an overlapping mobile bar.
@@ -99,6 +107,7 @@ let observer: ResizeObserver | undefined
 let desktop: MediaQueryList | undefined
 function measureNavigation() {
   if (desktop?.matches) moreOpen.value = false
+  else userOpen.value = false
   const height = Math.ceil(navigation.value?.getBoundingClientRect().height ?? 0)
   const availableHeight = window.visualViewport?.height ?? window.innerHeight
   inFlow.value = !desktop?.matches && height > availableHeight * 0.4
@@ -132,7 +141,7 @@ onBeforeUnmount(() => {
       </span>
       <span>{{ settings.churchName || 'Церковь' }}</span>
     </div>
-    <template v-for="item in items" :key="item.to">
+    <template v-for="item in listedItems" :key="item.to">
       <NuxtLink
         :to="item.to"
         class="app-nav__item"
@@ -148,7 +157,8 @@ onBeforeUnmount(() => {
       </NuxtLink>
       <NuxtLink v-if="item.to === '/calendar' && canManageCalendar" to="/templates" class="app-nav__item app-nav__subitem app-nav__secondary" :class="{ 'app-nav__item--active': isActive('/templates') }" :aria-current="isActive('/templates') ? 'page' : undefined" active-class="" exact-active-class=""><svg class="app-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4V3Zm4 5h8m-8 4h8m-8 4h4" /></svg><span>Шаблоны</span></NuxtLink>
     </template>
-    <div v-if="adminItems.length" data-test="nav-admin" class="app-nav__admin">
+    <div v-if="adminItems.length" data-test="nav-admin" class="app-nav__admin" role="group" :aria-labelledby="adminLabelId">
+      <p :id="adminLabelId" class="app-nav__group-label">Управление</p>
       <NuxtLink
         v-for="item in adminItems"
         :key="item.to"
@@ -167,6 +177,13 @@ onBeforeUnmount(() => {
       <svg class="app-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg>
       <span data-nav-label>Ещё</span>
     </button>
+    <div v-if="auth.user" class="app-nav__user">
+      <button type="button" data-test="nav-user" class="app-nav__item app-nav__user-button" :class="{ 'app-nav__item--active': userActive }" :aria-label="`Меню пользователя: ${userName || 'Профиль'}`" :aria-current="userActive ? 'page' : undefined" aria-haspopup="dialog" :aria-expanded="userOpen" @click="userOpen = true">
+        <UiAvatar :id="auth.person?.id ?? auth.user.id" :name="userName || null" size="sm" decorative />
+        <span class="app-nav__user-name">{{ userName || 'Профиль' }}</span>
+      </button>
+    </div>
+    <NavigationUserMenu v-if="userOpen" @close="userOpen = false" />
     <NavigationMoreMenu v-if="moreOpen" :items="secondaryItems" :admin-items="adminItems" @close="moreOpen = false" />
   </nav>
 </template>
@@ -232,6 +249,8 @@ onBeforeUnmount(() => {
 }
 
 .app-nav__more { display: none; }
+.app-nav__group-label { margin: 0; padding: 4px 12px; color: var(--ui-text-muted); font-size: .875rem; font-weight: 600; }
+.app-nav__user { display: none; }
 
 @media (max-width: 767px) {
   .app-nav {
@@ -246,7 +265,7 @@ onBeforeUnmount(() => {
     border-top: 1px solid var(--ui-border);
   }
   .app-nav--flow { position: static; }
-  .app-nav__brand, .app-nav__secondary, .app-nav__admin { display: none; }
+  .app-nav__brand, .app-nav__secondary, .app-nav__admin, .app-nav__user { display: none; }
   .app-nav__item {
     position: relative;
     flex: 1 0 auto;
@@ -294,6 +313,10 @@ onBeforeUnmount(() => {
   }
   .app-nav__item { flex-shrink: 0; flex-wrap: wrap; }
   .app-nav__admin { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ui-border); }
+  /* У нижнего края, когда разделы помещаются; иначе идёт за ними в общем потоке и не закрывает фокус. */
+  .app-nav__user { display: block; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--ui-border); }
+  .app-nav__user-button { width: 100%; border: 0; background: transparent; text-align: start; font: inherit; font-size: .875rem; color: inherit; }
+  .app-nav__user-name { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {

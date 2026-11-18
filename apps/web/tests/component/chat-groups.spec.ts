@@ -24,8 +24,8 @@ const m = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), del: 
 mockNuxtImport('useApi', () => () => ({ get: m.get, post: m.post, patch: m.patch, delete: m.del, put: m.put }))
 mockNuxtImport('useRoute', () => () => ({ params: { id: 'x1' }, query: {} }))
 type Chat = components['schemas']['ChatResource']
-const chat = (over = {}): Chat => ({ id: 'c1', type: 'group', title: 'Поездка', avatar_url: null, ministry_id: null, event_id: null, archived: false, last_message: null, last_message_at: null, unread_count: 0, muted_until: null, is_owner: false, can_write: true, can_moderate: false, can_manage_members: false, pinned_messages: [], members: [{ user_id: 'u2', person_id: 'p1', full_name: 'Анна', photo_url: null, is_owner: false, joined_at: '' }], ...over })
-const person = (over = {}) => ({ id: 'p1', full_name: 'Анна', has_account: true, user_id: 'u2', account_disabled: false, archived: false, status: 'member', has_global_roles: false, ...over })
+const chat = (over = {}): Chat => ({ id: 'c1', type: 'group', title: 'Поездка', avatar_url: null, ministry_id: null, event_id: null, archived: false, last_message: null, last_message_at: null, unread_count: 0, muted_until: null, is_owner: false, can_write: true, can_moderate: false, can_manage_members: false, pinned_messages: [], members: [{ user_id: 'u2', person_id: 'p1', full_name: 'Анна', short_name: 'Анна', photo_url: null, is_owner: false, joined_at: '' }], ...over })
+const person = (over = {}) => ({ id: 'p1', full_name: 'Анна', short_name: 'Анна', has_account: true, user_id: 'u2', account_disabled: false, archived: false, status: 'member', has_global_roles: false, ...over })
 enableAutoUnmount(afterEach)
 beforeEach(() => {
   vi.resetAllMocks(); grantPermissions({ global: ['people.view', 'chats.create_groups', 'chats.dm'] })
@@ -58,10 +58,11 @@ it('does not query Directory without people.view and explains unavailable select
 })
 it('shows a working new group control only with create_groups', async () => {
   const page = await mountSuspended(ChatsIndex)
-  await page.get('[data-test="new-group"]').trigger('click')
+  await page.get('[data-test="write"]').trigger('click')
+  await page.get('[data-test="write-group"]').trigger('click'); await flushPromises()
   expect(page.findComponent(NewGroupDialog).exists()).toBe(true)
   grantPermissions(); await flushPromises()
-  expect(page.find('[data-test="new-group"]').exists()).toBe(false)
+  expect(page.find('[data-test="write"]').exists()).toBe(false)
   expect(page.findComponent(NewGroupDialog).exists()).toBe(false)
 })
 it('exposes group-only management from server flags and confirms leave/archive', async () => {
@@ -143,14 +144,17 @@ it('opens a direct chat only for eligible accounts and chats.dm', async () => {
 it('creates event chat for managers and exposes existing chat link', async () => {
   const event = { id: 'x1', title: 'Т', status: 'scheduled', can_manage: true, chat_id: null, slots: [], attachments: [], starts_at: '2026-12-01T10:00:00Z', ends_at: '2026-12-01T11:00:00Z' }
   m.get.mockResolvedValue({ data: event })
-  const page = await mountSuspended(EventPage)
-  await page.get('[data-test="create-chat"]').trigger('click'); await flushPromises()
+  const page = await mountSuspended(EventPage, { attachTo: document.body })
+  await page.get('[data-test="event-menu"]').trigger('click'); await page.get('[data-test="create-chat"]').trigger('click'); await flushPromises()
   expect(m.post).toHaveBeenCalledWith('/events/x1/chat', {})
   expect(m.push).toHaveBeenCalledWith('/chats/c9')
-  m.get.mockResolvedValue({ data: { ...event, can_manage: false, chat_id: 'c7' } })
+  m.get.mockResolvedValue({ data: { ...event, can_manage: true, chat_id: 'c7' } })
   const existing = await mountSuspended(EventPage)
   expect(existing.get('[data-test="open-chat"]').attributes('href')).toBe('/chats/c7')
   expect(existing.find('[data-test="create-chat"]').exists()).toBe(false)
+  m.get.mockResolvedValue({ data: { ...event, can_manage: false, chat_id: 'c7' } })
+  const plain = await mountSuspended(EventPage)
+  expect(plain.find('[data-test="open-chat"]').exists()).toBe(false)
 })
 it('embeds shared ChatScreen using actual ministry chat identity', async () => {
   m.get.mockResolvedValue({ data: { id: 'x1', name: 'Хор', chat_id: 'ministry-chat' } })

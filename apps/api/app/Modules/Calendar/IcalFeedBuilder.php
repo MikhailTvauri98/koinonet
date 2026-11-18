@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Calendar;
 
 use App\Modules\Calendar\Http\Queries\EventIndexQuery;
+use App\Modules\Calendar\Models\Event;
+use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
 use App\Modules\Settings\ChurchSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Spatie\IcalendarGenerator\Components\Calendar;
 use Spatie\IcalendarGenerator\Components\Event as IcalEvent;
+use Spatie\IcalendarGenerator\Enums\EventStatus as IcalEventStatus;
 
 final readonly class IcalFeedBuilder
 {
@@ -26,17 +29,47 @@ final readonly class IcalFeedBuilder
             ->whereHas('assignments', fn (Builder $assignments): Builder => $assignments->whereNull('archived_at')->where('person_id', $user->person_id))])
             ->get();
         $calendar = Calendar::create($this->settings->name())->refreshInterval(60)->withoutAutoTimezoneComponents();
-        $host = parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'church';
 
         foreach ($events as $event) {
-            $calendar->event(IcalEvent::create($event->title)
-                ->uniqueIdentifier("event-{$event->id}@{$host}")
-                ->startsAt($event->starts_at->utc()->toDateTime())
-                ->endsAt($event->ends_at->utc()->toDateTime())
-                ->address((string) $event->location)
-                ->description('Слоты: '.$event->slots->pluck('label')->implode(', ')));
+            $calendar->event($this->vevent($event, false));
         }
 
         return $calendar->get();
+    }
+
+    /** One downloadable event for an authenticated viewer: description plus the viewer's own slot labels. */
+    public function forEvent(Event $event, Person $viewer): string
+    {
+        $event->load(['slots' => fn ($slots) => $slots->whereNull('archived_at')
+            ->whereHas('assignments', fn (Builder $assignments): Builder => $assignments->whereNull('archived_at')->where('person_id', $viewer->id))]);
+
+        return Calendar::create($this->settings->name())->withoutAutoTimezoneComponents()
+            ->event($this->vevent($event, true))->get();
+    }
+
+    private function vevent(Event $event, bool $includeDescription): IcalEvent
+    {
+        $host = parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'church';
+        $slots = $event->slots->pluck('label')->implode(', ');
+        $vevent = IcalEvent::create($event->title)
+            ->uniqueIdentifier("event-{$event->id}@{$host}")
+            ->startsAt($event->starts_at->utc()->toDateTime())
+            ->endsAt($event->ends_at->utc()->toDateTime())
+            ->address((string) $event->location);
+
+        if ($event->status === EventStatus::Cancelled) {
+            $vevent->status(IcalEventStatus::Cancelled);
+        }
+
+        if (! $includeDescription) {
+            return $vevent->description('Слоты: '.$slots);
+        }
+
+        $description = implode("\n", array_filter(
+            [(string) $event->description, $slots === '' ? '' : 'Слоты: '.$slots],
+            fn (string $part): bool => $part !== '',
+        ));
+
+        return $description === '' ? $vevent : $vevent->description($description);
     }
 }
