@@ -138,7 +138,11 @@ test('a leader manages members of their own ministry only', async ({ page, openP
     expectApiResponse(leaderPhone, 'GET', `${youthHref}/members`, 403),
     visitAuthenticated(leaderPhone, `${youthHref}/members`),
   ])
-  // Служение недоступно, поэтому шапки с названием нет: вкладка показывает только отказ.
-  await expect(leaderPhone.getByRole('alert')).toContainText('Нет права на это действие.')
+  // Служение недоступно, поэтому шапки с названием нет: отказ показывают и шапка
+  // (с повтором загрузки служения, фаза 8), и сама вкладка состава; других сообщений нет.
+  const refusals = leaderPhone.getByRole('alert')
+  await expect(refusals).toHaveCount(2)
+  for (const refusal of await refusals.all()) await expect(refusal).toContainText('Нет права на это действие.')
+  await expect(leaderPhone.getByRole('heading', { level: 1, name: 'Молодёжное', exact: true })).toHaveCount(0)
   await expect(addButton).toHaveCount(0)
 })

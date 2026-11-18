@@ -74,6 +74,21 @@ async function openChat(page: Page, title: string) {
   return new URL(page.url()).pathname.split('/').at(-1)!
 }
 
+// Кнопка действий сообщения не висит в каждом пузыре (фаза 8): мышью она появляется
+// при наведении на сообщение, на телефоне — по долгому нажатию, а с клавиатуры
+// остаётся в порядке фокуса. Сценарии открывают её так же, как человек.
+async function openMessageActions(page: Page, messageId: string, via: 'keyboard' | 'pointer') {
+  const trigger = page.getByTestId(`actions-${messageId}`)
+  if (via === 'pointer') {
+    await page.locator(`[data-message-id="${messageId}"]`).hover()
+    await trigger.click()
+  } else {
+    await trigger.focus()
+    await expect(trigger).toBeFocused()
+    await page.keyboard.press('Enter')
+  }
+}
+
 async function send(page: Page, chatId: string, body: string) {
   await page.getByTestId('composer').fill(body)
   const response = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/chats/${chatId}/messages` && response.request().method() === 'POST')
@@ -174,7 +189,7 @@ test('a plain group member cannot delete another sender but the owner can modera
   const adminMessage = await send(page, id, 'Сообщение владельца e2e')
   await live.delivered(id, adminMessage)
   await expect(member.locator(`[data-message-id="${adminMessage}"]`)).toContainText('Сообщение владельца e2e')
-  await member.getByTestId(`actions-${adminMessage}`).click()
+  await openMessageActions(member, adminMessage, 'keyboard')
   await expect(member.getByTestId(`delete-${adminMessage}`)).toHaveCount(0)
   await member.keyboard.press('Escape')
   // UI absence plus the real authenticated endpoint prove the permission boundary.
@@ -182,11 +197,11 @@ test('a plain group member cannot delete another sender but the owner can modera
   expect(denied.status()).toBe(403)
   const memberMessage = await send(member, id, 'Сообщение участника для модерации e2e')
   await expect(page.locator(`[data-message-id="${memberMessage}"]`)).toContainText('Сообщение участника для модерации e2e')
-  await member.getByTestId(`actions-${memberMessage}`).click()
+  await openMessageActions(member, memberMessage, 'keyboard')
   await expect(member.getByTestId(`delete-${memberMessage}`)).toBeVisible()
   await member.keyboard.press('Escape')
   const before = live.snapshot()
-  await page.getByTestId(`actions-${memberMessage}`).click()
+  await openMessageActions(page, memberMessage, 'pointer')
   await page.getByTestId(`delete-${memberMessage}`).click()
   await Promise.all([expectApiResponse(page, 'DELETE', `/messages/${memberMessage}`, 204), page.getByRole('alertdialog', { name: 'Удалить сообщение?' }).getByRole('button', { name: 'Удалить', exact: true }).click()])
   await live.delivered(id, memberMessage, 'message.deleted')
