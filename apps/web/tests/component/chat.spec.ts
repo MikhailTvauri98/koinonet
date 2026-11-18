@@ -354,7 +354,7 @@ it('switches once without transferring draft, reply, observers or private subscr
 it('distinguishes own messages without repeating the author while preserving incoming sender privacy', async () => {
   mocks.get.mockImplementation((url: string) => Promise.resolve(url.endsWith('/messages') ? { data: [
     msg('mine', { sender: { id: 'me', person: { id: 'p-me', full_name: 'Анна Петрова', photo_thumb_url: null } } }),
-    msg('incoming', { sender: { id: 'other', person: { id: 'p-other', full_name: 'Михаил Сергеевич Орлов', short_name: 'Михаил Орлов', photo_thumb_url: null } } }),
+    msg('incoming', { sender: { id: 'other', person: { id: 'p-other', full_name: 'Михаил Сергеевич Орлов', short_name: 'Михаил Орлов', photo_thumb_url: '/media/partner-thumb' } } }),
     msg('hidden', { sender: { id: 'hidden', person: { id: 'p-hidden', full_name: null, photo_thumb_url: null } } }),
     msg('erased', { sender: null }),
   ], next_before: null, next_after: null } : { data: card() }))
@@ -364,6 +364,8 @@ it('distinguishes own messages without repeating the author while preserving inc
   expect(mine.attributes('aria-label')).toBe('Ваше сообщение')
   expect(mine.text()).not.toContain('Анна Петрова')
   expect(screen.get('[data-message-id=incoming]').text()).toContain('Михаил Орлов')
+  expect(screen.get('.message-row:has([data-message-id=incoming]) .ui-avatar img').attributes('src')).toBe('/media/partner-thumb')
+  expect(screen.find('.message-row:has([data-message-id=hidden]) .ui-avatar img').exists()).toBe(false)
   expect(screen.get('[data-message-id=hidden]').text()).toContain('Участник')
   expect(screen.get('[data-message-id=erased]').text()).toContain('Удалённый человек')
 })

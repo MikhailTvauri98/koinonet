@@ -35,7 +35,7 @@ export function apiErrorStatus(error: unknown): number | undefined {
  */
 export function isConnectionFailure(error: unknown): boolean {
   const status = apiErrorStatus(error)
-  return status === undefined || [408, 502, 503, 504].includes(status)
+  return status === undefined || [0, 408, 502, 503, 504].includes(status)
 }
 
 function failureBody(error: unknown): FailureBody {

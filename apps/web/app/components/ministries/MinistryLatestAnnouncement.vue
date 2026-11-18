@@ -14,9 +14,17 @@ async function load() {
   const live = () => current === generation && session === auth.sessionVersion && id === props.ministryId
   loading.value = true; errorMessage.value = ''
   try {
-    const response = await api.get<AnnouncementListResponse>('/announcements', { scope: 'ministry', ministry: id, page: 1 })
-    // Закреплённые идут первыми в списке, а «последнее» — самое новое по дате публикации.
-    if (live()) latest.value = [...response.data].sort((a, b) => b.published_at.localeCompare(a.published_at))[0] ?? null
+    let newest: Announcement | null = null
+    for (let page = 1; ; page++) {
+      const response = await api.get<AnnouncementListResponse>('/announcements', { scope: 'ministry', ministry: id, page })
+      if (!live()) return
+      for (const item of response.data) {
+        if (!newest || item.published_at > newest.published_at) newest = item
+      }
+      // Закрепления сортируются по моменту закрепления. После них остальные уже идут по дате публикации.
+      if (page >= response.meta.last_page || !response.data.length || response.data.some(item => !item.pinned)) break
+    }
+    latest.value = newest
   } catch (error) {
     if (live()) errorMessage.value = apiErrorMessage(error, 'Не удалось загрузить объявления служения. Попробуйте ещё раз.')
   } finally { if (live()) loading.value = false }

@@ -148,6 +148,7 @@ describe('calendar month cells and toolbar', () => {
       event({ id: 'c', title: 'Церковь', ...at(3) }),
     ])
     const [a, b, c] = chips(page).map(chip => chip.attributes('style'))
+    expect(chips(page)[1]!.text()).toContain('Дети')
     expect(a).toContain('var(--ui-ministry-teal)'); expect(b).toContain('var(--ui-ministry-church)'); expect(c).toContain('var(--ui-ministry-church)')
   })
   it('lists a legend entry per visible ministry plus the church and the «Вы» marker', async () => {

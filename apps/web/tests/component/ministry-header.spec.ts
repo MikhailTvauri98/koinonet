@@ -121,7 +121,7 @@ describe('ministry header without a loaded ministry', () => {
     await flushPromises()
     expect(view.get('h1').text()).toBe(ministry.name)
     expect(view.get('[role="alert"]').text()).toContain('Нет права на это действие.')
-    expect(view.get('[data-test="retry"]').exists()).toBe(true)
+    expect(view.get('[data-test="retry"]').text()).toBe('Повторить')
   })
 
   it('keeps a page heading and the tabs while the ministry is loading', async () => {

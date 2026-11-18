@@ -4,6 +4,22 @@ import { installAcceptanceApi } from './support/acceptance-api'
 import { checkDocumentWidth, settleLayout, takeAcceptanceScreenshot } from './support/acceptance-layout'
 import { measureWordWrapping } from './support/word-wrapping'
 
+test.describe('touch message actions', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+  test('keeps a 44px action target for assistive input on touch', async ({ page }) => {
+    await installAcceptanceApi(page)
+    await page.goto('/chats/c1')
+    const button = page.locator('[data-test=actions-msg7]')
+    await expect(button).toBeAttached()
+    const box = await button.boundingBox()
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+    await button.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('dialog', { name: 'Действия сообщения' })).toBeVisible()
+  })
+})
+
 // A fixed chat-height subtraction or competing minimum height must expose an
 // overlap here. Resizing a desktop viewport does not simulate a phone keyboard.
 for (const path of ['/chats/c1', '/ministries/m1/chat']) {
@@ -243,7 +259,7 @@ for (const type of ['direct', 'ministry', 'event'] as const) {
   test(`chat information preserves draft and exposes only available ${type} composition`, async ({ page }) => {
     const api = await installAcceptanceApi(page)
     api.data.chat.type = type
-    api.data.chat.members.push({ ...api.data.chat.members[0]!, user_id: 'hidden', full_name: null, is_owner: false })
+    api.data.chat.members.push({ ...api.data.chat.members[0]!, user_id: 'hidden', person_id: 'hidden-person', full_name: null, short_name: null, photo_url: null, is_owner: false })
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/chats/c1')
     const composer = page.getByRole('textbox', { name: 'Сообщение', exact: true })

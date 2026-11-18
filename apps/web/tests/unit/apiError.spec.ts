@@ -61,7 +61,7 @@ describe('apiFieldErrors', () => {
 })
 
 describe('isConnectionFailure', () => {
-  it.each([undefined, 408, 502, 503, 504])('treats %s as a lost connection', (status) => {
+  it.each([undefined, 0, 408, 502, 503, 504])('treats %s as a lost connection', (status) => {
     expect(isConnectionFailure(status === undefined ? new Error('offline') : { statusCode: status })).toBe(true)
   })
   it.each([400, 401, 403, 404, 422, 429, 500])('treats %s as an answer of the application', (status) => {

@@ -8,6 +8,7 @@ import { apiErrorMessage } from '~/utils/apiError'
 const props = defineProps<{ ministryId: string, defaultRoleId?: string | null }>()
 const AVATARS = 12
 const api = useApi(), auth = useAuthStore()
+const { can } = useCan()
 const members = ref<Member[]>([]), loaded = ref(false), loading = ref(false), errorMessage = ref('')
 let generation = 0
 
@@ -23,7 +24,7 @@ async function load() {
   } finally { if (live()) loading.value = false }
 }
 function reset() { generation++; members.value = []; loaded.value = false; errorMessage.value = ''; loading.value = false; if (auth.user) void load() }
-watch([() => props.ministryId, () => auth.sessionVersion], reset, { flush: 'sync' })
+watch([() => props.ministryId, () => auth.sessionVersion, () => can('people.view')], reset, { flush: 'sync' })
 onBeforeUnmount(() => { generation++ })
 
 const shown = computed(() => members.value.slice(0, AVATARS))

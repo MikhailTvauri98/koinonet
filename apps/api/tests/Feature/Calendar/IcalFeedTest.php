@@ -7,7 +7,6 @@ use App\Modules\Access\Models\Role;
 use App\Modules\Access\Permission;
 use App\Modules\Calendar\EventAccess;
 use App\Modules\Calendar\Models\Event;
-use App\Modules\Calendar\Models\EventAssignment;
 use App\Modules\Calendar\Models\EventSlot;
 use App\Modules\Directory\Models\Person;
 use App\Modules\Directory\Models\User;
@@ -21,18 +20,6 @@ beforeEach(function (): void {
     $this->travelTo(CarbonImmutable::parse('2026-11-01 00:00Z'));
     config(['app.url' => 'https://church.example.test:8443']);
 });
-
-function icalAssign(User $user, Event $event, string $label = 'Звук', array $attributes = [], array $slotAttributes = []): EventAssignment
-{
-    $slot = EventSlot::factory()->for($event)->create(['label' => $label, ...$slotAttributes]);
-
-    return EventAssignment::factory()->for($slot)->for($user->person)->create($attributes);
-}
-
-function unfoldIcal(string $body): string
-{
-    return preg_replace('/\r\n[ \t]/', '', $body);
-}
 
 it('rejects unknown tokens disabled accounts and archived people', function () {
     $this->get('/api/v1/calendar/feed/unknown.ics')->assertNotFound();

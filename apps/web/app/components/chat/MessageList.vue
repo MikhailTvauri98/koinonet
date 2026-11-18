@@ -112,7 +112,7 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
         :class="{ own: row.own, 'message-row--first': row.first }"
         :data-test="row.message.id === messages.at(-1)?.id ? 'latest-message' : undefined">
         <template v-if="!row.own">
-          <UiAvatar v-if="row.first" :id="row.message.sender?.person?.id ?? row.senderId ?? 'deleted-person'" :name="row.message.sender?.person?.short_name ?? null" class="message-row__avatar" size="sm" decorative />
+          <UiAvatar v-if="row.first" :id="row.message.sender?.person?.id ?? row.senderId ?? 'deleted-person'" :name="row.message.sender?.person?.short_name ?? null" :photo-url="row.message.sender?.person?.photo_thumb_url" class="message-row__avatar" size="sm" decorative />
           <span v-else class="message-row__avatar" aria-hidden="true" />
         </template>
         <MessageItem :message="row.message" :own="row.own" :first="row.first" :sender-name="senderLabel(row.message.sender)" :writable="writable" :moderate="moderate" :pinned="pinnedIds.includes(row.message.id)" @reply="emit('reply', $event)" @edit="emit('edit', $event)" @delete="emit('delete', $event)" @pin="emit('pin', $event)" />
@@ -125,7 +125,7 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
 .message-day { margin: 1rem 0 .25rem; text-align: center; color: var(--ui-text-muted); font-size: .875rem; font-weight: 600; }
 .message-row { display: flex; align-items: flex-start; gap: .5rem; margin: .125rem 0; min-width: 0; }
 .message-row--first { margin-top: .75rem; }
-.message-row__avatar { flex: none; width: 32px; margin-top: .25rem; }
+.message-row__avatar { flex: none; width: 2rem; margin-top: .25rem; }
 .message-row > :last-child { min-width: 0; max-width: 100%; }
 /* Свои сообщения справа: даже длинный пузырь на телефоне отступает от левого края
    дальше колонки аватара чужих сообщений (32 px и промежуток). */
@@ -142,5 +142,9 @@ onBeforeUnmount(() => { observerRun++; resizeObserver?.disconnect(); observer?.d
   .message-row :deep(.message-actions-trigger) { inset-inline-end: auto; inset-inline-start: calc(100% + .25rem); top: 0; }
   .message-row.own :deep(.message-actions-trigger) { inset-inline-start: auto; inset-inline-end: calc(100% + .25rem); }
 }
-.message-list { contain: size; flex: 1 1 0; overflow-y: auto; min-height: 0; min-width: 0; overscroll-behavior: contain; padding: .4rem; }
+.message-list { contain: size; container-type: inline-size; flex: 1 1 0; overflow-y: auto; min-height: 0; min-width: 0; overscroll-behavior: contain; padding: .4rem; }
+@container (max-width: 16rem) {
+  .message-row:not(.own) { flex-direction: column; gap: 0; }
+  .message-row:not(.message-row--first) > .message-row__avatar { display: none; }
+}
 </style>

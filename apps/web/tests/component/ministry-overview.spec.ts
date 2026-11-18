@@ -206,9 +206,39 @@ describe('ministry overview: composition', () => {
     const page = await mount()
     expect(page.get('[data-test="composition-member"]').text()).toBe('?Участник')
   })
+
+  it('clears cached names and photos when directory visibility changes within the session', async () => {
+    grantPermissions({ global: ['people.view'] })
+    api({ members: [{ ...member(1, [], 'Ольга Орлова'), photo_url: '/photos/olga' }] })
+    const page = await mount()
+    const roster = page.get('[data-test="overview-composition"]')
+    expect(roster.text()).toContain('Ольга Орлова')
+    api({ members: [member(1, [], null)] })
+    grantPermissions()
+    await flushPromises()
+    expect(roster.text()).not.toContain('Ольга Орлова')
+    expect(roster.find('img').exists()).toBe(false)
+    expect(roster.get('[data-test="composition-member"]').text()).toBe('?Участник')
+  })
 })
 
 describe('ministry overview: announcement, chat and independence', () => {
+  it('looks past a full page of pins for a more recent publication', async () => {
+    get.mockImplementation(async (path: string, query?: { page: number }) => {
+      if (path === '/announcements') {
+        const data = query?.page === 1
+          ? [{ ...announcement('pinned', '2026-11-01T10:00:00Z'), pinned: true }]
+          : [announcement('recent', '2026-11-07T10:00:00Z')]
+        return { data, meta: { current_page: query?.page, last_page: 3, total: 3 } }
+      }
+      if (path === '/events') return list([])
+      return { data: path === '/ministries/m1' ? ministry : [] }
+    })
+    const view = await mount()
+    expect(view.get('[data-test="overview-announcement"] h3').text()).toBe('Объявление recent')
+    expect(get.mock.calls.filter(([path]) => path === '/announcements')).toHaveLength(2)
+  })
+
   it('shows the newest announcement with plain text and a link to all', async () => {
     api({ announcements: [announcement('a1', '2026-11-01T10:00:00Z'), announcement('a2', '2026-11-05T10:00:00Z', '**Жирный** текст [ссылка](https://x.test)')] })
     const page = await mount()

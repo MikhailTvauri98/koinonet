@@ -47,7 +47,7 @@ onBeforeUnmount(() => { revision++ })
 /* Hidden at rest but kept in the tab order and the accessibility tree. */
 @media (hover: hover) and (pointer: fine) { .message-actions-trigger { opacity: 0; pointer-events: none; } .message-actions-trigger:focus-visible, .message-actions-trigger[aria-expanded="true"] { opacity: 1; pointer-events: auto; } }
 @media (hover: none), (pointer: coarse) {
-  .message-actions-trigger:not(:focus-visible):not([aria-expanded="true"]) { width: 1px; height: 1px; min-width: 0; min-height: 0; padding: 0; overflow: hidden; clip-path: inset(50%); border: 0; white-space: nowrap; }
+  .message-actions-trigger:not(:focus-visible):not([aria-expanded="true"]) { opacity: 0; pointer-events: none; }
 }
 .message-actions { display: flex; flex-direction: column; gap: .5rem; }
 .message-actions button { text-align: start; min-width: 44px; }

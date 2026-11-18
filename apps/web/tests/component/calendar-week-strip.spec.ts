@@ -35,6 +35,18 @@ describe('calendar week strip', () => {
     await strip.get('[data-test="strip-day-2026-11-20"]').trigger('click')
     expect(strip.emitted('select')).toEqual([['2026-11-20']])
   })
+  it('describes owners with identical colors and marks a cancelled day without color', async () => {
+    const strip = await mount('2026-11-17', [
+      event({ ministry: { id: 'm1', name: 'Хор', color: 'teal' } }),
+      event({ id: 'e2', ministry: { id: 'm2', name: 'Дети', color: 'teal' }, status: 'cancelled' }),
+    ])
+    const day = strip.get('[data-test="strip-day-2026-11-17"]')
+    const description = strip.get(`[id="${day.attributes('aria-describedby')}"]`).text()
+    expect(description).toContain('Хор')
+    expect(description).toContain('Дети')
+    expect(description).toContain('Отменено')
+    expect(day.find('.week-strip__cancelled').exists()).toBe(true)
+  })
   it('holds only the seven day buttons and shows a week across a month and a year boundary', async () => {
     expect((await mount('2026-12-30')).findAll('button')).toHaveLength(7)
     const boundary = await mount('2026-12-31')

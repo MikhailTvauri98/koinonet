@@ -22,10 +22,9 @@ const photo = computed(() => props.photoUrl && props.photoUrl !== failedUrl.valu
 </template>
 
 <style scoped>
-/* Размер круга фиксирован: имя рядом с аватаром растёт с текстом, инициалы лишь подсказка. */
 .ui-avatar { display: inline-grid; place-items: center; flex: none; overflow: hidden; border-radius: 50%; font-weight: 700; line-height: 1; letter-spacing: .02em; user-select: none; }
-.ui-avatar--sm { width: 32px; height: 32px; font-size: min(.875rem, 14px); }
-.ui-avatar--md { width: 44px; height: 44px; font-size: min(1rem, 16px); }
-.ui-avatar--lg { width: 64px; height: 64px; font-size: min(1.375rem, 22px); }
+.ui-avatar--sm { width: 2rem; height: 2rem; font-size: .875rem; }
+.ui-avatar--md { width: 2.75rem; height: 2.75rem; font-size: 1rem; }
+.ui-avatar--lg { width: 4rem; height: 4rem; font-size: 1.375rem; }
 .ui-avatar img { width: 100%; height: 100%; object-fit: cover; }
 </style>

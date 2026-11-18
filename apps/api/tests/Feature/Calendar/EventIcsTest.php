@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use App\Modules\Calendar\Models\Event;
-use App\Modules\Calendar\Models\EventAssignment;
-use App\Modules\Calendar\Models\EventSlot;
 use App\Modules\Directory\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,18 +14,12 @@ beforeEach(function (): void {
     config(['app.url' => 'https://church.example.test:8443']);
 });
 
-function icsAssign(User $user, Event $event, string $label): void
-{
-    $slot = EventSlot::factory()->for($event)->create(['label' => $label]);
-    EventAssignment::factory()->for($slot)->for($user->person)->create();
-}
-
 it('downloads a single event with description and own slots', function () {
     $user = actingAsUser();
     $event = Event::factory()->between(CarbonImmutable::parse('2026-11-08 10:00+03:00'), CarbonImmutable::parse('2026-11-08 12:00+03:00'))
         ->create(['title' => 'Воскресное служение', 'location' => 'Зал', 'description' => 'Приходите вовремя']);
-    icsAssign($user, $event, 'Учитель воскресной школы');
-    icsAssign(User::factory()->create(), $event, 'Чужой слот');
+    icalAssign($user, $event, 'Учитель воскресной школы');
+    icalAssign(User::factory()->create(), $event, 'Чужой слот');
 
     $response = $this->get("/api/v1/events/{$event->id}/ics")->assertOk()
         ->assertHeader('Content-Type', 'text/calendar; charset=UTF-8')

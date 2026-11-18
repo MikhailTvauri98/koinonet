@@ -145,6 +145,14 @@ test('all desktop navigation remains reachable on a short screen', async ({ page
   await expect(last).toBeInViewport()
 })
 
+test('avatar initials scale to 200 percent in all three sizes', async ({ page }) => {
+  await mountFoundation(page, 'light')
+  await page.addStyleTag({ content: 'html { font-size: 32px !important }' })
+  for (const [size, pixels] of [['sm', 28], ['md', 32], ['lg', 44]] as const) {
+    await expect(page.locator(`[data-test=foundation] .ui-avatar--${size}`).first()).toHaveCSS('font-size', `${pixels}px`)
+  }
+})
+
 for (const theme of ['dark', 'light'] as const) {
   test(`${theme} ministry marks and avatars keep readable text on their tint`, async ({ page }, testInfo) => {
     await mountFoundation(page, theme)
@@ -218,4 +226,3 @@ for (const theme of ['dark', 'light'] as const) {
     }
   })
 }
-
