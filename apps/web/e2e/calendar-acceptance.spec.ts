@@ -34,14 +34,25 @@ for (const theme of ['dark', 'light'] as const) {
     const ministryId = ministryPath!.split('/').at(-1)!
     await page.setViewportSize({ width: 390, height: 844 })
     await openSection(page, 'Календарь', 'Календарь')
+    // На телефоне календарь открывается списком: стрелки шапки листают недели,
+    // в месяце — месяцы. Оба перехода проверяются через границу года.
+    const viewSwitch = page.getByTestId('phone-view-switch')
+    await expect(viewSwitch).toHaveAttribute('aria-pressed', 'false')
     await page.getByTestId('calendar-date').fill('2030-12-31')
+    await page.getByTestId('week-next').click()
+    await expect(page.getByTestId('calendar-date')).toHaveValue('2031-01-07')
+    await page.getByTestId('week-previous').click()
+    await expect(page.getByTestId('calendar-date')).toHaveValue('2030-12-31')
+    await viewSwitch.click()
+    await expect(viewSwitch).toHaveAttribute('aria-pressed', 'true')
     await page.getByTestId('next-month').click()
     await expect(page.getByTestId('calendar-date')).toHaveValue('2031-01-31')
     await page.getByTestId('calendar-today').click()
     const today = new Intl.DateTimeFormat('sv-SE', { timeZone: church.timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
     await expect(page.getByTestId('calendar-date')).toHaveValue(today)
     await page.getByTestId('calendar-date').fill('2030-12-31')
-    await page.getByRole('button', { name: 'Список', exact: true }).click()
+    await viewSwitch.click()
+    await expect(viewSwitch).toHaveAttribute('aria-pressed', 'false')
     await page.getByTestId('scope-mine').click()
     await expect(page.getByTestId('scope-mine')).toHaveAttribute('aria-pressed', 'true')
     const returnTo = '/calendar?date=2030-12-31&view=list&scope=mine'
@@ -55,7 +66,7 @@ for (const theme of ['dark', 'light'] as const) {
       await page.getByTestId('starts-time').fill(start)
       await page.getByTestId('ends-time').fill(end)
       if (failures) {
-        await page.getByTestId('save-event-top').click()
+        await page.getByTestId('save-event').click()
         await expect(page.getByTestId('ends-time')).toBeFocused()
         await expect(page.getByTestId('ends-time')).toHaveAttribute('aria-invalid', 'true')
         await expect(page.getByTestId('title')).toHaveValue(title)
@@ -72,17 +83,17 @@ for (const theme of ['dark', 'light'] as const) {
         const failedCreate = async (route: import('@playwright/test').Route) => route.request().method() === 'POST'
           ? route.fulfill({ status: 503, json: { message: 'Не удалось сохранить событие. Попробуйте ещё раз.' } }) : route.fallback()
         await page.route('**/api/v1/events', failedCreate)
-        await Promise.all([expectApiResponse(page, 'POST', '/events', 503), page.getByTestId('save-event-top').click()])
+        await Promise.all([expectApiResponse(page, 'POST', '/events', 503), page.getByTestId('save-event').click()])
         await expect(page.getByTestId('save-error')).toBeVisible()
         await expect(page.getByTestId('title')).toHaveValue(title)
         await expect(page.getByTestId('slot-0-label')).toHaveValue('Помощь на встрече')
         await expect(page.getByTestId('ends-date')).toHaveValue('2031-01-01')
         await page.unroute('**/api/v1/events', failedCreate)
       }
-      await reachable(page, '[data-test=save-event-top]')
+      await reachable(page, '[data-test=save-event]')
       await expectNoHorizontalScroll(page, 'создание через полночь')
       const created = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/events' && response.request().method() === 'POST')
-      await page.getByTestId('save-event-top').click()
+      await page.getByTestId('save-event').click()
       const response = await created
       expect(response.status()).toBe(201)
       const event = ((await response.json()) as { data: CalendarEvent }).data
@@ -104,7 +115,7 @@ for (const theme of ['dark', 'light'] as const) {
       dialog.locator('.candidates button').filter({ hasText: fullName(credentials.admin) }).click(),
     ])
     await dialog.getByTestId('close-assign').click()
-    await expect(page.getByTestId('my-participation')).toContainText('Вы назначены')
+    await expect(page.getByTestId('my-participation')).toContainText('Вы служите:')
     await expect(page.getByTestId(`slot-${firstSlot}-count`)).toHaveText('1 из 1')
     await page.getByTestId('calendar-return').click()
     await expect(page.getByTestId('calendar-date')).toHaveValue('2030-12-31')
@@ -147,7 +158,7 @@ for (const theme of ['dark', 'light'] as const) {
     await Promise.all([expectApiResponse(page, 'GET', `/events/${second.id}`, 200), page.getByTestId('retry-assignments').click()])
     expect(assignmentWrites).toBe(1)
     expect(failedReadResponses).toBeGreaterThanOrEqual(1)
-    await expect(page.getByTestId('my-participation')).toContainText('Вы назначены')
+    await expect(page.getByTestId('my-participation')).toContainText('Вы служите:')
     await expect(page.getByTestId(`slot-${secondSlot}-count`)).toHaveText('1 из 1')
 
     await page.getByTestId('edit-event').click()
@@ -155,7 +166,9 @@ for (const theme of ['dark', 'light'] as const) {
     await page.getByTestId('cancel-edit').click()
     await page.getByTestId('discard-edit').click()
     await expect(page.getByRole('heading', { level: 1, name: second.title, exact: true })).toBeVisible()
-    await page.getByTestId('cancel-event').click()
+    // Отмена события — только в меню «⋯» и с подтверждением.
+    await page.getByTestId('event-menu').click()
+    await page.getByRole('dialog', { name: 'Действия с событием', exact: true }).getByTestId('cancel-event').click()
     await page.getByTestId('reason').fill('Встречу перенесли после проверки')
     await Promise.all([
       expectApiResponse(page, 'POST', `/events/${second.id}/cancel`, 200), expectApiResponse(page, 'GET', `/events/${second.id}`, 200),
@@ -167,7 +180,10 @@ for (const theme of ['dark', 'light'] as const) {
     expect(await page.getByTestId('calendar-return').getAttribute('href')).toBe('/calendar')
     await page.setViewportSize({ width: 320, height: 390 })
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' })
-    await reachable(page, `[data-test=assign-${firstSlot}]`)
+    // Слот заполнен (1 из 1): тихая «+ Назначить» есть только при свободном месте,
+    // а все действия слота, включая назначение сверх количества, — в окне слота по его строке.
+    await expect(page.getByTestId(`assign-${firstSlot}`)).toHaveCount(0)
+    await reachable(page, `[data-test=slot-row-${firstSlot}]`)
     await expectNoHorizontalScroll(page, 'реальная карточка 320×390 при200%')
     await page.screenshot({ path: info.outputPath(`${theme}-320x390-200-real-slot-action.png`) })
     await page.setViewportSize({ width: 1440, height: 1000 })

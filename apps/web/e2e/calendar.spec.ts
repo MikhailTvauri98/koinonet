@@ -243,7 +243,8 @@ test('a template materializes eight weeks idempotently, a phone leader fills a s
   await dialog.getByTestId('close-assign').click()
   await expect(dialog).toBeHidden()
   await expect(leaderPhone.getByTestId(`slot-${slotId}-count`)).toHaveText('1 из 2')
-  await expect(leaderPhone.getByRole('list', { name: 'Назначенные' }).getByText(fullName(singer), { exact: true })).toBeVisible()
+  // Строка слота показывает короткое имя («Имя Фамилия»), полное остаётся в выборе кандидата.
+  await expect(leaderPhone.getByTestId(`slot-row-${slotId}`)).toContainText(`${singer.firstName} ${singer.lastName}`)
   await expectNoHorizontalScroll(leaderPhone, 'заполненный слот')
 
   await expect.poll(() => live.notifications.find(notification => notification.title === 'Вас назначили' && notification.url === `/events/${event.id}`), { timeout: 20_000 }).toBeTruthy()

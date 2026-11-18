@@ -37,11 +37,14 @@ export const test = base.extend<{ resetCache: undefined, openPhone: () => Promis
     ].join(' ')])
     await use(undefined)
   }, { auto: true }],
-  openPhone: async ({ browser }, use) => {
+  // Телефон живёт в том же поясе устройства, что и основная страница сценария
+  // (test.use({ timezoneId })): проверка показа во времени церкви не зависит от него.
+  openPhone: async ({ browser, timezoneId }, use) => {
     const contexts: BrowserContext[] = []
     await use(async () => {
       const context = await browser.newContext({
         ...devices['Pixel 7'],
+        ...(timezoneId ? { timezoneId } : {}),
         baseURL: e2e.webOrigin,
         serviceWorkers: 'block',
       })
